@@ -1,0 +1,10 @@
+# Folders
+/node_modules/
+/build
+
+# Buidler files
+cache
+artifacts
+
+#Environment Variables
+.env
