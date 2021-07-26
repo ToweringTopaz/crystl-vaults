@@ -10,7 +10,6 @@
     "@openzeppelin/contracts": "^3.1.0",
     "@truffle/hdwallet-provider": "^1.4.0",
     "dotenv": "^8.6.0",
-    "fs": "^0.0.1-security",
     "path": "^0.12.7",
     "truffle": "^5.4.0",
     "truffle-flattener": "^1.4.4",
