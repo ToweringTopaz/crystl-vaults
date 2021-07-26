@@ -42,4 +42,8 @@ This strategy is optimized for the CRYSTL to CRYSTL pool. It simply accumulates 
 
 This contract owns each of the active strategies and manages all user data via mappings. When users deposit to VaultHealer, the formula "sharesAdded = tokensAdded \* sharesTotal / tokensTotal" is used to record the user's deposit value relative to other deposits which have grown over time. The same happens in reverse when a user withdraws, so at any given time it is possible to calculate exactly how many tokens belong to each user, despite this data not being updated in real time with each compounding cycle.
 
-Under normal circumstances, VaultHealer calls all strategies to perform their compounding earn() function before any deposit or withdrawal to any of the vaults.
+Under normal circumstances, VaultHealer calls all strategies to perform their compounding earn() function before any deposit or withdrawal to any of the vaults. If gas costs become excessive, this can be reduced to only compound every second, third,... strategy as needed. The vault owner also has the ability to restrict the compounding function.
+
+## VaultMonolith
+
+VaultMonolith extends the VaultHealer method of tracking user shares with Crystallizer and CrystalCore. 
