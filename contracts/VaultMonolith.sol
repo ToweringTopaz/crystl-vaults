@@ -54,7 +54,7 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
             
             address crystallizer = crystallizerAddress[i];
             
-            uint lizerSharesTotal = IStrategy(crystallizer).vaultSharesTotal(); //total shares of the crystallizer vault
+            uint lizerSharesTotal = IStrategy(crystallizer).sharesTotal(); //total shares of the crystallizer vault
             int lizerCoreShares = crystalCoreShares[crystallizer]; // crystallizer's share of the core vault
 
             shares += MoreMath.mulDiv(lizerCoreShares, userLizerShares, lizerSharesTotal);
@@ -81,14 +81,14 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
             //Adding shares to a crystallizer will reduce the share of the crystal core for everyone else, and
             //credit unearned shares to the depositor. We must compensate for this here
             if (isCrystallizer[address(strat)]) {
-                uint lizerVaultShares = IStrategy(strat).vaultSharesTotal(); // vault shares (non-crystl) for the crystallizer
+                uint lizerSharesTotal = IStrategy(strat).sharesTotal(); // shares (non-crystl) for the crystallizer
                 int lizerCoreShares = crystalCoreShares[strat]; // crystal core shares held by the crystallizer
         
                 uint256 sharesAdded = IStrategy(strat).deposit(_to, _wantAmt); // do the deposit
                 
                 //old/new == old/new; vault gets +shares, depositor gets -shares but it all evens out
-                if (lizerVaultShares > 0) {
-                    int crystalShareOffset = MoreMath.mulDiv(lizerCoreShares, lizerVaultShares + sharesAdded, lizerVaultShares) - lizerCoreShares;
+                if (lizerSharesTotal > 0) {
+                    int crystalShareOffset = MoreMath.mulDiv(lizerCoreShares, lizerSharesTotal + sharesAdded, lizerSharesTotal) - lizerCoreShares;
                     crystalCoreShares[strat] += crystalShareOffset;
                     crystalCoreShares[_to] -= crystalShareOffset;
                 } 
@@ -107,7 +107,7 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
     function _withdraw(uint256 _sid, uint256 _wantAmt, address _to) internal override {
         require (_sid < numStrategies, "pool doesn't exist");
         address strat = strategyAddress[_sid];
-        uint256 sharesTotal = IStrategy(strat).vaultSharesTotal();
+        uint256 sharesTotal = IStrategy(strat).sharesTotal();
         require(sharesTotal > 0, "sharesTotal is 0");
         uint256 _shares;
         
