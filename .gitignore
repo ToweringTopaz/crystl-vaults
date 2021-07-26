@@ -1,3 +1,7 @@
+# System
+.DS_Store
+.vscode
+
 # Folders
 /node_modules/
 /build
@@ -9,3 +13,4 @@ artifacts
 
 #Environment Variables
 .env
+.env.*
