@@ -1,188 +1,206 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.6;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IStrategy.sol";
 import "./Operators.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
-contract VaultHealer is Ownable, ReentrancyGuard, Operators {
-    using SafeMath for uint256;
+contract VaultHealer is ReentrancyGuard, Operators {
     using SafeERC20 for IERC20;
+    
+    mapping(address => IERC20) public strategyWant; // Want token for a given strategy address
+    mapping(uint256 => address) public strategyAddress;
+    mapping(uint256 => mapping(address => uint256)) internal userShares; // For each strategy, shares for each user that stakes LP tokens.
+    mapping(uint256 => bool) public compoundDisabled;
 
-    // Info of each user.
-    struct UserInfo {
-        uint256 shares; // How many LP tokens the user has provided.
-    }
-
-    struct PoolInfo {
-        IERC20 want; // Address of the want token.
-        address strat; // Strategy address that will auto compound want tokens
-    }
-
-    PoolInfo[] public poolInfo; // Info of each pool.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
-    mapping(address => bool) private strats;
+    uint24 public numStrategies;
+    
+    //0: compound by anyone; 1: EOA only; 2: restricted to operators
+    uint8 public compoundLock;
+    bool public autocompoundOn = true;
+    uint16 public compoundDivisor = 1;
 
     event AddPool(address indexed strat);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-
-    function poolLength() external view returns (uint256) {
-        return poolInfo.length;
-    }
-
+    event SetCompoundMode(bool automatic, uint16 divisor, uint8 locked);
+    event CompoundError(uint, bytes);
+    
     /**
-     * @dev Add a new want to the pool. Can only be called by the owner.
+     * @dev Add a new strategy to the vaults. Can only be called by the owner.
      */
-    function addPool(address _strat) external onlyOwner nonReentrant {
-        require(!strats[_strat], "Existing strategy");
-        poolInfo.push(
-            PoolInfo({
-                want: IERC20(IStrategy(_strat).wantAddress()),
-                strat: _strat
-            })
-        );
-        resetSingleAllowance(poolInfo.length - 1);
-        strats[_strat] = true;
-        emit AddPool(_strat);
+    function addStrategy(address strat) public virtual onlyOwner nonReentrant {
+        require(Address.isContract(strat), "strategy isn't a contract!");
+        
+        uint _numStrategies = numStrategies;
+        
+        for (uint i; i < _numStrategies; i++) {
+            require(strategyAddress[i] != strat, "Existing strategy");
+        }
+        
+        strategyAddress[_numStrategies] = strat;
+        strategyWant[strat] = IERC20(IStrategy(strat).wantAddress());
+
+        resetSingleAllowance(_numStrategies); //authorize token transfers for the new strategy
+        numStrategies++; // increment the number of strategies here
+
+        emit AddPool(strat);
     }
 
     // View function to see staked Want tokens on frontend.
-    function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
+    function stakedWantTokens(uint256 _sid, address _user) public view returns (uint256) {
+        
+        IStrategy strat = IStrategy(strategyAddress[_sid]);
 
-        uint256 sharesTotal = IStrategy(pool.strat).sharesTotal();
-        uint256 wantLockedTotal = IStrategy(poolInfo[_pid].strat).wantLockedTotal();
-        if (sharesTotal == 0) {
-            return 0;
-        }
-        return user.shares.mul(wantLockedTotal).div(sharesTotal);
+        uint256 sharesTotal = strat.vaultSharesTotal();
+        uint256 wantLockedTotal = strat.wantLockedTotal();
+        
+        if (sharesTotal == 0) return 0;
+        return userShares[_sid][_user] * wantLockedTotal / sharesTotal;
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant autoCompound {
-        require (_pid < poolInfo.length, "pool doesn't exist");
-        
-        _deposit(_pid, _wantAmt, msg.sender);
+    function deposit(uint256 _sid, uint256 _wantAmt) external nonReentrant {
+        require (_sid < numStrategies, "pool doesn't exist");
+        autoCompound(_sid);
+        _deposit(_sid, _wantAmt, msg.sender);
     }
 
     // For unique contract calls
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant onlyOperator {
-        _deposit(_pid, _wantAmt, _to);
+    function deposit(uint256 _sid, uint256 _wantAmt, address _to) external nonReentrant onlyOperator {
+        _deposit(_sid, _wantAmt, _to);
     }
     
-    function _deposit(uint256 _pid, uint256 _wantAmt, address _to) internal {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_to];
+    function _deposit(uint256 _sid, uint256 _wantAmt, address _to) internal virtual {
+        address strat = strategyAddress[_sid];
 
         if (_wantAmt > 0) {
-            pool.want.safeTransferFrom(msg.sender, address(this), _wantAmt);
+            strategyWant[strat].safeTransferFrom(msg.sender, address(this), _wantAmt);
 
-            uint256 sharesAdded = IStrategy(poolInfo[_pid].strat).deposit(_to, _wantAmt);
-            user.shares = user.shares.add(sharesAdded);
+            uint256 sharesAdded = IStrategy(strat).deposit(_to, _wantAmt);
+            userShares[_sid][_to] += sharesAdded;
         }
-        emit Deposit(_to, _pid, _wantAmt);
+        emit Deposit(_to, _sid, _wantAmt);
     }
 
-    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant autoCompound {
-        _withdraw(_pid, _wantAmt, msg.sender);
+    function withdraw(uint256 _sid, uint256 _wantAmt) external nonReentrant {
+        autoCompound(_sid);
+        _withdraw(_sid, _wantAmt, msg.sender);
     }
 
     // For unique contract calls
-    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant onlyOperator {
-        _withdraw(_pid, _wantAmt, _to);
+    function withdraw(uint256 _sid, uint256 _wantAmt, address _to) external nonReentrant onlyOperator {
+        _withdraw(_sid, _wantAmt, _to);
     }
 
-    function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) internal {
-        require (_pid < poolInfo.length, "pool doesn't exist");
+    function _withdraw(uint256 _sid, uint256 _wantAmt, address _to) internal virtual {
+        require (_sid < numStrategies, "pool doesn't exist");
         
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        uint256 wantLockedTotal = IStrategy(poolInfo[_pid].strat).wantLockedTotal();
-        uint256 sharesTotal = IStrategy(poolInfo[_pid].strat).sharesTotal();
-
-        require(user.shares > 0, "user.shares is 0");
+        address strat = strategyAddress[_sid];
+        uint256 _shares = userShares[_sid][msg.sender];
+        require(_shares > 0, "user.shares is 0");
+        
+        uint256 wantLockedTotal = IStrategy(strat).wantLockedTotal();
+        
+        uint256 sharesTotal = IStrategy(strat).vaultSharesTotal();
         require(sharesTotal > 0, "sharesTotal is 0");
 
         // Withdraw want tokens
-        uint256 amount = user.shares.mul(wantLockedTotal).div(sharesTotal);
+        uint256 amount = _shares * wantLockedTotal / sharesTotal;
         if (_wantAmt > amount) {
             _wantAmt = amount;
         }
         if (_wantAmt > 0) {
-            uint256 sharesRemoved = IStrategy(poolInfo[_pid].strat).withdraw(msg.sender, _wantAmt);
+            uint256 sharesRemoved = IStrategy(strat).withdraw(msg.sender, _wantAmt);
 
-            if (sharesRemoved > user.shares) {
-                user.shares = 0;
+            if (sharesRemoved > _shares) {
+                userShares[_sid][msg.sender] = 0;
             } else {
-                user.shares = user.shares.sub(sharesRemoved);
+               userShares[_sid][msg.sender] = _shares - sharesRemoved;
             }
 
-            uint256 wantBal = IERC20(pool.want).balanceOf(address(this));
+            uint256 wantBal = strategyWant[strat].balanceOf(address(this));
             if (wantBal < _wantAmt) {
                 _wantAmt = wantBal;
             }
-            pool.want.safeTransfer(_to, _wantAmt);
+            strategyWant[strat].safeTransfer(_to, _wantAmt);
         }
-        emit Withdraw(msg.sender, _pid, _wantAmt);
+        emit Withdraw(msg.sender, _sid, _wantAmt);
     }
 
     // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) external nonReentrant autoCompound {
-        _withdraw(_pid, uint256(-1), msg.sender);
+    function withdrawAll(uint256 _sid) external nonReentrant {
+        autoCompound(_sid);
+        _withdraw(_sid, type(uint256).max, msg.sender);
     }
 
     function resetAllowances() external onlyOwner {
-        uint numPools = poolInfo.length;
-        for (uint i = 0; i < numPools; i++) {
-            PoolInfo storage pool = poolInfo[i];
-            pool.want.safeApprove(pool.strat, uint256(0));
-            pool.want.safeIncreaseAllowance(pool.strat, uint256(-1));
+        uint _numStrategies = numStrategies;
+        for (uint i; i < _numStrategies; i++) {
+            address strat = strategyAddress[i];
+            strategyWant[strat].safeApprove(strat, uint256(0));
+            strategyWant[strat].safeIncreaseAllowance(strat, type(uint256).max);
         }
     }
 
-    function resetSingleAllowance(uint256 _pid) public onlyOwner {
-        PoolInfo storage pool = poolInfo[_pid];
-        pool.want.safeApprove(pool.strat, uint256(0));
-        pool.want.safeIncreaseAllowance(pool.strat, uint256(-1));
+    function resetSingleAllowance(uint256 _sid) public onlyOwner {
+        address strat = strategyAddress[_sid];
+        strategyWant[strat].safeApprove(strat, uint256(0));
+        strategyWant[strat].safeIncreaseAllowance(strat, type(uint256).max);
     }
     
-    //0: compound by anyone; 1: EOA only; 2: restricted to operators
-    uint public compoundLock = 0;
-    bool public autocompoundOn = true;
-    event SetCompoundMode(uint locked, bool automatic);
-    function setCompoundMode(uint lock, bool autoC) external onlyOwner {
+
+    function setCompoundMode(uint8 lock, bool autoC, uint16 divisor) external onlyOwner {
         compoundLock = lock;
         autocompoundOn = autoC;
-        emit SetCompoundMode(lock,autoC);
+        compoundDivisor = divisor;
+        emit SetCompoundMode(autoC,divisor,lock);
     }
-    modifier autoCompound {
-        if (autocompoundOn && (compoundLock == 0 || operators[msg.sender] || (compoundLock == 1 && msg.sender == tx.origin)))
-            _compoundAll();
-        _;
-    }
-    function compoundAll() external {
+
+    function compoundAll(uint sid) external {
         require(compoundLock == 0 || operators[msg.sender] || (compoundLock == 1 && msg.sender == tx.origin), "Compounding is restricted");
-            _compoundAll();
+            _compoundAll(sid);
     }
     
-    event CompoundError(uint, bytes);
-    function _compoundAll() internal {
-        uint numPools = poolInfo.length;
-        for (uint i = 0; i < numPools; i++) {
+    //disables compounding for any one strategy
+    function disableCompounding(uint strat, bool disabled) external onlyOwner {
+        compoundDisabled[strat] = disabled;
+    }
+    
+    //In the event of high gas costs due to a large number of strategy contracts, this will set autocompounding to only affect 
+    // some fraction of the pools: 1/2, 1/3, 1/4, 1/5... This will include the selected pool, so it will always compound before deposit/withdraw
+    function setCompoundDivisor(uint divisor) external onlyOwner {
+        require(divisor != 0, "can't configure to divide by zero");
+        require(divisor <= numStrategies, "can't be more than number of strategies");
+        compoundDivisor = uint16(divisor);
+    }
+    
+    function autoCompound(uint sid) internal {
+        if (autocompoundOn && (compoundLock == 0 || operators[msg.sender] || (compoundLock == 1 && msg.sender == tx.origin)))
+            _compoundAll(sid);
+    }
+    
+    function _compoundAll(uint sid) internal virtual {
+        uint _numStrategies = numStrategies;
+        uint divisor = compoundDivisor;
+        uint modulus = sid % divisor;
+        
+        for (uint i = 1; i < _numStrategies; i++) {
+            if (i % divisor != modulus || compoundDisabled[i]) continue;
+            
+            address strat = strategyAddress[i];
+            
             //If something goes wrong with one strategy compounding, let's not break deposit and withdraw
-            try IStrategy(poolInfo[i].strat).earn() {}
+            try IStrategy(strat).earn() returns (uint) {}
             catch (bytes memory reason) {
                 emit CompoundError(i, reason);
             }
         }
     }
+    
 }

@@ -11,61 +11,54 @@ pragma solidity ^0.8.6;
 
 import "./interfaces/IMasterHealer.sol";
 import "@uniswap/v2-core@1.0.1/contracts/interfaces/IUniswapV2Pair.sol";
-import "./BaseStrategyApeLPSingle.sol";
+import "./BaseStrategy.sol";
 
-contract StrategyMasterHealer is BaseStrategyApeLPSingle {
+contract StrategyCrystallizer is BaseStrategy {
     using SafeERC20 for IERC20;
-
+    using GibbonRouter for AmmData;
+    
     IMasterHealer public immutable masterHealer;
     uint256 public immutable pid;
-
+    
     constructor(
         AmmData _farmAMM,
+        address _wantAddress,
+        address _earnedAddress,
         address _vaultHealerAddress,
         address _masterHealerAddress,
         uint256 _pid,
-        address _earnedAddress,
-        address _wantAddress,
-        address[] memory _earnedToMaticPath,
-        address[] memory _earnedToToken0Path,
-        address[] memory _earnedToToken1Path,
-        address[] memory _token0ToEarnedPath,
-        address[] memory _token1ToEarnedPath
-    ) BaseStrategyApeLPSingle(_farmAMM, _wantAddress, _earnedAddress, _vaultHealerAddress) {
+        address[] memory _earnedToMaticPath
+    ) BaseStrategy(_farmAMM, _wantAddress, _earnedAddress, _vaultHealerAddress) {
         
         masterHealer = IMasterHealer(_masterHealerAddress);
         pid = _pid;     // pid for the MasterHealer pool
         
         (address healerWantAddress,,,,) = IMasterHealer(_masterHealerAddress).poolInfo(_pid);
         require(healerWantAddress == _wantAddress, "Assigned pid doesn't match want token");
-        
-        address _token0Address = IUniswapV2Pair(_wantAddress).token0();
-        address _token1Address = IUniswapV2Pair(_wantAddress).token1();
 
         require(
-            _earnedToMaticPath[0] == _earnedAddress && _earnedToMaticPath[_earnedToMaticPath.length - 1] == WMATIC
-            && _token0ToEarnedPath[0] == _token0Address && _token0ToEarnedPath[_token0ToEarnedPath.length - 1] == _earnedAddress
-            && _token1ToEarnedPath[0] == _token1Address && _token1ToEarnedPath[_token1ToEarnedPath.length - 1] == _earnedAddress
-            && _earnedToToken0Path[0] == _earnedAddress && _earnedToToken0Path[_earnedToToken0Path.length - 1] == _token0Address
-            && _earnedToToken1Path[0] == _earnedAddress && _earnedToToken1Path[_earnedToToken1Path.length - 1] == _token1Address,
+            _earnedToMaticPath[0] == _earnedAddress && _earnedToMaticPath[_earnedToMaticPath.length - 1] == WMATIC,
             "Tokens and paths mismatch"
         );
 
         earnedToMaticPath = _earnedToMaticPath;
-        earnedToToken0Path = _earnedToToken0Path;
-        earnedToToken1Path = _earnedToToken1Path;
-        token0ToEarnedPath = _token0ToEarnedPath;
-        token1ToEarnedPath = _token1ToEarnedPath;
         
         transferOwnership(_vaultHealerAddress);
         
-        //initialize allowance
+        //initialize allowances
+        IERC20(_wantAddress).safeApprove(_masterHealerAddress, uint256(0));
+        IERC20(_wantAddress).safeIncreaseAllowance(
+            address(_masterHealerAddress),
+            type(uint256).max
+        );
         IERC20(_wantAddress).safeApprove(_masterHealerAddress, uint256(0));
         IERC20(_wantAddress).safeIncreaseAllowance(
             address(_masterHealerAddress),
             type(uint256).max
         );
     }
+
+    function isCrystallizer() external override pure returns (bool) { return true; }
 
     function _vaultDeposit(uint256 _amount) internal override {
         masterHealer.deposit(pid, _amount);
@@ -75,17 +68,17 @@ contract StrategyMasterHealer is BaseStrategyApeLPSingle {
         masterHealer.withdraw(pid, _amount);
     }
     
-    function _vaultHarvest() internal override {
+    function _vaultHarvest() internal {
         masterHealer.withdraw(pid, 0);
     }
     
-    function vaultTotal() public override view returns (uint256) {
+    function vaultSharesTotal() public override view returns (uint256) {
         (uint256 amount,) = masterHealer.userInfo(pid, address(this));
         return amount;
     }
      
     function wantLockedTotal() public override view returns (uint256) {
-        return IERC20(wantAddress).balanceOf(address(this)) + vaultTotal();
+        return IERC20(wantAddress).balanceOf(address(this)) + vaultSharesTotal();
     }
 
     function _resetAllowances() internal override {
@@ -99,4 +92,39 @@ contract StrategyMasterHealer is BaseStrategyApeLPSingle {
     function _emergencyVaultWithdraw() internal override {
         masterHealer.emergencyWithdraw(pid);
     }
+    
+    function earn() external override whenNotPaused onlyOwner returns (uint256 crystlHarvest) {
+        
+        if (lastEarnBlock == block.number) return 0; // only compound once per block max
+        lastEarnBlock = block.number;
+        
+        // Harvest farm tokens
+        _vaultHarvest();
+
+        uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
+        if (earnedAmt == 0) return 0;
+          
+        //convert earned to crystl, if necessary
+        if (earnedAddress != CRYSTL) {
+            
+            uint wmaticAmt = farmAMM.swap(
+                earnedAmt,
+                earnedToMaticPath,
+                address(this)
+            );
+        
+            earnedAmt = APESWAP.swap(
+                wmaticAmt,
+                WMATIC,
+                CRYSTL,
+                address(this)
+            );
+        } else earnedAmt = IERC20(CRYSTL).balanceOf(address(this));
+
+        earnedAmt = buyBack(earnedAmt);
+        IERC20(CRYSTL).safeTransfer(vaultHealerAddress, earnedAmt);
+        
+        return earnedAmt;
+    }
+    
 }
