@@ -72,13 +72,13 @@ contract StrategyCrystallizer is BaseStrategy {
         masterHealer.withdraw(pid, 0);
     }
     
-    function vaultSharesTotal() public override view returns (uint256) {
+    function vaultTotal() public override view returns (uint256) {
         (uint256 amount,) = masterHealer.userInfo(pid, address(this));
         return amount;
     }
      
     function wantLockedTotal() public override view returns (uint256) {
-        return IERC20(wantAddress).balanceOf(address(this)) + vaultSharesTotal();
+        return IERC20(wantAddress).balanceOf(address(this)) + vaultTotal();
     }
 
     function _resetAllowances() internal override {

@@ -57,7 +57,7 @@ contract VaultHealer is ReentrancyGuard, Operators {
         
         IStrategy strat = IStrategy(strategyAddress[_sid]);
 
-        uint256 sharesTotal = strat.vaultSharesTotal();
+        uint256 sharesTotal = strat.sharesTotal();
         uint256 wantLockedTotal = strat.wantLockedTotal();
         
         if (sharesTotal == 0) return 0;
@@ -107,7 +107,7 @@ contract VaultHealer is ReentrancyGuard, Operators {
         
         uint256 wantLockedTotal = IStrategy(strat).wantLockedTotal();
         
-        uint256 sharesTotal = IStrategy(strat).vaultSharesTotal();
+        uint256 sharesTotal = IStrategy(strat).sharesTotal();
         require(sharesTotal > 0, "sharesTotal is 0");
 
         // Withdraw want tokens
