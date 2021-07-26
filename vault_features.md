@@ -12,7 +12,7 @@ All of the vault options have a default 0.1% deposit fee (depositFeeRate), which
 
 ## Important external strategy functions
 
-wantLockedTotal() returns (uint256) total amount of the strategy's farming tokens, such as LP tokens
+wantLockedTotal() returns (uint256) total amount of the strategy's farming tokens, such as LP tokens. NOTE: Generally rather than call this, we want to call functions of the VaultMonolith.
 	
 paused() returns (bool) showing whether the governor has emergency-withdrawn paused the vault
 
@@ -20,7 +20,7 @@ buybackRate() returns (uint256) the amount of earnings which are swapped to crys
 
 isCrystalCore() and isCrystallizer() return (bool) showing whether the vault is either of those types of strategy, explained later.
 
-Most of the time, there is no need for users to directly interact with the strategies.
+Usually there is no need for users to directly interact with the strategies.
 
 ## StrategyMasterHealer
 
@@ -38,3 +38,8 @@ This is the same concept as ApeRocket's banana maximizer. With a crystallizer, t
 
 This strategy is optimized for the CRYSTL to CRYSTL pool. It simply accumulates and restakes CRYSTL. Users and crystallizer strategies alike may deposit CRYSTL to this via VaultMonolith.
 
+## VaultHealer
+
+This contract owns each of the active strategies and manages all user data via mappings. When users deposit to VaultHealer, the formula "sharesAdded = tokensAdded \* sharesTotal / tokensTotal" is used to record the user's deposit value relative to other deposits which have grown over time. The same happens in reverse when a user withdraws, so at any given time it is possible to calculate exactly how many tokens belong to each user, despite this data not being updated in real time with each compounding cycle.
+
+Under normal circumstances, VaultHealer calls all strategies to perform their compounding earn() function before any deposit or withdrawal to any of the vaults.

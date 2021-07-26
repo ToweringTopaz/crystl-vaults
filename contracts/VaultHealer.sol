@@ -14,7 +14,7 @@ contract VaultHealer is ReentrancyGuard, Operators {
     
     mapping(address => IERC20) public strategyWant; // Want token for a given strategy address
     mapping(uint256 => address) public strategyAddress;
-    mapping(uint256 => mapping(address => uint256)) internal userShares; // For each strategy, shares for each user that stakes LP tokens.
+    mapping(uint256 => mapping(address => uint256)) private userShares; // For each strategy, shares for each user that stakes LP tokens.
     mapping(uint256 => bool) public compoundDisabled;
 
     uint24 public numStrategies;
@@ -53,7 +53,7 @@ contract VaultHealer is ReentrancyGuard, Operators {
     }
 
     // View function to see staked Want tokens on frontend.
-    function stakedWantTokens(uint256 _sid, address _user) public view returns (uint256) {
+    function stakedWantTokens(uint256 _sid, address _user) public view virtual returns (uint256) {
         
         IStrategy strat = IStrategy(strategyAddress[_sid]);
 
@@ -62,6 +62,12 @@ contract VaultHealer is ReentrancyGuard, Operators {
         
         if (sharesTotal == 0) return 0;
         return userShares[_sid][_user] * wantLockedTotal / sharesTotal;
+    }
+    function getUserShares(uint256 _sid, address _user) public virtual view returns (uint256) {
+        return userShares[_sid][_user];
+    }
+    function setUserShares(uint256 _sid, address _user, uint newShares) internal virtual {
+        userShares[_sid][_user] = newShares;
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)

@@ -11,7 +11,7 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
 
     address public constant CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
     mapping(address => bool) public isCrystallizer;
-    mapping(uint256 => address) internal crystallizerAddress; // to easily iterate along crystallizers only
+    mapping(uint256 => uint256) internal crystallizerSID; // to look up the strategy ID for each crystallizer
     
     // user or crystallizer's shares in the crystal core vault; can be negative as portions are reallocated if a user deposits or withdraws
     mapping(address => int) crystalCoreShares;
@@ -31,12 +31,34 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
             //enable special behavior if it's a crystallizer
             if (IStrategy(strat).isCrystallizer()) {
                 isCrystallizer[address(strat)] = true;
-                crystallizerAddress[numCrystallizers] = address(strat);
+                crystallizerSID[numCrystallizers] = _numStrategies;
                 numCrystallizers++;
             }
         }
         
         VaultHealer.addStrategy(strat);
+    }
+    
+    // View function to see staked Want tokens on frontend.
+    function stakedWantTokens(uint256 _sid, address _user) public view override returns (uint256) {
+        
+        if (_sid == 0) {
+            int shares = crystlShares(_user);
+            if (shares <= 0) return 0;
+            
+            return uint(shares) * crystalCore.wantLockedTotal() / crystalCore.sharesTotal();
+        }
+        
+        return VaultHealer.stakedWantTokens(_sid, _user);
+    }
+
+    function getUserShares(uint256 _sid, address _user) public override view returns (uint256) {
+        require(_sid != 0);
+        return VaultHealer.getUserShares(_sid, _user);
+    }
+    function setUserShares(uint256 _sid, address _user, uint newShares) internal override {
+        require(_sid != 0);
+        return VaultHealer.setUserShares(_sid, _user, newShares);
     }
 
     //returns a user's share of the crystal core vault
@@ -49,27 +71,17 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
         //Add the user's share of each crystallizer's share of the crystal core vault. No need to do this if the user is a crystallizer, as
         //crystallizers won't have shares in anything except the core.
         for (uint i; i < numCrystallizers; i++) {
-            uint userLizerShares = userShares[i][_user]; //user's share of the crystallizer
+            uint _sid = crystallizerSID[i];
+            uint userLizerShares = getUserShares(_sid, _user); //user's share of the crystallizer
             if (userLizerShares == 0) continue;
             
-            address crystallizer = crystallizerAddress[i];
+            address crystallizer = strategyAddress[_sid];
             
             uint lizerSharesTotal = IStrategy(crystallizer).sharesTotal(); //total shares of the crystallizer vault
             int lizerCoreShares = crystalCoreShares[crystallizer]; // crystallizer's share of the core vault
 
-            shares += MoreMath.mulDiv(lizerCoreShares, userLizerShares, lizerSharesTotal);
+            shares += lizerCoreShares * int(userLizerShares) / int(lizerSharesTotal);
         }
-    }
-    
-    function getUserShares(uint256 _sid, address _user) public view returns (uint256) {
-        
-        if (_sid == 0){
-            int shares = crystlShares(_user);
-            if (shares <= 0) return 0;
-            return uint256(shares);
-        }
-        
-        return userShares[_sid][_user];
     }
   
     function _deposit(uint256 _sid, uint256 _wantAmt, address _to) internal override {
@@ -98,7 +110,7 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
                 emit Transfer(address(0), _to, _wantAmt);
             } else {
                 uint256 sharesAdded = IStrategy(strat).deposit(_to, _wantAmt);
-                userShares[_sid][_to] += sharesAdded;
+                setUserShares(_sid, _to, getUserShares(_sid, _to) + sharesAdded);
             }
         }
         emit Deposit(_to, _sid, _wantAmt);
@@ -116,7 +128,7 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
             require(_cshares > 0, "user.shares is 0");
             _shares = uint(_cshares);
         } else {
-            _shares = userShares[_sid][msg.sender];
+            _shares = getUserShares(_sid, msg.sender);
             require(_shares > 0, "user.shares is 0");
         }
         
@@ -135,7 +147,7 @@ contract VaultMonolith is VaultHealer, MonolithERC20 {
                 crystalCoreShares[msg.sender] -= int(sharesRemoved);
             } else {
                 if (sharesRemoved > _shares) sharesRemoved = _shares;       //for crystallizer, remove more or fewer shares? difference likely negligible
-                userShares[_sid][msg.sender] = _shares - sharesRemoved;
+                setUserShares(_sid, msg.sender, _shares - sharesRemoved);
             }
 
             if (isCrystallizer[address(strat)]) {
