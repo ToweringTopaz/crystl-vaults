@@ -35,13 +35,13 @@ contract CrystalCore is BaseBaseStrategy {
     
     function isCrystalCore() external override pure returns (bool) { return true; }
     
-    function vaultSharesTotal() public view override returns (uint256) {
+    function vaultTotal() public view override returns (uint256) {
         (uint256 amount,) = MASTER_HEALER.userInfo(PID, address(this));
         return amount;
     }
      
     function wantLockedTotal() public override view returns (uint256) {
-        return IERC20(CRYSTL).balanceOf(address(this)) + vaultSharesTotal();
+        return IERC20(CRYSTL).balanceOf(address(this)) + vaultTotal();
     }
     
     function buyBack(uint256 _earnedAmt) internal override returns (uint256) {
