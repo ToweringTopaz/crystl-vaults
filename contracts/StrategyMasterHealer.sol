@@ -1,102 +1,113 @@
 // SPDX-License-Identifier: MIT
 
-/*
-Join us at PolyCrystal.Finance!
-█▀▀█ █▀▀█ █░░ █░░█ █▀▀ █▀▀█ █░░█ █▀▀ ▀▀█▀▀ █▀▀█ █░░ 
-█░░█ █░░█ █░░ █▄▄█ █░░ █▄▄▀ █▄▄█ ▀▀█ ░░█░░ █▄▄█ █░░ 
-█▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
-*/
+pragma solidity 0.6.12;
 
-pragma solidity ^0.8.6;
+import "./libs/IMasterchef.sol";
 
-import "./interfaces/IMasterHealer.sol";
-import "@uniswap/v2-core@1.0.1/contracts/interfaces/IUniswapV2Pair.sol";
-import "./BaseStrategyApeLPSingle.sol";
+import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealer is BaseStrategyApeLPSingle {
+contract StrategyMasterHealer is BaseStrategyLPSingle {
+    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IMasterHealer public immutable masterHealer;
-    uint256 public immutable pid;
+    address public masterchefAddress;
+    uint256 public pid;
 
     constructor(
-        AmmData _farmAMM,
-        address _vaultHealerAddress,
-        address _masterHealerAddress,
+        address _vaultChefAddress,
+        address _masterchefAddress,
+        address _uniRouterAddress,
         uint256 _pid,
-        address _earnedAddress,
         address _wantAddress,
-        address[] memory _earnedToMaticPath,
+        address _earnedAddress,
+        address[] memory _earnedToWmaticPath,
+        address[] memory _earnedToUsdcPath,
+        address[] memory _earnedToFishPath,
         address[] memory _earnedToToken0Path,
         address[] memory _earnedToToken1Path,
         address[] memory _token0ToEarnedPath,
         address[] memory _token1ToEarnedPath
-    ) BaseStrategyApeLPSingle(_farmAMM, _wantAddress, _earnedAddress, _vaultHealerAddress) {
-        
-        masterHealer = IMasterHealer(_masterHealerAddress);
-        pid = _pid;     // pid for the MasterHealer pool
-        
-        (address healerWantAddress,,,,) = IMasterHealer(_masterHealerAddress).poolInfo(_pid);
-        require(healerWantAddress == _wantAddress, "Assigned pid doesn't match want token");
-        
-        address _token0Address = IUniswapV2Pair(_wantAddress).token0();
-        address _token1Address = IUniswapV2Pair(_wantAddress).token1();
+    ) public {
+        govAddress = msg.sender;
+        vaultChefAddress = _vaultChefAddress;
+        masterchefAddress = _masterchefAddress;
+        uniRouterAddress = _uniRouterAddress;
 
-        require(
-            _earnedToMaticPath[0] == _earnedAddress && _earnedToMaticPath[_earnedToMaticPath.length - 1] == WMATIC
-            && _token0ToEarnedPath[0] == _token0Address && _token0ToEarnedPath[_token0ToEarnedPath.length - 1] == _earnedAddress
-            && _token1ToEarnedPath[0] == _token1Address && _token1ToEarnedPath[_token1ToEarnedPath.length - 1] == _earnedAddress
-            && _earnedToToken0Path[0] == _earnedAddress && _earnedToToken0Path[_earnedToToken0Path.length - 1] == _token0Address
-            && _earnedToToken1Path[0] == _earnedAddress && _earnedToToken1Path[_earnedToToken1Path.length - 1] == _token1Address,
-            "Tokens and paths mismatch"
-        );
+        wantAddress = _wantAddress;
+        token0Address = IUniPair(wantAddress).token0();
+        token1Address = IUniPair(wantAddress).token1();
 
-        earnedToMaticPath = _earnedToMaticPath;
+        pid = _pid;
+        earnedAddress = _earnedAddress;
+
+        earnedToWmaticPath = _earnedToWmaticPath;
+        earnedToUsdcPath = _earnedToUsdcPath;
+        earnedToFishPath = _earnedToFishPath;
         earnedToToken0Path = _earnedToToken0Path;
         earnedToToken1Path = _earnedToToken1Path;
         token0ToEarnedPath = _token0ToEarnedPath;
         token1ToEarnedPath = _token1ToEarnedPath;
+
+        transferOwnership(vaultChefAddress);
         
-        transferOwnership(_vaultHealerAddress);
-        
-        //initialize allowance
-        IERC20(_wantAddress).safeApprove(_masterHealerAddress, uint256(0));
-        IERC20(_wantAddress).safeIncreaseAllowance(
-            address(_masterHealerAddress),
-            type(uint256).max
-        );
+        _resetAllowances();
     }
 
     function _vaultDeposit(uint256 _amount) internal override {
-        masterHealer.deposit(pid, _amount);
+        IMasterchef(masterchefAddress).deposit(pid, _amount);
     }
     
     function _vaultWithdraw(uint256 _amount) internal override {
-        masterHealer.withdraw(pid, _amount);
+        IMasterchef(masterchefAddress).withdraw(pid, _amount);
     }
     
     function _vaultHarvest() internal override {
-        masterHealer.withdraw(pid, 0);
+        IMasterchef(masterchefAddress).withdraw(pid, 0);
     }
     
-    function vaultTotal() public override view returns (uint256) {
-        (uint256 amount,) = masterHealer.userInfo(pid, address(this));
+    function vaultSharesTotal() public override view returns (uint256) {
+        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, address(this));
         return amount;
     }
-     
+    
     function wantLockedTotal() public override view returns (uint256) {
-        return IERC20(wantAddress).balanceOf(address(this)) + vaultTotal();
+        return IERC20(wantAddress).balanceOf(address(this))
+            .add(vaultSharesTotal());
     }
 
     function _resetAllowances() internal override {
-        IERC20(wantAddress).safeApprove(address(masterHealer), uint256(0));
+        IERC20(wantAddress).safeApprove(masterchefAddress, uint256(0));
         IERC20(wantAddress).safeIncreaseAllowance(
-            address(masterHealer),
-            type(uint256).max
+            masterchefAddress,
+            uint256(-1)
+        );
+
+        IERC20(earnedAddress).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(earnedAddress).safeIncreaseAllowance(
+            uniRouterAddress,
+            uint256(-1)
+        );
+
+        IERC20(token0Address).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(token0Address).safeIncreaseAllowance(
+            uniRouterAddress,
+            uint256(-1)
+        );
+
+        IERC20(token1Address).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(token1Address).safeIncreaseAllowance(
+            uniRouterAddress,
+            uint256(-1)
+        );
+
+        IERC20(usdcAddress).safeApprove(rewardAddress, uint256(0));
+        IERC20(usdcAddress).safeIncreaseAllowance(
+            rewardAddress,
+            uint256(-1)
         );
     }
     
     function _emergencyVaultWithdraw() internal override {
-        masterHealer.emergencyWithdraw(pid);
+        IMasterchef(masterchefAddress).emergencyWithdraw(pid);
     }
 }
