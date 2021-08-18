@@ -20,6 +20,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         uint256 _pid,
         address _wantAddress,
         address _earnedAddress,
+        uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
         address[] memory _earnedToUsdcPath,
         address[] memory _earnedToFishPath,
@@ -39,6 +40,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
 
         pid = _pid;
         earnedAddress = _earnedAddress;
+        tolerance = _tolerance;
 
         earnedToWmaticPath = _earnedToWmaticPath;
         earnedToUsdcPath = _earnedToUsdcPath;

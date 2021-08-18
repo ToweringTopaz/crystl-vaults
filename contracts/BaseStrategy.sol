@@ -22,10 +22,10 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     
     address public uniRouterAddress;
     address public constant usdcAddress = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174;
-    address public constant fishAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64; // Now CRYSTL Address
-    address public constant rewardAddress = 0x917FB15E8aAA12264DCBdC15AFef7cD3cE76BA39; // StrategyFish Goes here
-    address public constant withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637; // Fee collector
-    address public constant feeAddress = 0x87341F64c955C76b807A364ba88eaD3953881A18; // Account to automate compounding
+    address public constant fishAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64; 
+    address public constant rewardAddress = 0x917FB15E8aAA12264DCBdC15AFef7cD3cE76BA39; 
+    address public constant withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637; 
+    address public constant feeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637; 
     address public vaultChefAddress;
     address public govAddress;
 
@@ -39,12 +39,16 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant feeMaxTotal = 1000;
     uint256 public constant feeMax = 10000; // 100 = 1%
 
-    uint256 public withdrawFeeFactor = 10000; // 0% withdraw fee
+    uint256 public withdrawFeeFactor = 9990; // 0.1% withdraw fee
     uint256 public constant withdrawFeeFactorMax = 10000;
-    uint256 public constant withdrawFeeFactorLL = 9900;
+    uint256 public constant withdrawFeeFactorLL = 9900; 
 
     uint256 public slippageFactor = 950; // 5% default slippage tolerance
     uint256 public constant slippageFactorUL = 995;
+
+    // Frontend variables
+    uint256 public tolerance;
+    uint256 public burnedAmount;
 
     address[] public earnedToWmaticPath;
     address[] public earnedToUsdcPath;
@@ -60,6 +64,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         uint256 _buyBackRate,
         uint256 _withdrawFeeFactor,
         uint256 _slippageFactor,
+        uint256 _tolerance,
         address _uniRouterAddress
     );
     
@@ -235,6 +240,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         uint256 _buyBackRate,
         uint256 _withdrawFeeFactor,
         uint256 _slippageFactor,
+        uint256 _tolerance,
         address _uniRouterAddress
     ) external onlyGov {
         require(_controllerFee.add(_rewardRate).add(_buyBackRate) <= feeMaxTotal, "Max fee of 10%");
@@ -246,6 +252,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         buyBackRate = _buyBackRate;
         withdrawFeeFactor = _withdrawFeeFactor;
         slippageFactor = _slippageFactor;
+        tolerance = _tolerance;
         uniRouterAddress = _uniRouterAddress;
 
         emit SetSettings(
@@ -254,6 +261,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
             _buyBackRate,
             _withdrawFeeFactor,
             _slippageFactor,
+            _tolerance,
             _uniRouterAddress
         );
     }
@@ -265,6 +273,10 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     ) internal {
         uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
         uint256 amountOut = amounts[amounts.length.sub(1)];
+        
+        if (_path[_path.length.sub(1)] == fishAddress && _to == buyBackAddress) {
+            burnedAmount = burnedAmount.add(amountOut);
+        }
 
         IUniRouter02(uniRouterAddress).swapExactTokensForTokens(
             _amountIn,

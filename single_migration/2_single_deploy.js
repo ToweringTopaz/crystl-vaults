@@ -1,15 +1,11 @@
 const VaultHealer = artifacts.require("VaultHealer");
 const StrategyMasterHealer = artifacts.require("StrategyMasterHealer");
 
-// Vaults to add
-// Barbershop BANANA-ETH
-// Barbershop HAIR-MATIC
-
 module.exports = async function(deployer) {
     // Contracts
     const BARBER_MASTERCHEF = '0xC6Ae34172bB4fC40c49C3f53badEbcE3Bb8E6430';
     const APESWAP_ROUTER = '0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607';
-    const POLYCRYSTAL_VAULT_CHEF = '0x0f64fA636FeB5e8F13052212fd0224Ee712c29F2';
+    const VAULT_HEALER = '0x0192eb09c31ded57ee77dbb9856ee75b19fb47ef';
 
     // Tokens 
     const CRYSTL = '0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64';
@@ -24,25 +20,25 @@ module.exports = async function(deployer) {
     const HAIR = '0x100A947f51fA3F1dcdF97f3aE507A72603cAE63C';
     const BANANA = '0x5d47baba0d66083c52009271faf3f50dcc01023c';
 
-    // Ape LPs for Barbershop
-    BANANA_ETH_APE_LP = '0x44b82c02F404Ed004201FB23602cC0667B1D011e';
+    HAIR_USDC_APE_LP = '0xb394009787c2d0cb5b45d06e401a39648e21d681'; // pid = 8
 
     deployer.deploy(
         StrategyMasterHealer,
-        POLYCRYSTAL_VAULT_CHEF, // address _vaultChefAddress
+        VAULT_HEALER, // address _vaultChefAddress
         BARBER_MASTERCHEF, // address _masterchefAddress
         APESWAP_ROUTER, // address _uniRouterAddress
-        2, // uint256 _pid --> BANANA-ETH
-        BANANA_ETH_APE_LP, // address _wantAddress
+        8, // uint256 _pid 
+        HAIR_USDC_APE_LP, // address _wantAddress
         HAIR, // address _earnedAddress
+        1, // uint256 tolerance
         [HAIR, WMATIC], // address[] memory _earnedToWmaticPath
-        [HAIR, WMATIC, DAI, USDC], // address[] memory _earnedToUsdcPath
+        [HAIR, USDC], // address[] memory _earnedToUsdcPath
         [HAIR, WMATIC, CRYSTL], // address[] memory _earnedToFishPath
-        [HAIR, WMATIC, BANANA], // address[] memory _earnedToToken0Path
-        [HAIR, WMATIC, WETH], // address[] memory _earnedToToken1Path
-        [BANANA, WMATIC, HAIR], // address[] memory _token0ToEarnedPath
-        [WETH, WMATIC, HAIR], // address[] memory _token1ToEarnedPath
-    ).then((instance)=> {
+        [HAIR], // address[] memory _earnedToToken0Path
+        [HAIR, USDC], // address[] memory _earnedToToken1Path
+        [HAIR], // address[] memory _token0ToEarnedPath
+        [USDC, HAIR], // address[] memory _token1ToEarnedPath
+    ).then((instance) => {
         console.table({
             Strategy: instance.address
         })

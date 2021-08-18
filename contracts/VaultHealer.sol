@@ -16,22 +16,29 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
 
     // Info of each user.
     struct UserInfo {
-        uint256 shares; // How many LP tokens the user has provided.
+        uint256 shares;
     }
 
     struct PoolInfo {
-        IERC20 want; // Address of the want token.
-        address strat; // Strategy address that will auto compound want tokens
+        IERC20 want;
+        address strat;
     }
 
-    PoolInfo[] public poolInfo; // Info of each pool.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
+    PoolInfo[] public poolInfo;
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     mapping(address => bool) private strats;
+
+    // Compounding Variables
+    // 0: compound by anyone; 1: EOA only; 2: restricted to operators
+    uint public compoundMode = 1;
+    bool public autocompoundOn = true;
 
     event AddPool(address indexed strat);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event SetCompoundMode(uint locked, bool automatic);
+    event CompoundError(uint pid, bytes reason);
 
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
@@ -53,7 +60,6 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
         emit AddPool(_strat);
     }
 
-    // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
@@ -66,8 +72,7 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
         return user.shares.mul(wantLockedTotal).div(sharesTotal);
     }
 
-    // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant {
+    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant autoCompound {
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
@@ -89,8 +94,7 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
         emit Deposit(_to, _pid, _wantAmt);
     }
 
-    // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant {
+    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant autoCompound {
         _withdraw(_pid, _wantAmt, msg.sender);
     }
 
@@ -109,7 +113,6 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
         require(user.shares > 0, "user.shares is 0");
         require(sharesTotal > 0, "sharesTotal is 0");
 
-        // Withdraw want tokens
         uint256 amount = user.shares.mul(wantLockedTotal).div(sharesTotal);
         if (_wantAmt > amount) {
             _wantAmt = amount;
@@ -132,8 +135,7 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
 
-    // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) external {
+    function withdrawAll(uint256 _pid) external autoCompound {
         _withdraw(_pid, uint256(-1), msg.sender);
     }
 
@@ -149,5 +151,34 @@ contract VaultHealer is Ownable, ReentrancyGuard, Operators {
         PoolInfo storage pool = poolInfo[_pid];
         pool.want.safeApprove(pool.strat, uint256(0));
         pool.want.safeIncreaseAllowance(pool.strat, uint256(-1));
+    }
+    
+    // Compounding Functionality
+    function setCompoundMode(uint mode, bool autoC) external onlyOwner {
+        compoundMode = mode;
+        autocompoundOn = autoC;
+        emit SetCompoundMode(mode, autoC);
+    }
+
+    modifier autoCompound {
+        if (autocompoundOn && (compoundMode == 0 || operators[msg.sender] || (compoundMode == 1 && msg.sender == tx.origin))) {
+            _compoundAll();
+        }
+        _;
+    }
+
+    function compoundAll() external {
+        require(compoundMode == 0 || operators[msg.sender] || (compoundMode == 1 && msg.sender == tx.origin), "Compounding is restricted");
+        _compoundAll();
+    }
+    
+    function _compoundAll() internal {
+        uint numPools = poolInfo.length;
+        for (uint i = 0; i < numPools; i++) {
+            try IStrategy(poolInfo[i].strat).earn() {}
+            catch (bytes memory reason) {
+                emit CompoundError(i, reason);
+            }
+        }
     }
 }
