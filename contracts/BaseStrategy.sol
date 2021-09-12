@@ -21,7 +21,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     address public earnedAddress;
 
     address public uniRouterAddress;
-    address public usdAddress = 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063;
+    address public usdAddress = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
     address public crystlAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
     address public wNativeAddress = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
 

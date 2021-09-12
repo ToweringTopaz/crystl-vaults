@@ -2,8 +2,6 @@ const accounts = {
         polygon: {
                 ADMIN_ADDRESS: "0xCE34Ccb6481fdc85953fd870343b24816A325351",
                 FEE_ADDRESS: "0x5386881b46C37CdD30A748f7771CF95D7B213637",
-                TEST_VAULT_HEALER: '0x951e96fdf692289c000153aa6fd56836108c1fa0',
-                PROD_VAULT_HEALER: '0xdb48731c021bdb3d73abb771b4d7af0f43c0ac16',
                 NEW_TEST_VAULT_HEALER: '0x619b42b89817dc9FE5e021ACb1A8334DCd70667D'
         }
 }
