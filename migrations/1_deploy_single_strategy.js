@@ -1,15 +1,15 @@
-const StrategyMasterHealer = artifacts.require("StrategyMasterHealer");
-const { barbershopVaults } = require('../configs/barbershopVaults');
+const StrategyMasterHealerWithReferral = artifacts.require("StrategyMasterHealerWithReferral");
+const { polyrollVaults } = require('../configs/polyrollVaults');
 
 module.exports = async function (deployer, network) {
     await deployer.deploy(
-        StrategyMasterHealer,
-        barbershopVaults[0].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
-        ...barbershopVaults[0].strategyConfig // all other contract configuration variables
+        StrategyMasterHealerWithReferral,
+        polyrollVaults[0].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
+        ...polyrollVaults[0].strategyConfig // all other contract configuration variables
     )
-    const strategyMasterHealer = await StrategyMasterHealer.deployed();
+    const StrategyMasterHealerWithReferralInstance = await StrategyMasterHealerWithReferral.deployed();
 
     console.table({
-        BarbershopStrategy: strategyMasterHealer.address,
+        PolyRollStrategy: StrategyMasterHealerWithReferralInstance.address,
     })
 };
