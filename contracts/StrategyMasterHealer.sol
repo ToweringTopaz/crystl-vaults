@@ -49,7 +49,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         _resetAllowances();
     }
 
-    function _vaultDeposit(uint256 _amount) internal override {
+    function _vaultDeposit(uint256 _amount) internal virtual override {
         IMasterchef(masterchefAddress).deposit(pid, _amount);
     }
     

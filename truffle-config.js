@@ -15,7 +15,7 @@ module.exports = {
       confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true,
-      gasPrice: 250000000000
+      // gasPrice: 250000000000
     },
   },
   plugins: [

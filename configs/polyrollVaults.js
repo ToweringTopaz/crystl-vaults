@@ -1,5 +1,5 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { WMATIC, ROLL, DAI } = tokens.polygon;
+const { WMATIC, ROLL, DAI, CRYSTL } = tokens.polygon;
 
 const polyrollVaults = [
     {
