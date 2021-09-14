@@ -25,6 +25,7 @@ const tokens = {
                 GPUL: '0x40ed0565ecfb14ebcdfe972624ff2364933a8ce3',
                 TAKO: '0x6D2a71f4edF10ab1E821B9B373363e1E24E5DF6b',
                 INKU: '0x1Dd9e9e142f3f84d90aF1a9F2cb617C7e08420a4',
+                ROLL: '0xc68e83a305b0fad69e264a1769a0a070f190d2d6',
         }
 }
  
@@ -36,6 +37,7 @@ const tokens = {
                 KAVIAN_MASTERCHEF: '0x90ab4f52bd975dcb17965666c98fc908fa173d31',
                 POLYPULSAR_GAMMA_MASTERCHEF: '0xa375495919205251a05f3b259b4d3cc30a4d3ed5',
                 TAKO_MASTERCHEF: '0xB19300246e19929a617C4260189f7B759597B8d8',
+                POLYROLL_MASTERCHEF: '0x3C58EA8D37f4fc6882F678f822E383Df39260937',
          }
 }
 
@@ -52,6 +54,7 @@ const lps = {
                 MATIC_TAKO_APE_LP: '0xd30f018e0DD3c9FD1fF5077a05D86bA82d04c73C', // tako pid = 0
                 MATIC_INKU_APE_LP: '0x5bfd0CA929aC41e110B709a5be069Cb7D5D8A15e', // tako pid = 6
                 BANANA_ETH_APE_LP: '0x44b82c02F404Ed004201FB23602cC0667B1D011e', // tako pid = 4
+                MATIC_ROLL_APE_LP: '0x65c37f48781a555e2ad5542e4306ebab1ae93cd7', // polyroll pid = 8
         }
 }
 
