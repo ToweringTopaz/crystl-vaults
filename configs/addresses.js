@@ -23,6 +23,8 @@ const tokens = {
                 SX: '0x840195888db4d6a99ed9f73fcd3b225bb3cb1a79',
                 KAVIAN: '0xc4df0e37e4ad3e5c6d1df12d3ca7feb9d2b67104',
                 GPUL: '0x40ed0565ecfb14ebcdfe972624ff2364933a8ce3',
+                TAKO: '0x6D2a71f4edF10ab1E821B9B373363e1E24E5DF6b',
+                INKU: '0x1Dd9e9e142f3f84d90aF1a9F2cb617C7e08420a4',
         }
 }
  
@@ -33,6 +35,7 @@ const tokens = {
                 JETSWAP_MASTERCHEF: '0x4e22399070aD5aD7f7BEb7d3A7b543e8EcBf1d85',
                 KAVIAN_MASTERCHEF: '0x90ab4f52bd975dcb17965666c98fc908fa173d31',
                 POLYPULSAR_GAMMA_MASTERCHEF: '0xa375495919205251a05f3b259b4d3cc30a4d3ed5',
+                TAKO_MASTERCHEF: '0xB19300246e19929a617C4260189f7B759597B8d8',
          }
 }
 
@@ -40,12 +43,15 @@ const lps = {
         polygon: {
                 HAIR_USDC_APE_LP: '0xb394009787c2d0cb5b45d06e401a39648e21d681', // pid: 8
                 MATIC_SING_APE_LP: '0x854d3639f38f65c091664062230091858955ddc2', // barber pid: 10
-                MATIC_CRYSTL_APE_LP: '0xb8e54c9ea1616beebe11505a419dd8df1000e02a', // barber pid: 9
+                MATIC_CRYSTL_APE_LP: '0xb8e54c9ea1616beebe11505a419dd8df1000e02a', // barber pid: 9, tako pid = 5
                 ETH_SX_SUSHI_LP: '0x1bf9805b40a5f69c7d0f9e5d1ab718642203c652', // dino pid: 4
                 WBTC_WETH_JET_LP: '0x173e90f2a94af3b075deec7e64df4d70efb4ac3d', // jet pid: 14
                 USDC_USDT_JET_LP: '0x20bf018fddba3b352f3d913fe1c81b846fe0f490', // jet pid: 15
                 USDC_KAVIAN_QUICK_LP: '0x0a4374b0d63597a5d314ad65fb687892bcaab22e', // kavian pid: 0
-                MATIC_GPUL_CAT_LP: '0xc6fcd85ddd4a301c9babffefc07dadddf7b413a4', // gpul farm pid: 0 
+                MATIC_GPUL_CAT_LP: '0xc6fcd85ddd4a301c9babffefc07dadddf7b413a4', // gpul farm pid: 0
+                MATIC_TAKO_APE_LP: '0xd30f018e0DD3c9FD1fF5077a05D86bA82d04c73C', // tako pid = 0
+                MATIC_INKU_APE_LP: '0x5bfd0CA929aC41e110B709a5be069Cb7D5D8A15e', // tako pid = 6
+                BANANA_ETH_APE_LP: '0x44b82c02F404Ed004201FB23602cC0667B1D011e', // tako pid = 4
         }
 }
 
