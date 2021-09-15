@@ -23,6 +23,7 @@ const tokens = {
                 SX: '0x840195888db4d6a99ed9f73fcd3b225bb3cb1a79',
                 KAVIAN: '0xc4df0e37e4ad3e5c6d1df12d3ca7feb9d2b67104',
                 GPUL: '0x40ed0565ecfb14ebcdfe972624ff2364933a8ce3',
+                GBNT: "0x8c9aaca6e712e2193acccbac1a024e09fb226e51",
                 TAKO: '0x6D2a71f4edF10ab1E821B9B373363e1E24E5DF6b',
                 INKU: '0x1Dd9e9e142f3f84d90aF1a9F2cb617C7e08420a4',
                 ROLL: '0xc68e83a305b0fad69e264a1769a0a070f190d2d6',
@@ -51,6 +52,7 @@ const lps = {
                 USDC_USDT_JET_LP: '0x20bf018fddba3b352f3d913fe1c81b846fe0f490', // jet pid: 15
                 USDC_KAVIAN_QUICK_LP: '0x0a4374b0d63597a5d314ad65fb687892bcaab22e', // kavian pid: 0
                 MATIC_GPUL_CAT_LP: '0xc6fcd85ddd4a301c9babffefc07dadddf7b413a4', // gpul farm pid: 0
+                MATIC_GBNT_CAT_LP: "0xd883c361d1e8a7e1f77d38e0a6e45d897006b798",
                 MATIC_TAKO_APE_LP: '0xd30f018e0DD3c9FD1fF5077a05D86bA82d04c73C', // tako pid = 0
                 MATIC_INKU_APE_LP: '0x5bfd0CA929aC41e110B709a5be069Cb7D5D8A15e', // tako pid = 6
                 BANANA_ETH_APE_LP: '0x44b82c02F404Ed004201FB23602cC0667B1D011e', // tako pid = 4
@@ -75,3 +77,4 @@ module.exports = {
         lps,
         routers
 }
+
