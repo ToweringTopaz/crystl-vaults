@@ -42,7 +42,7 @@ const gpulVaults = [
             [GBNT, WMATIC, GPUL], // address[] memory _token1ToEarnedPath
         ]
     },
-    
+
 ]
 
 module.exports = {
