@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/Utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/Security/Pausable.sol";
+import "@openzeppelin/contracts/Utils/Math/SafeMath.sol";
+import "@openzeppelin/contracts/Utils/Math/Math.sol";
+import "@openzeppelin/contracts/Security/ReentrancyGuard.sol";
 
 import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
 
-import "./GasGuard.sol";
-import "./YieldDataReporter.sol";
-
-abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, YieldDataReporter {
+abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -35,7 +32,6 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
 
     uint256 public lastEarnBlock = block.number;
     uint256 public sharesTotal;
-
     uint256 public tolerance;
     uint256 public burnedAmount;
 
@@ -58,17 +54,12 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
     address[] public earnedToUsdPath;
     address[] public earnedToCrystlPath;
     
-    IYieldDataRecorder public yieldDataRecorder;
-    uint256 public earnBlocks;
-    
     event SetSettings(
         uint256 _controllerFee,
         uint256 _rewardRate,
         uint256 _buyBackRate,
         uint256 _withdrawFeeFactor,
-        uint256 _slippageFactor,
-        IYieldDataRecorder yieldDataRecorder,
-        uint256 _earnBlocks
+        uint256 _slippageFactor
     );
 
     event SetAddress(
@@ -94,30 +85,25 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
     function _resetAllowances() internal virtual;
     function _emergencyVaultWithdraw() internal virtual;
     
-    function beforeDeposit(address _from) external onlyOwner nonReentrant whenNotPaused returns (uint wantLockedBefore) {
-        wantLockedBefore = wantLockedTotal();
-        _beforeDeposit(_from);
-    }
-    
-    function deposit(address /*_from*/, uint256 _wantLockedBefore) external onlyOwner nonReentrant whenNotPaused returns (uint256) {
-        //beforeDeposit is called before before transfer
+    function deposit(address _userAddress, uint256 _wantAmt) external onlyOwner nonReentrant whenNotPaused returns (uint256) {
+        // Call must happen before transfer
+        _beforeDeposit(_userAddress);
+        uint256 wantLockedBefore = wantLockedTotal();
 
-        YieldDataReporter.YieldData memory _yd;
-        _yd.wantLockedBefore = _wantLockedBefore;
-        _yd.sharesBefore = sharesTotal;
-        
+        IERC20(wantAddress).safeTransferFrom(
+            address(msg.sender),
+            address(this),
+            _wantAmt
+        );
+
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         uint256 sharesAdded = _farm();
         if (sharesTotal > 0) {
-            sharesAdded = sharesAdded.mul(sharesTotal).div(_wantLockedBefore);
+            sharesAdded = sharesAdded.mul(sharesTotal).div(wantLockedBefore);
         }
         require(sharesAdded >= 1, "Low deposit - no shares added");
         sharesTotal = sharesTotal.add(sharesAdded);
 
-        _yd.wantLockedAfter = wantLockedTotal();
-        _yd.sharesAfter = sharesTotal;
-        if (address(yieldDataRecorder) != address(0)) yieldDataRecorder.receiveYieldData(_yd);
-        
         return sharesAdded;
     }
 
@@ -132,14 +118,10 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
         return sharesAfter.sub(sharesBefore);
     }
 
-    function withdraw(address _toAddress, uint256 _wantAmt) external onlyOwner nonReentrant returns (uint256) {
+    function withdraw(address _userAddress, uint256 _wantAmt) external onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt is 0");
         
-        YieldDataReporter.YieldData memory _yd;
-        _yd.wantLockedBefore = wantLockedTotal();
-        _yd.sharesBefore = sharesTotal;
-        
-        _beforeWithdraw(_toAddress);
+        _beforeWithdraw(_userAddress);
         uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
         
         // Check if strategy has tokens from panic
@@ -173,20 +155,13 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
         
         _wantAmt = _wantAmt.sub(withdrawFee);
 
-        IERC20(wantAddress).safeTransfer(_toAddress, _wantAmt);
-
-        _yd.wantLockedAfter = wantLockedTotal();
-        _yd.sharesAfter = sharesTotal;
-        if (address(yieldDataRecorder) != address(0)) yieldDataRecorder.receiveYieldData(_yd);
+        IERC20(wantAddress).safeTransfer(vaultChefAddress, _wantAmt);
 
         return sharesRemoved;
     }
 
     // To pay for earn function
     function distributeFees(uint256 _earnedAmt, address _to) internal returns (uint256) {
-        
-        uint earnedAmt = _earnedAmt;
-        
         if (controllerFee > 0) {
             uint256 fee = _earnedAmt.mul(controllerFee).div(FEE_MAX);
     
@@ -196,9 +171,13 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
                 _to
             );
             
-            earnedAmt -= fee;
+            _earnedAmt = _earnedAmt.sub(fee);
         }
-        
+
+        return _earnedAmt;
+    }
+
+    function distributeRewards(uint256 _earnedAmt) internal returns (uint256) {
         if (rewardRate > 0) {
             uint256 fee = _earnedAmt.mul(rewardRate).div(FEE_MAX);
 
@@ -213,7 +192,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
                 );
             }
 
-            earnedAmt -= fee;
+            _earnedAmt = _earnedAmt.sub(fee);
         }
 
         return _earnedAmt;
@@ -253,15 +232,9 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
         _resetAllowances();
     }
 
-    //Gov can panic all they want, but only one emergency vault withdraw per 6 hours
-    uint public timelockEVW;
-    uint constant public EVW_LOCK_DURATION = 6 hours;
     function panic() external onlyGov {
         _pause();
-        if (timelockEVW <= block.timestamp + EVW_LOCK_DURATION) { 
-            timelockEVW = block.timestamp + EVW_LOCK_DURATION;
-            _emergencyVaultWithdraw();
-        }
+        _emergencyVaultWithdraw();
     }
 
     function unpanic() external onlyGov {
@@ -278,9 +251,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
         uint256 _rewardRate,
         uint256 _buyBackRate,
         uint256 _withdrawFeeFactor,
-        uint256 _slippageFactor,
-        IYieldDataRecorder _yieldDataRecorder,
-        uint256 _earnBlocks
+        uint256 _slippageFactor
     ) external onlyGov {
         require(_controllerFee.add(_rewardRate).add(_buyBackRate) <= FEE_MAX_TOTAL, "Max fee of 100%");
         require(_withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
@@ -291,18 +262,13 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
         buyBackRate = _buyBackRate;
         withdrawFeeFactor = _withdrawFeeFactor;
         slippageFactor = _slippageFactor;
-        yieldDataRecorder = _yieldDataRecorder;
-        earnBlocks = _earnBlocks;
 
         emit SetSettings(
             _controllerFee,
             _rewardRate,
             _buyBackRate,
             _withdrawFeeFactor,
-            _slippageFactor,
-            _yieldDataRecorder,
-            _earnBlocks
-            
+            _slippageFactor
         );
     }
 
@@ -339,7 +305,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
             amountOut.mul(slippageFactor).div(1000),
             _path,
             _to,
-            type(uint256).max
+            block.timestamp.add(600)
         );
     }
     
@@ -356,7 +322,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable, GasGuard, 
             amountOut.mul(slippageFactor).div(1000),
             _path,
             _to,
-            type(uint256).max
+            block.timestamp.add(600)
         );
     }
 }

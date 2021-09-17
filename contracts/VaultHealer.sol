@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/Utils/SafeERC20.sol";
+import "@openzeppelin/contracts/Utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/Security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/Utils/Math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./libs/IStrategy.sol";
@@ -30,7 +31,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event CompoundError(IStrategy indexed strat, bytes error);
+
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
@@ -47,6 +48,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             })
         );
         strats[_strat] = true;
+        resetSingleAllowance(poolInfo.length.sub(1));
         emit AddPool(_strat);
     }
 
@@ -79,11 +81,13 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         UserInfo storage user = userInfo[_pid][_to];
 
         if (_wantAmt > 0) {
-            uint wantLockedBefore = IStrategy(pool.strat).beforeDeposit();
-            pool.want.safeTransferFrom(msg.sender, pool.strat, _wantAmt);
+            // Call must happen before transfer
+            uint256 wantBefore = IERC20(pool.want).balanceOf(address(this));
+            pool.want.safeTransferFrom(msg.sender, address(this), _wantAmt);
+            uint256 finalDeposit = IERC20(pool.want).balanceOf(address(this)).sub(wantBefore);
 
             // Proper deposit amount for tokens with fees
-            uint256 sharesAdded = IStrategy(poolInfo[_pid].strat).deposit(_to, wantLockedBefore);
+            uint256 sharesAdded = IStrategy(poolInfo[_pid].strat).deposit(_to, finalDeposit);
             user.shares = user.shares.add(sharesAdded);
         }
         emit Deposit(_to, _pid, _wantAmt);
@@ -116,13 +120,19 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             _wantAmt = amount;
         }
         if (_wantAmt > 0) {
-            uint256 sharesRemoved = IStrategy(poolInfo[_pid].strat).withdraw(_to, _wantAmt);
+            uint256 sharesRemoved = IStrategy(poolInfo[_pid].strat).withdraw(msg.sender, _wantAmt);
 
             if (sharesRemoved > user.shares) {
                 user.shares = 0;
             } else {
                 user.shares = user.shares.sub(sharesRemoved);
             }
+
+            uint256 wantBal = IERC20(pool.want).balanceOf(address(this));
+            if (wantBal < _wantAmt) {
+                _wantAmt = wantBal;
+            }
+            pool.want.safeTransfer(_to, _wantAmt);
         }
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
@@ -132,31 +142,31 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
 
+    function resetAllowances() external onlyOwner {
+        for (uint256 i=0; i<poolInfo.length; i++) {
+            PoolInfo storage pool = poolInfo[i];
+            pool.want.safeApprove(pool.strat, uint256(0));
+            pool.want.safeIncreaseAllowance(pool.strat, type(uint256).max);
+        }
+    }
+
     function earnAll() external {
         for (uint256 i=0; i<poolInfo.length; i++) {
             if (!IStrategy(poolInfo[i].strat).paused())
-                IStrategy(poolInfo[i].strat).earn();
+                IStrategy(poolInfo[i].strat).earn(_msgSender());
         }
     }
 
     function earnSome(uint256[] memory pids) external {
-        for (uint256 i; i<pids.length; i++) {
+        for (uint256 i=0; i<pids.length; i++) {
             if (poolInfo.length >= pids[i] && !IStrategy(poolInfo[pids[i]].strat).paused())
-                IStrategy(poolInfo[pids[i]].strat).earn();
+                IStrategy(poolInfo[pids[i]].strat).earn(_msgSender());
         }
     }
-    
-    function _earn(IStrategy strat) internal {
-        try strat.paused() returns (bool _paused) {
-            if (_paused) return;
-            try strat.earn() {
-                
-            } catch (bytes memory error) {
-                emit CompoundError(strat, error);
-            }
-        } catch (bytes memory err) {
-            emit CompoundError(strat, err);
-        }
+
+    function resetSingleAllowance(uint256 _pid) public onlyOwner {
+        PoolInfo storage pool = poolInfo[_pid];
+        pool.want.safeApprove(pool.strat, uint256(0));
+        pool.want.safeIncreaseAllowance(pool.strat, type(uint256).max);
     }
-    
 }

@@ -72,13 +72,6 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
     }
 
     function _resetAllowances() internal override {
-        
-        IERC20(wantAddress).safeApprove(vaultchefAddress, uint256(0));
-        IERC20(wantAddress).safeIncreaseAllowance(
-            vaultchefAddress,
-            type(uint256).max
-        );
-        
         IERC20(wantAddress).safeApprove(masterchefAddress, uint256(0));
         IERC20(wantAddress).safeIncreaseAllowance(
             masterchefAddress,

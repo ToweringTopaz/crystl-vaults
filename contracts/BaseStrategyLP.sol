@@ -14,14 +14,8 @@ abstract contract BaseStrategyLP is BaseStrategy {
     address[] public earnedToToken1Path;
     address[] public token0ToEarnedPath;
     address[] public token1ToEarnedPath;
-    
-    bool private _cdteFuse;
-    function _burnConvertDustToEarnedFuse() external onlyGov {
-        _cdteFuse = true;
-    }
 
     function convertDustToEarned() external nonReentrant whenNotPaused {
-        require(!_cdteFuse, "blown");
         // Converts dust tokens into earned tokens, which will be reinvested on the next earn().
 
         // Converts token0 dust (if any) to earned tokens
