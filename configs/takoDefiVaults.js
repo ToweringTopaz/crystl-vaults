@@ -4,7 +4,7 @@ const { TAKO, WMATIC, CRYSTL, BANANA, WETH, INKU, DAI } = tokens.polygon;
 const takoDefiVaults = [
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.TAKO_MASTERCHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_CRYSTL_APE_LP, // Want
@@ -24,7 +24,7 @@ const takoDefiVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.TAKO_MASTERCHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_TAKO_APE_LP, // Want
@@ -44,7 +44,7 @@ const takoDefiVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.TAKO_MASTERCHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_INKU_APE_LP, // Want
@@ -64,7 +64,7 @@ const takoDefiVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.TAKO_MASTERCHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.BANANA_ETH_APE_LP, // Want

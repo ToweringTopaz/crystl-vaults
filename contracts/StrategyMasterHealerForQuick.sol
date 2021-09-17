@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./libs/IMasterchef.sol";
+import "./libs/IStakingRewards.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealer is BaseStrategyLPSingle {
+contract StrategyMasterHealerForQuick is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -12,7 +12,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
     uint256 public pid;
 
     constructor(
-        address[5] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
+        address[5] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned
         uint256 _pid,
         uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
@@ -50,19 +50,20 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
     }
 
     function _vaultDeposit(uint256 _amount) internal override {
-        IMasterchef(masterchefAddress).deposit(pid, _amount);
+        IStakingRewards(masterchefAddress).stake(_amount);
     }
     
     function _vaultWithdraw(uint256 _amount) internal override {
-        IMasterchef(masterchefAddress).withdraw(pid, _amount);
+        IStakingRewards(masterchefAddress).withdraw(_amount);
     }
     
     function _vaultHarvest() internal override {
-        IMasterchef(masterchefAddress).withdraw(pid, 0);
+        IStakingRewards(masterchefAddress).getReward();
     }
     
+    //I'm pretty confident this one below is right - it's the balance that the vault holds of shares in the farm
     function vaultSharesTotal() public override view returns (uint256) {
-        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, address(this));
+        uint256 amount = IStakingRewards(masterchefAddress).balanceOf(address(this));
         return amount;
     }
     
@@ -72,13 +73,6 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
     }
 
     function _resetAllowances() internal override {
-        
-        IERC20(wantAddress).safeApprove(vaultchefAddress, uint256(0));
-        IERC20(wantAddress).safeIncreaseAllowance(
-            vaultchefAddress,
-            type(uint256).max
-        );
-        
         IERC20(wantAddress).safeApprove(masterchefAddress, uint256(0));
         IERC20(wantAddress).safeIncreaseAllowance(
             masterchefAddress,
@@ -104,9 +98,10 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         );
 
     }
-    
+    // interestingly, you do get the reward with this exit function, 
+    // which you don't with a Masterchef emergency withdraw
     function _emergencyVaultWithdraw() internal override {
-        IMasterchef(masterchefAddress).emergencyWithdraw(pid);
+        IStakingRewards(masterchefAddress).exit(); 
     }
 
     function _beforeDeposit(address _to) internal override {
