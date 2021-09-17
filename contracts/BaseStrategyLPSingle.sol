@@ -6,9 +6,10 @@ import "./BaseStrategyLP.sol";
 abstract contract BaseStrategyLPSingle is BaseStrategyLP {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+    using Math for uint256;
     
     function earn() external override nonReentrant whenNotPaused { 
-        _earn(_msgSender());
+        _earn(tx.origin); //normally called via another contract; not for authentication
     }
 
     function earn(address _to) external override nonReentrant whenNotPaused {
@@ -16,6 +17,13 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
     }
 
     function _earn(address _to) internal {
+        
+        if (lastEarnBlock <= block.number + earnBlocks) return;
+        
+        YieldDataReporter.YieldData memory _yd;
+        _yd.wantLockedBefore = wantLockedTotal();
+        _yd.sharesBefore = sharesTotal;
+        
         // Harvest farm tokens
         _vaultHarvest();
 
@@ -24,13 +32,11 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
 
         if (earnedAmt > 0) {
             earnedAmt = distributeFees(earnedAmt, _to);
-            earnedAmt = distributeRewards(earnedAmt);
-            earnedAmt = buyBack(earnedAmt);
     
             if (earnedAddress != token0Address) {
                 // Swap half earned to token0
                 _safeSwap(
-                    earnedAmt.div(2),
+                    earnedAmt.ceilDiv(2), //prevents dust from accumulating
                     earnedToToken0Path,
                     address(this)
                 );
@@ -57,13 +63,17 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
                     0,
                     0,
                     address(this),
-                    block.timestamp.add(600)
+                    type(uint256).max
                 );
             }
     
             lastEarnBlock = block.number;
     
             _farm();
+            
+            _yd.wantLockedAfter = wantLockedTotal();
+            _yd.sharesAfter = sharesTotal;
+            if (address(yieldDataRecorder) != address(0)) yieldDataRecorder.receiveYieldData(_yd);
         }
     }
 }

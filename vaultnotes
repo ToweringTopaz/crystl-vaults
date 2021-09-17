@@ -1,0 +1,36 @@
+_msgSender() is good in Contexts like GSN relayer calls where the authenticated end user didn't make the call. In our case it's equivalent to msg.sender at best, and troublesome at worst. If the intent is to credit the EOA that paid for gas, I'm going with tx.origin.
+
+The UniswapV2Router deadline parameter has no effect in the context where it's been used. type(uint).max is a constant which always passes the check, same as block.timestamp.add(300), but without misleading or misunderstanding.
+
+We can remove some unnecessary complexity from VaultHealer by transferring tokens directly from user to strategy and vice versa. As an intermediary, the VaultHealer then no longer needs to set approvals.
+
+As noted in the HashEx audit, panic/emergencyWithdraw/unpanic/farm() can hard-rugpull in combination with deposit fees. The solution is a timelock which I implemented
+
+For what legitimate purpose is FEE_MAX_TOTAL now set to 100%? If the intention is a proto-maximizer or a special fee strategy, this should probably be implemented differently.
+
+SafeMath notation was anachronistic in its prime. We're on 0.8 so let's move on. Highly recommend using the built-in operators for clarity and sanity.
+
+import "@openzeppelin/contracts/Utils/structs/EnumerableSet.sol" is not used and is not needed in VaultHealer or any of these contracts
+
+convertDustToEarned() is a weak way of covering up a bug somewhere else, and it has potential to be a nuisance. I inserted a fuse the gov can call to disable it permanently.
+
+Recommend reversing arrays algorithmically instead of requesting basically the same user input twice.
+
+Strategies now have a setting "earnBlocks" which will stop them from trying to earn() again too soon. Zero reflects the current behavior
+
+GasGuard is now inherited by strategies and can be enabled as needed.
+
+Empty overrides like this are annoying:
+
+	    function _beforeDeposit(address _to) internal override {
+        
+	    }
+
+Why not just "implement" the parent virtual function { }?
+
+
+StrategyMasterHealerWithReferral should inherit from the standard masterhealer and simply override the few changes
+
+YieldDataReporter stuff is added
+
+Fees weren't calculating quite right. The correct math is additive, it was multiplicative. Combined functions into one

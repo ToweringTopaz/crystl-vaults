@@ -26,4 +26,7 @@ interface IStrategy {
 
     // Transfer want tokens strategy -> vaultChef
     function withdraw(address _userAddress, uint256 _wantAmt) external returns (uint256);
+    
+    // Used by vaulthealer
+    function beforeDeposit(address _userAddress) external returns (uint256);
 }
