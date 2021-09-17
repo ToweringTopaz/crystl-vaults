@@ -4,7 +4,7 @@ const { GPUL, WMATIC, CRYSTL, GBNT, DAI } = tokens.polygon;
 const gpulVaults = [
     {
         addresses: [
-            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.POLYPULSAR_GAMMA_MASTERCHEF, // Masterchef
             routers.polygon.POLYCAT_ROUTER, // UniRouter
             lps.polygon.MATIC_GPUL_CAT_LP, // Want
@@ -12,7 +12,7 @@ const gpulVaults = [
         ],
         strategyConfig: [
             0, // uint256 _pid 
-            10, // uint256 tolerance
+            1, // uint256 tolerance
             [GPUL, WMATIC], // address[] memory _earnedToWmaticPath
             [GPUL, WMATIC, DAI], // address[] memory _earnedToUsdcPath
             [GPUL, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
@@ -24,7 +24,7 @@ const gpulVaults = [
     },
     {
         addresses: [
-            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.POLYPULSAR_GAMMA_MASTERCHEF, // Masterchef
             routers.polygon.POLYCAT_ROUTER, // UniRouter
             lps.polygon.MATIC_GBNT_CAT_LP, // Want
@@ -32,7 +32,7 @@ const gpulVaults = [
         ],
         strategyConfig: [
             1, // uint256 _pid 
-            10, // uint256 tolerance
+            1, // uint256 tolerance
             [GPUL, WMATIC], // address[] memory _earnedToWmaticPath
             [GPUL, WMATIC, DAI], // address[] memory _earnedToUsdcPath
             [GPUL, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath

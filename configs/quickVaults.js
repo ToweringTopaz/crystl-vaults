@@ -4,7 +4,7 @@ const { QUICK, WMATIC, CRYSTL, KOM, DAI } = tokens.polygon;
 const quickVaults = [
     {
         addresses: [
-            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.QUICK_MASTERCHEF, // Masterchef
             routers.polygon.QUICKSWAP_ROUTER, // UniRouter
             lps.polygon.QUICK_KOM_QUICK_LP, // Want
