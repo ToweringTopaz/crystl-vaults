@@ -4,7 +4,7 @@ pragma solidity 0.8.6;
 import "./libs/IMasterchef.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealer is BaseStrategyLPSingle {
+contract StrategyMasterHealerForDoubleReflect is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -43,6 +43,8 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         earnedToToken1Path = _earnedToToken1Path;
         token0ToEarnedPath = _token0ToEarnedPath;
         token1ToEarnedPath = _token1ToEarnedPath;
+
+        slippageFactor = 800;
 
         transferOwnership(vaultChefAddress);
         
@@ -108,5 +110,43 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
 
     function _beforeWithdraw(address _to) internal override {
         
+    }
+
+    function _safeSwap(
+        uint256 _amountIn,
+        address[] memory _path,
+        address _to
+        ) internal override {
+            uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
+            uint256 amountOut = amounts[amounts.length.sub(1)];
+
+        if (_path[_path.length.sub(1)] == crystlAddress && _to == buyBackAddress) {
+            burnedAmount = burnedAmount.add(amountOut);
+        }
+
+        IUniRouter02(uniRouterAddress).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _amountIn,
+            amountOut.mul(slippageFactor).div(1000),
+            _path,
+            _to,
+            block.timestamp.add(600)
+        );
+    }
+
+    function _safeSwapWnative(
+        uint256 _amountIn,
+        address[] memory _path,
+        address _to
+        ) internal override {
+        uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
+        uint256 amountOut = amounts[amounts.length.sub(1)];
+
+        IUniRouter02(uniRouterAddress).swapExactTokensForETHSupportingFeeOnTransferTokens(
+            _amountIn,
+            amountOut.mul(slippageFactor).div(1000),
+            _path,
+            _to,
+            block.timestamp.add(600)
+        );
     }
 }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./libs/IMasterchef.sol";
+import "./libs/IMasterchefWithReferral.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealer is BaseStrategyLPSingle {
+contract StrategyMasterHealerWithReferral is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -50,19 +50,19 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
     }
 
     function _vaultDeposit(uint256 _amount) internal override {
-        IMasterchef(masterchefAddress).deposit(pid, _amount);
+        IMasterchefWithReferral(masterchefAddress).deposit(pid, _amount, address(0));
     }
     
     function _vaultWithdraw(uint256 _amount) internal override {
-        IMasterchef(masterchefAddress).withdraw(pid, _amount);
+        IMasterchefWithReferral(masterchefAddress).withdraw(pid, _amount);
     }
     
     function _vaultHarvest() internal override {
-        IMasterchef(masterchefAddress).withdraw(pid, 0);
+        IMasterchefWithReferral(masterchefAddress).withdraw(pid, 0);
     }
     
     function vaultSharesTotal() public override view returns (uint256) {
-        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, address(this));
+        (uint256 amount,) = IMasterchefWithReferral(masterchefAddress).userInfo(pid, address(this));
         return amount;
     }
     
@@ -99,7 +99,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
     }
     
     function _emergencyVaultWithdraw() internal override {
-        IMasterchef(masterchefAddress).emergencyWithdraw(pid);
+        IMasterchefWithReferral(masterchefAddress).emergencyWithdraw(pid);
     }
 
     function _beforeDeposit(address _to) internal override {
