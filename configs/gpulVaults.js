@@ -4,7 +4,7 @@ const { GPUL, WMATIC, CRYSTL, GBNT, DAI } = tokens.polygon;
 const gpulVaults = [
     {
         addresses: [
-            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.POLYPULSAR_GAMMA_MASTERCHEF, // Masterchef
             routers.polygon.POLYCAT_ROUTER, // UniRouter
             lps.polygon.MATIC_GPUL_CAT_LP, // Want
@@ -24,7 +24,7 @@ const gpulVaults = [
     },
     {
         addresses: [
-            accounts.polygon.STAGING_VAULT_HEALER, // Vault Healer
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.POLYPULSAR_GAMMA_MASTERCHEF, // Masterchef
             routers.polygon.POLYCAT_ROUTER, // UniRouter
             lps.polygon.MATIC_GBNT_CAT_LP, // Want
@@ -42,7 +42,7 @@ const gpulVaults = [
             [GBNT, WMATIC, GPUL], // address[] memory _token1ToEarnedPath
         ]
     },
-
+    
 ]
 
 module.exports = {
