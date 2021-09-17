@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "@openzeppelin/contracts/token/ERC20/Utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/Security/Pausable.sol";
-import "@openzeppelin/contracts/Utils/Math/SafeMath.sol";
-import "@openzeppelin/contracts/Utils/Math/Math.sol";
-import "@openzeppelin/contracts/Security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
@@ -36,9 +36,9 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     uint256 public burnedAmount;
 
     address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
-    uint256 public controllerFee = 25; // 0.25%
-    uint256 public rewardRate = 75; // 0.75%
-    uint256 public buyBackRate = 300; // 3%
+    uint256 public controllerFee = 50; // 0.50%
+    uint256 public rewardRate = 50; // 0.50%
+    uint256 public buyBackRate = 400; // 4%
 
     uint256 public constant FEE_MAX_TOTAL = 10000;
     uint256 public constant FEE_MAX = 10000; // 100 = 1%
@@ -47,7 +47,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     uint256 public constant WITHDRAW_FEE_FACTOR_MAX = 10000;
     uint256 public constant WITHDRAW_FEE_FACTOR_LL = 9900;
 
-    uint256 public slippageFactor = 950; // 10% default slippage tolerance
+    uint256 public slippageFactor = 900; // 10% default slippage tolerance
     uint256 public constant SLIPPAGE_FACTOR_UL = 995;
 
     address[] public earnedToWnativePath;
