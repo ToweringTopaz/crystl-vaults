@@ -29,7 +29,7 @@ const tokens = {
                 TAKO: '0x6D2a71f4edF10ab1E821B9B373363e1E24E5DF6b',
                 INKU: '0x1Dd9e9e142f3f84d90aF1a9F2cb617C7e08420a4',
                 ROLL: '0xc68e83a305b0fad69e264a1769a0a070f190d2d6',
-                QUICK: '0x831753dd7087cac61ab5644b308642cc1c33dc13',
+                QUICK: '0x831753DD7087CaC61aB5644b308642cc1c33Dc13',
                 KOM: '0xC004e2318722EA2b15499D6375905d75Ee5390B8',
         }
 }
@@ -62,7 +62,7 @@ const lps = {
                 MATIC_INKU_APE_LP: '0x5bfd0CA929aC41e110B709a5be069Cb7D5D8A15e', // tako pid = 6
                 BANANA_ETH_APE_LP: '0x44b82c02F404Ed004201FB23602cC0667B1D011e', // tako pid = 4
                 MATIC_ROLL_APE_LP: '0x65c37f48781a555e2ad5542e4306ebab1ae93cd7', // polyroll pid = 8
-                QUICK_KOM_QUICK_LP: '0x082b58350a04d8d38b4bcae003bb1191b9aae565', //quick pid = ?
+                QUICK_KOM_QUICK_LP: '0x082b58350a04D8D38b4BCaE003BB1191b9aae565', //quick pid = ?
         }
 }
 
@@ -71,7 +71,7 @@ const routers = {
                 SUSHISWAP_ROUTER: '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
                 APESWAP_ROUTER: '0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607',
                 JETSWAP_ROUTER: '0x5C6EC38fb0e2609672BDf628B1fD605A523E5923',
-                QUICKSWAP_ROUTER: '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
+                QUICKSWAP_ROUTER: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff',
                 POLYCAT_ROUTER: '0x94930a328162957ff1dd48900af67b5439336cbd',
         }
 }
