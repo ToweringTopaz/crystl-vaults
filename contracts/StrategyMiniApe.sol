@@ -89,9 +89,10 @@ contract StrategyMasterHealer is BaseStrategyLP {
         // Converts farm tokens into want tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
         uint256 earnedBetaAmt = IERC20(earnedBetaAddress).balanceOf(address(this));
-        bool earnedSomething = earnedAmt > 0 || earnedBetaAmt > 0;
+        bool earnedSomething;
             
         if (earnedAmt > 0) {
+            earnedSomething = true;
             earnedAmt = distributeFees(earnedAmt, _to);
             earnedAmt = distributeRewards(earnedAmt);
             earnedAmt = buyBack(earnedAmt);
@@ -116,6 +117,7 @@ contract StrategyMasterHealer is BaseStrategyLP {
         }
         
         if (earnedBetaAmt > 0) {
+            earnedSomething = true;
             earnedBetaAmt = distributeFees(earnedBetaAmt, _to);
             earnedBetaAmt = distributeRewards(earnedBetaAmt);
             earnedBetaAmt = buyBack(earnedBetaAmt);
@@ -194,6 +196,12 @@ contract StrategyMasterHealer is BaseStrategyLP {
 
         IERC20(earnedAddress).safeApprove(uniRouterAddress, uint256(0));
         IERC20(earnedAddress).safeIncreaseAllowance(
+            uniRouterAddress,
+            type(uint256).max
+        );
+        
+        IERC20(earnedBetaAddress).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(earnedBetaAddress).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
         );
