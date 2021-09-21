@@ -44,6 +44,7 @@ const tokens = {
                 TAKO_MASTERCHEF: '0xB19300246e19929a617C4260189f7B759597B8d8',
                 POLYROLL_MASTERCHEF: '0x3C58EA8D37f4fc6882F678f822E383Df39260937',
                 QUICK_MASTERCHEF: '0x2f58B48A013BAde935e43f7bCc31f1378Ae68d55',
+                APESWAP_MINICHEF: '0x54aff400858Dcac39797a81894D9920f16972D1D',
          }
 }
 
@@ -51,7 +52,7 @@ const lps = {
         polygon: {
                 HAIR_USDC_APE_LP: '0xb394009787c2d0cb5b45d06e401a39648e21d681', // pid: 8
                 MATIC_SING_APE_LP: '0x854d3639f38f65c091664062230091858955ddc2', // barber pid: 10
-                MATIC_CRYSTL_APE_LP: '0xb8e54c9ea1616beebe11505a419dd8df1000e02a', // barber pid: 9, tako pid = 5
+                MATIC_CRYSTL_APE_LP: '0xB8e54c9Ea1616beEBe11505a419DD8dF1000E02a', // barber pid: 9, tako pid = 5, apeswap pid = 7
                 ETH_SX_SUSHI_LP: '0x1bf9805b40a5f69c7d0f9e5d1ab718642203c652', // dino pid: 4
                 WBTC_WETH_JET_LP: '0x173e90f2a94af3b075deec7e64df4d70efb4ac3d', // jet pid: 14
                 USDC_USDT_JET_LP: '0x20bf018fddba3b352f3d913fe1c81b846fe0f490', // jet pid: 15
@@ -63,6 +64,7 @@ const lps = {
                 BANANA_ETH_APE_LP: '0x44b82c02F404Ed004201FB23602cC0667B1D011e', // tako pid = 4
                 MATIC_ROLL_APE_LP: '0x65c37f48781a555e2ad5542e4306ebab1ae93cd7', // polyroll pid = 8
                 QUICK_KOM_QUICK_LP: '0x082b58350a04D8D38b4BCaE003BB1191b9aae565', //quick pid = ?
+                MATIC_BANANA_APE_LP: '0x034293F21F1cCE5908BC605CE5850dF2b1059aC0', //apeswap pid = 0
         }
 }
 

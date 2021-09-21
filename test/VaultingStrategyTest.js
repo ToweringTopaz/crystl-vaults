@@ -16,18 +16,16 @@ const WITHDRAW_FEE_FACTOR_MAX = 10000; //hardcoded for now - TODO change to pull
 // THESE FIVE VARIABLES BELOW NEED TO BE SET CORRECTLY FOR A GIVEN TEST //
 //////////////////////////////////////////////////////////////////////////
 
-const STRATEGY_CONTRACT_TYPE = 'StrategyMasterHealer'; //<-- change strategy type to the contract deployed for this strategy
-const { takoDefiVaults } = require('../configs/takoDefiVaults'); //<-- replace all references to 'takoDefiVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [takoDefiVaults[0].addresses, ...takoDefiVaults[0].strategyConfig];
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = takoDefiVaults[0].addresses
-const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = takoDefiVaults[0].strategyConfig;
+const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
+const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
+const DEPLOYMENT_VARS = [apeSwapVaults[0].addresses, ...apeSwapVaults[0].strategyConfig];
+const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[0].addresses
+const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].strategyConfig;
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
 
 describe('StrategyMasterHealer contract', () => {
-    // let StrategyMasterHealer, strategyMasterHealer, owner, addr1, addr2;
-
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
 
@@ -109,36 +107,39 @@ describe('StrategyMasterHealer contract', () => {
 
             await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, owner.address, Date.now() + 900)
             LPtoken = await ethers.getContractAt(token_abi, LIQUIDITY_POOL);
-            LPtokenBalance = await LPtoken.balanceOf(owner.address);
+            initialLPtokenBalance = await LPtoken.balanceOf(owner.address);
 
-            expect(LPtokenBalance).to.not.equal(0);
+            expect(initialLPtokenBalance).to.not.equal(0);
         })
         
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit users whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
-            await LPtoken.approve(vaultHealer.address, LPtokenBalance); //no, I have to approve the vaulthealer surely?
+            await LPtoken.approve(vaultHealer.address, initialLPtokenBalance); //no, I have to approve the vaulthealer surely?
             
             poolLength = await vaultHealer.poolLength()
-            LPtokenBalanceBefore = await LPtoken.balanceOf(owner.address);
+            const LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(owner.address);
             
-            await vaultHealer["deposit(uint256,uint256)"](poolLength-1,LPtokenBalance); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
-            vaultSharesTotalAfter = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            await vaultHealer["deposit(uint256,uint256)"](poolLength-1,initialLPtokenBalance); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            const vaultSharesTotalAfterFirstDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             
-            expect(LPtokenBalanceBefore).to.equal(vaultSharesTotalAfter); //will this work for 2nd deposit? on normal masterchef?
+            expect(LPtokenBalanceBeforeFirstDeposit).to.equal(vaultSharesTotalAfterFirstDeposit); //will this work for 2nd deposit? on normal masterchef?
         })
         
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
         // Check balance to ensure it increased as expected
         it('Should compound the LPs upon calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
-            vaultSharesTotalBefore = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             
             await vaultHealer.earnSome([poolLength-1]);
             
-            vaultSharesTotalAfter = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             
-            differenceInVaultSharesTotal = vaultSharesTotalAfter - vaultSharesTotalBefore;
+            const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome - vaultSharesTotalBeforeCallingEarnSome;
+            console.log(vaultSharesTotalBeforeCallingEarnSome)
+            console.log(vaultSharesTotalAfterCallingEarnSome)
+
             expect(differenceInVaultSharesTotal).to.be.gt(0);
-            // assert.isAbove(vaultSharesTotalAfter.toNumber(), vaultSharesTotalBefore.toNumber(), "Vault Shares go up after compounding");
+            // assert.isAbove(vaultSharesTotalAfterCallingEarnSome.toNumber(), vaultSharesTotalBefore.toNumber(), "Vault Shares go up after compounding");
         })
         
         // follow the flow of funds in the transaction to ensure burn, compound fee, and LP creation are all accurate.
@@ -149,55 +150,56 @@ describe('StrategyMasterHealer contract', () => {
         // Unstake 50% of LPs. 
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should unstake 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
-            LPtokenBalanceBefore = await LPtoken.balanceOf(owner.address);
-            UsersStakedTokensBefore = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
-            
-            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBefore.div(2)); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
-            
-            LPtokenBalanceAfter = await LPtoken.balanceOf(owner.address);
-            UsersStakedTokensAfter = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
+            const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(owner.address);
+            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
 
-            expect(LPtokenBalanceAfter-LPtokenBalanceBefore)
+            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFirstWithdrawal.div(2)); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            
+            const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(owner.address);
+            // const UsersStakedTokensAfterFirstWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
+            const vaultSharesTotalAfterFirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+
+            expect(LPtokenBalanceAfterFirstWithdrawal-LPtokenBalanceBeforeFirstWithdrawal)
             .to.equal(
-                (UsersStakedTokensBefore-UsersStakedTokensAfter)
-                -parseInt((WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor)/WITHDRAW_FEE_FACTOR_MAX*(UsersStakedTokensBefore-UsersStakedTokensAfter))
+                (vaultSharesTotalAfterCallingEarnSome-vaultSharesTotalAfterFirstWithdrawal)
+                -parseInt((WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor)*(vaultSharesTotalAfterCallingEarnSome-vaultSharesTotalAfterFirstWithdrawal)/WITHDRAW_FEE_FACTOR_MAX)
                 );
         })
         
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
         it('Should accurately increase vaultSharesTotal upon second deposit', async () => {
-            await LPtoken.approve(vaultHealer.address, LPtokenBalance);
-            LPtokenBalanceBefore = await LPtoken.balanceOf(owner.address);
-            vaultSharesTotalBefore = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            await LPtoken.approve(vaultHealer.address, initialLPtokenBalance);
+            const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(owner.address);
+            const vaultSharesTotalBeforeSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            await vaultHealer["deposit(uint256,uint256)"](poolLength-1, LPtokenBalanceBefore); //owner (default signer) deposits LP tokens into specified pid vaulthealer
+            await vaultHealer["deposit(uint256,uint256)"](poolLength-1, LPtokenBalanceBeforeSecondDeposit); //owner (default signer) deposits LP tokens into specified pid vaulthealer
             
-            LPtokenBalanceAfter = await LPtoken.balanceOf(owner.address);
-            vaultSharesTotalAfter = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(owner.address);
+            const vaultSharesTotalAfterSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             
-            expect(LPtokenBalanceBefore-LPtokenBalanceAfter).to.equal(vaultSharesTotalAfter-vaultSharesTotalBefore); //will this work for 2nd deposit? on normal masterchef?
+            expect(LPtokenBalanceBeforeSecondDeposit-LPtokenBalanceAfterSecondDeposit).to.equal(vaultSharesTotalAfterSecondDeposit-vaultSharesTotalBeforeSecondDeposit); //will this work for 2nd deposit? on normal masterchef?
         })
         
         // Withdraw 100%
         it('Should withdraw remaining balance back to owner, minus withdrawal fee (0.1%)', async () => {
-            LPtokenBalanceBefore = await LPtoken.balanceOf(owner.address);
-            UsersStakedTokensBefore = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
+            const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(owner.address);
+            const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
 
-            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBefore); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFinalWithdrawal); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
-            LPtokenBalanceAfter = await LPtoken.balanceOf(owner.address);
-            UsersStakedTokensAfter = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
-            console.log(LPtokenBalanceBefore, LPtokenBalanceAfter, UsersStakedTokensAfter, UsersStakedTokensBefore)
+            const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(owner.address);
+            UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
             
-            expect(UsersStakedTokensBefore
-                -LPtokenBalanceAfter
-                -parseInt((WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor)*UsersStakedTokensBefore/WITHDRAW_FEE_FACTOR_MAX))
-                .to.equal(0);
+            expect(LPtokenBalanceAfterFinalWithdrawal-LPtokenBalanceBeforeFinalWithdrawal)
+            .to.equal(
+                (UsersStakedTokensBeforeFinalWithdrawal-UsersStakedTokensAfterFinalWithdrawal)
+                -parseInt((WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor)/WITHDRAW_FEE_FACTOR_MAX*(UsersStakedTokensBeforeFinalWithdrawal-UsersStakedTokensAfterFinalWithdrawal))
+                );
         })
 
         //ensure no funds left in the vault.
         it('Should leave zero funds in vault after 100% withdrawal', async () => {
-            expect(UsersStakedTokensAfter.toNumber()).to.equal(0);
+            expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
         })
         
     })
