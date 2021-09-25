@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./BaseStrategyLP.sol";
+import "./BaseStrategy.sol";
 
-abstract contract BaseStrategyLPSingle is BaseStrategyLP {
-    using SafeMath for uint256;
+abstract contract BaseStrategyLPSingle is BaseStrategy {
     using SafeERC20 for IERC20;
     
-    function earn() external override nonReentrant whenNotPaused { 
+    address public token0Address;
+    address public token1Address;
+
+    address[] public earnedToToken0Path;
+    address[] public earnedToToken1Path;
+    
+    function earn() external override nonReentrant { 
         _earn(_msgSender());
     }
 
-    function earn(address _to) external override nonReentrant whenNotPaused {
+    function earn(address _to) external override nonReentrant {
         _earn(_to);
     }
 
     function _earn(address _to) internal {
+        
+        //No good reason to execute _earn twice in a block
+        //Vault must not _earn() while paused!
+        if (block.number == lastEarnBlock || paused()) return;
+        
         // Harvest farm tokens
         _vaultHarvest();
 
@@ -24,13 +34,11 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
 
         if (earnedAmt > 0) {
             earnedAmt = distributeFees(earnedAmt, _to);
-            earnedAmt = distributeRewards(earnedAmt);
-            earnedAmt = buyBack(earnedAmt);
     
             if (earnedAddress != token0Address) {
                 // Swap half earned to token0
                 _safeSwap(
-                    earnedAmt.div(2),
+                    earnedAmt / 2,
                     earnedToToken0Path,
                     address(this)
                 );
@@ -39,7 +47,7 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
             if (earnedAddress != token1Address) {
                 // Swap half earned to token1
                 _safeSwap(
-                    earnedAmt.div(2),
+                    earnedAmt / 2,
                     earnedToToken1Path,
                     address(this)
                 );
@@ -57,7 +65,7 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
                     0,
                     0,
                     address(this),
-                    block.timestamp.add(600)
+                    block.timestamp + 600
                 );
             }
     

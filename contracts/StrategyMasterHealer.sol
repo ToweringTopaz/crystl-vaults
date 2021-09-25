@@ -5,7 +5,6 @@ import "./libs/IMasterchef.sol";
 import "./BaseStrategyLPSingle.sol";
 
 contract StrategyMasterHealer is BaseStrategyLPSingle {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public masterchefAddress;
@@ -19,9 +18,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         address[] memory _earnedToUsdcPath,
         address[] memory _earnedToCrystlPath,
         address[] memory _earnedToToken0Path,
-        address[] memory _earnedToToken1Path,
-        address[] memory _token0ToEarnedPath,
-        address[] memory _token1ToEarnedPath
+        address[] memory _earnedToToken1Path
     ) {
         govAddress = msg.sender;
         vaultChefAddress = _configAddress[0];
@@ -41,56 +38,46 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         earnedToCrystlPath = _earnedToCrystlPath;
         earnedToToken0Path = _earnedToToken0Path;
         earnedToToken1Path = _earnedToToken1Path;
-        token0ToEarnedPath = _token0ToEarnedPath;
-        token1ToEarnedPath = _token1ToEarnedPath;
 
         transferOwnership(vaultChefAddress);
         
         _resetAllowances();
     }
 
-    function _vaultDeposit(uint256 _amount) internal override {
+    function _vaultDeposit(uint256 _amount) internal virtual override {
+        IERC20(wantAddress).safeIncreaseAllowance(masterchefAddress, _amount);
         IMasterchef(masterchefAddress).deposit(pid, _amount);
     }
     
-    function _vaultWithdraw(uint256 _amount) internal override {
+    function _vaultWithdraw(uint256 _amount) internal virtual override {
         IMasterchef(masterchefAddress).withdraw(pid, _amount);
     }
     
-    function _vaultHarvest() internal override {
+    function _vaultHarvest() internal virtual override {
         IMasterchef(masterchefAddress).withdraw(pid, 0);
     }
     
-    function vaultSharesTotal() public override view returns (uint256) {
+    function vaultSharesTotal() public virtual override view returns (uint256) {
         (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, address(this));
         return amount;
     }
     
-    function wantLockedTotal() public override view returns (uint256) {
-        return IERC20(wantAddress).balanceOf(address(this))
-            .add(vaultSharesTotal());
-    }
-
     function _resetAllowances() internal override {
-        IERC20(wantAddress).safeApprove(masterchefAddress, uint256(0));
-        IERC20(wantAddress).safeIncreaseAllowance(
-            masterchefAddress,
-            type(uint256).max
-        );
+        IERC20(wantAddress).safeApprove(masterchefAddress, 0);
 
-        IERC20(earnedAddress).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(earnedAddress).safeApprove(uniRouterAddress, 0);
         IERC20(earnedAddress).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
         );
 
-        IERC20(token0Address).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(token0Address).safeApprove(uniRouterAddress, 0);
         IERC20(token0Address).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
         );
 
-        IERC20(token1Address).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(token1Address).safeApprove(uniRouterAddress, 0);
         IERC20(token1Address).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
@@ -98,15 +85,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
 
     }
     
-    function _emergencyVaultWithdraw() internal override {
+    function _emergencyVaultWithdraw() internal virtual override {
         IMasterchef(masterchefAddress).emergencyWithdraw(pid);
-    }
-
-    function _beforeDeposit(address _to) internal override {
-        
-    }
-
-    function _beforeWithdraw(address _to) internal override {
-        
     }
 }

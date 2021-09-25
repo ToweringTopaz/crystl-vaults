@@ -3,7 +3,6 @@ pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -11,9 +10,9 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
+import "./PausableTL.sol";
 
-abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
-    using SafeMath for uint256;
+abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
@@ -34,6 +33,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     uint256 public sharesTotal;
     uint256 public tolerance;
     uint256 public burnedAmount;
+    bool public feeOnTransferSwapMode; //enabled by strategies dealing with reflect tokens
 
     address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
     uint256 public controllerFee = 50; // 0.50%
@@ -76,14 +76,22 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;
     function _vaultHarvest() internal virtual;
-    function _beforeDeposit(address _from) internal virtual;
-    function _beforeWithdraw(address _from) internal virtual;
     function earn() external virtual;
     function earn(address _to) external virtual;
     function vaultSharesTotal() public virtual view returns (uint256);
-    function wantLockedTotal() public virtual view returns (uint256);
     function _resetAllowances() internal virtual;
     function _emergencyVaultWithdraw() internal virtual;
+    
+    function _beforeDeposit(address _from) internal virtual { }
+    function _beforeWithdraw(address _from) internal virtual { }
+    
+    function wantBalance() public virtual view returns (uint256) {
+        return IERC20(wantAddress).balanceOf(address(this));
+    }
+    
+    function wantLockedTotal() public view returns (uint256) {
+        return wantBalance() + vaultSharesTotal();
+    }
     
     function deposit(address _userAddress, uint256 _wantAmt) external onlyOwner nonReentrant whenNotPaused returns (uint256) {
         // Call must happen before transfer
@@ -91,7 +99,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         uint256 wantLockedBefore = wantLockedTotal();
 
         IERC20(wantAddress).safeTransferFrom(
-            address(msg.sender),
+            msg.sender,
             address(this),
             _wantAmt
         );
@@ -99,124 +107,97 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         uint256 sharesAdded = _farm();
         if (sharesTotal > 0) {
-            sharesAdded = sharesAdded.mul(sharesTotal).div(wantLockedBefore);
+            sharesAdded = sharesAdded * sharesTotal / wantLockedBefore;
         }
         require(sharesAdded >= 1, "Low deposit - no shares added");
-        sharesTotal = sharesTotal.add(sharesAdded);
+        sharesTotal = sharesTotal + sharesAdded;
 
         return sharesAdded;
     }
 
     function _farm() internal returns (uint256) {
-        uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
+        uint256 wantAmt = wantBalance();
         if (wantAmt == 0) return 0;
         
         uint256 sharesBefore = vaultSharesTotal();
         _vaultDeposit(wantAmt);
         uint256 sharesAfter = vaultSharesTotal();
         
-        return sharesAfter.sub(sharesBefore);
+        return sharesAfter - sharesBefore;
     }
 
     function withdraw(address _userAddress, uint256 _wantAmt) external onlyOwner nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt is 0");
         
         _beforeWithdraw(_userAddress);
-        uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
+        uint256 wantAmt = wantBalance();
         
         // Check if strategy has tokens from panic
         if (_wantAmt > wantAmt) {
-            _vaultWithdraw(_wantAmt.sub(wantAmt));
-            wantAmt = IERC20(wantAddress).balanceOf(address(this));
+            _vaultWithdraw(_wantAmt - wantAmt);
+            wantAmt = wantBalance();
+            
+            if (_wantAmt > wantAmt) {
+                _wantAmt = wantAmt;
+            }
         }
 
-        if (_wantAmt > wantAmt) {
-            _wantAmt = wantAmt;
-        }
-
-        if (_wantAmt > wantLockedTotal()) {
-            _wantAmt = wantLockedTotal();
-        }
-
-        uint256 sharesRemoved = _wantAmt.mul(sharesTotal).ceilDiv(wantLockedTotal());
+        uint256 sharesRemoved = (_wantAmt * sharesTotal).ceilDiv(wantLockedTotal());
         if (sharesRemoved > sharesTotal) {
             sharesRemoved = sharesTotal;
         }
         require(sharesRemoved >= 1, "Low withdraw - no shares removed");
-        sharesTotal = sharesTotal.sub(sharesRemoved);
+        sharesTotal -= sharesRemoved;
         
         // Withdraw fee
-        uint256 withdrawFee = _wantAmt
-            .mul(WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-            .div(WITHDRAW_FEE_FACTOR_MAX);
+        uint256 withdrawFee = 
+            _wantAmt * 
+            (WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor) /
+            WITHDRAW_FEE_FACTOR_MAX;
         if (withdrawFee > 0) {
             IERC20(wantAddress).safeTransfer(withdrawFeeAddress, withdrawFee);
         }
         
-        _wantAmt = _wantAmt.sub(withdrawFee);
+        _wantAmt -= withdrawFee;
 
         IERC20(wantAddress).safeTransfer(vaultChefAddress, _wantAmt);
 
         return sharesRemoved;
     }
 
-    // To pay for earn function
     function distributeFees(uint256 _earnedAmt, address _to) internal returns (uint256) {
+        
+        uint earnedAmt = _earnedAmt;
+        
+        // To pay for earn function
         if (controllerFee > 0) {
-            uint256 fee = _earnedAmt.mul(controllerFee).div(FEE_MAX);
-    
-            _safeSwapWnative(
-                fee,
-                earnedToWnativePath,
-                _to
-            );
-            
-            _earnedAmt = _earnedAmt.sub(fee);
+            uint256 fee = _earnedAmt * controllerFee / FEE_MAX;
+            _safeSwap(fee, earnedToWnativePath, _to);
+            earnedAmt -= fee;
         }
-
-        return _earnedAmt;
-    }
-
-    function distributeRewards(uint256 _earnedAmt) internal returns (uint256) {
+        //distribute rewards
         if (rewardRate > 0) {
-            uint256 fee = _earnedAmt.mul(rewardRate).div(FEE_MAX);
+            uint256 fee = _earnedAmt * rewardRate / FEE_MAX;
 
             if (earnedAddress == crystlAddress) {
                 // Earn token is CRYSTL
                 IERC20(earnedAddress).safeTransfer(rewardAddress, fee);
             } else {
-                _safeSwap(
-                    fee,
-                    earnedToUsdPath,
-                    rewardAddress
-                );
+                _safeSwap(fee, earnedToUsdPath, rewardAddress);
             }
 
-            _earnedAmt = _earnedAmt.sub(fee);
+            earnedAmt -= fee;
         }
-
-        return _earnedAmt;
-    }
-
-    function buyBack(uint256 _earnedAmt) internal virtual returns (uint256) {
+        //burn crystl
         if (buyBackRate > 0) {
-            uint256 buyBackAmt = _earnedAmt.mul(buyBackRate).div(FEE_MAX);
+            uint256 buyBackAmt = _earnedAmt * buyBackRate / FEE_MAX;
 
-            if (earnedAddress == crystlAddress) {
-                // Earn token is CRYSTL
-                IERC20(earnedAddress).safeTransfer(buyBackAddress, buyBackAmt);
-            } else {
-                _safeSwap(
-                    buyBackAmt,
-                    earnedToCrystlPath,
-                    buyBackAddress
-                );
-            }
+            _safeSwap(buyBackAmt, earnedToCrystlPath, buyBackAddress);
 
-            _earnedAmt = _earnedAmt.sub(buyBackAmt);
+            earnedAmt -= buyBackAmt;
         }
         
-        return _earnedAmt;
+        return earnedAmt;
     }
 
     function resetAllowances() external onlyGov {
@@ -253,7 +234,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         uint256 _withdrawFeeFactor,
         uint256 _slippageFactor
     ) external onlyGov {
-        require(_controllerFee.add(_rewardRate).add(_buyBackRate) <= FEE_MAX_TOTAL, "Max fee of 100%");
+        require(_controllerFee +_rewardRate + _buyBackRate <= FEE_MAX_TOTAL, "Max fee of 100%");
         require(_withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
         require(_withdrawFeeFactor <= WITHDRAW_FEE_FACTOR_MAX, "_withdrawFeeFactor too high");
         require(_slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
@@ -292,37 +273,40 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
         uint256 _amountIn,
         address[] memory _path,
         address _to
-    ) internal virtual {
+    ) internal {
+        
+        //Handle one-token paths which are simply a transfer
+        if (_path.length == 1) {
+            if (_path[0] == crystlAddress && _to == buyBackAddress)
+                burnedAmount += _amountIn;
+            IERC20(_path[0]).safeTransfer(_to, _amountIn);
+            return;
+        }
+        
         uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
-        uint256 amountOut = amounts[amounts.length.sub(1)];
+        uint256 amountOut = amounts[amounts.length - 1];
 
-        if (_path[_path.length.sub(1)] == crystlAddress && _to == buyBackAddress) {
-            burnedAmount = burnedAmount.add(amountOut);
+        if (_path[_path.length - 1] == crystlAddress && _to == buyBackAddress) {
+            burnedAmount += amountOut;
         }
 
-        IUniRouter02(uniRouterAddress).swapExactTokensForTokens(
-            _amountIn,
-            amountOut.mul(slippageFactor).div(1000),
-            _path,
-            _to,
-            block.timestamp.add(600)
-        );
-    }
-    
-    function _safeSwapWnative(
-        uint256 _amountIn,
-        address[] memory _path,
-        address _to
-    ) internal virtual {
-        uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
-        uint256 amountOut = amounts[amounts.length.sub(1)];
+        if (feeOnTransferSwapMode) {
+            IUniRouter02(uniRouterAddress).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                _amountIn,
+                amountOut * slippageFactor / 1000,
+                _path,
+                _to,
+                block.timestamp + 600
+            );
+        } else {
+            IUniRouter02(uniRouterAddress).swapExactTokensForTokens(
+                _amountIn,
+                amountOut * slippageFactor / 1000,
+                _path,
+                _to,
+                block.timestamp + 600
+            );
+        }
 
-        IUniRouter02(uniRouterAddress).swapExactTokensForETH(
-            _amountIn,
-            amountOut.mul(slippageFactor).div(1000),
-            _path,
-            _to,
-            block.timestamp.add(600)
-        );
     }
 }
