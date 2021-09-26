@@ -97,12 +97,4 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
     function _emergencyVaultWithdraw() internal override {
         IMiniChefV2(miniapeAddress).emergencyWithdraw(pid, address(this));
     }
-
-    function _beforeDeposit(address _to) internal override {
-        
-    }
-
-    function _beforeWithdraw(address _to) internal override {
-        
-    }
 }
