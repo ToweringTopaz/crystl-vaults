@@ -65,16 +65,19 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         IERC20(wantAddress).safeApprove(miniapeAddress, 0);
 
         IERC20(earnedAddress).safeApprove(uniRouterAddress, 0);
+
         IERC20(earnedAddress).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
         );
         
+
         IERC20(earned2Address).safeApprove(uniRouterAddress, 0);
         IERC20(earned2Address).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
         );
+
 
         IERC20(token0Address).safeApprove(uniRouterAddress, 0);
         IERC20(token0Address).safeIncreaseAllowance(
@@ -82,13 +85,16 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
             type(uint256).max
         );
 
+
         IERC20(token1Address).safeApprove(uniRouterAddress, 0);
+
         IERC20(token1Address).safeIncreaseAllowance(
             uniRouterAddress,
             type(uint256).max
         );
 
     }
+
     function vaultSharesTotal() public override view returns (uint256) {
         (uint256 amount,) = IMiniChefV2(miniapeAddress).userInfo(pid, address(this));
         return amount;
@@ -96,6 +102,7 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
     
     function _emergencyVaultWithdraw() internal override {
         IMiniChefV2(miniapeAddress).emergencyWithdraw(pid, address(this));
+
     }
 
     function _beforeDeposit(address _to) internal override {
