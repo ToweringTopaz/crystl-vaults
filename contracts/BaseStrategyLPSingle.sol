@@ -35,39 +35,14 @@ abstract contract BaseStrategyLPSingle is BaseStrategy {
         if (earnedAmt > 0) {
             earnedAmt = distributeFees(earnedAmt, _to);
     
-            if (earnedAddress != token0Address) {
-                // Swap half earned to token0
-                _safeSwap(
-                    earnedAmt / 2,
-                    earnedToToken0Path,
-                    address(this)
-                );
-            }
+            // Swap half earned to token0
+            _safeSwap(earnedAmt / 2, earnedToToken0Path, wantAddress);
     
-            if (earnedAddress != token1Address) {
-                // Swap half earned to token1
-                _safeSwap(
-                    earnedAmt / 2,
-                    earnedToToken1Path,
-                    address(this)
-                );
-            }
-    
+            // Swap half earned to token1
+            _safeSwap(earnedAmt / 2, earnedToToken1Path, wantAddress);
+
             // Get want tokens, ie. add liquidity
-            uint256 token0Amt = IERC20(token0Address).balanceOf(address(this));
-            uint256 token1Amt = IERC20(token1Address).balanceOf(address(this));
-            if (token0Amt > 0 && token1Amt > 0) {
-                IUniRouter02(uniRouterAddress).addLiquidity(
-                    token0Address,
-                    token1Address,
-                    token0Amt,
-                    token1Amt,
-                    0,
-                    0,
-                    address(this),
-                    block.timestamp + 600
-                );
-            }
+            IUniPair(wantAddress).mint(address(this));
     
             lastEarnBlock = block.number;
     
