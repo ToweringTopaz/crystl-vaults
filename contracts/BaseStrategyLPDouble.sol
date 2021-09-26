@@ -53,6 +53,7 @@ abstract contract BaseStrategyLPDouble is BaseStrategy {
         uint256 earned2Amt = IERC20(earned2Address).balanceOf(address(this));
 
         if (earned2Amt > 0) {
+            earned2Amt = distributeFeesE2(earned2Amt, _to);
             
             // Swap half earned to token0
             _safeSwap(earned2Amt / 2, earned2ToToken0Path, wantAddress);
