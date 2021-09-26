@@ -5,7 +5,8 @@ import "./libs/IMasterchefWithReferral.sol";
 import "./StrategyMasterHealer.sol";
 
 contract StrategyMasterHealerWithReferral is StrategyMasterHealer {
-
+    using SafeERC20 for IERC20;
+    
     constructor(
         address[5] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
         uint256 _pid,
@@ -27,6 +28,7 @@ contract StrategyMasterHealerWithReferral is StrategyMasterHealer {
     ) {}
 
     function _vaultDeposit(uint256 _amount) internal override {
+        IERC20(wantAddress).safeIncreaseAllowance(masterchefAddress, _amount);
         IMasterchefWithReferral(masterchefAddress).deposit(pid, _amount, address(0));
     }
 }
