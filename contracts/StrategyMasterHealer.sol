@@ -7,8 +7,8 @@ import "./BaseStrategyLPSingle.sol";
 contract StrategyMasterHealer is BaseStrategyLPSingle {
     using SafeERC20 for IERC20;
 
-    address public masterchefAddress;
-    uint256 public pid;
+    address immutable public masterchefAddress;
+    uint256 immutable public pid;
 
     constructor(
         address[5] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
@@ -19,29 +19,24 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         address[] memory _earnedToCrystlPath,
         address[] memory _earnedToToken0Path,
         address[] memory _earnedToToken1Path
-    ) {
-        govAddress = msg.sender;
-        vaultChefAddress = _configAddress[0];
-        masterchefAddress = _configAddress[1];
-        uniRouterAddress = _configAddress[2];
+    ) BaseStrategy(_configAddress[0], _configAddress[2], _configAddress[3], _configAddress[4], _tolerance, _earnedToWmaticPath, _earnedToUsdcPath, _earnedToCrystlPath) {
 
-        wantAddress = _configAddress[3];
-        token0Address = IUniPair(wantAddress).token0();
-        token1Address = IUniPair(wantAddress).token1();
+        masterchefAddress = _configAddress[1];
+        
+        address _wantAddress = _configAddress[3];
+        token0Address = IUniPair(_wantAddress).token0();
+        token1Address = IUniPair(_wantAddress).token1();
 
         pid = _pid;
-        earnedAddress = _configAddress[4];
-        tolerance = _tolerance;
 
-        earnedToWnativePath = _earnedToWmaticPath;
-        earnedToUsdPath = _earnedToUsdcPath;
-        earnedToCrystlPath = _earnedToCrystlPath;
         earnedToToken0Path = _earnedToToken0Path;
         earnedToToken1Path = _earnedToToken1Path;
-
-        transferOwnership(vaultChefAddress);
         
-        _resetAllowances();
+        address _unirouter = _configAddress[2];
+        
+        //initialize allowances for token0/token1
+        IERC20(token0Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
+        IERC20(token1Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
     }
 
     function _vaultDeposit(uint256 _amount) internal virtual override {

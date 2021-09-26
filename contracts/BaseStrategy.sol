@@ -16,22 +16,20 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
-    address public wantAddress;
-    address public earnedAddress;
+    address immutable public wantAddress;
+    address immutable public earnedAddress;
 
-    address public uniRouterAddress;
-    address public usdAddress = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
-    address public crystlAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
-    address public wNativeAddress = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address immutable public uniRouterAddress;
+    address constant public usdAddress = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+    address constant public crystlAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
+    address constant public wNativeAddress = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
 
     address public rewardAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
     address public withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
-    address public vaultChefAddress;
-    address public govAddress;
 
     uint256 public lastEarnBlock = block.number;
     uint256 public sharesTotal;
-    uint256 public tolerance;
+    uint256 immutable public tolerance;
     uint256 public burnedAmount;
     bool public feeOnTransferSwapMode; //enabled by strategies dealing with reflect tokens
 
@@ -69,9 +67,35 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     );
     
     modifier onlyGov() {
-        require(msg.sender == govAddress, "!gov");
+        require(msg.sender == Ownable(owner()).owner(), "!gov");
         _;
     }
+    
+    constructor(
+        address _vaulthealerAddress,
+        address _uniRouterAddress,
+        address _wantAddress,
+        address _earnedAddress,
+        uint256 _tolerance,
+        address[] memory _earnedToWnativePath,
+        address[] memory _earnedToUsdPath,
+        address[] memory _earnedToCrystlPath
+    ) {
+        uniRouterAddress = _uniRouterAddress;
+        wantAddress = _wantAddress;
+        earnedAddress = _earnedAddress;
+        tolerance = _tolerance;
+        earnedToWnativePath = _earnedToWnativePath;
+        earnedToUsdPath = _earnedToUsdPath;
+        earnedToCrystlPath = _earnedToCrystlPath;
+        
+        //initialize allowance for earned address
+        IERC20(_earnedAddress).safeIncreaseAllowance(_uniRouterAddress, type(uint256).max);
+        
+        require(Ownable(_vaulthealerAddress).owner() != address(0), "gov is vaulthealer's owner; can't be zero");
+        transferOwnership(_vaulthealerAddress);
+    }
+    
 
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;
@@ -84,8 +108,9 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     
     function _beforeDeposit(address _from) internal virtual { }
     function _beforeWithdraw(address _from) internal virtual { }
+    function vaultChefAddress() external view returns (address) { return owner(); }
     
-    function wantBalance() public virtual view returns (uint256) {
+    function wantBalance() internal virtual view returns (uint256) {
         return IERC20(wantAddress).balanceOf(address(this));
     }
     
@@ -110,7 +135,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
             sharesAdded = sharesAdded * sharesTotal / wantLockedBefore;
         }
         require(sharesAdded >= 1, "Low deposit - no shares added");
-        sharesTotal = sharesTotal + sharesAdded;
+        sharesTotal += sharesAdded;
 
         return sharesAdded;
     }
@@ -123,6 +148,8 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         _vaultDeposit(wantAmt);
         uint256 sharesAfter = vaultSharesTotal();
         
+        require(sharesAfter + wantBalance() >= sharesBefore + wantAmt * slippageFactor / 1000,
+            "Excessive slippage in vault deposit");
         return sharesAfter - sharesBefore;
     }
 
@@ -160,7 +187,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         
         _wantAmt -= withdrawFee;
 
-        IERC20(wantAddress).safeTransfer(vaultChefAddress, _wantAmt);
+        IERC20(wantAddress).safeTransfer(owner(), _wantAmt); //owner is vaulthealer
 
         return sharesRemoved;
     }
@@ -223,8 +250,8 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         _farm();
     }
 
-    function setGov(address _govAddress) external onlyGov {
-        govAddress = _govAddress;
+    function setGov(address) external pure {
+        revert("Gov is the vaulthealer's owner");
     }
     
     function setSettings(
