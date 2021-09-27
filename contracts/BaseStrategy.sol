@@ -14,31 +14,19 @@ import "./PausableTL.sol";
 import "./PathStorage.sol";
 
 abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
-    using Math for uint256;
     using SafeERC20 for IERC20;
 
     address constant internal DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
     address constant internal CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
     address constant internal WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
-
-    uint256 public lastEarnBlock = block.number;
-    uint256 public sharesTotal;
-    uint256 public burnedAmount;
-
-    uint256 public constant FEE_MAX_TOTAL = 10000;
-    uint256 public constant FEE_MAX = 10000; // 100 = 1%
-
-    uint256 public withdrawFeeFactor = 9990; // 0.1% default withdraw fee
-    uint256 public constant WITHDRAW_FEE_FACTOR_MAX = 10000;
-    uint256 public constant WITHDRAW_FEE_FACTOR_LL = 9900;
-
-    uint256 public slippageFactor; // 10% default slippage tolerance
-    uint256 public constant SLIPPAGE_FACTOR_UL = 9950;
+    uint256 constant internal FEE_MAX_TOTAL = 10000;
+    uint256 constant internal FEE_MAX = 10000; // 100 = 1%
+    uint256 constant internal WITHDRAW_FEE_FACTOR_MAX = 10000;
+    uint256 constant internal WITHDRAW_FEE_FACTOR_LL = 9900;
+    uint256 constant internal SLIPPAGE_FACTOR_UL = 9950;
     
-    //deprecated; for front-end
-    function buyBackRate() external view returns (uint) { return settings.buybackRate; }
-    function tolerance() external view returns (uint) { return settings.tolerance; }
-    function vaultChefAddress() external view returns (address) { return addresses.vaulthealer; }
+    uint256 immutable earnedLength; //number of earned tokens;
+    uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
     
     struct Addresses {
         address vaulthealer;
@@ -72,8 +60,9 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     //double reflect: ["50", "50", "400", "9990", "8000", "0", "true", "1000000000000", "10"]
     Settings public settings;
     
-    uint256 earnedLength; //number of earned tokens;
-    uint256 lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
+    uint256 public lastEarnBlock = block.number;
+    uint256 public sharesTotal;
+    uint256 public burnedAmount;
     
     event SetSettings(Settings _settings);
     event SetAddress(Addresses _addresses);
@@ -97,14 +86,20 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         _setAddresses(_addresses);
         _setSettings(_settings);
         
-        for (uint i; i < _paths.length; i++) {
+        uint i;
+        for (i = 0; i < _paths.length; i++) {
             _setPath(_paths[i]);
         }
+        for (i = 0; i < _addresses.lpToken.length && _addresses.lpToken[i] != address(0); i++) {}
+        earnedLength = i;
+        for (i = 0; i < _addresses.lpToken.length && _addresses.lpToken[i] != address(0); i++) {}
+        lpTokenLength = i;
         
         _resetAllowances();
+
     }
     
-
+    //depend on masterchef
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;
     function _vaultHarvest() internal virtual;
@@ -112,9 +107,11 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function vaultSharesTotal() public virtual view returns (uint256);
     function _emergencyVaultWithdraw() internal virtual;
     
+    //currently unused
     function _beforeDeposit(address _from) internal virtual { }
     function _beforeWithdraw(address _from) internal virtual { }
     
+    //simple balance functions
     function wantBalance() internal view returns (uint256) {
         return IERC20(addresses.want).balanceOf(address(this));
     }
@@ -152,20 +149,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         return sharesAdded;
     }
 
-    function _farm() internal returns (uint256) {
-        uint256 wantAmt = wantBalance();
-        if (wantAmt == 0) return 0;
-        
-        uint256 sharesBefore = vaultSharesTotal();
-        _allowVaultDeposit(wantAmt);
-        _vaultDeposit(wantAmt);
-        uint256 sharesAfter = vaultSharesTotal();
-        
-        require(sharesAfter + wantBalance() >= sharesBefore + wantAmt * slippageFactor / 10000,
-            "Excessive slippage in vault deposit");
-        return sharesAfter - sharesBefore;
-    }
-
     function withdraw(address _userAddress, uint256 _wantAmt) external onlyVaultHealer nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt is 0");
         
@@ -182,7 +165,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
             }
         }
 
-        uint256 sharesRemoved = (_wantAmt * sharesTotal).ceilDiv(wantLockedTotal());
+        uint256 sharesRemoved = Math.ceilDiv(_wantAmt * sharesTotal, wantLockedTotal());
         if (sharesRemoved > sharesTotal) {
             sharesRemoved = sharesTotal;
         }
@@ -192,7 +175,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         // Withdraw fee
         uint256 withdrawFee = 
             _wantAmt * 
-            (WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor) /
+            (WITHDRAW_FEE_FACTOR_MAX - settings.withdrawFeeFactor) /
             WITHDRAW_FEE_FACTOR_MAX;
         if (withdrawFee > 0) {
             IERC20(addresses.want).safeTransfer(addresses.withdrawFee, withdrawFee);
@@ -203,6 +186,20 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         IERC20(addresses.want).safeTransfer(addresses.vaulthealer, _wantAmt);
 
         return sharesRemoved;
+    }
+
+    function _farm() internal returns (uint256) {
+        uint256 wantAmt = wantBalance();
+        if (wantAmt == 0) return 0;
+        
+        uint256 sharesBefore = vaultSharesTotal();
+        _allowVaultDeposit(wantAmt);
+        _vaultDeposit(wantAmt);
+        uint256 sharesAfter = vaultSharesTotal();
+        
+        require(sharesAfter + wantBalance() >= sharesBefore + wantAmt * settings.slippageFactor / 10000,
+            "Excessive slippage in vault deposit");
+        return sharesAfter - sharesBefore;
     }
 
     function distributeFees(address _earnedAddress, uint256 _earnedAmt, address _to) internal returns (uint256) {
@@ -240,79 +237,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         return earnedAmt;
     }
 
-    function resetAllowances() external onlyGov {
-        _resetAllowances();
-    }
-
-    function pause() external onlyGov {
-        _pause();
-    }
-
-    function unpause() external onlyGov {
-        _unpause();
-        _resetAllowances();
-    }
-
-    function panic() external onlyGov {
-        _pause();
-        _emergencyVaultWithdraw();
-    }
-
-    function unpanic() external onlyGov {
-        _unpause();
-        _farm();
-    }
-
-    function setGov(address) external pure {
-        revert("Gov is the vaulthealer's owner");
-    }
-    
-    function setPath(address[] calldata _path) external onlyGov {
-        _setPath(_path);
-    }
-    
-    function setSettings(Settings calldata _settings) external onlyGov {
-        _setSettings(_settings);
-    }
-    function _setSettings(Settings memory _settings) private {
-        require(_settings.controllerFee + _settings.rewardRate + _settings.buybackRate <= FEE_MAX_TOTAL, "Max fee of 100%");
-        require(_settings.withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
-        require(_settings.withdrawFeeFactor <= WITHDRAW_FEE_FACTOR_MAX, "_withdrawFeeFactor too high");
-        require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
-        settings = _settings;
-        
-        emit SetSettings(_settings);
-    }
-
-    function setAddresses(Addresses calldata _addresses) external onlyGov {
-        for (uint i; i < addresses.earned.length; i++) {
-            require(_addresses.earned[i] == addresses.earned[i], "cannot change earned address");
-        }
-        for (uint i; i < addresses.lpToken.length; i++) {
-            require(_addresses.lpToken[i] == addresses.lpToken[i], "cannot change lpToken address");
-        }        
-        require(_addresses.want == addresses.want, "cannot change want address");
-        require(_addresses.masterchef == addresses.masterchef, "cannot change masterchef address");
-        require(_addresses.vaulthealer == addresses.vaulthealer, "cannot change masterchef address");
-        _setAddresses(_addresses);
-    }
-    function _setAddresses(Addresses memory _addresses) private {
-        require(_addresses.router != address(0), "Invalid router address");
-        IUniRouter02(_addresses.router).factory(); // unirouter will have this function; bad address will revert
-        require(_addresses.rewardFee != address(0), "Invalid reward address");
-        require(_addresses.withdrawFee != address(0), "Invalid Withdraw address");
-        require(_addresses.buybackFee != address(0), "Invalid buyback address");
-        addresses = _addresses;
-        uint i;
-        for (; i < _addresses.lpToken.length && addresses.lpToken[i] != address(0); i++) {}
-        earnedLength = i;
-        for (; i < _addresses.lpToken.length && addresses.lpToken[i] != address(0); i++) {}
-        lpTokenLength = i;
-
-
-        emit SetAddress(addresses);
-    }
-    
     function _safeSwap(
         uint256 _amountIn,
         address _tokenA,
@@ -339,7 +263,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         if (settings.feeOnTransfer) {
             IUniRouter02(addresses.router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountIn,
-                amountOut * slippageFactor / 10000,
+                amountOut * settings.slippageFactor / 10000,
                 path,
                 _to,
                 block.timestamp + 600
@@ -347,12 +271,79 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         } else {
             IUniRouter02(addresses.router).swapExactTokensForTokens(
                 _amountIn,
-                amountOut * slippageFactor / 10000,
+                amountOut * settings.slippageFactor / 10000,
                 path,
                 _to,
                 block.timestamp + 600
             );
         }
+    }
+
+    //Admin functions
+    function resetAllowances() external onlyGov {
+        _resetAllowances();
+    }
+
+    function pause() external onlyGov {
+        _pause();
+    }
+
+    function unpause() external onlyGov {
+        _unpause();
+        _resetAllowances();
+    }
+
+    function panic() external onlyGov {
+        _pause();
+        _emergencyVaultWithdraw();
+    }
+
+    function unpanic() external onlyGov {
+        _unpause();
+        _farm();
+    }
+    
+    function setPath(address[] calldata _path) external onlyGov {
+        _setPath(_path);
+    }
+    
+    function setSettings(Settings calldata _settings) external onlyGov {
+        _setSettings(_settings);
+    }
+
+    function setAddresses(Addresses calldata _addresses) external onlyGov {
+        for (uint i; i < addresses.earned.length; i++) {
+            require(_addresses.earned[i] == addresses.earned[i], "cannot change earned address");
+        }
+        for (uint i; i < addresses.lpToken.length; i++) {
+            require(_addresses.lpToken[i] == addresses.lpToken[i], "cannot change lpToken address");
+        }        
+        require(_addresses.want == addresses.want, "cannot change want address");
+        require(_addresses.masterchef == addresses.masterchef, "cannot change masterchef address");
+        require(_addresses.vaulthealer == addresses.vaulthealer, "cannot change masterchef address");
+        _setAddresses(_addresses);
+    }
+    
+    //private configuration functions
+    function _setSettings(Settings memory _settings) private {
+        require(_settings.controllerFee + _settings.rewardRate + _settings.buybackRate <= FEE_MAX_TOTAL, "Max fee of 100%");
+        require(_settings.withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
+        require(_settings.withdrawFeeFactor <= WITHDRAW_FEE_FACTOR_MAX, "_withdrawFeeFactor too high");
+        require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
+        settings = _settings;
+        
+        emit SetSettings(_settings);
+    }
+    
+    function _setAddresses(Addresses memory _addresses) private {
+        require(_addresses.router != address(0), "Invalid router address");
+        IUniRouter02(_addresses.router).factory(); // unirouter will have this function; bad address will revert
+        require(_addresses.rewardFee != address(0), "Invalid reward address");
+        require(_addresses.withdrawFee != address(0), "Invalid Withdraw address");
+        require(_addresses.buybackFee != address(0), "Invalid buyback address");
+        addresses = _addresses;
+
+        emit SetAddress(addresses);
     }
     function _setMaxAllowance(address token, address spender) private {
         IERC20(token).safeApprove(spender, 0);
@@ -363,12 +354,20 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     }
     function _resetAllowances() private {
         _setZeroAllowance(addresses.want, addresses.masterchef);
-        for (uint i; i < earnedLength; i++) {
-            _setMaxAllowance(addresses.earned[i], addresses.router);
+        for (uint i; i < addresses.earned.length; i++) {
+            if (addresses.earned[i] != address(0))
+                _setMaxAllowance(addresses.earned[i], addresses.router);
         }
     }
     function _allowVaultDeposit(uint256 _amount) private {
         IERC20(addresses.want).safeIncreaseAllowance(addresses.masterchef, _amount);
     }
-
+    
+    //deprecated; for front-end
+    function buyBackRate() external view returns (uint) { return settings.buybackRate; }
+    function tolerance() external view returns (uint) { return settings.tolerance; }
+    function vaultChefAddress() external view returns (address) { return addresses.vaulthealer; }
+    function setGov(address) external pure {
+        revert("Gov is the vaulthealer's owner");
+    }
 }
