@@ -88,8 +88,8 @@ describe('StrategyMasterHealer contract', () => {
             expect(await strategyMasterHealer.pid()).to.equal(PID);
         })
 
-        it('Should set the right tolerance', async () => { //could do a less than 3 check here?
-            expect(await strategyMasterHealer.tolerance()).to.equal(TOLERANCE);
+        it('Should set tolerance in the range of 1-3', async () => { 
+            expect(await strategyMasterHealer.tolerance()).to.be.within(1,3);
         })
         //and paths too?
     })
