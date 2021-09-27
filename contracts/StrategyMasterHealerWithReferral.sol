@@ -10,8 +10,6 @@ contract StrategyMasterHealerWithReferral is StrategyMasterHealer {
         Addresses memory _addresses,
         Settings memory _settings,
         address[][] memory _paths,  //need paths for earned to each of (wmatic, dai, crystl, token0, token1)
-        address _wantAddress,
-        address _earnedAddress,
         uint256 _pid
     ) StrategyMasterHealer(_addresses, _settings, _paths, _pid) {}
 
