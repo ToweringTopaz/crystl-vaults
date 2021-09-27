@@ -5,7 +5,6 @@ import "./libs/IMasterchef.sol";
 import "./BaseStrategyLP.sol";
 
 contract StrategyMasterHealer is BaseStrategyLP {
-    using SafeERC20 for IERC20;
 
     uint256 immutable public pid;
 
@@ -14,13 +13,12 @@ contract StrategyMasterHealer is BaseStrategyLP {
         Settings memory _settings,
         address[][] memory _paths,  //need paths for earned to each of (wmatic, dai, crystl, token0, token1): 5 total
         uint256 _pid
-    ) BaseStrategy(_addresses, _settings, _paths) {
+    ) BaseStrategyLP(_addresses, _settings, _paths) {
         require(_paths.length == 5, "need 5 paths for this strategy");
         pid = _pid;
     }
 
     function _vaultDeposit(uint256 _amount) internal virtual override {
-        IERC20(addresses.want).safeIncreaseAllowance(addresses.masterchef, _amount);
         IMasterchef(addresses.masterchef).deposit(pid, _amount);
     }
     

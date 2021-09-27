@@ -288,7 +288,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
             require(_addresses.earned[i] == addresses.earned[i], "cannot change earned address");
         }
         for (uint i; i < addresses.lpToken.length; i++) {
-            require(_addresses.lpToken[i] == addresses.lpToken[i], "cannot change earned address");
+            require(_addresses.lpToken[i] == addresses.lpToken[i], "cannot change lpToken address");
         }        
         require(_addresses.want == addresses.want, "cannot change want address");
         require(_addresses.masterchef == addresses.masterchef, "cannot change masterchef address");

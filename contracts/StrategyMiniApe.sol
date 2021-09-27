@@ -5,7 +5,6 @@ import "./libs/IMiniChefV2.sol";
 import "./BaseStrategyLP.sol";
 
 contract StrategyMiniApe is BaseStrategyLP {
-    using SafeERC20 for IERC20;
 
     uint256 public immutable pid;
     
@@ -14,7 +13,7 @@ contract StrategyMiniApe is BaseStrategyLP {
         Settings memory _settings,
         address[][] memory _paths,  //need paths for earned/earned2 to each of (wmatic, dai, crystl, token0, token1): 10 total
         uint256 _pid
-    ) BaseStrategy(_addresses, _settings, _paths) {
+    ) BaseStrategyLP(_addresses, _settings, _paths) {
         require(_paths.length == 10, "need 10 paths for this strategy");
         pid = _pid;
     }
