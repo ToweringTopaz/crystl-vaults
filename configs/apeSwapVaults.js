@@ -1,5 +1,5 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { BANANA, WMATIC, CRYSTL, KOM, DAI } = tokens.polygon;
+const { BANANA, WMATIC, CRYSTL, DAI } = tokens.polygon;
 
 const apeSwapVaults = [
     {
@@ -13,15 +13,21 @@ const apeSwapVaults = [
         ],
         strategyConfig: [
             7, // uint256 _pid 
-            1, // uint256 tolerance
+            1, // uint256 tolerance            
+        ],
+        earnedPaths: [
             [BANANA, WMATIC], // address[] memory _earnedToWmaticPath
             [BANANA, WMATIC, DAI], // address[] memory _earnedToUsdcPath
             [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
             [BANANA, WMATIC], // address[] memory _earnedToToken0Path
             [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToToken1Path
-            [WMATIC, BANANA], // address[] memory _token0ToEarnedPath
-            [CRYSTL, WMATIC, BANANA], // address[] memory _token1ToEarnedPath
-            [CRYSTL, WMATIC, BANANA] // address[] memory _EarnedBetaToEarnedPath
+        ],
+        earned2Paths: [
+            [CRYSTL, WMATIC], // address[] memory _earnedToWmaticPath
+            [CRYSTL, WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [CRYSTL], // address[] memory _earnedToCrystlPath
+            [CRYSTL, WMATIC], // address[] memory _earnedToToken0Path
+            [CRYSTL], // address[] memory _earnedToToken1Path
         ],
     },
     {
