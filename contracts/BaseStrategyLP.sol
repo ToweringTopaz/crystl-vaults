@@ -14,13 +14,23 @@ abstract contract BaseStrategyLP is BaseStrategy {
         
         // Harvest farm tokens
         _vaultHarvest();
-
-        bool anySwapped;
-        address wantAddress = addresses.want;
         
         // Converts farm tokens into want tokens
+        try this._swapEarnedToLP(_to) returns (bool success) {
+            if (success) lastGainBlock = block.number;
+        } catch {}
+        
+        lastEarnBlock = block.number;
+    }
+    
+    function _swapEarnedToLP(address _to) external returns (bool success) {
+        require(msg.sender == address(this)); //external call by this contract only
+        
+        address wantAddress = addresses.want;
+        
         for (uint i; i < earnedLength; i++ ) {
             address earnedAddress = addresses.earned[i];
+            if (earnedAddress == address(0)) break;
             
             uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
             uint dust = settings.dust;
@@ -29,19 +39,16 @@ abstract contract BaseStrategyLP is BaseStrategy {
                 earnedAmt = distributeFees(earnedAddress, earnedAmt, _to);
         
                 // Swap half earned to token0, half to token1
-                anySwapped = true;
+                success = true;
                 uint _lpTokenLength = lpTokenLength;
                 for (uint j; j < _lpTokenLength; i++) {
                     _safeSwap(earnedAmt / _lpTokenLength, earnedAddress, addresses.lpToken[j], wantAddress);
                 }
             }
         }
-        if (anySwapped) {
+        if (success) {
             // Get want tokens, ie. add liquidity
             IUniPair(wantAddress).mint(address(this));
-    
-            lastEarnBlock = block.number;
-    
             _farm();
         }
     }

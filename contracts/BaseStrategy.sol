@@ -50,16 +50,11 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         uint256 minBlocksBetweenSwaps;
     }
     
-    //reward/withdraw: 0x5386881b46C37CdD30A748f7771CF95D7B213637
-    //buybackFee: 0x000000000000000000000000000000000000dEaD
     Addresses public addresses;
-    
-    //standard: ["50", "50", "400", "9990", "9500", "0", "false", "1000000000000", "10"]
-    //reflect: ["50", "50", "400", "9990", "9000", "0", "true", "1000000000000", "10"]
-    //double reflect: ["50", "50", "400", "9990", "8000", "0", "true", "1000000000000", "10"]
     Settings public settings;
     
     uint256 public lastEarnBlock = block.number;
+    uint256 public lastGainBlock; //last time earn() produced anything
     uint256 public sharesTotal;
     uint256 public burnedAmount;
     

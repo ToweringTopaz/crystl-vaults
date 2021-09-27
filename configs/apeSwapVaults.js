@@ -1,55 +1,50 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
 const { BANANA, WMATIC, CRYSTL, DAI } = tokens.polygon;
+const { ZERO_ADDRESS } = accounts.polygon;
 
 const apeSwapVaults = [
     {
         addresses: [
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
+            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+            accounts.polygon.FEE_ADDRESS, // rewardFee
+            accounts.polygon.FEE_ADDRESS, // withdrawFee
+            accounts.polygon.BURN_ADDRESS, // 0xdead
             lps.polygon.MATIC_CRYSTL_APE_LP, // Want
-            BANANA, // Earned - there is a second reward in CRYSTL!
-            CRYSTL, //EarnedBeta
+            [ BANANA, CRYSTL, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ],
+            [ ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ]
         ],
-        strategyConfig: [
-            7, // uint256 _pid 
-            1, // uint256 tolerance            
-        ],
-        earnedPaths: [
-            [BANANA, WMATIC], // address[] memory _earnedToWmaticPath
-            [BANANA, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
-            [BANANA, WMATIC], // address[] memory _earnedToToken0Path
-            [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToToken1Path
-        ],
-        earned2Paths: [
-            [CRYSTL, WMATIC], // address[] memory _earnedToWmaticPath
-            [CRYSTL, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [CRYSTL], // address[] memory _earnedToCrystlPath
-            [CRYSTL, WMATIC], // address[] memory _earnedToToken0Path
-            [CRYSTL], // address[] memory _earnedToToken1Path
+        paths: [
+            [BANANA, WMATIC], //  earned to wmatic, earned to token0
+            [BANANA, WMATIC, DAI], // earned to dai
+            [BANANA, WMATIC, CRYSTL], // earned to crystl, earned to token1
+            [CRYSTL, WMATIC], // earned2 to wmatic, earned2 to token0
+            [CRYSTL, WMATIC, DAI], // earned2 to dai
+            [CRYSTL] // earned2 to crystl, earned2 to token1
         ],
     },
     {
         addresses: [
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
+            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+            accounts.polygon.FEE_ADDRESS, // rewardFee
+            accounts.polygon.FEE_ADDRESS, // withdrawFee
+            accounts.polygon.BURN_ADDRESS, // 0xdead
             lps.polygon.MATIC_BANANA_APE_LP, // Want
-            BANANA, // Earned
-            CRYSTL, //EarnedBeta
+            [ BANANA, WMATIC, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ],
+            [ ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ]
         ],
-        strategyConfig: [
-            0, // uint256 _pid 
-            1, // uint256 tolerance
-            [BANANA, WMATIC], // address[] memory _earnedToWmaticPath
-            [BANANA, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
-            [BANANA, WMATIC], // address[] memory _earnedToToken0Path
-            [BANANA], // address[] memory _earnedToToken1Path
-            [WMATIC, BANANA], // address[] memory _token0ToEarnedPath
-            [BANANA], // address[] memory _token1ToEarnedPath
-            [CRYSTL, WMATIC, BANANA] // address[] memory _EarnedBetaToEarnedPath
+        paths: [
+            [BANANA, WMATIC], //  earned to wmatic, earned to token0
+            [BANANA, WMATIC, DAI], // earned to dai
+            [BANANA, WMATIC, CRYSTL], // earned to crystl
+            [BANANA], // earned to token1
+            [WMATIC], // earned2 to wmatic, earned2 to token0
+            [WMATIC, DAI], // earned2 to dai
+            [WMATIC, CRYSTL], //earned2 to crystl
+            [WMATIC, BANANA] //earned2 to token1
         ],
     },
 ]
