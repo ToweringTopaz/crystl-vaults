@@ -14,7 +14,6 @@ contract StrategyMasterHealer is BaseStrategyLP {
         address[][] memory _paths,  //need paths for earned to each of (wmatic, dai, crystl, token0, token1): 5 total
         uint256 _pid
     ) BaseStrategy(_addresses, _settings, _paths) {
-        require(_paths.length == 5, "need 5 paths for this strategy");
         
         addresses.lpToken[0] = IUniPair(_addresses.want).token0();
         addresses.lpToken[1] = IUniPair(_addresses.want).token1();
