@@ -47,7 +47,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
 
     uint256 public slippageFactor = 900; // 10% default slippage tolerance
     uint256 public constant SLIPPAGE_FACTOR_UL = 995;
-    uint256 public constant EARN_DUST = 1e14;
+    uint256 immutable EARN_DUST;
 
     address[] public earnedToWnativePath;
     address[] public earnedToUsdPath;
@@ -95,6 +95,14 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         
         require(Ownable(_vaulthealerAddress).owner() != address(0), "gov is vaulthealer's owner; can't be zero");
         transferOwnership(_vaulthealerAddress);
+        
+        uint _earnDust;
+        try IUniPair(_earnedAddress).decimals() returns (uint8 _d) {
+            _earnDust = _d > 8 ? 10**(_d - 4) : 10000; // 1/10000 of a token, or 10000 wei if this is more
+        } catch {
+            _earnDust = 10000;
+        }
+        EARN_DUST = _earnDust;
     }
     
 
