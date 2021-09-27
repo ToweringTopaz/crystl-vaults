@@ -43,9 +43,12 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         //initialize allowances for token0/token1
         IERC20(token0Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
         IERC20(token1Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        IERC20(_earnedAddress).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        IERC20(earned2Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        
+        if (_earnedAddress != token0Address && _earnedAddress != token1Address) {
+            IERC20(_earnedAddress).safeIncreaseAllowance(_unirouter, type(uint240).max);
+            }
+        if (earned2Address != token0Address && earned2Address != token1Address) {
+            IERC20(earned2Address).safeIncreaseAllowance(_unirouter, type(uint240).max);
+            }
     }
 
     function _vaultDeposit(uint256 _amount) internal virtual override {
