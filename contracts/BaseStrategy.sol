@@ -337,6 +337,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     }
     function setMaxAllowance(address token, address spender) internal {
         
+        IERC20(token).safeApprove(spender, 0);
         IERC20(token).safeIncreaseAllowance(spender, type(uint256).max);
     }
 }
