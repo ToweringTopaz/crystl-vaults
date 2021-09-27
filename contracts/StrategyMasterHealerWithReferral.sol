@@ -6,29 +6,18 @@ import "./StrategyMasterHealer.sol";
 
 contract StrategyMasterHealerWithReferral is StrategyMasterHealer {
     using SafeERC20 for IERC20;
-    
+
     constructor(
-        address[5] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
-        uint256 _pid,
-        uint256 _tolerance,
-        address[] memory _earnedToWmaticPath,
-        address[] memory _earnedToUsdcPath,
-        address[] memory _earnedToCrystlPath,
-        address[] memory _earnedToToken0Path,
-        address[] memory _earnedToToken1Path
-    ) StrategyMasterHealer(
-        _configAddress,
-        _pid,
-        _tolerance, 
-        _earnedToWmaticPath,
-        _earnedToUsdcPath, 
-        _earnedToCrystlPath,
-        _earnedToToken0Path,
-        _earnedToToken1Path
-    ) {}
+        Addresses memory _addresses,
+        Settings memory _settings,
+        address[][] memory _paths,  //need paths for earned to each of (wmatic, dai, crystl, token0, token1)
+        address _wantAddress,
+        address _earnedAddress,
+        uint256 _pid
+    ) StrategyMasterHealer(_addresses, _settings, _paths, _pid) {}
 
     function _vaultDeposit(uint256 _amount) internal override {
-        IERC20(wantAddress).safeIncreaseAllowance(masterchefAddress, _amount);
-        IMasterchefWithReferral(masterchefAddress).deposit(pid, _amount, address(0));
+        IERC20(addresses.want).safeIncreaseAllowance(addresses.masterchef, _amount);
+        IMasterchefWithReferral(addresses.masterchef).deposit(pid, _amount, address(0));
     }
 }

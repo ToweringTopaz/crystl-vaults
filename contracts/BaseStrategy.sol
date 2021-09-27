@@ -11,32 +11,19 @@ import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
 import "./PausableTL.sol";
+import "./PathStorage.sol";
 
-abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
+abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
-    address immutable public wantAddress;
-    address immutable public earnedAddress;
-
-    address immutable public uniRouterAddress;
-    address constant public usdAddress = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
-    address constant public crystlAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
-    address constant public wNativeAddress = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
-
-    address public rewardAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
-    address public withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
+    address constant internal DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+    address constant internal CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
+    address constant internal WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
 
     uint256 public lastEarnBlock = block.number;
     uint256 public sharesTotal;
-    uint256 immutable public tolerance;
     uint256 public burnedAmount;
-    bool public feeOnTransferSwapMode; //enabled by strategies dealing with reflect tokens
-
-    address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
-    uint256 public controllerFee = 50; // 0.50%
-    uint256 public rewardRate = 50; // 0.50%
-    uint256 public buyBackRate = 400; // 4%
 
     uint256 public constant FEE_MAX_TOTAL = 10000;
     uint256 public constant FEE_MAX = 10000; // 100 = 1%
@@ -45,64 +32,76 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     uint256 public constant WITHDRAW_FEE_FACTOR_MAX = 10000;
     uint256 public constant WITHDRAW_FEE_FACTOR_LL = 9900;
 
-    uint256 public slippageFactor = 900; // 10% default slippage tolerance
-    uint256 public constant SLIPPAGE_FACTOR_UL = 995;
-    uint256 immutable EARN_DUST;
-
-    address[] public earnedToWnativePath;
-    address[] public earnedToUsdPath;
-    address[] public earnedToCrystlPath;
+    uint256 public slippageFactor; // 10% default slippage tolerance
+    uint256 public constant SLIPPAGE_FACTOR_UL = 9950;
     
-    event SetSettings(
-        uint256 _controllerFee,
-        uint256 _rewardRate,
-        uint256 _buyBackRate,
-        uint256 _withdrawFeeFactor,
-        uint256 _slippageFactor
-    );
-
-    event SetAddress(
-        address rewardAddress,
-        address withdrawFeeAddress,
-        address buyBackAddress
-    );
+    //deprecated; for front-end
+    function buyBackRate() external view returns (uint) { return settings.buybackRate; }
+    function tolerance() external view returns (uint) { return settings.tolerance; }
+    function vaultChefAddress() external view returns (address) { return addresses.vaulthealer; }
     
-    modifier onlyGov() {
-        require(msg.sender == Ownable(owner()).owner(), "!gov");
-        _;
+    struct Addresses {
+        address vaulthealer;
+        address router;
+        address masterchef;
+        address rewardFee;
+        address withdrawFee;
+        address buybackFee;
+        address want;
+        address[8] earned;
+        address[8] lpToken;
+    }
+    struct Settings {
+        uint16 controllerFee;
+        uint16 rewardRate;
+        uint16 buybackRate;
+        uint256 withdrawFeeFactor;
+        uint256 slippageFactor;
+        uint256 tolerance;
+        bool feeOnTransfer;
+        uint256 dust; //minimum raw token value considered to be worth swapping or depositing
+        uint256 minBlocksBetweenSwaps;
     }
     
+    //reward/withdraw: 0x5386881b46C37CdD30A748f7771CF95D7B213637
+    //buybackFee: 0x000000000000000000000000000000000000dEaD
+    Addresses public addresses;
+    
+    //standard: ["50", "50", "400", "9990", "9500", "0", "false", "1000000000000"]
+    //reflect: ["50", "50", "400", "9990", "9000", "0", "true", "1000000000000"]
+    //double reflect: ["50", "50", "400", "9990", "8000", "0", "true", "1000000000000"]
+    Settings public settings;
+    
+    uint256 earnedLength; //number of earned tokens;
+    uint256 lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
+    
+    event SetSettings(Settings _settings);
+    event SetAddress(Addresses _addresses);
+    
+    modifier onlyGov() {
+        require(msg.sender == Ownable(addresses.vaulthealer).owner(), "!gov");
+        _;
+    }
+    modifier onlyVaultHealer() {
+        require(msg.sender == addresses.vaulthealer, "!vaulthealer");
+        _;
+    }
+
     constructor(
-        address _vaulthealerAddress,
-        address _uniRouterAddress,
-        address _wantAddress,
-        address _earnedAddress,
-        uint256 _tolerance,
-        address[] memory _earnedToWnativePath,
-        address[] memory _earnedToUsdPath,
-        address[] memory _earnedToCrystlPath
+        Addresses memory _addresses,
+        Settings memory _settings,
+        address[][] memory _paths
     ) {
-        uniRouterAddress = _uniRouterAddress;
-        wantAddress = _wantAddress;
-        earnedAddress = _earnedAddress;
-        tolerance = _tolerance;
-        earnedToWnativePath = _earnedToWnativePath;
-        earnedToUsdPath = _earnedToUsdPath;
-        earnedToCrystlPath = _earnedToCrystlPath;
+        require(Ownable(_addresses.vaulthealer).owner() != address(0), "gov is vaulthealer's owner; can't be zero");
         
-        //initialize allowance for earned address
-        setMaxAllowance(_earnedAddress, _uniRouterAddress);
+        _setAddresses(_addresses);
+        _setSettings(_settings);
         
-        require(Ownable(_vaulthealerAddress).owner() != address(0), "gov is vaulthealer's owner; can't be zero");
-        transferOwnership(_vaulthealerAddress);
-        
-        uint _earnDust;
-        try IUniPair(_earnedAddress).decimals() returns (uint8 _d) {
-            _earnDust = _d > 8 ? 10**(_d - 4) : 10000; // 1/10000 of a token, or 10000 wei if this is more
-        } catch {
-            _earnDust = 10000;
+        for (uint i; i < _paths.length; i++) {
+            _setPath(_paths[i]);
         }
-        EARN_DUST = _earnDust;
+        
+        _resetAllowances();
     }
     
 
@@ -112,27 +111,25 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     function earn() external virtual;
     function earn(address _to) external virtual;
     function vaultSharesTotal() public virtual view returns (uint256);
-    function _resetAllowances() internal virtual;
     function _emergencyVaultWithdraw() internal virtual;
     
     function _beforeDeposit(address _from) internal virtual { }
     function _beforeWithdraw(address _from) internal virtual { }
-    function vaultChefAddress() external view returns (address) { return owner(); }
     
-    function wantBalance() internal virtual view returns (uint256) {
-        return IERC20(wantAddress).balanceOf(address(this));
+    function wantBalance() internal view returns (uint256) {
+        return IERC20(addresses.want).balanceOf(address(this));
     }
     
     function wantLockedTotal() public view returns (uint256) {
         return wantBalance() + vaultSharesTotal();
     }
     
-    function deposit(address _userAddress, uint256 _wantAmt) external onlyOwner nonReentrant whenNotPaused returns (uint256) {
+    function deposit(address _userAddress, uint256 _wantAmt) external onlyVaultHealer nonReentrant whenNotPaused returns (uint256) {
         // Call must happen before transfer
         _beforeDeposit(_userAddress);
         uint256 wantLockedBefore = wantLockedTotal();
 
-        IERC20(wantAddress).safeTransferFrom(
+        IERC20(addresses.want).safeTransferFrom(
             msg.sender,
             address(this),
             _wantAmt
@@ -154,15 +151,16 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         if (wantAmt == 0) return 0;
         
         uint256 sharesBefore = vaultSharesTotal();
+        _allowVaultDeposit(wantAmt);
         _vaultDeposit(wantAmt);
         uint256 sharesAfter = vaultSharesTotal();
         
-        require(sharesAfter + wantBalance() >= sharesBefore + wantAmt * slippageFactor / 1000,
+        require(sharesAfter + wantBalance() >= sharesBefore + wantAmt * slippageFactor / 10000,
             "Excessive slippage in vault deposit");
         return sharesAfter - sharesBefore;
     }
 
-    function withdraw(address _userAddress, uint256 _wantAmt) external onlyOwner nonReentrant returns (uint256) {
+    function withdraw(address _userAddress, uint256 _wantAmt) external onlyVaultHealer nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt is 0");
         
         _beforeWithdraw(_userAddress);
@@ -191,44 +189,49 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
             (WITHDRAW_FEE_FACTOR_MAX - withdrawFeeFactor) /
             WITHDRAW_FEE_FACTOR_MAX;
         if (withdrawFee > 0) {
-            IERC20(wantAddress).safeTransfer(withdrawFeeAddress, withdrawFee);
+            IERC20(addresses.want).safeTransfer(addresses.withdrawFee, withdrawFee);
         }
         
         _wantAmt -= withdrawFee;
 
-        IERC20(wantAddress).safeTransfer(owner(), _wantAmt); //owner is vaulthealer
+        IERC20(addresses.want).safeTransfer(addresses.vaulthealer, _wantAmt);
 
         return sharesRemoved;
     }
 
-    function distributeFees(uint256 _earnedAmt, address _to) internal returns (uint256) {
+    function distributeFees(address _earnedAddress, uint256 _earnedAmt, address _to) internal returns (uint256) {
         
         uint earnedAmt = _earnedAmt;
+        
+        //gas optimization
+        uint controllerFee = settings.controllerFee;
+        uint rewardRate = settings.rewardRate;
+        uint buybackRate = settings.buybackRate;
         
         // To pay for earn function
         if (controllerFee > 0) {
             uint256 fee = _earnedAmt * controllerFee / FEE_MAX;
-            _safeSwap(fee, earnedToWnativePath, _to);
+            _safeSwap(fee, _earnedAddress, WNATIVE, _to);
             earnedAmt -= fee;
         }
         //distribute rewards
         if (rewardRate > 0) {
             uint256 fee = _earnedAmt * rewardRate / FEE_MAX;
 
-            if (earnedAddress == crystlAddress) {
+            if (_earnedAddress == CRYSTL) {
                 // Earn token is CRYSTL
-                IERC20(earnedAddress).safeTransfer(rewardAddress, fee);
+                IERC20(_earnedAddress).safeTransfer(addresses.rewardFee, fee);
             } else {
-                _safeSwap(fee, earnedToUsdPath, rewardAddress);
+                _safeSwap(fee, _earnedAddress, DAI, addresses.rewardFee);
             }
 
             earnedAmt -= fee;
         }
         //burn crystl
-        if (buyBackRate > 0) {
-            uint256 buyBackAmt = _earnedAmt * buyBackRate / FEE_MAX;
+        if (settings.buybackRate > 0) {
+            uint256 buyBackAmt = _earnedAmt * buybackRate / FEE_MAX;
 
-            _safeSwap(buyBackAmt, earnedToCrystlPath, buyBackAddress);
+            _safeSwap(buyBackAmt, _earnedAddress, CRYSTL, addresses.buybackFee);
 
             earnedAmt -= buyBackAmt;
         }
@@ -263,90 +266,108 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         revert("Gov is the vaulthealer's owner");
     }
     
-    function setSettings(
-        uint256 _controllerFee,
-        uint256 _rewardRate,
-        uint256 _buyBackRate,
-        uint256 _withdrawFeeFactor,
-        uint256 _slippageFactor
-    ) external onlyGov {
-        require(_controllerFee +_rewardRate + _buyBackRate <= FEE_MAX_TOTAL, "Max fee of 100%");
-        require(_withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
-        require(_withdrawFeeFactor <= WITHDRAW_FEE_FACTOR_MAX, "_withdrawFeeFactor too high");
-        require(_slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
-        controllerFee = _controllerFee;
-        rewardRate = _rewardRate;
-        buyBackRate = _buyBackRate;
-        withdrawFeeFactor = _withdrawFeeFactor;
-        slippageFactor = _slippageFactor;
-
-        emit SetSettings(
-            _controllerFee,
-            _rewardRate,
-            _buyBackRate,
-            _withdrawFeeFactor,
-            _slippageFactor
-        );
+    function setPath(address[] calldata _path) external onlyGov {
+        _setPath(_path);
+    }
+    
+    function setSettings(Settings calldata _settings) external onlyGov {
+        _setSettings(_settings);
+    }
+    function _setSettings(Settings memory _settings) private {
+        require(_settings.controllerFee + _settings.rewardRate + _settings.buybackRate <= FEE_MAX_TOTAL, "Max fee of 100%");
+        require(_settings.withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
+        require(_settings.withdrawFeeFactor <= WITHDRAW_FEE_FACTOR_MAX, "_withdrawFeeFactor too high");
+        require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
+        settings = _settings;
+        
+        emit SetSettings(_settings);
     }
 
-    function setAddresses(
-        address _rewardAddress,
-        address _withdrawFeeAddress,
-        address _buyBackAddress
-    ) external onlyGov {
-        require(_withdrawFeeAddress != address(0), "Invalid Withdraw address");
-        require(_rewardAddress != address(0), "Invalid reward address");
-        require(_buyBackAddress != address(0), "Invalid buyback address");
+    function setAddresses(Addresses calldata _addresses) external onlyGov {
+        for (uint i; i < addresses.earned.length; i++) {
+            require(_addresses.earned[i] == addresses.earned[i], "cannot change earned address");
+        }
+        for (uint i; i < addresses.lpToken.length; i++) {
+            require(_addresses.lpToken[i] == addresses.lpToken[i], "cannot change earned address");
+        }        
+        require(_addresses.want == addresses.want, "cannot change want address");
+        require(_addresses.masterchef == addresses.masterchef, "cannot change masterchef address");
+        require(_addresses.vaulthealer == addresses.vaulthealer, "cannot change masterchef address");
+        _setAddresses(_addresses);
+    }
+    function _setAddresses(Addresses memory _addresses) private {
+        require(_addresses.router != address(0), "Invalid router address");
+        IUniRouter02(_addresses.router).factory(); // unirouter will have this function; bad address will revert
+        require(_addresses.rewardFee != address(0), "Invalid reward address");
+        require(_addresses.withdrawFee != address(0), "Invalid Withdraw address");
+        require(_addresses.buybackFee != address(0), "Invalid buyback address");
+        addresses = _addresses;
+        uint i;
+        for (; i < _addresses.lpToken.length && addresses.lpToken[i] != address(0); i++) {}
+        earnedLength = i;
+        for (; i < _addresses.lpToken.length && addresses.lpToken[i] != address(0); i++) {}
+        lpTokenLength = i;
 
-        rewardAddress = _rewardAddress;
-        withdrawFeeAddress = _withdrawFeeAddress;
-        buyBackAddress = _buyBackAddress;
 
-        emit SetAddress(_rewardAddress, _withdrawFeeAddress, _buyBackAddress);
+        emit SetAddress(addresses);
     }
     
     function _safeSwap(
         uint256 _amountIn,
-        address[] memory _path,
+        address _tokenA,
+        address _tokenB,
         address _to
     ) internal {
         
         //Handle one-token paths which are simply a transfer
-        if (_path.length == 1) {
-            if (_path[0] == crystlAddress && _to == buyBackAddress)
+        if (_tokenA == _tokenB) {
+            if (_tokenA == CRYSTL && _to == addresses.buybackFee)
                 burnedAmount += _amountIn;
-            IERC20(_path[0]).safeTransfer(_to, _amountIn);
+            IERC20(_tokenA).safeTransfer(_to, _amountIn);
             return;
         }
+        address[] memory path = getPath(_tokenA, _tokenB);
         
-        uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
+        uint256[] memory amounts = IUniRouter02(addresses.router).getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1];
 
-        if (_path[_path.length - 1] == crystlAddress && _to == buyBackAddress) {
+        if (_tokenB == CRYSTL && _to == addresses.buybackFee) {
             burnedAmount += amountOut;
         }
 
-        if (feeOnTransferSwapMode) {
-            IUniRouter02(uniRouterAddress).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        if (settings.feeOnTransfer) {
+            IUniRouter02(addresses.router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountIn,
-                amountOut * slippageFactor / 1000,
-                _path,
+                amountOut * slippageFactor / 10000,
+                path,
                 _to,
                 block.timestamp + 600
             );
         } else {
-            IUniRouter02(uniRouterAddress).swapExactTokensForTokens(
+            IUniRouter02(addresses.router).swapExactTokensForTokens(
                 _amountIn,
-                amountOut * slippageFactor / 1000,
-                _path,
+                amountOut * slippageFactor / 10000,
+                path,
                 _to,
                 block.timestamp + 600
             );
         }
     }
-    function setMaxAllowance(address token, address spender) internal {
-        
+    function _setMaxAllowance(address token, address spender) private {
         IERC20(token).safeApprove(spender, 0);
         IERC20(token).safeIncreaseAllowance(spender, type(uint256).max);
     }
+    function _setZeroAllowance(address token, address spender) private {
+        IERC20(token).safeApprove(spender, 0);
+    }
+    function _resetAllowances() private {
+        _setZeroAllowance(addresses.want, addresses.masterchef);
+        for (uint i; i < earnedLength; i++) {
+            _setMaxAllowance(addresses.earned[i], addresses.router);
+        }
+    }
+    function _allowVaultDeposit(uint256 _amount) private {
+        IERC20(addresses.want).safeIncreaseAllowance(addresses.masterchef, _amount);
+    }
+
 }
