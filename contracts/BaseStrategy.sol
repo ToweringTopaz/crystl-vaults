@@ -90,7 +90,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         earnedToCrystlPath = _earnedToCrystlPath;
         
         //initialize allowance for earned address
-        IERC20(_earnedAddress).safeIncreaseAllowance(_uniRouterAddress, type(uint256).max);
+        setMaxAllowance(_earnedAddress, _uniRouterAddress);
         
         require(Ownable(_vaulthealerAddress).owner() != address(0), "gov is vaulthealer's owner; can't be zero");
         transferOwnership(_vaulthealerAddress);
@@ -334,6 +334,9 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
                 block.timestamp + 600
             );
         }
-
+    }
+    function setMaxAllowance(address token, address spender) internal {
+        
+        IERC20(token).safeIncreaseAllowance(spender, type(uint256).max);
     }
 }

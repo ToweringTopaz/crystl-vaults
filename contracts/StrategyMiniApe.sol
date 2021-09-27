@@ -41,11 +41,9 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         address _unirouter = _configAddress[2];
         
         //initialize allowances for token0/token1
-        IERC20(token0Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        IERC20(token1Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        IERC20(_earnedAddress).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        IERC20(earned2Address).safeIncreaseAllowance(_unirouter, type(uint256).max);
-        
+        setMaxAllowance(token0Address, _unirouter);
+        setMaxAllowance(token1Address, _unirouter);
+        setMaxAllowance(earned2Address, _unirouter);
     }
 
     function _vaultDeposit(uint256 _amount) internal virtual override {
@@ -64,29 +62,10 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
     function _resetAllowances() internal override {
         IERC20(wantAddress).safeApprove(miniapeAddress, 0);
 
-        IERC20(earnedAddress).safeApprove(uniRouterAddress, 0);
-        IERC20(earnedAddress).safeIncreaseAllowance(
-            uniRouterAddress,
-            type(uint256).max
-        );
-        
-        IERC20(earned2Address).safeApprove(uniRouterAddress, 0);
-        IERC20(earned2Address).safeIncreaseAllowance(
-            uniRouterAddress,
-            type(uint256).max
-        );
-
-        IERC20(token0Address).safeApprove(uniRouterAddress, 0);
-        IERC20(token0Address).safeIncreaseAllowance(
-            uniRouterAddress,
-            type(uint256).max
-        );
-
-        IERC20(token1Address).safeApprove(uniRouterAddress, 0);
-        IERC20(token1Address).safeIncreaseAllowance(
-            uniRouterAddress,
-            type(uint256).max
-        );
+        setMaxAllowance(earnedAddress,uniRouterAddress);
+        setMaxAllowance(earned2Address,uniRouterAddress);
+        setMaxAllowance(token0Address,uniRouterAddress);
+        setMaxAllowance(token1Address,uniRouterAddress);
 
     }
     function vaultSharesTotal() public override view returns (uint256) {
