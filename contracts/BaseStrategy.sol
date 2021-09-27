@@ -67,9 +67,9 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     //buybackFee: 0x000000000000000000000000000000000000dEaD
     Addresses public addresses;
     
-    //standard: ["50", "50", "400", "9990", "9500", "0", "false", "1000000000000"]
-    //reflect: ["50", "50", "400", "9990", "9000", "0", "true", "1000000000000"]
-    //double reflect: ["50", "50", "400", "9990", "8000", "0", "true", "1000000000000"]
+    //standard: ["50", "50", "400", "9990", "9500", "0", "false", "1000000000000", "10"]
+    //reflect: ["50", "50", "400", "9990", "9000", "0", "true", "1000000000000", "10"]
+    //double reflect: ["50", "50", "400", "9990", "8000", "0", "true", "1000000000000", "10"]
     Settings public settings;
     
     uint256 earnedLength; //number of earned tokens;
