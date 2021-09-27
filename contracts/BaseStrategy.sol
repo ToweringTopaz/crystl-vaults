@@ -47,7 +47,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
 
     uint256 public slippageFactor = 900; // 10% default slippage tolerance
     uint256 public constant SLIPPAGE_FACTOR_UL = 995;
-    uint256 public constant EARN_DUST = 1e12;
+    uint256 public constant EARN_DUST = 1e14;
 
     address[] public earnedToWnativePath;
     address[] public earnedToUsdPath;
