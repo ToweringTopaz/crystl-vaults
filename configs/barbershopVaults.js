@@ -1,5 +1,5 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { HAIR, WMATIC, CRYSTL } = tokens.polygon;
+const { HAIR, WMATIC, CRYSTL, DAI } = tokens.polygon;
 
 const barbershopVaults = [
     {
@@ -27,6 +27,3 @@ const barbershopVaults = [
 module.exports = {
     barbershopVaults
 }
-
-barbershopVaults[0].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
-...barbershopVaults[0].strategyConfig // all other contract configuration variables
