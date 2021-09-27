@@ -34,8 +34,7 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         earned2ToCrystlPath = _earned2Paths[2];
         earned2ToToken0Path = _earned2Paths[3];
         earned2ToToken1Path = _earned2Paths[4];
-        
-        address _earnedAddress = _configAddress[4];
+
         earned2Address = _configAddress[5];
         
         address _unirouter = _configAddress[2];
