@@ -32,7 +32,7 @@ abstract contract BaseStrategyLPSingle is BaseStrategy {
         // Converts farm tokens into want tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
 
-        if (earnedAmt > 0) {
+        if (earnedAmt > EARN_DUST) {
             earnedAmt = distributeFees(earnedAmt, _to);
     
             // Swap half earned to token0

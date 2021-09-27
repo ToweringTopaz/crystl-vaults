@@ -40,7 +40,7 @@ abstract contract BaseStrategyLPDouble is BaseStrategy {
         // Converts farm tokens into want tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
 
-        if (earnedAmt > 0) {
+        if (earnedAmt > EARN_DUST) {
             earnedAmt = distributeFees(earnedAmt, _to);
     
             // Swap half earned to token0
@@ -52,7 +52,7 @@ abstract contract BaseStrategyLPDouble is BaseStrategy {
         //Do second earned token
         uint256 earned2Amt = IERC20(earned2Address).balanceOf(address(this));
 
-        if (earned2Amt > 0) {
+        if (earned2Amt > EARN_DUST) {
             earned2Amt = distributeFeesE2(earned2Amt, _to);
             
             // Swap half earned to token0
@@ -61,7 +61,7 @@ abstract contract BaseStrategyLPDouble is BaseStrategy {
             // Swap half earned to token1
             _safeSwap(earned2Amt / 2, earned2ToToken1Path, wantAddress);
         }
-        if (earnedAmt | earned2Amt > 0) {
+        if (earnedAmt > EARN_DUST || earned2Amt > EARN_DUST) {
             // Get want tokens, ie. add liquidity
             IUniPair(wantAddress).mint(address(this));
     
