@@ -14,12 +14,8 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         address[5] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
         uint256 _pid,
         uint256 _tolerance,
-        address[] memory _earnedToWmaticPath,
-        address[] memory _earnedToUsdcPath,
-        address[] memory _earnedToCrystlPath,
-        address[] memory _earnedToToken0Path,
-        address[] memory _earnedToToken1Path
-    ) BaseStrategy(_configAddress[0], _configAddress[2], _configAddress[3], _configAddress[4], _tolerance, _earnedToWmaticPath, _earnedToUsdcPath, _earnedToCrystlPath) {
+        address[][5] memory _earnedPaths  //wmatic, usdc, crystl, token0, token1
+    ) BaseStrategy(_configAddress[0], _configAddress[2], _configAddress[3], _configAddress[4], _tolerance, _earnedPaths[0], _earnedPaths[1], _earnedPaths[2]) {
 
         masterchefAddress = _configAddress[1];
         
@@ -29,8 +25,8 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
 
         pid = _pid;
 
-        earnedToToken0Path = _earnedToToken0Path;
-        earnedToToken1Path = _earnedToToken1Path;
+        earnedToToken0Path = _earnedPaths[3];
+        earnedToToken1Path = _earnedPaths[4];
         
         address _unirouter = _configAddress[2];
         
