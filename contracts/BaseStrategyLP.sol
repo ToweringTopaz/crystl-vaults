@@ -5,27 +5,8 @@ import "./BaseStrategy.sol";
 
 abstract contract BaseStrategyLP is BaseStrategy {
     using SafeERC20 for IERC20;
-    
-    constructor(
-        Addresses memory _addresses,
-        Settings memory _settings,
-        address[][] memory _paths
-    ) BaseStrategy(_addresses, _settings, _paths) {
-        require(_paths.length == 5, "need 5 paths for this strategy");
-        
-        addresses.lpToken[0] = IUniPair(_addresses.want).token0();
-        addresses.lpToken[1] = IUniPair(_addresses.want).token1();
-    }
-    
-    function earn() external override nonReentrant { 
-        _earn(_msgSender());
-    }
 
-    function earn(address _to) external override nonReentrant {
-        _earn(_to);
-    }
-
-    function _earn(address _to) internal {
+    function _earn(address _to) internal override {
         
         //No good reason to execute _earn twice in a block
         //Vault must not _earn() while paused!

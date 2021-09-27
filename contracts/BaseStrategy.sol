@@ -108,8 +108,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;
     function _vaultHarvest() internal virtual;
-    function earn() external virtual;
-    function earn(address _to) external virtual;
+    function _earn(address _to) internal virtual;
     function vaultSharesTotal() public virtual view returns (uint256);
     function _emergencyVaultWithdraw() internal virtual;
     
@@ -122,6 +121,13 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     
     function wantLockedTotal() public view returns (uint256) {
         return wantBalance() + vaultSharesTotal();
+    }
+    
+    function earn() external nonReentrant { 
+        _earn(_msgSender());
+    }
+    function earn(address _to) external nonReentrant {
+        _earn(_to);
     }
     
     function deposit(address _userAddress, uint256 _wantAmt) external onlyVaultHealer nonReentrant whenNotPaused returns (uint256) {
@@ -217,22 +223,17 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         //distribute rewards
         if (rewardRate > 0) {
             uint256 fee = _earnedAmt * rewardRate / FEE_MAX;
-
-            if (_earnedAddress == CRYSTL) {
-                // Earn token is CRYSTL
+            if (_earnedAddress == CRYSTL)
                 IERC20(_earnedAddress).safeTransfer(addresses.rewardFee, fee);
-            } else {
+            else
                 _safeSwap(fee, _earnedAddress, DAI, addresses.rewardFee);
-            }
 
             earnedAmt -= fee;
         }
         //burn crystl
         if (settings.buybackRate > 0) {
             uint256 buyBackAmt = _earnedAmt * buybackRate / FEE_MAX;
-
             _safeSwap(buyBackAmt, _earnedAddress, CRYSTL, addresses.buybackFee);
-
             earnedAmt -= buyBackAmt;
         }
         
