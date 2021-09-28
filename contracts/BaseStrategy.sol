@@ -24,7 +24,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     uint256 constant internal WITHDRAW_FEE_FACTOR_LL = 9900;
     uint256 constant internal SLIPPAGE_FACTOR_UL = 9950;
     
-    uint256 immutable earnedLength; //number of earned tokens;
+    uint256 earnedLength; //number of earned tokens;
     uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
     
     struct Addresses {
@@ -58,10 +58,12 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     uint256 public sharesTotal;
     uint256 public burnedAmount;
     
+    mapping(address => uint256) public reflectRate;
+    
     event SetSettings(Settings _settings);
     event SetAddress(Addresses _addresses);
     
-    modifier onlyGov() {
+    modifier onlyGov() virtual {
         require(msg.sender == Ownable(addresses.vaulthealer).owner(), "!gov");
         _;
     }
@@ -317,6 +319,11 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         require(_addresses.vaulthealer == addresses.vaulthealer, "cannot change masterchef address");
         _setAddresses(_addresses);
     }
+    //for optimizing liquidity calculations
+    function setReflectRate(address _token, uint256 _rate) external onlyGov {
+        require(_rate < 10000, "invalid reflect rate");
+        reflectRate[_token] = _rate;
+    }
     
     //private configuration functions
     function _setSettings(Settings memory _settings) private {
@@ -356,7 +363,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function _allowVaultDeposit(uint256 _amount) private {
         IERC20(addresses.want).safeIncreaseAllowance(addresses.masterchef, _amount);
     }
-    
     //deprecated; for front-end
     function buyBackRate() external view returns (uint) { return settings.buybackRate; }
     function tolerance() external view returns (uint) { return settings.tolerance; }

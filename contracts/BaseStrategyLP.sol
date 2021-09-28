@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import "./BaseStrategy.sol";
+import "./libs/LiquidityMath.sol";
 
 abstract contract BaseStrategyLP is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -42,13 +43,13 @@ abstract contract BaseStrategyLP is BaseStrategy {
                 success = true;
                 uint _lpTokenLength = lpTokenLength;
                 for (uint j; j < _lpTokenLength; i++) {
-                    _safeSwap(earnedAmt / _lpTokenLength, earnedAddress, addresses.lpToken[j], wantAddress);
+                    _safeSwap(earnedAmt / _lpTokenLength, earnedAddress, addresses.lpToken[j], address(this));
                 }
             }
         }
         if (success) {
             // Get want tokens, ie. add liquidity
-            IUniPair(wantAddress).mint(address(this));
+            LiquidityMath.optimalMint(wantAddress, addresses.lpToken[0], addresses.lpToken[1]);
             _farm();
         }
     }

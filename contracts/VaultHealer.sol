@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./libs/IStrategy.sol";
+import "./libs/IUniPair.sol";
 
 contract VaultHealer is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
@@ -168,5 +169,17 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         pool.want.safeApprove(address(pool.strat), 0);
         pool.want.safeIncreaseAllowance(address(pool.strat), type(uint256).max);
+    }
+    function strategyWantMigration(IUniPair _newWant) external {
+        require (strats[msg.sender], "only callable by strategies");
+        for (uint i; i < poolInfo.length; i++) {
+            if (address(poolInfo[i].strat) == msg.sender) {
+                address token0 = IUniPair(address(poolInfo[i].want)).token0();
+                address token1 = IUniPair(address(poolInfo[i].want)).token1();
+                require(token0 == IUniPair(_newWant).token0() && token1 == IUniPair(_newWant).token1(), "old/new tokens don't match");
+                poolInfo[i].want = _newWant;
+                break;
+            }
+        }
     }
 }
