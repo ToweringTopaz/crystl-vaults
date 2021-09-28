@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 import "./BaseStrategy.sol";
-import "./libs/LiquidityMath.sol";
+import "./libs/HelperLiquidity.sol";
 
 abstract contract BaseStrategyLP is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -49,7 +49,7 @@ abstract contract BaseStrategyLP is BaseStrategy {
         }
         if (success) {
             // Get want tokens, ie. add liquidity
-            LiquidityMath.optimalMint(wantAddress, addresses.lpToken[0], addresses.lpToken[1]);
+            HelperLiquidity.optimalMint(wantAddress, addresses.lpToken[0], addresses.lpToken[1]);
             _farm();
         }
     }
