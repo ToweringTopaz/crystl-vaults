@@ -10,7 +10,6 @@
     "@openzeppelin/contracts": "^4.3.1",
     "@truffle/hdwallet-provider": "^1.4.3",
     "dotenv": "^8.6.0",
-    "hardhat-console": "^1.0.0",
     "path": "^0.12.7",
     "truffle": "^5.4.0",
     "truffle-flattener": "^1.4.4",
@@ -29,6 +28,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.6",
     "hardhat": "^2.6.4",
+    "hardhat-console": "^1.0.0",
     "solidity-coverage": "^0.7.16",
     "truffle-plugin-verify": "^0.5.14",
     "ts-node": "^9.1.1"
