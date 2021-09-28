@@ -1,13 +1,15 @@
 // import hre from "hardhat";
 
 const { tokens } = require('../configs/addresses.js');
-const { WMATIC } = tokens.polygon;
-const { expect, assert } = require('chai');
+const { WMATIC, CRYSTL, DAI } = tokens.polygon;
+const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./IUniRouter02_abi.js');
 const { token_abi } = require('./token_abi.js');
 const { vaultHealer_abi } = require('./vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
 const { IWETH_abi } = require('./IWETH_abi.js');
+// const { IMasterchef_abi } = require('./IMasterchef_abi.js');
+const { IUniswapV2Pair_abi } = require('./IUniswapV2Pair_abi.js');
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -17,29 +19,35 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
+const { vaultSettings } = require('../configs/vaultSettings');
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [
-    apeSwapVaults[0].addresses, 
-    apeSwapVaults[0].strategyConfig[0], 
-    apeSwapVaults[0].strategyConfig[1],
-    apeSwapVaults[0].earnedPaths,
-    apeSwapVaults[0].earned2Paths
-];
+const DEPLOYMENT_VARS = [apeSwapVaults[0].addresses, vaultSettings.standard, ...apeSwapVaults[0].paths];
+const [VAULT_HEALER, ROUTER, MASTERCHEF, REWARD_FEE, WITHDRAW_FEE, BURN_ADDRESS, LIQUIDITY_POOL] = apeSwapVaults[0].addresses
+const [,,,,, TOLERANCE] = vaultSettings.standard;
+const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
 
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[0].addresses;
-const [PID, TOLERANCE] = apeSwapVaults[0].strategyConfig;
-const [,,,EARNED_TO_TOKEN0_PATH, EARNED_TO_TOKEN1_PATH] = apeSwapVaults[0].earnedPaths;
+const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[1]);
+const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[2]);
 
-const TOKEN0 = ethers.utils.getAddress(EARNED_TO_TOKEN0_PATH[EARNED_TO_TOKEN0_PATH.length-1]);
-const TOKEN1 = ethers.utils.getAddress(EARNED_TO_TOKEN1_PATH[EARNED_TO_TOKEN1_PATH.length-1]);
-
-describe('StrategyMasterHealer contract', () => {
+describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
+    connected to vaultHealer @  ${VAULT_HEALER}
+    depositing these LP tokens: ${LIQUIDITY_POOL}
+    into Masterchef:            ${MASTERCHEF} 
+    using Router:               ${ROUTER} 
+    with earned token:          ${EARNED}
+    PID:                        ${PID}
+    Tolerance:                  ${TOLERANCE}
+    earnedToWmaticPath: ${apeSwapVaults[0].paths[0]}
+    earnedToUsdcPath:   ${apeSwapVaults[0].paths[1]}
+    earnedToCrystlPath: ${apeSwapVaults[0].paths[2]}
+    earnedToToken0Path: ${apeSwapVaults[0].paths[0]}
+    earnedToToken1Path: ${apeSwapVaults[0].paths[2]}
+    `, () => {
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
 
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE); //<-- this needs to change for different tests!!
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
-
         vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         vaultHealerOwner = await vaultHealer.owner();
         await hre.network.provider.request({
@@ -71,38 +79,24 @@ describe('StrategyMasterHealer contract', () => {
         }
     });
 
-    describe('Deployment', () => {
-        it('Should set the right VaultHealer address - PRODUCTION_VAULT_HEALER', async () => {
-            expect(await strategyMasterHealer.vaultChefAddress()).to.equal(ethers.utils.getAddress(VAULT_HEALER)); //getAddress ensures that address is checksummed
-        })
+    describe(`Testing deployment:
+    `, () => {
+        // it('Should set the pid such that our want tokens correspond with the masterchef pools LP tokens', async () => {
+        //     masterchef = await ethers.getContractAt(IMasterchef_abi, MASTERCHEF); 
+        //     poolInfo = await masterchef.poolInfo(PID);
+        //     lpToken = poolInfo[0];
+        //     expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
+        // })
 
-        it('Should set the right Masterchef address', async () => {
-            expect(await strategyMasterHealer.masterchefAddress()).to.equal(ethers.utils.getAddress(MASTERCHEF));
-        })
-
-        it('Should set the right Router address', async () => {
-            expect(await strategyMasterHealer.uniRouterAddress()).to.equal(ethers.utils.getAddress(ROUTER));
-        })
-
-        it('Should set the right LP address', async () => {
-            expect(await strategyMasterHealer.wantAddress()).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
-        })
-
-        it('Should set the right Reward/Earned address', async () => {
-            expect(await strategyMasterHealer.earnedAddress()).to.equal(ethers.utils.getAddress(EARNED));
-        })
-
-        it('Should set the right pid for the eventual farm it gets vaulted in', async () => {
-            expect(await strategyMasterHealer.pid()).to.equal(PID);
-        })
-
-        it('Should set the right tolerance', async () => { //could do a less than 3 check here?
-            expect(await strategyMasterHealer.tolerance()).to.equal(TOLERANCE);
+        it(`Should set tolerance in the range of 1-3
+        `, async () => { 
+            expect(await strategyMasterHealer.tolerance()).to.be.within(1,3);
         })
         //and paths too?
     })
 
-    describe('Transactions', () => {
+    describe(`Testing depositing into vault, compounding vault, withdrawing from vault:
+    `, () => {
         // Create LPs for the vault
         it('Should create the right LP tokens for user to deposit in the vault', async () => {
             token0 = await ethers.getContractAt(token_abi, TOKEN0);
@@ -114,7 +108,7 @@ describe('StrategyMasterHealer contract', () => {
             await token1.approve(uniswapRouter.address, token1Balance);
 
             await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, owner.address, Date.now() + 900)
-            LPtoken = await ethers.getContractAt(token_abi, LIQUIDITY_POOL);
+            LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, LIQUIDITY_POOL);
             initialLPtokenBalance = await LPtoken.balanceOf(owner.address);
             expect(initialLPtokenBalance).to.not.equal(0);
         })
@@ -134,8 +128,20 @@ describe('StrategyMasterHealer contract', () => {
         
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
         // Check balance to ensure it increased as expected
-        it('Should compound the LPs upon calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
+        it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+            daiToken = await ethers.getContractAt(token_abi, DAI);
+
+            balanceCrystlAtBurnAddressBeforeEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
+            balanceMaticAtUserAddressBeforeEarn = await owner.getBalance(); //maticToken.balanceOf(owner.address); //CHANGE THIS
+
+            balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            
+            for (i=0; i<10;i++) {
+                await ethers.provider.send("evm_mine"); //creates a 10 block delay
+            }
 
             await vaultHealer.earnSome([poolLength-1]);
             
@@ -147,8 +153,23 @@ describe('StrategyMasterHealer contract', () => {
         })
         
         // follow the flow of funds in the transaction to ensure burn, compound fee, and LP creation are all accurate.
-        it('Should burn x amount of crystal with each earn, pay y fee to compound, and create z LPs when it compounds', async () => {
-            // what to put here? a little tricky...
+        it('Should burn a small amount of CRYSTL with each earn, resulting in a small increase in the CRYSTL balance of the burn address', async () => {
+            const balanceCrystlAtBurnAddressAfterEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
+            expect(balanceCrystlAtBurnAddressAfterEarn).to.be.gt(balanceCrystlAtBurnAddressBeforeEarn);
+        })
+
+        // will redesign this test once we change the payout to WMATIC - at the moment it's tricky to see the increase in user's matic balance, as they also pay out gas
+        // it('Should pay a small amount of MATIC to the user with each earn, resulting in a small increase in the MATIC balance of the user', async () => {
+        //     const balanceMaticAtUserAddressAfterEarn = await owner.getBalance();
+        //     console.log(balanceMaticAtUserAddressBeforeEarn);
+        //     console.log(balanceMaticAtUserAddressAfterEarn);
+        //     expect(balanceMaticAtUserAddressAfterEarn).to.be.gt(balanceMaticAtUserAddressBeforeEarn);        
+        // }) 
+
+        it('Should pay a small amount to the rewardAddress with each earn, resulting in a small increase in CRYSTL or DAI balance of the rewardAddress', async () => {
+            const balanceCrystlAtFeeAddressAfterEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            const balanceDaiAtFeeAddressAfterEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            expect(balanceCrystlAtFeeAddressAfterEarn.add(balanceDaiAtFeeAddressAfterEarn)).to.be.gt(balanceCrystlAtFeeAddressBeforeEarn.add(balanceDaiAtFeeAddressBeforeEarn));
         })
         
         // Unstake 50% of LPs. 
@@ -157,10 +178,10 @@ describe('StrategyMasterHealer contract', () => {
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(owner.address);
             const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
 
-            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFirstWithdrawal.div(2)); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
             
             const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(owner.address);
-            const vaultSharesTotalAfterFirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            const vaultSharesTotalAfterFirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() 
 
             expect(LPtokenBalanceAfterFirstWithdrawal.sub(LPtokenBalanceBeforeFirstWithdrawal))
             .to.equal(
