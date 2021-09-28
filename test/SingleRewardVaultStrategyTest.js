@@ -9,6 +9,7 @@ const { token_abi } = require('./token_abi.js');
 const { vaultHealer_abi } = require('./vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
 const { IWETH_abi } = require('./IWETH_abi.js');
 const { IMasterchef_abi } = require('./IMasterchef_abi.js');
+const { IUniswapV2Pair_abi } = require('./IUniswapV2Pair_abi.js');
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -107,7 +108,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await token1.approve(uniswapRouter.address, token1Balance);
 
             await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, owner.address, Date.now() + 900)
-            LPtoken = await ethers.getContractAt(token_abi, LIQUIDITY_POOL);
+            LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, LIQUIDITY_POOL);
             initialLPtokenBalance = await LPtoken.balanceOf(owner.address);
             expect(initialLPtokenBalance).to.not.equal(0);
         })
@@ -127,7 +128,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
         // Check balance to ensure it increased as expected
-        it('Should compound the LPs upon calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
+        it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             daiToken = await ethers.getContractAt(token_abi, DAI);
@@ -137,7 +138,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-            await ethers.provider.send("evm_mine"); //this should introduce a short delay...
+            
+            for (i=0; i<10;i++) {
+                await ethers.provider.send("evm_mine"); //creates a 10 block delay
+            }
+
             await vaultHealer.earnSome([poolLength-1]);
             
             vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
