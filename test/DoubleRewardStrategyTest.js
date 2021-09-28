@@ -21,12 +21,14 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
 const { vaultSettings } = require('../configs/vaultSettings');
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[0].addresses, vaultSettings.standard, ...apeSwapVaults[0].paths];
+const DEPLOYMENT_VARS = [apeSwapVaults[0].addresses, vaultSettings.standard, apeSwapVaults[0].paths, apeSwapVaults[0].PID];
 const [VAULT_HEALER, ROUTER, MASTERCHEF, REWARD_FEE, WITHDRAW_FEE, BURN_ADDRESS, LIQUIDITY_POOL] = apeSwapVaults[0].addresses
 const [,,,,, TOLERANCE] = vaultSettings.standard;
 const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
+const EARNED = TOKEN0_TO_EARNED_PATH[1]
+const EARNED2 = TOKEN0_TO_EARNED_PATH[2]
 
-const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[1]);
+const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[2]);
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
@@ -35,7 +37,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     into Masterchef:            ${MASTERCHEF} 
     using Router:               ${ROUTER} 
     with earned token:          ${EARNED}
-    PID:                        ${PID}
+    with earned2 token:         ${EARNED2}
     Tolerance:                  ${TOLERANCE}
     earnedToWmaticPath: ${apeSwapVaults[0].paths[0]}
     earnedToUsdcPath:   ${apeSwapVaults[0].paths[1]}
@@ -45,7 +47,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
-
+        console.log("1")
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE); //<-- this needs to change for different tests!!
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
         vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
@@ -55,15 +57,19 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             params: [vaultHealerOwner],
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
+        console.log("2")
 
         await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyMasterHealer.address);
-        
+        console.log("3")
+
         await network.provider.send("hardhat_setBalance", [
             owner.address,
             "0x3635c9adc5dea00000", //amount of 1000 in hex
         ]);
+        console.log("4")
 
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
+        console.log("5")
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
@@ -77,6 +83,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         } else {
             await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
         }
+        console.log("6")
+
     });
 
     describe(`Testing deployment:
@@ -88,10 +96,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //     expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
         // })
 
-        it(`Should set tolerance in the range of 1-3
-        `, async () => { 
-            expect(await strategyMasterHealer.tolerance()).to.be.within(1,3);
-        })
+        // it(`Should set tolerance in the range of 1-3
+        // `, async () => { 
+        //     expect(await strategyMasterHealer.tolerance()).to.be.within(1,3);
+        // })
         //and paths too?
     })
 

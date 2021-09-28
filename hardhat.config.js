@@ -52,7 +52,15 @@ module.exports = {
       accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
     },
   },
-  solidity: "0.8.6",
+  solidity: {
+    version: "0.8.6",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
+  },
   mocha: {
     timeout: 90000,
   },
