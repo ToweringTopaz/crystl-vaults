@@ -7,7 +7,7 @@ import "./PrismLibrary.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-library LiquidityMath {
+library HelperLiquidity {
     using SafeERC20 for IERC20;
     
     //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
