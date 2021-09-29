@@ -22,7 +22,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
 
     uint256 earnedLength; //number of earned tokens;
     uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
-    bool constant _DEBUG_ = true;
     
     Addresses public addresses;
     Settings public settings;

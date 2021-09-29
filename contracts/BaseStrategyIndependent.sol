@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -8,12 +8,7 @@ import "./BaseStrategy.sol";
 abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
     using SafeERC20 for IERC20;
     
-    // Info of each user.
-    struct UserInfo {
-        uint256 shares; // How many LP tokens the user has provided.
-    }
-    
-    mapping (address => UserInfo) public userInfo;
+    // mapping (address => UserInfo) public userInfo;
     
     modifier onlyGov() override {
         require(msg.sender == owner(), "!gov");
