@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../PathStorage.sol";
+import "./IPathStorage.sol";
 import "./IUniRouter02.sol";
 import "./StratStructs.sol";
 
@@ -70,7 +70,7 @@ library LibBaseStrategy {
             IERC20(_tokenA).safeTransfer(_to, _amountIn);
             return burnedAmt;
         }
-        address[] memory path = PathStorage(address(this)).getPath(_tokenA, _tokenB);
+        address[] memory path = IPathStorage(address(this)).getPath(_tokenA, _tokenB);
         
         uint256[] memory amounts = IUniRouter02(addresses.router).getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1];
