@@ -60,7 +60,7 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
         //Danger: vaulthealer-based implementation has the address as from!!
     //function withdraw(address _to, uint256 _wantAmt) external override returns (uint256 sharesRemoved) {
     function withdrawTo(address _to, uint256 _wantAmt) external returns (uint256 sharesRemoved) {
-        _withdraw(msg.sender, _to, _wantAmt);
+        return _withdraw(msg.sender, _to, _wantAmt);
     }
     
     
