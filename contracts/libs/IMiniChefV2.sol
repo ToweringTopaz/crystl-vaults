@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 interface IMiniChefV2 {
     function poolLength() external view returns (uint256);

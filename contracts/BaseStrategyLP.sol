@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 import "./BaseStrategy.sol";
 import "./libs/PrismLibrary2.sol";
@@ -7,7 +7,6 @@ import "hardhat/console.sol";
 
 abstract contract BaseStrategyLP is BaseStrategy {
     using SafeERC20 for IERC20;
-    bool constant _DEBUG_ = true;
 
     function _earn(address _to) internal override {
         
