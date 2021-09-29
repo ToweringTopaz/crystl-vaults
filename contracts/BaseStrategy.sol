@@ -15,11 +15,14 @@ import "./PathStorage.sol";
 import "./libs/StratStructs.sol";
 import "./libs/LibBaseStrategy.sol";
 
+import "hardhat/console.sol";
+
 abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     using SafeERC20 for IERC20;
 
     uint256 earnedLength; //number of earned tokens;
     uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
+    bool constant _DEBUG_ = true;
     
     Addresses public addresses;
     Settings public settings;
@@ -91,7 +94,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         _earn(_to);
     }
     
-    function deposit(address _userAddress, uint256 _wantAmt) external onlyVaultHealer nonReentrant whenNotPaused returns (uint256) {
+    function deposit(address _userAddress, uint256 _wantAmt) external virtual onlyVaultHealer nonReentrant whenNotPaused returns (uint256) {
         // Call must happen before transfer
         _beforeDeposit(_userAddress);
         uint256 wantLockedBefore = wantLockedTotal();
@@ -113,7 +116,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         return sharesAdded;
     }
 
-    function withdraw(address _userAddress, uint256 _wantAmt) external onlyVaultHealer nonReentrant returns (uint256) {
+    function withdraw(address _userAddress, uint256 _wantAmt) external virtual onlyVaultHealer nonReentrant returns (uint256) {
         require(_wantAmt > 0, "_wantAmt is 0");
         
         _beforeWithdraw(_userAddress);
@@ -176,6 +179,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         address _tokenB,
         address _to
     ) internal {
+        console.log("_safeSwap: amountIn: %s to: %s path: %s", _amountIn, _to, string(abi.encode(getPath(_tokenA, _tokenB))));
         burnedAmount += LibBaseStrategy._safeSwap(
             settings,
             addresses,
@@ -184,6 +188,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
             _tokenB,
             _to
         );
+        console.log("burned: %s", burnedAmount);
     }
 
     //Admin functions

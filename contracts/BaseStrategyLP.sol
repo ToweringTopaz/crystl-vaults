@@ -17,9 +17,13 @@ abstract contract BaseStrategyLP is BaseStrategy {
         _vaultHarvest();
         
         // Converts farm tokens into want tokens
-        try this._swapEarnedToLP(_to) returns (bool success) {
-            if (success) lastGainBlock = block.number;
-        } catch {}
+        if (_DEBUG_) {
+            this._swapEarnedToLP(_to);
+        } else {
+            try this._swapEarnedToLP(_to) returns (bool success) {
+                if (success) lastGainBlock = block.number;
+            } catch {}
+        }
         
         lastEarnBlock = block.number;
     }
@@ -28,20 +32,24 @@ abstract contract BaseStrategyLP is BaseStrategy {
         require(msg.sender == address(this)); //external call by this contract only
         
         address wantAddress = addresses.want;
-        
+        console.log("_swapEarnedToLP: wantAddress is %s", wantAddress);
         for (uint i; i < earnedLength; i++ ) {
             address earnedAddress = addresses.earned[i];
+            console.log("_swapEarnedToLP: earnedAddress is %s", earnedAddress);
             if (earnedAddress == address(0)) break;
             
             uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
             uint dust = settings.dust;
+            console.log("_swapEarnedToLP: earnedAmt is %s; greater than dust? %s", earnedAmt, earnedAmt > dust);
     
             if (earnedAmt > dust) {
                 earnedAmt = distributeFees(earnedAddress, earnedAmt, _to);
         
+                console.log("_swapEarnedToLP: earnedAmt after fees is %s", earnedAmt);
                 // Swap half earned to token0, half to token1
                 success = true;
                 uint _lpTokenLength = lpTokenLength;
+                console.log("_swapEarnedToLP: _lpTokenLength is %s", _lpTokenLength);
                 for (uint j; j < _lpTokenLength; i++) {
                     _safeSwap(earnedAmt / _lpTokenLength, earnedAddress, addresses.lpToken[j], address(this));
                 }
@@ -49,7 +57,7 @@ abstract contract BaseStrategyLP is BaseStrategy {
         }
         if (success) {
             // Get want tokens, ie. add liquidity
-            HelperLiquidity.optimalMint(wantAddress, addresses.lpToken[0], addresses.lpToken[1]);
+            PrismLibrary2.optimalMint(wantAddress, addresses.lpToken[0], addresses.lpToken[1]);
             _farm();
         }
     }
