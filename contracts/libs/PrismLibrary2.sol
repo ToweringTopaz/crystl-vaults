@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 library HelperLiquidity {
     using SafeERC20 for IERC20;
-    
+        
     //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
     function optimalMint(address pair, address tokenA, address tokenB) internal {
         (address token0, address token1) = PrismLibrary.sortTokens(tokenA, tokenB);
@@ -34,5 +34,4 @@ library HelperLiquidity {
         IUniPair(pair).mint(address(this));
         
     }
-    
 }
