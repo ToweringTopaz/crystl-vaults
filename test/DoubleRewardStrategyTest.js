@@ -48,7 +48,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
         console.log("1")
-        StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE); //<-- this needs to change for different tests!!
+        StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
+            libraries: {
+                LibBaseStrategy: "./libs/LibBaseStrategy.sol",
+                LibPathStorage: "./libs/LibPathStorage.sol"
+              },
+        }); //<-- this needs to change for different tests!!
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
         vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         vaultHealerOwner = await vaultHealer.owner();
