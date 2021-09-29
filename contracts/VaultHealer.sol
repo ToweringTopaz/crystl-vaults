@@ -178,8 +178,9 @@ contract VaultHealer is ReentrancyGuard, Ownable {
                 address token1 = IUniPair(address(poolInfo[i].want)).token1();
                 require(token0 == IUniPair(_newWant).token0() && token1 == IUniPair(_newWant).token1(), "old/new tokens don't match");
                 poolInfo[i].want = _newWant;
-                break;
+                return;
             }
         }
+        revert("VH failed to migrate want");
     }
 }
