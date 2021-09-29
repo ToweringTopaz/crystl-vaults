@@ -7,7 +7,7 @@ const vaultSettings = {
         9500, //uint256 slippageFactor;
         1, //uint256 tolerance;
         false, //bool feeOnTransfer;
-        1000000000000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
+        100000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
         10 //uint256 minBlocksBetweenSwaps;
 	],
 	reflect: [

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.4;
 
 import "./libs/IMiniChefV2.sol";
 import "./BaseStrategyLP.sol";
@@ -21,7 +21,7 @@ contract StrategyMiniApe is BaseStrategyLP {
         pid = _pid;
     }
 
-    function _vaultDeposit(uint256 _amount) internal override {
+    function _vaultDeposit(uint256 _amount) internal virtual override {
         IMiniChefV2(addresses.masterchef).deposit(pid, _amount, address(this));
     }
     

@@ -23,7 +23,7 @@ const apeSwapVaults = [
             [CRYSTL, WMATIC, DAI], // earned2 to dai
             [CRYSTL] // earned2 to crystl, earned2 to token1
         ],
-        PID: 8,
+        PID: 7,
     },
     {
         addresses: [
@@ -47,7 +47,7 @@ const apeSwapVaults = [
             [WMATIC, CRYSTL], //earned2 to crystl
             [WMATIC, BANANA] //earned2 to token1
         ],
-        PID: 8,
+        PID: 0,
     },
 ]
 

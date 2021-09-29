@@ -27,11 +27,12 @@ const [,,,,, TOLERANCE] = vaultSettings.standard;
 const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
 const EARNED = TOKEN0_TO_EARNED_PATH[0]
 const EARNED2 = TOKEN1_TO_EARNED_PATH[2]
+const PID = apeSwapVaults[0].PID;
+const minBlocksBetweenSwaps = vaultSettings.standard[8];
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[1]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[2]);
-console.log(TOKEN0)
-console.log(TOKEN1)
+
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
     depositing these LP tokens: ${LIQUIDITY_POOL}
@@ -156,14 +157,19 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-            
-            for (i=0; i<10;i++) {
-                await ethers.provider.send("evm_mine"); //creates a 10 block delay
+            console.log(await ethers.provider.getBlockNumber())
+            console.log(vaultSharesTotalBeforeCallingEarnSome)
+
+            for (i=0; i<minBlocksBetweenSwaps+1;i++) {
+                await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
             }
+            console.log(await ethers.provider.getBlockNumber())
 
             await vaultHealer.earnSome([poolLength-1]);
-            
+                        console.log(vaultSharesTotalBeforeCallingEarnSome)
+
             vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            console.log(vaultSharesTotalAfterCallingEarnSome)
 
             const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
 
@@ -244,6 +250,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         //ensure no funds left in the vault.
         it('Should leave zero funds in vault after 100% withdrawal', async () => {
+            console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
             expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
         })
         
