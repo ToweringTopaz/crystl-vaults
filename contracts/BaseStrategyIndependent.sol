@@ -8,11 +8,6 @@ import "./BaseStrategy.sol";
 abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
     using SafeERC20 for IERC20;
     
-    // Info of each user.
-    struct UserInfo {
-        uint256 shares; // How many LP tokens the user has provided.
-    }
-    
     mapping (address => UserInfo) public userInfo;
     
     modifier onlyGov() override {
@@ -147,5 +142,12 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
         IERC20(addresses.want).safeTransfer(_to, _wantAmt);
         
         return sharesRemoved;
+    }
+    
+    //Maximizer-incapable strategies throw
+    //Maximizer suppliers return address(0)
+    //Maximizer cores return their want address
+    function maximizerInfo() external view virtual returns (address) {
+        revert("No maximizer functionality");
     }
 }
