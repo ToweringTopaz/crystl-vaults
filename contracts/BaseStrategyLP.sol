@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.4;
 
 import "./BaseStrategy.sol";
 import "./libs/PrismLibrary2.sol";
+import "hardhat/console.sol";
 
 abstract contract BaseStrategyLP is BaseStrategy {
     using SafeERC20 for IERC20;
+    bool constant _DEBUG_ = true;
 
     function _earn(address _to) internal override {
         
@@ -15,11 +17,18 @@ abstract contract BaseStrategyLP is BaseStrategy {
         
         // Harvest farm tokens
         _vaultHarvest();
-        
+    
         // Converts farm tokens into want tokens
-        try this._swapEarnedToLP(_to) returns (bool success) {
-            if (success) lastGainBlock = block.number;
-        } catch {}
+        if (_DEBUG_) {
+            this._swapEarnedToLP(_to);
+        } else {
+            try this._swapEarnedToLP(_to) returns (bool success) {
+                if (success) lastGainBlock = block.number;
+            } catch {}
+        }
+        // try this._swapEarnedToLP(_to) returns (bool success) {
+        //     if (success) lastGainBlock = block.number;
+        // } catch {}
         
         lastEarnBlock = block.number;
     }
