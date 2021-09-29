@@ -9,10 +9,6 @@ import "./StratStructs.sol";
 library LibBaseStrategy {
     using SafeERC20 for IERC20;
     
-    address constant internal DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
-    address constant internal CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
-    address constant internal WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
-    
     event SetAddresses(Addresses _addresses);
     event SetSettings(Settings _settings);
 
@@ -48,7 +44,7 @@ library LibBaseStrategy {
         
         emit SetAddresses(addresses);
     }
-    function _setSettings(Settings storage settings, Settings memory _settings, uint FEE_MAX_TOTAL, uint WITHDRAW_FEE_FACTOR_LL, uint WITHDRAW_FEE_FACTOR_MAX, uint SLIPPAGE_FACTOR_UL)  external {
+    function _setSettings(Settings storage settings, Settings memory _settings)  external {
         require(_settings.controllerFee + _settings.rewardRate + _settings.buybackRate <= FEE_MAX_TOTAL, "Max fee of 100%");
         require(_settings.withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
         require(_settings.withdrawFeeFactor <= WITHDRAW_FEE_FACTOR_MAX, "_withdrawFeeFactor too high");
@@ -102,7 +98,7 @@ library LibBaseStrategy {
         }
         return burnedAmt;
     }
-    function distributeFees(Settings storage settings, Addresses storage addresses, address _earnedAddress, uint256 _earnedAmt, address _to, uint FEE_MAX) external returns (uint earnedAmt){
+    function distributeFees(Settings storage settings, Addresses storage addresses, address _earnedAddress, uint256 _earnedAmt, address _to) external returns (uint earnedAmt){
         earnedAmt = _earnedAmt;
         
         //gas optimization

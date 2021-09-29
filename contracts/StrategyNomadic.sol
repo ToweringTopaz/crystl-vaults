@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 import "./libs/IMasterchef.sol";
 import "./BaseStrategyLP.sol";
 import "./MigratoryTacticBase.sol";
+import "./VaultHealer.sol";
 
 contract StrategyNomadic is BaseStrategyLP {
     using Address for address;
@@ -105,7 +106,6 @@ contract StrategyNomadic is BaseStrategyLP {
         }
         settings.slippageFactor = plannedMigration.slippage;
         
-        //TODO: break LP, adjust, make new LP, set new want
         if (plannedMigration.router != addresses.router) {
             IUniRouter02(addresses.router).removeLiquidity(
                 addresses.lpToken[0],
@@ -128,7 +128,7 @@ contract StrategyNomadic is BaseStrategyLP {
             
             address factory = IUniRouter02(addresses.router).factory();
             addresses.want = IUniFactory(factory).getPair(addresses.lpToken[0], addresses.lpToken[1]);
-            LiquidityMath.optimalMint(addresses.want, addresses.lpToken[0], addresses.lpToken[1]);
+            HelperLiquidity.optimalMint(addresses.want, addresses.lpToken[0], addresses.lpToken[1]);
         }
         
         addresses.masterchef = plannedMigration.masterchef;
@@ -138,6 +138,7 @@ contract StrategyNomadic is BaseStrategyLP {
         _farm();
         uint wantLockedAfter = wantLockedTotal();
         require(wantLockedAfter > wantLockedBefore * settings.slippageFactor**2 / 1e8, "migration slippage too high");
+        VaultHealer(addresses.vaulthealer).strategyWantMigration(IUniPair(addresses.want));
     }
     
     

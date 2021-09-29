@@ -18,15 +18,6 @@ import "./libs/LibBaseStrategy.sol";
 abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     using SafeERC20 for IERC20;
 
-    address constant internal DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
-    address constant internal CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
-    address constant internal WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
-    uint256 constant internal FEE_MAX_TOTAL = 10000;
-    uint256 constant internal FEE_MAX = 10000; // 100 = 1%
-    uint256 constant internal WITHDRAW_FEE_FACTOR_MAX = 10000;
-    uint256 constant internal WITHDRAW_FEE_FACTOR_LL = 9900;
-    uint256 constant internal SLIPPAGE_FACTOR_UL = 9950;
-    
     uint256 earnedLength; //number of earned tokens;
     uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
     
@@ -54,7 +45,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         Settings memory _settings,
         address[][] memory _paths
     ) {
-        require(Ownable(_addresses.vaulthealer).owner() != address(0), "gov is vaulthealer's owner; can't be zero");
+        require(Ownable(_addresses.vaulthealer).owner() != address(0), "VH must have owner"); //because gov is the vaulthealer's owner
         
         _setAddresses(_addresses);
         _setSettings(_settings);
@@ -116,7 +107,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         if (sharesTotal > 0) {
             sharesAdded = sharesAdded * sharesTotal / wantLockedBefore;
         }
-        require(sharesAdded >= 1, "Low deposit - no shares added");
+        require(sharesAdded >= 1, "deposit: no shares added");
         sharesTotal += sharesAdded;
 
         return sharesAdded;
@@ -142,7 +133,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         if (sharesRemoved > sharesTotal) {
             sharesRemoved = sharesTotal;
         }
-        require(sharesRemoved >= 1, "Low withdraw - no shares removed");
+        require(sharesRemoved >= 1, "withdraw: no shares removed");
         sharesTotal -= sharesRemoved;
         
         // Withdraw fee
@@ -171,12 +162,12 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         uint256 sharesAfter = vaultSharesTotal();
         
         require(sharesAfter + wantBalance() >= sharesBefore + wantAmt * settings.slippageFactor / 10000,
-            "Excessive slippage in vault deposit");
+            "High vault deposit slippage");
         return sharesAfter - sharesBefore;
     }
 
     function distributeFees(address _earnedAddress, uint256 _earnedAmt, address _to) internal returns (uint256) {
-        return LibBaseStrategy.distributeFees(settings, addresses, _earnedAddress, _earnedAmt, _to, FEE_MAX);
+        return LibBaseStrategy.distributeFees(settings, addresses, _earnedAddress, _earnedAmt, _to);
     }
 
     function _safeSwap(
@@ -199,46 +190,34 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function resetAllowances() external onlyGov {
         _resetAllowances();
     }
-
     function pause() external onlyGov {
         _pause();
     }
-
     function unpause() external onlyGov {
         _unpause();
         _resetAllowances();
     }
-
     function panic() external onlyGov {
         _pause();
         _emergencyVaultWithdraw();
     }
-
     function unpanic() external onlyGov {
         _unpause();
         _farm();
     }
-    
     function setPath(address[] calldata _path) external onlyGov {
         _setPath(_path);
     }
-    
     function setSettings(Settings calldata _settings) external onlyGov {
         _setSettings(_settings);
     }
-
     function setAddresses(Addresses calldata _addresses) external onlyGov {
         LibBaseStrategy.setAddresses(addresses, _addresses);
-    }
-    //for optimizing liquidity calculations
-    function setReflectRate(address _token, uint256 _rate) external onlyGov {
-        require(_rate < 10000, "invalid reflect rate");
-        reflectRate[_token] = _rate;
     }
     
     //private configuration functions
     function _setSettings(Settings memory _settings) private {
-        LibBaseStrategy._setSettings(settings, _settings, FEE_MAX_TOTAL, WITHDRAW_FEE_FACTOR_LL, WITHDRAW_FEE_FACTOR_MAX, SLIPPAGE_FACTOR_UL);
+        LibBaseStrategy._setSettings(settings, _settings);
     }
     
     function _setAddresses(Addresses memory _addresses) private {
@@ -268,5 +247,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function setGov(address) external pure {
         revert("Gov is the vaulthealer's owner");
     }
+    //required by vaulthealer
     function wantAddress() external view returns (address) { return addresses.want; }
 }

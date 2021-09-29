@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 import "./BaseStrategy.sol";
-import "./libs/HelperLiquidity.sol";
+import "./libs/PrismLibrary2.sol";
 
 abstract contract BaseStrategyLP is BaseStrategy {
     using SafeERC20 for IERC20;
