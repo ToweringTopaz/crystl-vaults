@@ -25,12 +25,13 @@ const DEPLOYMENT_VARS = [apeSwapVaults[0].addresses, vaultSettings.standard, ape
 const [VAULT_HEALER, ROUTER, MASTERCHEF, REWARD_FEE, WITHDRAW_FEE, BURN_ADDRESS, LIQUIDITY_POOL] = apeSwapVaults[0].addresses
 const [,,,,, TOLERANCE] = vaultSettings.standard;
 const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
-const EARNED = TOKEN0_TO_EARNED_PATH[1]
-const EARNED2 = TOKEN0_TO_EARNED_PATH[2]
+const EARNED = TOKEN0_TO_EARNED_PATH[0]
+const EARNED2 = TOKEN1_TO_EARNED_PATH[2]
 
-const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
+const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[1]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[2]);
-
+console.log(TOKEN0)
+console.log(TOKEN1)
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
     depositing these LP tokens: ${LIQUIDITY_POOL}
@@ -50,13 +51,17 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         console.log("1")
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
             libraries: {
-                LibBaseStrategy: "./libs/LibBaseStrategy.sol",
-                LibPathStorage: "./libs/LibPathStorage.sol"
+                LibBaseStrategy: "0xc8959897D1b8CE850B494a898F402946FA80D673",
+                LibPathStorage: "0x42e3b158bFd6ADc5F2734B4b5f925898bA033c0F"
               },
-        }); //<-- this needs to change for different tests!!
+        });
+        console.log("2")
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
+        console.log("3")
         vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
+        console.log("4")
         vaultHealerOwner = await vaultHealer.owner();
+        console.log("5")
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
             params: [vaultHealerOwner],
