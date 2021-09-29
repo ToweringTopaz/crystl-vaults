@@ -128,7 +128,7 @@ contract StrategyNomadic is BaseStrategyLP {
             
             address factory = IUniRouter02(addresses.router).factory();
             addresses.want = IUniFactory(factory).getPair(addresses.lpToken[0], addresses.lpToken[1]);
-            HelperLiquidity.optimalMint(addresses.want, addresses.lpToken[0], addresses.lpToken[1]);
+            PrismLibrary2.optimalMint(addresses.want, addresses.lpToken[0], addresses.lpToken[1]);
         }
         
         addresses.masterchef = plannedMigration.masterchef;
