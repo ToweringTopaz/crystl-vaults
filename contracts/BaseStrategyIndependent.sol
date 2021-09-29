@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -8,7 +8,7 @@ import "./BaseStrategy.sol";
 abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
     using SafeERC20 for IERC20;
     
-    // mapping (address => UserInfo) public userInfo;
+    mapping (address => UserInfo) public userInfo;
     
     modifier onlyGov() override {
         require(msg.sender == owner(), "!gov");
@@ -142,5 +142,12 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
         IERC20(addresses.want).safeTransfer(_to, _wantAmt);
         
         return sharesRemoved;
+    }
+    
+    //Maximizer-incapable strategies throw
+    //Maximizer suppliers return address(0)
+    //Maximizer cores return their want address
+    function maximizerInfo() external view virtual returns (address) {
+        revert("No maximizer functionality");
     }
 }

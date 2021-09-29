@@ -5,13 +5,12 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./BaseStrategyIndependent.sol";
 
-abstract contract BaseStrategyMaxiCore is BaseStrategyIndependent {
+library MaximizerMath {
     
     //Maximizer-incapable strategies throw
     //Maximizer suppliers return address(0)
     //Maximizer cores return their want address
-    function maximizerInfo() external view override returns (address maxiToken) {
-        return addresses.want;
+    function maximizerInfo() external pure returns (address maxiToken) {
+        return address(0);
     }
-
 }

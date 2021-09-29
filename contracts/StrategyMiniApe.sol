@@ -21,7 +21,7 @@ contract StrategyMiniApe is BaseStrategyLP {
         pid = _pid;
     }
 
-    function _vaultDeposit(uint256 _amount) internal virtual override {
+    function _vaultDeposit(uint256 _amount) internal override {
         IMiniChefV2(addresses.masterchef).deposit(pid, _amount, address(this));
     }
     

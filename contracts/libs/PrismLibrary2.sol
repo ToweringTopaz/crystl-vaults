@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 import "./IUniRouter02.sol";
 import "./IUniFactory.sol";
