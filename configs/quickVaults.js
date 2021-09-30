@@ -5,7 +5,7 @@ const quickVaults = [
     {
         addresses: [
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            masterChefs.polygon.QUICK_MASTERCHEF, // Masterchef
+            masterChefs.polygon.QUICK_STAKING_REWARDS_QUICK_KOM, // Masterchef
             routers.polygon.QUICKSWAP_ROUTER, // UniRouter
             lps.polygon.QUICK_KOM_QUICK_LP, // Want
             QUICK, // Earned

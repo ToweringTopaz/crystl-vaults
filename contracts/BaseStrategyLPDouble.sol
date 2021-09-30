@@ -3,10 +3,13 @@ pragma solidity ^0.8.4;
 
 import "./BaseStrategyLP.sol";
 
-abstract contract BaseStrategyLPSingle is BaseStrategyLP {
+abstract contract BaseStrategyLPDouble is BaseStrategyLP {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     
+    address public earnedBetaAddress;
+    address[] earnedBetaToEarnedPath;
+
     function earn() external override nonReentrant whenNotPaused { 
         _earn(_msgSender());
     }
@@ -20,9 +23,19 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
         _vaultHarvest();
 
         // Converts farm tokens into want tokens
+        uint256 earnedBetaAmt = IERC20(earnedBetaAddress).balanceOf(address(this));
+        uint256 dustAmt = 10000000000000; //1e13
+        
+        //converts earnedBeta into Earned
+        if (earnedBetaAmt > 0) {
+            _safeSwap(
+                earnedBetaAmt,
+                earnedBetaToEarnedPath,
+                address(this)
+            );    
+        }
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
-
-        if (earnedAmt > 0) {
+        if (earnedAmt > dustAmt) {
             earnedAmt = distributeFees(earnedAmt, _to);
             earnedAmt = distributeRewards(earnedAmt);
             earnedAmt = buyBack(earnedAmt);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
+import "hardhat/console.sol";
 
 abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     using SafeMath for uint256;
@@ -110,7 +111,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     function _farm() internal returns (uint256) {
         uint256 wantAmt = IERC20(wantAddress).balanceOf(address(this));
         if (wantAmt == 0) return 0;
-        
+
         uint256 sharesBefore = vaultSharesTotal();
         _vaultDeposit(wantAmt);
         uint256 sharesAfter = vaultSharesTotal();

@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./libs/IMasterchef.sol";
-import "./BaseStrategyLPSingle.sol";
+import "./libs/IStakingRewards.sol";
+import "./BaseStrategyLPDouble.sol";
 
-contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
+contract StrategyMasterHealerForStakingMultiRewards is BaseStrategyLPDouble {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public masterchefAddress;
-    uint256 public pid;
+    address public masterchefAddress; //actually a StakingRewards contract in this case
 
     constructor(
-        address[5] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
-        uint256 _pid,
+        address[6] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned, earnedBeta
         uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
         address[] memory _earnedToUsdcPath,
@@ -21,7 +19,8 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
         address[] memory _earnedToToken0Path,
         address[] memory _earnedToToken1Path,
         address[] memory _token0ToEarnedPath,
-        address[] memory _token1ToEarnedPath
+        address[] memory _token1ToEarnedPath,
+        address[] memory _earnedBetaToEarnedPath
     ) {
         govAddress = msg.sender;
         vaultChefAddress = _configAddress[0];
@@ -32,8 +31,8 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
         token0Address = IUniPair(wantAddress).token0();
         token1Address = IUniPair(wantAddress).token1();
 
-        pid = _pid;
         earnedAddress = _configAddress[4];
+        earnedBetaAddress = _configAddress[5];
         tolerance = _tolerance;
 
         earnedToWnativePath = _earnedToWmaticPath;
@@ -43,6 +42,8 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
         earnedToToken1Path = _earnedToToken1Path;
         token0ToEarnedPath = _token0ToEarnedPath;
         token1ToEarnedPath = _token1ToEarnedPath;
+        earnedBetaToEarnedPath = _earnedBetaToEarnedPath;
+
 
         transferOwnership(vaultChefAddress);
         
@@ -50,19 +51,20 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
     }
 
     function _vaultDeposit(uint256 _amount) internal override {
-        IMasterchef(masterchefAddress).deposit(pid, _amount);
+        IStakingRewards(masterchefAddress).stake(_amount);
     }
     
     function _vaultWithdraw(uint256 _amount) internal override {
-        IMasterchef(masterchefAddress).withdraw(pid, _amount);
+        IStakingRewards(masterchefAddress).withdraw(_amount);
     }
     
     function _vaultHarvest() internal override {
-        IMasterchef(masterchefAddress).withdraw(pid, 0);
+        IStakingRewards(masterchefAddress).getReward();
     }
     
+    //I'm pretty confident this one below is right - it's the balance that the vault holds of shares in the farm
     function vaultSharesTotal() public override view returns (uint256) {
-        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, address(this));
+        uint256 amount = IStakingRewards(masterchefAddress).balanceOf(address(this));
         return amount;
     }
     
@@ -84,6 +86,11 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
             type(uint256).max
         );
 
+        IERC20(earnedBetaAddress).safeApprove(uniRouterAddress, uint256(0));
+        IERC20(earnedBetaAddress).safeIncreaseAllowance(
+            uniRouterAddress,
+            type(uint256).max
+        );
         IERC20(token0Address).safeApprove(uniRouterAddress, uint256(0));
         IERC20(token0Address).safeIncreaseAllowance(
             uniRouterAddress,
@@ -97,9 +104,10 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
         );
 
     }
-    
+    // interestingly, you do get the reward with this exit function, 
+    // which you don't with a Masterchef emergency withdraw
     function _emergencyVaultWithdraw() internal override {
-        IMasterchef(masterchefAddress).emergencyWithdraw(pid);
+        IStakingRewards(masterchefAddress).exit(); 
     }
 
     function _beforeDeposit(address _to) internal override {
@@ -108,43 +116,5 @@ contract StrategyMasterHealerForReflect is BaseStrategyLPSingle {
 
     function _beforeWithdraw(address _to) internal override {
         
-    }
-
-    function _safeSwap(
-        uint256 _amountIn,
-        address[] memory _path,
-        address _to
-        ) internal override {
-            uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
-            uint256 amountOut = amounts[amounts.length.sub(1)];
-
-        if (_path[_path.length.sub(1)] == crystlAddress && _to == buyBackAddress) {
-            burnedAmount = burnedAmount.add(amountOut);
-        }
-
-        IUniRouter02(uniRouterAddress).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amountIn,
-            amountOut.mul(slippageFactor).div(1000),
-            _path,
-            _to,
-            block.timestamp.add(600)
-        );
-    }
-
-    function _safeSwapWnative(
-        uint256 _amountIn,
-        address[] memory _path,
-        address _to
-        ) internal override {
-        uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
-        uint256 amountOut = amounts[amounts.length.sub(1)];
-
-        IUniRouter02(uniRouterAddress).swapExactTokensForETHSupportingFeeOnTransferTokens(
-            _amountIn,
-            amountOut.mul(slippageFactor).div(1000),
-            _path,
-            _to,
-            block.timestamp.add(600)
-        );
     }
 }

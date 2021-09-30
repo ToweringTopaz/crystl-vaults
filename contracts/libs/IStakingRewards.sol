@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6; //was originally part of a package that was version ^0.5.16
+pragma solidity ^0.8.4; //was originally part of a package that was version ^0.5.16
 
 interface IStakingRewards {
     // Views

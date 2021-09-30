@@ -1,7 +1,7 @@
 // import hre from "hardhat";
 
 const { tokens } = require('../configs/addresses.js');
-const { WMATIC, CRYSTL, DAI } = tokens.polygon;
+const { WMATIC, CRYSTL, DAI, WETH } = tokens.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./IUniRouter02_abi.js');
@@ -18,11 +18,11 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 // THESE FIVE VARIABLES BELOW NEED TO BE SET CORRECTLY FOR A GIVEN TEST //
 //////////////////////////////////////////////////////////////////////////
 
-const STRATEGY_CONTRACT_TYPE = 'StrategyMasterHealer'; //<-- change strategy type to the contract deployed for this strategy
-const { barbershopVaults } = require('../configs/barbershopVaults'); //<-- replace all references to 'barbershopVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [barbershopVaults[0].addresses, ...barbershopVaults[0].strategyConfig];
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = barbershopVaults[0].addresses
-const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = barbershopVaults[0].strategyConfig;
+const STRATEGY_CONTRACT_TYPE = 'StrategyMasterHealerForStakingMultiRewards'; //<-- change strategy type to the contract deployed for this strategy
+const { dokiVaults } = require('../configs/dokiVaults'); //<-- replace all references to 'dokiVaults' (for example), with the right '...Vaults' name
+const DEPLOYMENT_VARS = [dokiVaults[3].addresses, ...dokiVaults[3].strategyConfig];
+const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED, EARNEDBETA] = dokiVaults[3].addresses
+const [TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = dokiVaults[3].strategyConfig;
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
@@ -33,60 +33,74 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     into Masterchef:            ${MASTERCHEF} 
     using Router:               ${ROUTER} 
     with earned token:          ${EARNED}
-    PID:                        ${PID}
+    and earnedBeta token:       ${EARNEDBETA}
     Tolerance:                  ${TOLERANCE}
-    earnedToWmaticPath: ${barbershopVaults[0].strategyConfig[2]}
-    earnedToUsdcPath:   ${barbershopVaults[0].strategyConfig[3]}
-    earnedToCrystlPath: ${barbershopVaults[0].strategyConfig[4]}
-    earnedToToken0Path: ${barbershopVaults[0].strategyConfig[5]}
-    earnedToToken1Path: ${barbershopVaults[0].strategyConfig[6]}
-    token0ToEarnedPath: ${barbershopVaults[0].strategyConfig[7]}
-    token1ToEarnedPath: ${barbershopVaults[0].strategyConfig[8]}
+    earnedToWmaticPath: ${dokiVaults[3].strategyConfig[1]}
+    earnedToUsdcPath:   ${dokiVaults[3].strategyConfig[2]}
+    earnedToCrystlPath: ${dokiVaults[3].strategyConfig[3]}
+    earnedToToken0Path: ${dokiVaults[3].strategyConfig[4]}
+    earnedToToken1Path: ${dokiVaults[3].strategyConfig[5]}
+    token0ToEarnedPath: ${dokiVaults[3].strategyConfig[6]}
+    token1ToEarnedPath: ${dokiVaults[3].strategyConfig[7]}
+    earnedBetaToEarned: ${dokiVaults[3].strategyConfig[8]}
     `, () => {
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
+        console.log("Fetched account signers")
 
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE); //<-- this needs to change for different tests!!
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
+        console.log("Strategy contract deployed");
+        
         vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         vaultHealerOwner = await vaultHealer.owner();
+        console.log("Fetched VaultHealer contract and owner");
+
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
             params: [vaultHealerOwner],
           });
+        
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
         await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyMasterHealer.address);
-        
+        console.log("Added pool to VaultHealer");
+
         await network.provider.send("hardhat_setBalance", [
             owner.address,
             "0x3635c9adc5dea00000", //amount of 1000 in hex
         ]);
+        console.log("Funded main address with 1000 MATIC")
 
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
+        console.log("Fetched Router instance");
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("400") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, WETH, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
         }
+        console.log("Swapped MATIC for token0")
+
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("400") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
         }
+        console.log("Swapped MATIC for token1")
+
     });
 
     describe(`Testing deployment:
     `, () => {
-        it('Should set the pid such that our want tokens correspond with the masterchef pools LP tokens', async () => {
-            masterchef = await ethers.getContractAt(IMasterchef_abi, MASTERCHEF); 
-            poolInfo = await masterchef.poolInfo(PID);
-            lpToken = poolInfo[0];
-            expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
-        })
+        // it('Should set the pid such that our want tokens correspond with the masterchef pools LP tokens', async () => {
+        //     masterchef = await ethers.getContractAt(IMasterchef_abi, MASTERCHEF); 
+        //     poolInfo = await masterchef.poolInfo(PID);
+        //     lpToken = poolInfo[0];
+        //     expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
+        // })
 
         it(`Should set tolerance in the range of 1-3
         `, async () => { 
@@ -128,7 +142,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
         // Check balance to ensure it increased as expected
-        it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
+        it('Should wait 100 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             daiToken = await ethers.getContractAt(token_abi, DAI);
@@ -139,7 +153,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             
-            for (i=0; i<10;i++) {
+            for (i=0; i<100;i++) {
                 await ethers.provider.send("evm_mine"); //creates a 10 block delay
             }
 
@@ -174,10 +188,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // Unstake 50% of LPs. 
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
-        it('Should unstake 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
+        it('Should delay 10 blocks, then unstake 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
+            for (i=0; i<10;i++) {
+                await ethers.provider.send("evm_mine"); //creates a 10 block delay
+            }
+            
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(owner.address);
             const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
-
+            
             await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
             
             const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(owner.address);
@@ -191,7 +209,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
         
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
-        it('Should accurately increase vaultSharesTotal upon second deposit', async () => {
+        it('Should delay 10 blocks, then accurately increase vaultSharesTotal upon second deposit', async () => {
+            for (i=0; i<10;i++) {
+                await ethers.provider.send("evm_mine"); //creates a 10 block delay
+            }
+            
             await LPtoken.approve(vaultHealer.address, initialLPtokenBalance);
             const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(owner.address);
             const vaultSharesTotalBeforeSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
@@ -206,6 +228,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // Withdraw 100%
         it('Should withdraw remaining balance back to owner, minus withdrawal fee (0.1%)', async () => {
+            for (i=0; i<10;i++) {
+                await ethers.provider.send("evm_mine"); //creates a 10 block delay
+            }
+            
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(owner.address);
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
 

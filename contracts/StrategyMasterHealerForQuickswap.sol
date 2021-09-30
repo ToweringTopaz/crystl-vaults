@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity ^0.8.4;
 
 import "./libs/IStakingRewards.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealerForQuick is BaseStrategyLPSingle {
+contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public masterchefAddress;
-    uint256 public pid;
 
     constructor(
         address[5] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned
-        uint256 _pid,
         uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
         address[] memory _earnedToUsdcPath,
@@ -32,7 +30,6 @@ contract StrategyMasterHealerForQuick is BaseStrategyLPSingle {
         token0Address = IUniPair(wantAddress).token0();
         token1Address = IUniPair(wantAddress).token1();
 
-        pid = _pid;
         earnedAddress = _configAddress[4];
         tolerance = _tolerance;
 

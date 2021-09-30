@@ -42,7 +42,7 @@ module.exports = {
       },
       forking: {
         url: archiveMainnetNodeURL,
-        blockNumber: 19200657,
+        blockNumber: 19675427,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",
@@ -52,7 +52,7 @@ module.exports = {
       accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
     },
   },
-  solidity: "0.8.6",
+  solidity: "0.8.4",
   mocha: {
     timeout: 90000,
   },
