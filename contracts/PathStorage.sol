@@ -12,15 +12,16 @@ abstract contract PathStorage {
     function _setPath(address[] memory _path) internal {
         require(_path.length <= MAX_PATH, "invalid _path.length");
         uint len = MAX_PATH;
-        for (uint i; i < MAX_PATH; i++) {
+        for (uint i; i < _path.length; i++) {
             if (_path[i] == address(0)) {
                 len = i;
-                for (uint j = i+1; j < MAX_PATH; j++) {
+                for (uint j = i+1; j < _path.length; j++) {
                     require(_path[j] == address(0), "broken path");
                 }
                 break;
             }
         }
+        if (len < 2) return;
         
         bytes32 hashAB = keccak256(abi.encodePacked(_path[0],_path[len - 1]));
         bytes32 hashBA = keccak256(abi.encodePacked(_path[len - 1],_path[0]));
@@ -82,7 +83,7 @@ abstract contract PathStorage {
         address[MAX_PATH] storage _path = _paths[hashAB];
         path = new address[](_len(_path));
         require(path.length > 0, "path not found");
-        
+        assert(path.length != 1);
         for (uint i; i < path.length; i++) {
             path[i] = _path[i];
         }
