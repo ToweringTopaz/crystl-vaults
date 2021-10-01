@@ -13,6 +13,7 @@ interface IMiniChefV2 {
     function emergencyWithdraw(uint256 pid, address to) external;
 }
 
+//Polygon: 0x48D446A5571592EC101e59FEb47A0aFdD4A42566
 contract TacticMiniApe is ITactic {
     
     function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external override {

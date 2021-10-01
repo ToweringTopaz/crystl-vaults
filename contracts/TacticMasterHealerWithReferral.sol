@@ -7,6 +7,7 @@ interface IMasterchefWithReferral {
     function deposit(uint256 _pid, uint256 _amount, address referrer) external;
 }
 
+//Polygon: 0xAfdA790471f2c26cEf82568E22a0feACfA031cD3
 contract TacticMasterHealerWithReferral is TacticMasterHealer {
     
     function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external override {

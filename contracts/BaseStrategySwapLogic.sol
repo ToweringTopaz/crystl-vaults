@@ -76,13 +76,14 @@ abstract contract BaseStrategySwapLogic is BaseStrategyConfig, PathStorage {
     function vaultSharesTotal() public virtual view returns (uint256);
     //to deposit tokens in the pool
     function _vaultDeposit(uint256 _amount) internal virtual;
+    function sharesTotal() external view virtual returns (uint);
     
     //Adds or modifies a swap path
     function setPath(address[] calldata _path) external onlyOwner {
         _setPath(_path);
     }
 
-    function _swapEarnedToLP(address _to, uint256 _wantBal) external returns (bool success) {
+    function _swapEarnedToLP(address _to, uint256 _wantBal) external virtual returns (bool success) {
         require(msg.sender == address(this)); //external call by this contract only
 
         for (uint i; i < earnedLength; i++ ) { //Process each earned token, whether it's 1, 2, or 8.

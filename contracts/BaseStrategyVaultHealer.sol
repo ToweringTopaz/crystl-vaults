@@ -37,22 +37,29 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function vaultSharesTotal() public virtual override view returns (uint256); //number of tokens currently deposited in the pool
     function _emergencyVaultWithdraw() internal virtual override;
     
-    //currently unused
-    function _beforeDeposit(address _from, address _to) internal virtual { }
+    function _beforeDeposit(address _from, address /*_to*/) internal virtual { 
+        _earn(_from); //earn before deposit prevents abuse
+    }
     function _beforeWithdraw(address _from, address _to) internal virtual { }
+    
+    function sharesTotal() external view override returns (uint) {
+        return IVaultHealer(vaultChefAddress).sharesTotal(address(this));
+    }
     
     //The owner of the connected vaulthealer inherits ownership of the strategy.
     //This grants several privileges such as pausing the vault. Cannot take user funds.
     function owner() public view override returns (address) {
         return IVaultHealer(vaultChefAddress).owner();
     }
-
     //This is the main compounding function, which should be called via the VaultHealer
     function earn(address _to) external onlyVaultChef {
+        _earn(_to);
+    }
+    function _earn(address _to) internal {
         
         //No good reason to execute _earn twice in a block
         //Vault must not _earn() while paused!
-        if (block.number < lastEarnBlock + settings.minBlocksBetweenSwaps || paused()) return;
+        if (block.number < lastEarnBlock + settings.minBlocksBetweenEarns || paused()) return;
         
         //Starting want balance which is not to be touched (anti-rug)
         uint wantBalanceBefore = wantBalance();

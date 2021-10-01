@@ -35,7 +35,10 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     }
 
     PoolInfo[] public poolInfo; // Info of each pool.
-    mapping(address => bool) private strats;
+    
+    //pid+1 for any of our strategies. +1 allows us to distinguish pid 0 from an unauthorized address
+    mapping(address => uint) private _strats;
+    
     PendingDeposit private pendingDeposit;
 
     event AddPool(address indexed strat);
@@ -54,13 +57,13 @@ contract VaultHealer is ReentrancyGuard, Ownable {
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
     function addPool(address _strat) external onlyOwner nonReentrant {
-        require(!strats[_strat], "Existing strategy");
+        require(!isStrat(_strat), "Existing strategy");
         poolInfo.push();
         PoolInfo storage pool = poolInfo[poolInfo.length - 1];
         pool.want = IERC20(IStrategy(_strat).wantAddress());
         pool.strat = IStrategy(_strat);
         
-        strats[_strat] = true;
+        _strats[_strat] = poolInfo.length;
         emit AddPool(_strat);
     }
 
@@ -69,12 +72,24 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = poolInfo[_pid].user[_user];
 
-        uint256 sharesTotal = pool.sharesTotal;
+        uint256 _sharesTotal = pool.sharesTotal;
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
-        if (sharesTotal == 0) {
+        if (_sharesTotal == 0) {
             return 0;
         }
-        return user.shares * wantLockedTotal / sharesTotal;
+        return user.shares * wantLockedTotal / _sharesTotal;
+    }
+    //enables sharesTotal function on strategy
+    function sharesTotal(address _strat) external view returns (uint) {
+        return poolInfo[findPid(_strat)].sharesTotal;
+    }
+    function isStrat(address _strat) public view returns (bool) {
+        return _strats[_strat] > 0;
+    }
+    function findPid(address _strat) public view returns (uint) {
+        uint pidPlusOne = _strats[_strat];
+        require(pidPlusOne > 0, "address is not a strategy on this VaultHealer");
+        return pidPlusOne - 1;
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
@@ -155,9 +170,10 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             }
         }
     }
+    
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint _amount) external {
-        require(strats[msg.sender]);
+        require(isStrat(msg.sender));
         pendingDeposit.amount -= _amount;
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,

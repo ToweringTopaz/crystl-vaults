@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./libs/IUniRouter02.sol";
+import "./libs/IUniRouter.sol";
 
 import "./PausableTL.sol";
 
@@ -26,7 +26,7 @@ abstract contract BaseStrategyConfig is PausableTL, Ownable {
         uint256 tolerance;
         bool feeOnTransfer;
         uint256 dust; //minimum raw token value considered to be worth swapping or depositing
-        uint256 minBlocksBetweenSwaps;
+        uint256 minBlocksBetweenEarns;
     }
     
     address constant DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
