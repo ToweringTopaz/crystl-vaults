@@ -79,7 +79,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (_wantAmt > 0) {
             uint256 wantLockedBefore = wantLockedTotal();
             
-            IVaultHealer(vaultChefAddress).executePendingTransfer(address(this), _wantAmt);
+            IVaultHealer(vaultChefAddress).executePendingDeposit(address(this), _wantAmt);
     
             _farm();
             

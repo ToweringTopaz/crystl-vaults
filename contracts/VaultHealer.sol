@@ -28,7 +28,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         uint256 sharesTotal;
         mapping (address => UserInfo) user;
     }
-    struct PendingTransfer {
+    struct PendingDeposit {
         IERC20 token;
         address from;
         uint256 amount;
@@ -36,7 +36,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
 
     PoolInfo[] public poolInfo; // Info of each pool.
     mapping(address => bool) private strats;
-    PendingTransfer private pendingTransfer;
+    PendingDeposit private pendingDeposit;
 
     event AddPool(address indexed strat);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -45,6 +45,9 @@ contract VaultHealer is ReentrancyGuard, Ownable {
 
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
+    }
+    function userInfo(uint _pid, address _user) external view returns (uint256 shares) {
+        return poolInfo[_pid].user[_user].shares;
     }
 
     /**
@@ -92,7 +95,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             
             UserInfo storage user = poolInfo[_pid].user[_to];
             
-            pendingTransfer = PendingTransfer({
+            pendingDeposit = PendingDeposit({
                 token: pool.want,
                 from: msg.sender,
                 amount: _wantAmt
@@ -102,7 +105,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             user.shares += sharesAdded;
             pool.sharesTotal += sharesAdded;
             
-            delete pendingTransfer;
+            delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);
     }
@@ -137,14 +140,14 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
 
-    function earnAll() external {
+    function earnAll() external nonReentrant {
         for (uint256 i; i < poolInfo.length; i++) {
             try poolInfo[i].strat.earn(_msgSender()) {}
             catch {}
         }
     }
 
-    function earnSome(uint256[] memory pids) external {
+    function earnSome(uint256[] memory pids) external nonReentrant {
         for (uint256 i; i < pids.length; i++) {
             if (poolInfo.length >= pids[i]) {
                 try poolInfo[pids[i]].strat.earn(_msgSender()) {}
@@ -152,14 +155,22 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             }
         }
     }
-    //for deposits, cannot be nonReentrant
-    function executePendingTransfer(address _to, uint _amount) external {
+    //called by strategy, cannot be nonReentrant
+    function executePendingDeposit(address _to, uint _amount) external {
         require(strats[msg.sender]);
-        pendingTransfer.amount -= _amount;
-        pendingTransfer.token.safeTransferFrom(
-            pendingTransfer.from,
+        pendingDeposit.amount -= _amount;
+        pendingDeposit.token.safeTransferFrom(
+            pendingDeposit.from,
             _to,
             _amount
         );
+    }
+    
+    //Enables future maximizer strategies
+    function transferShares(uint _pid, address _to, uint _amount) external {
+        require(strats[msg.sender]);
+        PoolInfo storage pool = poolInfo[_pid];
+        pool.user[msg.sender].shares -= _amount;
+        pool.user[_to].shares += _amount;
     }
 }
