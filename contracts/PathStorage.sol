@@ -10,18 +10,22 @@ abstract contract PathStorage {
     event SetPath(address[MAX_PATH] path);
     
     function _setPath(address[] memory _path) internal {
-        require(_path.length <= MAX_PATH, "invalid _path.length");
+        require(_path.length <= MAX_PATH, "_path.length too long");
+        require(_path.length >= 2, "_path.length too short");
         uint len = MAX_PATH;
-        for (uint i; i < _path.length; i++) {
+        for (uint i = 1; i < _path.length; i++) {
+            for (uint j; j < i; j++) {
+                require(_path[i] != _path[j], "path can't repeat steps");
+            }
             if (_path[i] == address(0)) {
                 len = i;
+                require(len > 1, "invalid path");
                 for (uint j = i+1; j < _path.length; j++) {
                     require(_path[j] == address(0), "broken path");
                 }
                 break;
             }
         }
-        if (len < 2) return;
         
         bytes32 hashAB = keccak256(abi.encodePacked(_path[0],_path[len - 1]));
         bytes32 hashBA = keccak256(abi.encodePacked(_path[len - 1],_path[0]));
