@@ -8,18 +8,16 @@ import "./BaseStrategy.sol";
 abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
     using SafeERC20 for IERC20;
     
+    uint256 sharesTotal;
+    
     mapping (address => UserInfo) public userInfo;
     
     modifier onlyGov() override {
         require(msg.sender == owner(), "!gov");
         _;
     }
-    
-    //currently unused
-    function _beforeDeposit(address _from, address _to) internal virtual { }
-    function _beforeWithdraw(address _from, address _to) internal virtual { }
-    
-    function deposit(address _to, uint256 _wantAmt) external nonReentrant whenNotPaused override returns (uint256 sharesAdded) {
+
+    function deposit(address _to, uint256 _wantAmt) external nonReentrant whenNotPaused returns (uint256 sharesAdded) {
         if (msg.sender == addresses.vaulthealer) {
             return _deposit(msg.sender, msg.sender, _wantAmt);
         }
@@ -63,7 +61,7 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
     }
     
     //VaultHealer uses "from" here. Must be careful about authorization and ambiguity
-    function withdraw(address _from, uint256 _wantAmt) external nonReentrant override returns (uint256 sharesRemoved) {
+    function withdraw(address _from, uint256 _wantAmt) external nonReentrant returns (uint256 sharesRemoved) {
         require(msg.sender == addresses.vaulthealer || msg.sender == _from, 
             "Use withdrawTo to withdraw to a different address"
         );

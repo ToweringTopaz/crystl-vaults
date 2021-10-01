@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "./libs/IMasterchef.sol";
 import "./BaseStrategyLP.sol";
-import "./MigratoryTacticBase.sol";
+import "./libs/ITactic.sol";
 import "./VaultHealer.sol";
 
 contract StrategyNomadic is BaseStrategyLP {
@@ -11,7 +11,7 @@ contract StrategyNomadic is BaseStrategyLP {
 
     struct NomadMigration {
         
-        MigratoryTacticBase tactic;
+        ITactic tactic;
         address router;
         address masterchef;
         uint pid;
@@ -25,7 +25,7 @@ contract StrategyNomadic is BaseStrategyLP {
     
     uint pid;
     address public khan;
-    MigratoryTacticBase tactic;
+    ITactic tactic;
     address[][] preparedPaths;
     
     NomadMigration public plannedMigration;
@@ -38,7 +38,7 @@ contract StrategyNomadic is BaseStrategyLP {
         Settings memory _settings,
         address[][] memory _paths,  //need paths for earned to each of (wmatic, dai, crystl, token0, token1): 5 total
         uint256 _pid,
-        MigratoryTacticBase _tactic
+        ITactic _tactic
     ) BaseStrategy(_addresses, _settings, _paths) {
         
         addresses.lpToken[0] = IUniPair(_addresses.want).token0();
@@ -64,7 +64,7 @@ contract StrategyNomadic is BaseStrategyLP {
         require(_masterchef.isContract(), "invalid masterchef");
         require(_slippage < SLIPPAGE_FACTOR_UL, "invalid slippage");
         
-        plannedMigration.tactic = MigratoryTacticBase(_tactic);
+        plannedMigration.tactic = ITactic(_tactic);
         plannedMigration.router = _router;
         plannedMigration.masterchef = _masterchef;
         plannedMigration.pid = _pid;
