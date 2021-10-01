@@ -53,7 +53,6 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         pool.strat = IStrategy(_strat);
         
         strats[_strat] = true;
-        resetSingleAllowance(poolInfo.length - 1);
         emit AddPool(_strat);
     }
 
@@ -133,14 +132,6 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
 
-    function resetAllowances() external onlyOwner {
-        for (uint256 i; i < poolInfo.length; i++) {
-            PoolInfo storage pool = poolInfo[i];
-            pool.want.safeApprove(address(pool.strat), 0);
-            pool.want.safeIncreaseAllowance(address(pool.strat), type(uint256).max);
-        }
-    }
-
     function earnAll() external {
         for (uint256 i; i < poolInfo.length; i++) {
             try poolInfo[i].strat.earn(_msgSender()) {}
@@ -157,11 +148,6 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         }
     }
 
-    function resetSingleAllowance(uint256 _pid) public onlyOwner {
-        PoolInfo storage pool = poolInfo[_pid];
-        pool.want.safeApprove(address(pool.strat), 0);
-        pool.want.safeIncreaseAllowance(address(pool.strat), type(uint256).max);
-    }
     function strategyWantMigration(IUniPair _newWant) external {
         require (strats[msg.sender], "only callable by strategies");
         for (uint i; i < poolInfo.length; i++) {
