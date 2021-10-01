@@ -165,12 +165,4 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             _amount
         );
     }
-    
-    //Enables future maximizer strategies
-    function transferShares(uint _pid, address _to, uint _amount) external {
-        require(strats[msg.sender]);
-        PoolInfo storage pool = poolInfo[_pid];
-        pool.user[msg.sender].shares -= _amount;
-        pool.user[_to].shares += _amount;
-    }
 }
