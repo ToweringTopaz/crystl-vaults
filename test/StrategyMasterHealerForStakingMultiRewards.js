@@ -20,9 +20,9 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 
 const STRATEGY_CONTRACT_TYPE = 'StrategyMasterHealerForStakingMultiRewards'; //<-- change strategy type to the contract deployed for this strategy
 const { dokiVaults } = require('../configs/dokiVaults'); //<-- replace all references to 'dokiVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [dokiVaults[3].addresses, ...dokiVaults[3].strategyConfig];
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED, EARNEDBETA] = dokiVaults[3].addresses
-const [TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = dokiVaults[3].strategyConfig;
+const DEPLOYMENT_VARS = [dokiVaults[0].addresses, ...dokiVaults[0].strategyConfig];
+const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED, EARNEDBETA] = dokiVaults[0].addresses
+const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = dokiVaults[0].strategyConfig;
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
@@ -35,14 +35,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     with earned token:          ${EARNED}
     and earnedBeta token:       ${EARNEDBETA}
     Tolerance:                  ${TOLERANCE}
-    earnedToWmaticPath: ${dokiVaults[3].strategyConfig[1]}
-    earnedToUsdcPath:   ${dokiVaults[3].strategyConfig[2]}
-    earnedToCrystlPath: ${dokiVaults[3].strategyConfig[3]}
-    earnedToToken0Path: ${dokiVaults[3].strategyConfig[4]}
-    earnedToToken1Path: ${dokiVaults[3].strategyConfig[5]}
-    token0ToEarnedPath: ${dokiVaults[3].strategyConfig[6]}
-    token1ToEarnedPath: ${dokiVaults[3].strategyConfig[7]}
-    earnedBetaToEarned: ${dokiVaults[3].strategyConfig[8]}
+    earnedToWmaticPath: ${dokiVaults[0].strategyConfig[2]}
+    earnedToUsdcPath:   ${dokiVaults[0].strategyConfig[3]}
+    earnedToCrystlPath: ${dokiVaults[0].strategyConfig[4]}
+    earnedToToken0Path: ${dokiVaults[0].strategyConfig[5]}
+    earnedToToken1Path: ${dokiVaults[0].strategyConfig[6]}
+    token0ToEarnedPath: ${dokiVaults[0].strategyConfig[7]}
+    token1ToEarnedPath: ${dokiVaults[0].strategyConfig[8]}
+    earnedBetaToEarned: ${dokiVaults[0].strategyConfig[9]}
     `, () => {
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();

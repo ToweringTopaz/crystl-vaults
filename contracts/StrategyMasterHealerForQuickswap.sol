@@ -9,9 +9,11 @@ contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
     using SafeERC20 for IERC20;
 
     address public masterchefAddress;
+    uint256 public pid;
 
     constructor(
         address[5] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned
+        uint256 _pid,
         uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
         address[] memory _earnedToUsdcPath,
@@ -29,7 +31,8 @@ contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
         wantAddress = _configAddress[3];
         token0Address = IUniPair(wantAddress).token0();
         token1Address = IUniPair(wantAddress).token1();
-
+        
+        pid = _pid;
         earnedAddress = _configAddress[4];
         tolerance = _tolerance;
 
