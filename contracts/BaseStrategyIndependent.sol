@@ -57,23 +57,22 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
         }
         
     }
-        //Danger: vaulthealer-based implementation has the address as from!!
     //function withdraw(address _to, uint256 _wantAmt) external override returns (uint256 sharesRemoved) {
     function withdrawTo(address _to, uint256 _wantAmt) external returns (uint256 sharesRemoved) {
-        return _withdraw(msg.sender, _to, _wantAmt);
+        return _withdraw(msg.sender, _to, _wantAmt, false);
     }
     
-    
+    //VaultHealer uses "from" here. Must be careful about authorization and ambiguity
     function withdraw(address _from, uint256 _wantAmt) external override returns (uint256 sharesRemoved) {
         require(msg.sender == addresses.vaulthealer || msg.sender == _from, 
             "Use withdrawTo to withdraw to a different address"
         );
         
-        return _withdraw(msg.sender, msg.sender, _wantAmt);
+        return _withdraw(msg.sender, msg.sender, _wantAmt, false);
     }
     
     function withdraw(uint256 _wantAmt) external returns (uint256 sharesRemoved) {
-        return _withdraw(msg.sender, msg.sender, _wantAmt);
+        return _withdraw(msg.sender, msg.sender, _wantAmt, false);
     }
 
     function _withdraw(address _from, address _to, uint256 _wantAmt) internal nonReentrant returns (uint256 sharesRemoved) {

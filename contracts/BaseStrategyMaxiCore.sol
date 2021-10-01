@@ -14,4 +14,10 @@ abstract contract BaseStrategyMaxiCore is BaseStrategyIndependent {
         return addresses.want;
     }
 
+    mapping (address => address) public maxiImports; //supplier => import tokens
+    
+    function _transferShares(address _from, address _to, uint _amount) {
+           
+    }
+
 }
