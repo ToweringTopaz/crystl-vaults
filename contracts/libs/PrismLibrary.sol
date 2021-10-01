@@ -3,6 +3,7 @@ pragma solidity ^0.8.4;
 
 import './IUniPair.sol';
 
+//Generic UniswapV2 library modified to have variable initcodehash and swap fees, so it'll work with any unirouter
 library PrismLibrary {
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order

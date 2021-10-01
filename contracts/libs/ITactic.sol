@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./IMasterchef.sol";
-
+//Tactics are used to interact with a strategy's underlying farm
 interface ITactic {
     
     function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external;

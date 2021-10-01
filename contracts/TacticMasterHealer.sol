@@ -2,11 +2,18 @@
 pragma solidity ^0.8.4;
 
 import "./libs/ITactic.sol";
-import "./libs/IMasterchef.sol";
+
+interface IMasterchef {
+    function deposit(uint256 _pid, uint256 _amount) external;
+    function withdraw(uint256 _pid, uint256 _amount) external;
+    function emergencyWithdraw(uint256 _pid) external;
+    function userInfo(uint256 _pid, address _address) external view returns (uint256, uint256);
+    function harvest(uint256 _pid, address _to) external;
+}
 
 contract TacticMasterHealer is ITactic {
     
-    function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external override {
+    function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external virtual override {
         IMasterchef(masterchefAddress).deposit(pid, _amount);
     }
     

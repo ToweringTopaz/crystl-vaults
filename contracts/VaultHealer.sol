@@ -3,11 +3,16 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./libs/IStrategy.sol";
-import "./libs/IUniPair.sol";
+interface IStrategy {
+    function wantAddress() external view returns (address); // Want address
+    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
+    function paused() external view returns (bool); // Is strategy paused
+    function earn(address _to) external; // Main want token compounding function
+    function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
+    function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved);
+}
 
 contract VaultHealer is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
@@ -146,20 +151,6 @@ contract VaultHealer is ReentrancyGuard, Ownable {
                 catch {}
             }
         }
-    }
-
-    function strategyWantMigration(IUniPair _newWant) external {
-        require (strats[msg.sender], "only callable by strategies");
-        for (uint i; i < poolInfo.length; i++) {
-            if (address(poolInfo[i].strat) == msg.sender) {
-                address token0 = IUniPair(address(poolInfo[i].want)).token0();
-                address token1 = IUniPair(address(poolInfo[i].want)).token1();
-                require(token0 == IUniPair(_newWant).token0() && token1 == IUniPair(_newWant).token1(), "old/new tokens don't match");
-                poolInfo[i].want = _newWant;
-                return;
-            }
-        }
-        revert("VH failed to migrate want");
     }
     //for deposits, cannot be nonReentrant
     function executePendingTransfer(address _to, uint _amount) external {
