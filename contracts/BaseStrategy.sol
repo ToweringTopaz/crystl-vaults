@@ -29,7 +29,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     
     uint256 public lastEarnBlock = block.number;
     uint256 public lastGainBlock; //last time earn() produced anything
-    uint256 public sharesTotal; //Total shares, added and removed when depositing/withdrawing
     uint256 public burnedAmount; //Total CRYSTL burned by this vault
     
     //The owner of the connected vaulthealer has several privileges such as pausing the vault.
@@ -96,7 +95,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function _earn(address _to) internal virtual;
     
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(address _from, address _to, uint256 _wantAmt) external onlyVaultHealer nonReentrant whenNotPaused returns (uint256 sharesAdded) {
+    function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer nonReentrant whenNotPaused returns (uint256 sharesAdded) {
         // Call must happen before transfer
         _beforeDeposit(_from, _to);
        
@@ -110,8 +109,8 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
             // Proper deposit amount for tokens with fees, or vaults with deposit fees
             sharesAdded = wantLockedTotal() - wantLockedBefore;
             
-            if (sharesTotal > 0) {
-                sharesAdded = sharesAdded * sharesTotal / wantLockedBefore;
+            if (_sharesTotal > 0) {
+                sharesAdded = sharesAdded * _sharesTotal / wantLockedBefore;
             }
             require(sharesAdded >= 1, "deposit: no shares added");
         }
@@ -143,7 +142,7 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         
         //Calculate shares to remove
         sharesRemoved = Math.ceilDiv(
-            (_wantAmt + withdrawSlippage) * sharesTotal,
+            (_wantAmt + withdrawSlippage) * _sharesTotal,
             wantLockedBefore
         );
         
@@ -151,11 +150,11 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         if (sharesRemoved > _userShares) sharesRemoved = _userShares;
         
         //Get final withdrawal amount
-        if (sharesRemoved < sharesTotal) { // Calculate final withdrawal amount
-            _wantAmt = (sharesRemoved * wantLockedBefore / sharesTotal) - withdrawSlippage;
+        if (sharesRemoved < _sharesTotal) { // Calculate final withdrawal amount
+            _wantAmt = (sharesRemoved * wantLockedBefore / _sharesTotal) - withdrawSlippage;
         
         } else { // last depositor is withdrawing
-            assert(sharesRemoved == sharesTotal); //for testing, should never fail
+            assert(sharesRemoved == _sharesTotal); //for testing, should never fail
             
             //clear out anything left
             uint vaultSharesRemaining = vaultSharesTotal();

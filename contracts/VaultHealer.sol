@@ -94,7 +94,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
                 amount: _wantAmt
             });
 
-            uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt);
+            uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt, pool.sharesTotal);
             user.shares += sharesAdded;
             pool.sharesTotal += sharesAdded;
             
