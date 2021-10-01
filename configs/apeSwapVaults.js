@@ -4,49 +4,21 @@ const { ZERO_ADDRESS } = accounts.polygon;
 
 const apeSwapVaults = [
     {
-        addresses: [
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            routers.polygon.APESWAP_ROUTER, // UniRouter
-            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
-            accounts.polygon.FEE_ADDRESS, // rewardFee
-            accounts.polygon.FEE_ADDRESS, // withdrawFee
-            accounts.polygon.BURN_ADDRESS, // 0xdead
-            lps.polygon.MATIC_CRYSTL_APE_LP, // Want
-            [ BANANA, CRYSTL, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ],
-            [ ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ]
-        ],
-        paths: [
-            [BANANA, WMATIC], //  earned to wmatic, earned to token0
-            [BANANA, WMATIC, DAI], // earned to dai
-            [BANANA, WMATIC, CRYSTL], // earned to crystl, earned to token1
-            [CRYSTL, WMATIC], // earned2 to wmatic, earned2 to token0
-            [CRYSTL, WMATIC, DAI], // earned2 to dai
-            [CRYSTL] // earned2 to crystl, earned2 to token1
-        ],
+		masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+		tactic: '0x48D446A5571592EC101e59FEb47A0aFdD4A42566', //TacticMiniApe
+		vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
+		want: lps.polygon.MATIC_CRYSTL_APE_LP, // Want
+		earned: [ BANANA, CRYSTL ],
+        paths: [], //all wmatic paths, so auto-gen
         PID: 7,
     },
     {
-        addresses: [
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            routers.polygon.APESWAP_ROUTER, // UniRouter
-            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
-            accounts.polygon.FEE_ADDRESS, // rewardFee
-            accounts.polygon.FEE_ADDRESS, // withdrawFee
-            accounts.polygon.BURN_ADDRESS, // 0xdead
-            lps.polygon.MATIC_BANANA_APE_LP, // Want
-            [ BANANA, WMATIC, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ],
-            [ ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ]
-        ],
-        paths: [
-            [BANANA, WMATIC], //  earned to wmatic, earned to token0
-            [BANANA, WMATIC, DAI], // earned to dai
-            [BANANA, WMATIC, CRYSTL], // earned to crystl
-            [BANANA], // earned to token1
-            [WMATIC], // earned2 to wmatic, earned2 to token0
-            [WMATIC, DAI], // earned2 to dai
-            [WMATIC, CRYSTL], //earned2 to crystl
-            [WMATIC, BANANA] //earned2 to token1
-        ],
+		masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+		tactic: '0x48D446A5571592EC101e59FEb47A0aFdD4A42566', //TacticMiniApe
+		vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
+		want: lps.polygon.MATIC_BANANA_APE_LP, // Want
+        earned: [ BANANA, WMATIC ],
+        paths: [], // all wmatic paths, so auto-gen
         PID: 0,
     },
 ]

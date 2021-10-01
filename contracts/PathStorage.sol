@@ -2,12 +2,15 @@
 pragma solidity ^0.8.4;
 
 //Efficiently and conveniently stores all paths which might be required by a strategy.
+//If no path is found, findPath will assume a path exists via WNATIVE
 abstract contract PathStorage {
     
     uint constant private MAX_PATH = 5;
     mapping(bytes32 => address[MAX_PATH]) private _paths;
+    address constant private WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     
     event SetPath(address[MAX_PATH] path);
+    event AutoGenPath(address[] path);
     
     function _setPath(address[] memory _path) internal {
         require(_path.length <= MAX_PATH, "_path.length too long");
@@ -78,6 +81,11 @@ abstract contract PathStorage {
         return MAX_PATH;
     }
     function getPath(address a, address b) public view returns (address[] memory path) {
+        path = _getPath(a, b);
+        require(path.length > 0, "path not found");
+        
+    }
+    function _getPath(address a, address b) private view returns (address[] memory path) {
         if (a == b) {
             path = new address[](1);
             path[0] = a;
@@ -86,12 +94,27 @@ abstract contract PathStorage {
         bytes32 hashAB = keccak256(abi.encodePacked(a, b));
         address[MAX_PATH] storage _path = _paths[hashAB];
         path = new address[](_len(_path));
-        require(path.length > 0, "path not found");
-        assert(path.length != 1);
         for (uint i; i < path.length; i++) {
             path[i] = _path[i];
         }
-        
+        assert(path.length != 1);
+    }
+    function findPath(address a, address b) internal returns (address[] memory path) {
+        path = _getPath(a, b);
+        if (path.length == 0) {
+            if (a == WNATIVE || b == WNATIVE) {
+                path = new address[](2);
+                path[0] = a;
+                path[1] = b;
+            } else {
+                path = new address[](3);
+                path[0] = a;
+                path[1] = WNATIVE;
+                path[2] = b;
+            }
+            emit AutoGenPath(path);
+            _setPath(path);
+        }
     }
     
 }

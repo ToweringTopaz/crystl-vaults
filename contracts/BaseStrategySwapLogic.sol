@@ -19,16 +19,16 @@ abstract contract BaseStrategySwapLogic is BaseStrategyConfig, PathStorage {
     
     address public router;
     
-    address[8] public earned;
-    address[8] public lpToken;
+    address[EARNED_LEN] public earned;
+    address[LP_LEN] public lpToken;
     
     uint256 public burnedAmount; //Total CRYSTL burned by this vault
 
     constructor(
         address _wantAddress,
         Settings memory _settings,
-        address[8] memory _earned,
-        address[8] memory _lpToken,
+        address[] memory _earned,
+        address[LP_LEN] memory _lpToken,
         address[][] memory _paths
     ) BaseStrategyConfig(_settings) {
         wantAddress = _wantAddress;
@@ -45,7 +45,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategyConfig, PathStorage {
         earnedLength = i;
         
         //If no LP tokens, try to look them up from the LP token ABI. If not, want must be a single-stake
-        if (_lpToken[0] == address(0)) {
+        if (_lpToken.length == 0 || _lpToken[0] == address(0)) {
             require(_lpToken[1] == address(0), "bad lpToken array");
             
             try IUniPair(_wantAddress).token0() returns (address _token0) {
@@ -134,7 +134,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategyConfig, PathStorage {
             IERC20(_tokenA).safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = getPath(_tokenA, _tokenB);
+        address[] memory path = findPath(_tokenA, _tokenB);
         
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1];

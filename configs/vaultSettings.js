@@ -1,5 +1,12 @@
+const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
+const { FEE_ADDRESS, BURN_ADDRESS } = accounts.polygon;
+
 const vaultSettings = {
 	standard: [
+		FEE_ADDRESS, // rewardFee
+		FEE_ADDRESS, // withdrawFee
+		BURN_ADDRESS, //buybackFee
+		routers.polygon.APESWAP_ROUTER, //aperouter
 		50, //uint16 controllerFee;
         50, //uint16 rewardRate;
         400, //uint16 buybackRate;
@@ -11,6 +18,10 @@ const vaultSettings = {
         10 //uint256 minBlocksBetweenSwaps;
 	],
 	reflect: [
+		FEE_ADDRESS, // rewardFee
+		FEE_ADDRESS, // withdrawFee
+		BURN_ADDRESS, //buybackFee
+		routers.polygon.APESWAP_ROUTER, //aperouter
 		50, //uint16 controllerFee;
         50, //uint16 rewardRate;
         400, //uint16 buybackRate;
@@ -22,6 +33,10 @@ const vaultSettings = {
         10 //uint256 minBlocksBetweenSwaps;
 	],
 	doubleReflect: [
+		FEE_ADDRESS, // rewardFee
+		FEE_ADDRESS, // withdrawFee
+		BURN_ADDRESS, //buybackFee
+		routers.polygon.APESWAP_ROUTER, //aperouter
 		50, //uint16 controllerFee;
         50, //uint16 rewardRate;
         400, //uint16 buybackRate;

@@ -38,6 +38,10 @@ abstract contract BaseStrategyConfig is PausableTL, Ownable {
     uint256 constant WITHDRAW_FEE_FACTOR_LL = 9900;
     uint256 constant SLIPPAGE_FACTOR_UL = 9950;
 
+    //max number of lp/earned tokens
+    uint256 constant LP_LEN = 2;
+    uint256 constant EARNED_LEN = 2;
+
     event SetSettings(Settings _settings);
     
     Settings public settings;

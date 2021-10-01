@@ -23,8 +23,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         address _vaultChefAddress,
         address _wantAddress,
         Settings memory _settings,
-        address[8] memory _earned,
-        address[8] memory _lpToken,
+        address[] memory _earned,
+        address[LP_LEN] memory _lpToken,
         address[][] memory _paths
     ) BaseStrategySwapLogic(_wantAddress, _settings, _earned, _lpToken, _paths) {
         vaultChefAddress = _vaultChefAddress;

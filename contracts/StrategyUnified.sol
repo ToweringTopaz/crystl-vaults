@@ -21,10 +21,16 @@ contract StrategyUnified is BaseStrategyVaultHealer {
         address _vaultChefAddress,
         address _wantAddress,
         Settings memory _settings,
-        address[8] memory _earned,
-        address[8] memory _lpToken,
+        address[] memory _earned,
         address[][] memory _paths
-    ) BaseStrategyVaultHealer(_vaultChefAddress, _wantAddress, _settings, _earned, _lpToken, _paths) {
+    ) BaseStrategyVaultHealer(
+        _vaultChefAddress, 
+        _wantAddress, 
+        _settings, 
+        _earned,
+        [address(0),address(0)], //LP tokens are auto-filled
+        _paths
+    ){
         
         masterchefAddress = _masterchefAddress;
         tactic = ITactic(_tactic);
