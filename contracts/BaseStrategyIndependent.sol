@@ -19,17 +19,17 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
     function _beforeDeposit(address _from, address _to) internal virtual { }
     function _beforeWithdraw(address _from, address _to) internal virtual { }
     
-    function deposit(address _to, uint256 _wantAmt) external override returns (uint256 sharesAdded) {
+    function deposit(address _to, uint256 _wantAmt) external nonReentrant whenNotPaused override returns (uint256 sharesAdded) {
         if (msg.sender == addresses.vaulthealer) {
             return _deposit(msg.sender, msg.sender, _wantAmt);
         }
         return _deposit(msg.sender, _to, _wantAmt);
     }
-    function deposit(uint256 _wantAmt) external returns (uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt) external nonReentrant whenNotPaused returns (uint256 sharesAdded) {
         return _deposit(msg.sender, msg.sender, _wantAmt);
     }
     
-    function _deposit(address _from, address _to, uint256 _wantAmt) internal nonReentrant whenNotPaused returns (uint256 sharesAdded) {
+    function _deposit(address _from, address _to, uint256 _wantAmt) internal returns (uint256 sharesAdded) {
         // Call must happen before transfer
         _beforeDeposit(_from, _to);
        
@@ -58,24 +58,24 @@ abstract contract BaseStrategyIndependent is BaseStrategy, Ownable {
         
     }
     //function withdraw(address _to, uint256 _wantAmt) external override returns (uint256 sharesRemoved) {
-    function withdrawTo(address _to, uint256 _wantAmt) external returns (uint256 sharesRemoved) {
-        return _withdraw(msg.sender, _to, _wantAmt, false);
+    function withdrawTo(address _to, uint256 _wantAmt) external nonReentrant returns (uint256 sharesRemoved) {
+        return _withdraw(msg.sender, _to, _wantAmt);
     }
     
     //VaultHealer uses "from" here. Must be careful about authorization and ambiguity
-    function withdraw(address _from, uint256 _wantAmt) external override returns (uint256 sharesRemoved) {
+    function withdraw(address _from, uint256 _wantAmt) external nonReentrant override returns (uint256 sharesRemoved) {
         require(msg.sender == addresses.vaulthealer || msg.sender == _from, 
             "Use withdrawTo to withdraw to a different address"
         );
         
-        return _withdraw(msg.sender, msg.sender, _wantAmt, false);
+        return _withdraw(msg.sender, msg.sender, _wantAmt);
     }
     
-    function withdraw(uint256 _wantAmt) external returns (uint256 sharesRemoved) {
-        return _withdraw(msg.sender, msg.sender, _wantAmt, false);
+    function withdraw(uint256 _wantAmt) external nonReentrant returns (uint256 sharesRemoved) {
+        return _withdraw(msg.sender, msg.sender, _wantAmt);
     }
 
-    function _withdraw(address _from, address _to, uint256 _wantAmt) internal nonReentrant returns (uint256 sharesRemoved) {
+    function _withdraw(address _from, address _to, uint256 _wantAmt) internal returns (uint256 sharesRemoved) {
         UserInfo storage user = userInfo[_from];
         require(user.shares > 0, "user.shares is 0");
 

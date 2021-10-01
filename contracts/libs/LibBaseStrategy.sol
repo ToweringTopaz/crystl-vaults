@@ -21,7 +21,7 @@ library LibBaseStrategy {
         }        
         require(_addresses.want == addresses.want, "cannot change want address");
         require(_addresses.masterchef == addresses.masterchef, "cannot change masterchef address");
-        require(_addresses.vaulthealer == addresses.vaulthealer, "cannot change masterchef address");
+        require(_addresses.vaulthealer == addresses.vaulthealer, "cannot change vaulthealer address");
         
         _setAddresses(addresses, _addresses);
     }
@@ -79,6 +79,8 @@ library LibBaseStrategy {
             burnedAmt += amountOut;
         }
         amountOut = amountOut * settings.slippageFactor / 10000;
+        
+        IERC20(_tokenA).safeIncreaseAllowance(addresses.router, _amountIn);
         if (settings.feeOnTransfer) {
             IUniRouter02(addresses.router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountIn,

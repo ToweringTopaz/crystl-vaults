@@ -37,8 +37,15 @@ struct Settings {
 //particular strategy
 struct UserInfo {
     uint256 shares; // How many LP tokens the user has provided.
-    uint256 cShares; //shares the user has auto-compounding
-    uint256 cRatioLast; // UQ32x224: as of last user update: (some amount xShares * 2**194) / equivalent value cShares
-    uint256[MAX_EXPORTS] xShares; //
-    uint256[MAX_EXPORTS] exportDebt;
+}
+
+struct ExportInfo {
+    address strat;
+    uint accCoreShares;
+    uint totalXShares;
+    mapping(address => UserExportInfo) user;
+}
+struct UserExportInfo {
+    uint256 xShares; //tokens which do not auto-compound but instead export their earnings
+    uint256 coreShareDebt;
 }

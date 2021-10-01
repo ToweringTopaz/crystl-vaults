@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "./libs/ITactic.sol";
 import "./libs/IMasterchef.sol";
-import "./BaseStrategyLP.sol";
-import "./MigratoryTacticBase.sol";
 
-abstract contract MigratoryTacticMasterHealer is MigratoryTacticBase {
+contract TacticMasterHealer is ITactic {
     
     function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external override {
         IMasterchef(masterchefAddress).deposit(pid, _amount);
@@ -19,8 +18,8 @@ abstract contract MigratoryTacticMasterHealer is MigratoryTacticBase {
         IMasterchef(masterchefAddress).withdraw(pid, 0);
     }
     
-    function vaultSharesTotal(address masterchefAddress, uint pid, address _addressThis) external override view returns (uint256) {
-        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, _addressThis);
+    function vaultSharesTotal(address masterchefAddress, uint pid, address strategyAddress) external override view returns (uint256) {
+        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, strategyAddress);
         return amount;
     }
     

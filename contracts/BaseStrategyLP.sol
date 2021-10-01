@@ -45,11 +45,11 @@ abstract contract BaseStrategyLP is BaseStrategy {
                 earnedAmt = distributeFees(earnedAddress, earnedAmt, _to); // handles all fees for this earned token
         
                 console.log("_swapEarnedToLP: earnedAmt after fees is %s", earnedAmt);
-                console.log("_swapEarnedToLP: _lpTokenLength is %s", _lpTokenLength);
+                console.log("_swapEarnedToLP: lpTokenLength is %s", lpTokenLength);
                 
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
-                for (uint j; j < _lpTokenLength; i++) {
-                    _safeSwap(earnedAmt / _lpTokenLength, earnedAddress, addresses.lpToken[j], address(this));
+                for (uint j; j < lpTokenLength; i++) {
+                    _safeSwap(earnedAmt / lpTokenLength, earnedAddress, addresses.lpToken[j], address(this));
                 }
             }
         }

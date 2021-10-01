@@ -20,11 +20,18 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     struct PoolInfo {
         IERC20 want; // Address of the want token.
         IStrategy strat; // Strategy address that will auto compound want tokens
+        uint256 sharesTotal;
+        mapping (address => UserInfo) user;
+    }
+    struct PendingTransfer {
+        IERC20 token;
+        address from;
+        uint256 amount;
     }
 
     PoolInfo[] public poolInfo; // Info of each pool.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
     mapping(address => bool) private strats;
+    PendingTransfer private pendingTransfer;
 
     event AddPool(address indexed strat);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -40,12 +47,11 @@ contract VaultHealer is ReentrancyGuard, Ownable {
      */
     function addPool(address _strat) external onlyOwner nonReentrant {
         require(!strats[_strat], "Existing strategy");
-        poolInfo.push(
-            PoolInfo({
-                want: IERC20(IStrategy(_strat).wantAddress()),
-                strat: IStrategy(_strat)
-            })
-        );
+        poolInfo.push();
+        PoolInfo storage pool = poolInfo[poolInfo.length - 1];
+        pool.want = IERC20(IStrategy(_strat).wantAddress());
+        pool.strat = IStrategy(_strat);
+        
         strats[_strat] = true;
         resetSingleAllowance(poolInfo.length - 1);
         emit AddPool(_strat);
@@ -54,9 +60,9 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
+        UserInfo storage user = poolInfo[_pid].user[_user];
 
-        uint256 sharesTotal = pool.strat.sharesTotal();
+        uint256 sharesTotal = pool.sharesTotal;
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
         if (sharesTotal == 0) {
             return 0;
@@ -77,17 +83,22 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     function _deposit(uint256 _pid, uint256 _wantAmt, address _to) internal {
         PoolInfo storage pool = poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
-        UserInfo storage user = userInfo[_pid][_to];
 
         if (_wantAmt > 0) {
-            // Call must happen before transfer
-            uint256 wantBefore = pool.want.balanceOf(address(this));
-            pool.want.safeTransferFrom(msg.sender, address(this), _wantAmt);
-            uint256 finalDeposit = pool.want.balanceOf(address(this)) - wantBefore;
+            
+            UserInfo storage user = poolInfo[_pid].user[_to];
+            
+            pendingTransfer = PendingTransfer({
+                token: pool.want,
+                from: msg.sender,
+                amount: _wantAmt
+            });
 
-            // Proper deposit amount for tokens with fees
-            uint256 sharesAdded = poolInfo[_pid].strat.deposit(_to, finalDeposit);
+            uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt);
             user.shares += sharesAdded;
+            pool.sharesTotal += sharesAdded;
+            
+            delete pendingTransfer;
         }
         emit Deposit(_to, _pid, _wantAmt);
     }
@@ -105,34 +116,15 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) internal {
         PoolInfo storage pool = poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
-        UserInfo storage user = userInfo[_pid][msg.sender];
-
-        uint256 wantLockedTotal = pool.strat.wantLockedTotal();
-        uint256 sharesTotal = pool.strat.sharesTotal();
+        UserInfo storage user = poolInfo[_pid].user[msg.sender];
 
         require(user.shares > 0, "user.shares is 0");
-        require(sharesTotal > 0, "sharesTotal is 0");
 
-        // Withdraw want tokens
-        uint256 amount = user.shares * wantLockedTotal / sharesTotal;
-        if (_wantAmt > amount) {
-            _wantAmt = amount;
-        }
-        if (_wantAmt > 0) {
-            uint256 sharesRemoved = pool.strat.withdraw(msg.sender, _wantAmt);
+        uint256 sharesRemoved = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
 
-            if (sharesRemoved > user.shares) {
-                user.shares = 0;
-            } else {
-                user.shares -= sharesRemoved;
-            }
+        user.shares -= sharesRemoved;
+        pool.sharesTotal -= sharesRemoved;
 
-            uint256 wantBal = pool.want.balanceOf(address(this));
-            if (wantBal < _wantAmt) {
-                _wantAmt = wantBal;
-            }
-            pool.want.safeTransfer(_to, _wantAmt);
-        }
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
 
@@ -182,5 +174,15 @@ contract VaultHealer is ReentrancyGuard, Ownable {
             }
         }
         revert("VH failed to migrate want");
+    }
+    //for deposits, cannot be nonReentrant
+    function executePendingTransfer(address _to, uint _amount) external {
+        require(strats[msg.sender]);
+        pendingTransfer.amount -= _amount;
+        pendingTransfer.token.safeTransferFrom(
+            pendingTransfer.from,
+            _to,
+            _amount
+        );
     }
 }

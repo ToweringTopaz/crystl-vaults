@@ -11,6 +11,7 @@ import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
 import "./PausableTL.sol";
 import "./PathStorage.sol";
+import "./VaultHealer.sol";
 
 import "./libs/StratStructs.sol";
 import "./libs/LibBaseStrategy.sol";
@@ -63,9 +64,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         earnedLength = i;
         for (i = 0; i < _addresses.lpToken.length && _addresses.lpToken[i] != address(0); i++) {}
         lpTokenLength = i;
-        
-        _resetAllowances();
-
     }
     
     //These are specific to a particular MasterChef/etc implementation
@@ -76,8 +74,8 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function _emergencyVaultWithdraw() internal virtual;
     
     //currently unused
-    function _beforeDeposit(address _from) internal virtual { }
-    function _beforeWithdraw(address _from) internal virtual { }
+    function _beforeDeposit(address _from, address _to) internal virtual { }
+    function _beforeWithdraw(address _from, address _to) internal virtual { }
     
     //simple balance functions
     function wantBalance() internal view returns (uint256) {
@@ -98,68 +96,86 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function _earn(address _to) internal virtual;
     
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(address _userAddress, uint256 _wantAmt) external virtual onlyVaultHealer nonReentrant whenNotPaused returns (uint256) {
+    function deposit(address _from, address _to, uint256 _wantAmt) external onlyVaultHealer nonReentrant whenNotPaused returns (uint256 sharesAdded) {
         // Call must happen before transfer
-        _beforeDeposit(_userAddress); //Typically a noop
-        uint256 wantLockedBefore = wantLockedTotal(); //Want tokens before deposit
-
-        IERC20(addresses.want).safeTransferFrom( //pull in tokens
-            msg.sender,
-            address(this),
-            _wantAmt
-        );
-
-        // Proper deposit amount for tokens with fees, or vaults with deposit fees
-        uint256 sharesAdded = _farm(); //deposit tokens
-        if (sharesTotal > 0) {
-            sharesAdded = sharesAdded * sharesTotal / wantLockedBefore; //calculate shares relative to existing pool size
+        _beforeDeposit(_from, _to);
+       
+        if (_wantAmt > 0) {
+            uint256 wantLockedBefore = wantLockedTotal();
+            
+            VaultHealer(addresses.vaulthealer).executePendingTransfer(address(this), _wantAmt);
+    
+            _farm();
+            
+            // Proper deposit amount for tokens with fees, or vaults with deposit fees
+            sharesAdded = wantLockedTotal() - wantLockedBefore;
+            
+            if (sharesTotal > 0) {
+                sharesAdded = sharesAdded * sharesTotal / wantLockedBefore;
+            }
+            require(sharesAdded >= 1, "deposit: no shares added");
         }
-        require(sharesAdded >= 1, "deposit: no shares added"); //safety check
-        sharesTotal += sharesAdded; //track total shares
-
-        return sharesAdded; //vaulthealer handles user share amounts
     }
 
-    function withdraw(address _userAddress, uint256 _wantAmt) external virtual onlyVaultHealer nonReentrant returns (uint256) {
-        require(_wantAmt > 0, "_wantAmt is 0");
-        //Vaulthealer handles user shares and won't let the tx get this far unless the user is owed _wantAmt
+    function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external onlyVaultHealer nonReentrant returns (uint256 sharesRemoved) {
+        _beforeWithdraw(_from, _to);
         
-        _beforeWithdraw(_userAddress); //Typically a noop
-        uint256 wantAmt = wantBalance(); //Total tokens held in strategy, not deposited
+        uint wantBalanceBefore = wantBalance();
+        uint wantLockedBefore = wantBalanceBefore + vaultSharesTotal();
+
+        //User's balance, in want tokens
+        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
+        
+        if (_wantAmt + settings.dust > userWant) { // user requested all, very nearly all, or more than their balance
+            _wantAmt = userWant;
+        }      
         
         // Check if strategy has tokens from panic
-        if (_wantAmt > wantAmt) {
-            _vaultWithdraw(_wantAmt - wantAmt); //withdraw tokens needed to pay the user
-            wantAmt = wantBalance();
+        if (_wantAmt > wantBalanceBefore) {
+            _vaultWithdraw(_wantAmt - wantBalanceBefore);
+            uint wantBal = wantBalance();
+            if (_wantAmt > wantBal) _wantAmt = wantBal;
+        }
+        
+        //Account for reflect, pool withdraw fee, etc; charge these to user
+        uint wantLockedAfter = wantLockedTotal();
+        uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
+        
+        //Calculate shares to remove
+        sharesRemoved = Math.ceilDiv(
+            (_wantAmt + withdrawSlippage) * sharesTotal,
+            wantLockedBefore
+        );
+        
+        //User removing too many shares? Security checkpoint.
+        if (sharesRemoved > _userShares) sharesRemoved = _userShares;
+        
+        //Get final withdrawal amount
+        if (sharesRemoved < sharesTotal) { // Calculate final withdrawal amount
+            _wantAmt = (sharesRemoved * wantLockedBefore / sharesTotal) - withdrawSlippage;
+        
+        } else { // last depositor is withdrawing
+            assert(sharesRemoved == sharesTotal); //for testing, should never fail
             
-            if (_wantAmt > wantAmt) { //in case the whole desired amount can't be withdrawn
-                _wantAmt = wantAmt;
-            }
+            //clear out anything left
+            uint vaultSharesRemaining = vaultSharesTotal();
+            if (vaultSharesRemaining > 0) _vaultWithdraw(vaultSharesRemaining);
+            if (vaultSharesTotal() > 0) _emergencyVaultWithdraw();
+            
+            _wantAmt = wantBalance();
         }
-
-        //Value withdrawal in terms of shares
-        //ceilDiv prevents abuse of rounding errors
-        uint256 sharesRemoved = Math.ceilDiv(_wantAmt * sharesTotal, wantLockedTotal());
-        if (sharesRemoved > sharesTotal) {
-            sharesRemoved = sharesTotal;
-        }
-        require(sharesRemoved >= 1, "withdraw: no shares removed"); //safety
-        sharesTotal -= sharesRemoved;
         
         // Withdraw fee
-        uint256 withdrawFee = 
-            _wantAmt * 
-            (WITHDRAW_FEE_FACTOR_MAX - settings.withdrawFeeFactor) /
-            WITHDRAW_FEE_FACTOR_MAX;
-        if (withdrawFee > 0) {
-            IERC20(addresses.want).safeTransfer(addresses.withdrawFee, withdrawFee);
-        }
-        
+        uint256 withdrawFee = Math.ceilDiv(
+            _wantAmt * (WITHDRAW_FEE_FACTOR_MAX - settings.withdrawFeeFactor),
+            WITHDRAW_FEE_FACTOR_MAX
+        );
         _wantAmt -= withdrawFee;
+        require(_wantAmt > 0, "Too small - nothing gained");
+        IERC20(addresses.want).safeTransfer(addresses.withdrawFee, withdrawFee);
 
-        //vaulthealer passes this on to the user
-        IERC20(addresses.want).safeTransfer(addresses.vaulthealer, _wantAmt);
-
+        IERC20(addresses.want).safeTransfer(_to, _wantAmt);
+        
         return sharesRemoved;
     }
 
@@ -201,26 +217,18 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
         console.log("burned: %s", burnedAmount);
     }
 
-    //Admin functions
-    function resetAllowances() external onlyGov {
-        _resetAllowances();
-    }
     function pause() external onlyGov {
         _pause();
-        _resetAllowances();
     }
     function unpause() external onlyGov {
         _unpause();
-        _resetAllowances();
     }
     function panic() external onlyGov {
         _pause();
-        _resetAllowances();
         _emergencyVaultWithdraw();
     }
     function unpanic() external onlyGov {
         _unpause();
-        _resetAllowances();
         _farm();
     }
     function setPath(address[] calldata _path) external onlyGov {
@@ -243,25 +251,6 @@ abstract contract BaseStrategy is ReentrancyGuard, PausableTL, PathStorage {
     function _setAddresses(Addresses memory _addresses) private {
         //Moving some logic to a library reduces code size, which is limited by the EVM
         LibBaseStrategy._setAddresses(addresses, _addresses);
-    }
-    function _setMaxAllowance(address token, address spender) private {
-        IERC20(token).safeApprove(spender, 0);
-        IERC20(token).safeIncreaseAllowance(spender, type(uint256).max);
-    }
-    function _setZeroAllowance(address token, address spender) private {
-        IERC20(token).safeApprove(spender, 0);
-    }
-    //minimal allowances prevent various exploits
-    function _resetAllowances() private {
-        _setZeroAllowance(addresses.want, addresses.masterchef); //masterchef gets allowances only as needed
-        for (uint i; i < addresses.earned.length; i++) {
-            if (addresses.earned[i] != address(0)) {
-                //All allowances removed while paused for security. Strategy transfers withdrawals out itself,
-                //so allowances aren't needed except when unpaused
-                paused() ? _setZeroAllowance(addresses.earned[i], addresses.router) :
-                    _setMaxAllowance(addresses.earned[i], addresses.router);
-            }
-        }
     }
     //to approve the masterchef immediately before a vault deposit
     function _allowVaultDeposit(uint256 _amount) private {
