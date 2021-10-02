@@ -1,46 +1,35 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
+
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./libs/ITactic.sol";
 
-import "./BaseStrategyVaultHealer.sol";
+import "./BaseStrategy.sol";
 
-//This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
-contract StrategyUnified is BaseStrategyVaultHealer {
+//Delegates to simple "tactic" contracts in order to interact with almost any pool or farm
+abstract contract BaseStrategyTactician is BaseStrategy {
     using Address for address;
     using SafeERC20 for IERC20;
     
-    uint public immutable pid;
     address public immutable masterchefAddress;
     ITactic public immutable tactic;
+    uint public immutable pid;
     
     constructor(
         address _masterchefAddress,
         address _tactic,
-        uint256 _pid,
-        address _vaultChefAddress,
-        address _wantAddress,
-        Settings memory _settings,
-        address[] memory _earned,
-        address[][] memory _paths
-    ) BaseStrategyVaultHealer(
-        _vaultChefAddress, 
-        _wantAddress, 
-        _settings, 
-        _earned,
-        [address(0),address(0)], //LP tokens are auto-filled
-        _paths
-    ){
-        
+        uint256 _pid
+    ) {
         masterchefAddress = _masterchefAddress;
         tactic = ITactic(_tactic);
         pid = _pid;
     }
-
+    
     function _vaultDeposit(uint256 _amount) internal override {
         
         //token allowance for the pool to pull the correct amount of funds only
-        IERC20(wantAddress).safeIncreaseAllowance(masterchefAddress, _amount);
+        _approveWant(masterchefAddress, _amount);
         
         address(tactic).functionDelegateCall(abi.encodeWithSelector(
             tactic._vaultDeposit.selector, masterchefAddress, pid, _amount
@@ -68,4 +57,5 @@ contract StrategyUnified is BaseStrategyVaultHealer {
             tactic._emergencyVaultWithdraw.selector, masterchefAddress, pid
         ), "emergencyvaultwithdraw failed");
     }
+    
 }
