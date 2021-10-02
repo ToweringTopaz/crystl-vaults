@@ -19,8 +19,10 @@ contract VaultHealer is ReentrancyGuard, Ownable {
 
     // Info of each user.
     struct UserInfo {
-        uint256 shares; // How many LP tokens the user has provided.
+        uint256 shares; // Shares for standard auto-compound rewards
     }
+
+    
 
     struct PoolInfo {
         IERC20 want; // Address of the want token.
@@ -34,7 +36,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
         uint256 amount;
     }
 
-    PoolInfo[] public poolInfo; // Info of each pool.
+    PoolInfo[] internal _poolInfo; // Info of each pool.
     
     //pid+1 for any of our strategies. +1 allows us to distinguish pid 0 from an unauthorized address
     mapping(address => uint) private _strats;
@@ -47,10 +49,14 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
     function poolLength() external view returns (uint256) {
-        return poolInfo.length;
+        return _poolInfo.length;
     }
+    function poolInfo(uint pid) external view returns (address want, address strat) {
+        return (address(_poolInfo[pid].want), address(_poolInfo[pid].strat));
+    }
+    
     function userInfo(uint _pid, address _user) external view returns (uint256 shares) {
-        return poolInfo[_pid].user[_user].shares;
+        return _poolInfo[_pid].user[_user].shares;
     }
 
     /**
@@ -58,19 +64,19 @@ contract VaultHealer is ReentrancyGuard, Ownable {
      */
     function addPool(address _strat) external onlyOwner nonReentrant {
         require(!isStrat(_strat), "Existing strategy");
-        poolInfo.push();
-        PoolInfo storage pool = poolInfo[poolInfo.length - 1];
+        _poolInfo.push();
+        PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
         pool.want = IERC20(IStrategy(_strat).wantAddress());
         pool.strat = IStrategy(_strat);
         
-        _strats[_strat] = poolInfo.length;
+        _strats[_strat] = _poolInfo.length;
         emit AddPool(_strat);
     }
 
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = poolInfo[_pid].user[_user];
+        PoolInfo storage pool = _poolInfo[_pid];
+        UserInfo storage user = pool.user[_user];
 
         uint256 _sharesTotal = pool.sharesTotal;
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
@@ -81,7 +87,7 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     }
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
-        return poolInfo[findPid(_strat)].sharesTotal;
+        return _poolInfo[findPid(_strat)].sharesTotal;
     }
     function isStrat(address _strat) public view returns (bool) {
         return _strats[_strat] > 0;
@@ -103,12 +109,12 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     }
 
     function _deposit(uint256 _pid, uint256 _wantAmt, address _to) internal {
-        PoolInfo storage pool = poolInfo[_pid];
+        PoolInfo storage pool = _poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
 
         if (_wantAmt > 0) {
             
-            UserInfo storage user = poolInfo[_pid].user[_to];
+            UserInfo storage user = pool.user[_to];
             
             pendingDeposit = PendingDeposit({
                 token: pool.want,
@@ -136,9 +142,9 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     }
 
     function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) internal {
-        PoolInfo storage pool = poolInfo[_pid];
+        PoolInfo storage pool = _poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
-        UserInfo storage user = poolInfo[_pid].user[msg.sender];
+        UserInfo storage user = pool.user[msg.sender];
 
         require(user.shares > 0, "user.shares is 0");
 
@@ -156,16 +162,16 @@ contract VaultHealer is ReentrancyGuard, Ownable {
     }
 
     function earnAll() external nonReentrant {
-        for (uint256 i; i < poolInfo.length; i++) {
-            try poolInfo[i].strat.earn(_msgSender()) {}
+        for (uint256 i; i < _poolInfo.length; i++) {
+            try _poolInfo[i].strat.earn(_msgSender()) {}
             catch {}
         }
     }
 
     function earnSome(uint256[] memory pids) external nonReentrant {
         for (uint256 i; i < pids.length; i++) {
-            if (poolInfo.length >= pids[i]) {
-                try poolInfo[pids[i]].strat.earn(_msgSender()) {}
+            if (_poolInfo.length >= pids[i]) {
+                try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
                 catch {}
             }
         }
