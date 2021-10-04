@@ -12,7 +12,7 @@ const dokiVaults = [
             AZUKI, //EarnedBeta
         ],
         strategyConfig: [
-            0, //pid
+            999, //pid
             1, // uint256 tolerance
             [MUST, WMATIC], // address[] memory _earnedToWmaticPath
             [MUST, USDC, DAI], // address[] memory _earnedToUsdcPath
@@ -34,7 +34,7 @@ const dokiVaults = [
             AZUKI, //EarnedBeta
         ],
         strategyConfig: [
-            1, //pid
+            999, //pid
             1, // uint256 tolerance
             [MUST, WMATIC], // address[] memory _earnedToWmaticPath
             [MUST, USDC, DAI], // address[] memory _earnedToUsdcPath
@@ -56,7 +56,7 @@ const dokiVaults = [
             AZUKI, //EarnedBeta
         ],
         strategyConfig: [
-            2, //pid
+            999, //pid
             1, // uint256 tolerance
             [MUST, WMATIC], // address[] memory _earnedToWmaticPath
             [MUST, USDC, DAI], // address[] memory _earnedToUsdcPath
@@ -78,7 +78,7 @@ const dokiVaults = [
             AZUKI, //EarnedBeta
         ],
         strategyConfig: [
-            3, //pid
+            999, //pid
             1, // uint256 tolerance
             [MUST, WMATIC], // address[] memory _earnedToWmaticPath
             [MUST, USDC, DAI], // address[] memory _earnedToUsdcPath
