@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+
+import "./libs/Boolean256.sol";
 
 interface IStrategy {
     function wantAddress() external view returns (address); // Want address
@@ -14,15 +16,19 @@ interface IStrategy {
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved);
 }
 
-contract VaultHealer is ReentrancyGuard, Ownable {
+contract VaultHealerMaxi is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
+
+    uint constant MAX_STRATS = 256; // code only supports 256 strats
 
     // Info of each user.
     struct UserInfo {
-        uint256 shares; // Shares for standard auto-compound rewards
+        uint shares; // Shares for standard auto-compound rewards
+        uint xTokensTotal; //Total tokens the user has earning/exporting at this pool
+        bool256 allImports; // all contracts from which this user/pool import shares
+        bool256 allExports; // all contracts to whom this user/pool export shares
+        mapping(uint => uint) xTokens; // amount of tokens exporting to the uint16 pid
     }
-
-    
 
     struct PoolInfo {
         IERC20 want; // Address of the want token.
