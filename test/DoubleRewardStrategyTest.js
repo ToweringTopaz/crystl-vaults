@@ -21,13 +21,14 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
 const { vaultSettings } = require('../configs/vaultSettings');
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[0].addresses, vaultSettings.standard, apeSwapVaults[0].paths, apeSwapVaults[0].PID];
-const [VAULT_HEALER, ROUTER, MASTERCHEF, REWARD_FEE, WITHDRAW_FEE, BURN_ADDRESS, LIQUIDITY_POOL] = apeSwapVaults[0].addresses
+const DEPLOYMENT_VARS = [apeSwapVaults[0], vaultSettings.standard];
+console.log(DEPLOYMENT_VARS)
+console.log(apeSwapVaults[0])
+const [MASTERCHEF, TACTIC, VAULT_HEALER, WANT, EARNED, PATHS, PID] = apeSwapVaults[0];
 const [,,,,, TOLERANCE] = vaultSettings.standard;
 const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
-const EARNED = TOKEN0_TO_EARNED_PATH[0]
-const EARNED2 = TOKEN1_TO_EARNED_PATH[2]
-const PID = apeSwapVaults[0].PID;
+const EARNED_TOKEN_1 = EARNED[0]
+const EARNED_TOKEN_2 = EARNED[1]
 const minBlocksBetweenSwaps = vaultSettings.standard[8];
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[1]);
@@ -41,15 +42,17 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     with earned token:          ${EARNED}
     with earned2 token:         ${EARNED2}
     Tolerance:                  ${TOLERANCE}
-    earnedToWmaticPath: ${apeSwapVaults[0].paths[0]}
-    earnedToUsdcPath:   ${apeSwapVaults[0].paths[1]}
-    earnedToCrystlPath: ${apeSwapVaults[0].paths[2]}
-    earnedToToken0Path: ${apeSwapVaults[0].paths[0]}
-    earnedToToken1Path: ${apeSwapVaults[0].paths[2]}
     `, () => {
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
         console.log("1")
+        
+        console.log("3")
+        // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
+        VaultHealer = await ethers.getContractFactory("VaultHealer");
+        vaultHealer = await VaultHealer.deploy();
+        console.log(vaultHealer.address);
+        
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
             libraries: {
                 LibBaseStrategy: "0xc8959897D1b8CE850B494a898F402946FA80D673",
@@ -57,9 +60,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
               },
         });
         console.log("2")
+        addresses_array = apeSwapVaults[0].addresses;
+        addresses_array[0] = vaultHealer.address;
+        const DEPLOYMENT_VARS = [addresses_array, vaultSettings.standard, apeSwapVaults[0].paths, apeSwapVaults[0].PID];
+
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
-        console.log("3")
-        vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
+        
         console.log("4")
         vaultHealerOwner = await vaultHealer.owner();
         console.log("5")
@@ -135,12 +141,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit users whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             await LPtoken.approve(vaultHealer.address, initialLPtokenBalance); //no, I have to approve the vaulthealer surely?
-            
+            console.log("lp token approved")
             poolLength = await vaultHealer.poolLength()
             const LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(owner.address);
-
-            await vaultHealer["deposit(uint256,uint256)"](poolLength-1,initialLPtokenBalance); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            console.log("got lp token balance")
+            console.log(poolLength-1);
+            console.log(initialLPtokenBalance);
+            await vaultHealer["deposit(uint256,uint256)"](poolLength-1,initialLPtokenBalance);
             const vaultSharesTotalAfterFirstDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log("deposited lp tokens")
 
             expect(LPtokenBalanceBeforeFirstDeposit).to.equal(vaultSharesTotalAfterFirstDeposit); //will this work for 2nd deposit? on normal masterchef?
         })
