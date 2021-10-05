@@ -23,5 +23,23 @@ library Boolean256 {
     function setAll(bool256, bool value) internal pure returns (bool256) {
         return value ? bool256.wrap(type(uint).max) : bool256.wrap(0);
     }
+    
+    //returns the first true index starting at 'from'. A return value of 256 means none found.
+    //255 is the default ending "to" value if not specified
+    function next(bool256 b, uint from) public pure returns (uint n) {
+        return next(b,from,255);
+    }
+    function next(bool256 b, uint from, uint to) public pure returns (uint n) {
+        require(to < 257, "bool256: invalid to index");
+        uint _b = bool256.unwrap(b);
+        if (from > to || from >= _b) return 256;
+
+        _b >>= from;
+        for (n = from; n < to; n++) { //TODO: should be optimized
+            if (_b % 2 == 1) return n;
+        }
+        return n;
+    }
+        
 }
     

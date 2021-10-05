@@ -105,5 +105,4 @@ abstract contract BaseStrategy is PausableTL {
         _unpause();
         _farm();
     }
-    
 }
