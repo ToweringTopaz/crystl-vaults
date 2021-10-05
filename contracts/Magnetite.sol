@@ -79,9 +79,13 @@ contract Magnetite is Ownable {
                     assert(i == j ||path[i] != path[j]); //no repeating steps
                 }
             }
-            this.setPath_(router, path);
+            if (pathAuth()) this.setPath_(router, path);
         }
     }
+    function pathAuth() internal virtual view returns (bool) {
+        return msg.sender == tx.origin;
+    }
+    
     function generatePath(address router, address a, address b) private view returns (address[] memory path) {
     
         address[] memory _b = new address[](2);
