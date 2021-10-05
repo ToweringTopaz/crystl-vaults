@@ -168,7 +168,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             IERC20(_tokenA).safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = magnetite().findPath(address(settings.router), _tokenA, _tokenB);
+        address[] memory path = magnetite().findAndSavePath(address(settings.router), _tokenA, _tokenB);
         
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;

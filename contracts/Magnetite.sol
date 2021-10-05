@@ -30,7 +30,7 @@ contract Magnetite is Ownable {
     event SetPath(AutoPath indexed _auto, address router, address[] path);
     
     //Adds or modifies a swap path
-    function setPath(address router, address[] calldata _path) external onlyOwner {
+    function overridePath(address router, address[] calldata _path) external onlyOwner {
         _setPath(router, _path, AutoPath.FALSE);
     }
 
@@ -61,7 +61,7 @@ contract Magnetite is Ownable {
             _setPath(router, _path[:len-1], AutoPath.SUBPATH);
         }
     }
-    function getPath(address router, address a, address b) public view returns (address[] memory path) {
+    function getPathFromStorage(address router, address a, address b) public view returns (address[] memory path) {
         if (a == b) {
             path = new address[](1);
             path[0] = a;
@@ -69,8 +69,8 @@ contract Magnetite is Ownable {
         }
         path = _paths[keccak256(abi.encodePacked(router, a, b))];
     }
-    function findPath(address router, address a, address b) public returns (address[] memory path) {
-        path = getPath(router, a, b); // [A C E D B]
+    function findAndSavePath(address router, address a, address b) public returns (address[] memory path) {
+        path = getPathFromStorage(router, a, b); // [A C E D B]
         if (path.length == 0) {
             path = generatePath(router, a, b);
             assert(path.length > 1);
@@ -82,8 +82,20 @@ contract Magnetite is Ownable {
             if (pathAuth()) this.setPath_(router, path);
         }
     }
+    function viewPath(address router, address a, address b) public view returns (address[] memory path) {
+        path = getPathFromStorage(router, a, b); // [A C E D B]
+        if (path.length == 0) {
+            path = generatePath(router, a, b);
+            assert(path.length > 1);
+            for (uint i; i < path.length; i++) {
+                for (uint j; j < path.length; j++) {
+                    assert(i == j ||path[i] != path[j]); //no repeating steps
+                }
+            }
+        }
+    }
     function pathAuth() internal virtual view returns (bool) {
-        return msg.sender == tx.origin;
+        return msg.sender == tx.origin || msg.sender == owner();
     }
     
     function generatePath(address router, address a, address b) private view returns (address[] memory path) {
@@ -200,12 +212,5 @@ contract Magnetite is Ownable {
         tokens[3] = COMMON3;
         tokens[4] = COMMON4;
         tokens[5] = COMMON5;
-    }
-    function isCommon(address token) private pure returns (bool) {
-        address[] memory tokens = allCommons();
-        for (uint i; i < tokens.length; i++) {
-            if (token == tokens[i]) return true;
-        }
-        return false;
     }
 }

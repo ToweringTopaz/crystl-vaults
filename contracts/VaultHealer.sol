@@ -190,6 +190,6 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     
     //allows strats to generate paths
     function pathAuth() internal override view returns (bool) {
-        return msg.sender == tx.origin || isStrat(msg.sender);
+        return super.pathAuth() || isStrat(msg.sender);
     }
 }
