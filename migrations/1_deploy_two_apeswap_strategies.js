@@ -11,8 +11,7 @@ module.exports = async function (deployer, network) {
 		apeSwapVaults[0].vaulthealer,
 		apeSwapVaults[0].want,
 		vaultSettings.standard,
-		apeSwapVaults[0].earned,
-        apeSwapVaults[0].paths
+		apeSwapVaults[0].earned
     )
     const MaticCrystlStrategyInstance = await StrategyMiniApe.deployed();
 
@@ -24,8 +23,7 @@ module.exports = async function (deployer, network) {
 		apeSwapVaults[1].vaulthealer,
 		apeSwapVaults[1].want,
 		vaultSettings.standard,
-		apeSwapVaults[1].earned,
-        apeSwapVaults[1].paths
+		apeSwapVaults[1].earned
     )
     const MaticBananaStrategyInstance = await StrategyMiniApe.deployed();
 

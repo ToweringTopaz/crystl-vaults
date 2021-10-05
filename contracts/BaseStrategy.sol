@@ -2,10 +2,12 @@
 pragma solidity ^0.8.4;
 
 import "./libs/IUniRouter.sol";
-
 import "./PausableTL.sol";
+/*
+ |Configuration settings, privileged gov functions, and basic function declarations
+ |
+*/
 
-//Configuration settings, privileged gov functions, and basic function declarations
 abstract contract BaseStrategy is PausableTL {
     
     struct Settings {
@@ -31,6 +33,19 @@ abstract contract BaseStrategy is PausableTL {
     
     Settings public settings;
     
+    function sharesTotal() external virtual view returns (uint256);
+    //number of tokens currently deposited in the pool
+    function vaultSharesTotal() public virtual view returns (uint256);
+    //number of want tokens currently held in this contract, not deposited in pool
+    function _wantBalance() internal virtual view returns (uint256);
+    function _vaultDeposit(uint256 _amount) internal virtual; //to deposit tokens in the pool
+    function _vaultHarvest() internal virtual; //To collect accumulated reward tokens
+    function _vaultWithdraw(uint256 _amount) internal virtual;
+    function _emergencyVaultWithdraw() internal virtual;
+    function _farm() internal virtual;
+    function _approveWant(address _to, uint256 _amount) internal virtual;
+    function _transferWant(address _to, uint256 _amount) internal virtual;
+    
     event SetSettings(Settings _settings);
     
     constructor(Settings memory _settings) {
@@ -49,19 +64,6 @@ abstract contract BaseStrategy is PausableTL {
     function wantLockedTotal() public view returns (uint256) {
         return _wantBalance() + vaultSharesTotal();
     }
-    //number of tokens currently deposited in the pool
-    function vaultSharesTotal() public virtual view returns (uint256);
-    
-    //number of want tokens currently held in this contract, not deposited in pool
-    function _wantBalance() internal virtual view returns (uint256);
-    function _vaultDeposit(uint256 _amount) internal virtual; //to deposit tokens in the pool
-    function _vaultHarvest() internal virtual; //To collect accumulated reward tokens
-    function _vaultWithdraw(uint256 _amount) internal virtual;
-    function _emergencyVaultWithdraw() internal virtual;
-    function _farm() internal virtual;
-    function sharesTotal() external virtual view returns (uint256);
-    function _approveWant(address _to, uint256 _amount) internal virtual;
-    function _transferWant(address _to, uint256 _amount) internal virtual;
     
     modifier onlyEarner virtual { //can be overridden to restrict the ability to call "earn"
         _;

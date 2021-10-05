@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Magnetite.sol";
 
 import "./libs/Boolean256.sol";
 
@@ -16,7 +16,8 @@ interface IStrategy {
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved);
 }
 
-contract VaultHealerMaxi is ReentrancyGuard, Ownable {
+contract VaultHealer is ReentrancyGuard, Magnetite {
+
     using SafeERC20 for IERC20;
 
     uint constant MAX_STRATS = 256; // code only supports 256 strats
@@ -192,5 +193,10 @@ contract VaultHealerMaxi is ReentrancyGuard, Ownable {
             _to,
             _amount
         );
+    }
+    
+    //allows strats to generate paths
+    function pathAuth() internal override view returns (bool) {
+        return super.pathAuth() || isStrat(msg.sender);
     }
 }
