@@ -18,29 +18,31 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 // THESE FIVE VARIABLES BELOW NEED TO BE SET CORRECTLY FOR A GIVEN TEST //
 //////////////////////////////////////////////////////////////////////////
 
-const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
+const STRATEGY_CONTRACT_TYPE = 'StrategyVHStandard'; //<-- change strategy type to the contract deployed for this strategy
 const { vaultSettings } = require('../configs/vaultSettings');
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[0], vaultSettings.standard];
-console.log(DEPLOYMENT_VARS)
-console.log(apeSwapVaults[0])
-const [MASTERCHEF, TACTIC, VAULT_HEALER, WANT, EARNED, PATHS, PID] = apeSwapVaults[0];
-const [,,,,, TOLERANCE] = vaultSettings.standard;
-const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
+const MASTERCHEF = apeSwapVaults[0].masterchef;
+const TACTIC = apeSwapVaults[0].tactic;
+const VAULT_HEALER = apeSwapVaults[0].vaulthealer;
+const WANT = apeSwapVaults[0].want;
+const EARNED = apeSwapVaults[0].earned;
+const PATHS = apeSwapVaults[0].paths;
+const PID = apeSwapVaults[0].PID;
+const ROUTER = vaultSettings.standard[3];
+
+const [,,,,,,,,, TOLERANCE] = vaultSettings.standard;
+
+// const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
 const minBlocksBetweenSwaps = vaultSettings.standard[8];
 
-const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[1]);
-const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[2]);
-
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
-    depositing these LP tokens: ${LIQUIDITY_POOL}
+    depositing these LP tokens: ${WANT}
     into Masterchef:            ${MASTERCHEF} 
-    using Router:               ${ROUTER} 
-    with earned token:          ${EARNED}
-    with earned2 token:         ${EARNED2}
+    with earned token:          ${EARNED_TOKEN_1}
+    with earned2 token:         ${EARNED_TOKEN_2}
     Tolerance:                  ${TOLERANCE}
     `, () => {
     before(async () => {
@@ -54,17 +56,34 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         console.log(vaultHealer.address);
         
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
-            libraries: {
-                LibBaseStrategy: "0xc8959897D1b8CE850B494a898F402946FA80D673",
-                LibPathStorage: "0x42e3b158bFd6ADc5F2734B4b5f925898bA033c0F"
-              },
+            // libraries: {
+            //     LibBaseStrategy: "0xc8959897D1b8CE850B494a898F402946FA80D673",
+            //     LibPathStorage: "0x42e3b158bFd6ADc5F2734B4b5f925898bA033c0F"
+            //   },
         });
         console.log("2")
-        addresses_array = apeSwapVaults[0].addresses;
-        addresses_array[0] = vaultHealer.address;
-        const DEPLOYMENT_VARS = [addresses_array, vaultSettings.standard, apeSwapVaults[0].paths, apeSwapVaults[0].PID];
+        
+        const DEPLOYMENT_VARS = [
+            apeSwapVaults[0]['masterchef'],
+            apeSwapVaults[0]['tactic'],
+            apeSwapVaults[0]['PID'],
+            vaultHealer.address,
+            apeSwapVaults[0]['want'],
+            vaultSettings.standard,
+            apeSwapVaults[0]['earned'],
+            apeSwapVaults[0]['paths']
+            ];
 
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
+        // TOKEN0 = await strategyMasterHealer.lpToken[0];
+        // TOKEN1 = await strategyMasterHealer.lpToken[1];
+        // console.log(await strategyMasterHealer.lpToken)
+        
+        LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
+        TOKEN0 = await LPtoken.token0()
+        TOKEN1 = await LPtoken.token1()
+        console.log(TOKEN0)
+        console.log(TOKEN1)
         
         console.log("4")
         vaultHealerOwner = await vaultHealer.owner();
@@ -110,7 +129,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //     masterchef = await ethers.getContractAt(IMasterchef_abi, MASTERCHEF); 
         //     poolInfo = await masterchef.poolInfo(PID);
         //     lpToken = poolInfo[0];
-        //     expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
+        //     expect(lpToken).to.equal(ethers.utils.getAddress(WANT));
         // })
 
         // it(`Should set tolerance in the range of 1-3
@@ -133,7 +152,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await token1.approve(uniswapRouter.address, token1Balance);
 
             await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, owner.address, Date.now() + 900)
-            LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, LIQUIDITY_POOL);
+            // LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
             initialLPtokenBalance = await LPtoken.balanceOf(owner.address);
             expect(initialLPtokenBalance).to.not.equal(0);
         })
