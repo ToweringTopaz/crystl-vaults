@@ -36,6 +36,10 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         _earn(_to);    
     }
     
+    function magnetite() public override view returns (Magnetite) {
+        return Magnetite(vaultChefAddress);
+    }
+    
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultChef whenNotPaused returns (uint256 sharesAdded) {
         _earn(_from); //earn before deposit prevents abuse

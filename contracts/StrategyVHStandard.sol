@@ -18,12 +18,11 @@ contract StrategyVHStandard is BaseStrategySwapLogic, BaseStrategyVaultHealer, B
         address _vaultChefAddress,
         address _wantAddress,
         Settings memory _settings,
-        address[] memory _earned,
-        address[][] memory _paths
+        address[] memory _earned
     ) BaseStrategy(_settings)
         BaseStrategyVaultHealer(_vaultChefAddress)
         BaseStrategyTactician(_masterchefAddress, _tactic, _pid)
-        BaseStrategySwapLogic(_wantAddress, _earned, _paths)
+        BaseStrategySwapLogic(_wantAddress, _earned)
     {}
         
 }

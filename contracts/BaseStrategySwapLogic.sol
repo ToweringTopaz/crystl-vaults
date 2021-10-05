@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./libs/PrismLibrary2.sol";
 
 import "./BaseStrategy.sol";
-import "./PathStorage.sol";
+import "./Magnetite.sol";
 
 //Contains the strategy's functions related to swapping, earning, etc.
-abstract contract BaseStrategySwapLogic is BaseStrategy, PathStorage {
+abstract contract BaseStrategySwapLogic is BaseStrategy {
     using SafeERC20 for IERC20;
     
     //max number of supported lp/earned tokens
@@ -34,19 +34,18 @@ abstract contract BaseStrategySwapLogic is BaseStrategy, PathStorage {
     uint256 public lastEarnBlock = block.number;
     uint256 public lastGainBlock; //last time earn() produced anything
 
+    Magnetite private _magnetite; //the contract responsible for pathing
+
     constructor(
         address _wantAddress,
-        address[] memory _earned,
-        address[][] memory _paths
+        address magnetite_,
+        address[] memory _earned
     ) {
         
         wantAddress = _wantAddress;
+        _magnetite = Magnetite(magnetite_);
         
         uint i;
-        for (i = 0; i < _paths.length; i++) {
-            _setPath(_paths[i]); //copies paths to storage
-        }
-        
         //The number of earned tokens should not be expected to change
         for (i = 0; i < _earned.length && _earned[i] != address(0); i++) {
             earned[i] = _earned[i];
@@ -78,6 +77,10 @@ abstract contract BaseStrategySwapLogic is BaseStrategy, PathStorage {
         IERC20(wantAddress).safeIncreaseAllowance(_to, _amount);   
     }
     
+    function magnetite() public virtual view returns (Magnetite) {
+        return _magnetite;
+    }
+    
     //returns without action if earn is not ready
     modifier whenEarnIsReady virtual {
         if (block.number >= lastEarnBlock + settings.minBlocksBetweenEarns && !paused()) {
@@ -89,11 +92,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy, PathStorage {
     modifier onlyThisContract {
         require(msg.sender == address(this));
         _;
-    }
-    
-    //Adds or modifies a swap path
-    function setPath(address[] calldata _path) external onlyGov {
-        _setPath(_path);
     }
 
     function _earn(address _to) internal whenEarnIsReady {
@@ -170,7 +168,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy, PathStorage {
             IERC20(_tokenA).safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = findPath(_tokenA, _tokenB);
+        address[] memory path = magnetite().findPath(address(settings.router), _tokenA, _tokenB);
         
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;

@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Magnetite.sol";
 
 interface IStrategy {
     function wantAddress() external view returns (address); // Want address
@@ -14,7 +14,7 @@ interface IStrategy {
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved);
 }
 
-contract VaultHealer is ReentrancyGuard, Ownable {
+contract VaultHealer is ReentrancyGuard, Magnetite {
     using SafeERC20 for IERC20;
 
     // Info of each user.
