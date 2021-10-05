@@ -8,7 +8,7 @@ import "./BaseStrategyVaultHealer.sol";
 import "./BaseStrategyTactician.sol";
 
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
-contract StrategyVHStandard is BaseStrategySwapLogic, BaseStrategyVaultHealer, BaseStrategyTactician {
+contract StrategyVHStandard is BaseStrategyVaultHealer, BaseStrategyTactician {
     using SafeERC20 for IERC20;
     
     constructor(
@@ -18,12 +18,11 @@ contract StrategyVHStandard is BaseStrategySwapLogic, BaseStrategyVaultHealer, B
         address _vaultChefAddress,
         address _wantAddress,
         Settings memory _settings,
-        address[] memory _earned,
-        address[][] memory _paths
+        address[] memory _earned
     ) BaseStrategy(_settings)
         BaseStrategyVaultHealer(_vaultChefAddress)
         BaseStrategyTactician(_masterchefAddress, _tactic, _pid)
-        BaseStrategySwapLogic(_wantAddress, _earned, _paths)
+        BaseStrategySwapLogic(_wantAddress, address(0), _earned)
     {}
         
 }
