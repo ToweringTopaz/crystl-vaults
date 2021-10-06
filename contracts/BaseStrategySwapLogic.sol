@@ -91,7 +91,13 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             if (success) {
                 _farm(); //deposit the want tokens so they can begin earning
             }
-        } catch {}
+        } catch (bytes memory e) {//Generate a log on failure
+            uint[] memory earnBals = new uint[](lpTokenLength);
+            for (uint i; i < lpTokenLength; i++) {
+                earnBals[i] = IERC20(lpToken[i]).balanceOf(address(this));
+            }
+            emit EarnFailure(earnBals, e);
+        }
         
         lastEarnBlock = block.number;
     }
@@ -119,6 +125,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 }
             }
         }
+        require(success, "dust-earnedToLP");
         //lpTokenLength == 1 means single-stake, not LP
         if (lpTokenLength > 1) {
             // Get want tokens, ie. add liquidity
