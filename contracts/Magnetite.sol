@@ -9,17 +9,19 @@ import "./libs/IUniRouter.sol";
 contract Magnetite is Ownable {
     
     mapping(bytes32 => address[]) private _paths;
-    address constant private WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; //wmatic
-    address constant private COMMON1 = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; //usdc
-    address constant private COMMON2 = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619; //weth
-    address constant private COMMON3 = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13; //quick
-    address constant private COMMON4 = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F; //usdt
-    address constant private COMMON5 = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063; //dai
+    address constant private WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    bytes constant private COMMON_TOKENS = abi.encode([
+        WNATIVE, //wmatic (wnative always first)
+        0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
+        0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
+        0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
+        0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
+        0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063  //dai
+    ]);
     uint constant private NUM_COMMON = 6;
     uint constant private WNATIVE_MULTIPLIER = 30000; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 100000; // Token B direct swap weighted 10x
     uint constant private BASE_MULTIPLIER = 10000;
-    
     struct PairData {
         address token;
         address lp;
@@ -164,7 +166,7 @@ contract Magnetite is Ownable {
         IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
-        address[] memory allCom = allCommons();
+        address[6] memory allCom = allCommons();
         
         //populate pair tokens
         for (uint i; i < b.length; i++) {
@@ -204,13 +206,8 @@ contract Magnetite is Ownable {
         return y.liquidity * ymul > x.liquidity * xmul;
     }
     
-    function allCommons() private pure returns (address[] memory tokens) {
-        tokens = new address[](NUM_COMMON);
-        tokens[0] = WNATIVE;
-        tokens[1] = COMMON1;
-        tokens[2] = COMMON2;
-        tokens[3] = COMMON3;
-        tokens[4] = COMMON4;
-        tokens[5] = COMMON5;
+    function allCommons() public pure returns (address[6] memory tokens) {
+        tokens = abi.decode(COMMON_TOKENS,(address[6]));
     }
+
 }
