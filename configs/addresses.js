@@ -33,7 +33,9 @@ const tokens = {
                 KOM: '0xC004e2318722EA2b15499D6375905d75Ee5390B8',
                 AZUKI: '0x7CdC0421469398e0F3aA8890693d86c840Ac8931',
                 MUST: '0x9C78EE466D6Cb57A4d01Fd887D2b5dFb2D46288f',
-                DOKI: '0x5C7F7Fe4766fE8f0fa9b41E2E4194d939488ff1C'
+                DOKI: '0x5C7F7Fe4766fE8f0fa9b41E2E4194d939488ff1C',
+                DFYN: '0xC168E40227E4ebD8C1caE80F7a55a4F0e6D66C97',
+                FRM: '0xd99baFe5031cC8B345cb2e8c80135991F12D7130',
         }
 }
  
@@ -52,6 +54,7 @@ const tokens = {
                 DOKI_STAKING_REWARDS_AZUKI_ETH: '0x69cb6f98e45c13a230d292be0a6af93a6521c39b',
                 DOKI_STAKING_REWARDS_DOKI_MUST: '0x2146bac214d9bf2da56c3d4a69b9149e457f9d8c',
                 DOKI_STAKING_REWARDS_DOKI_ETH: '0xbbdc1681e43549d3871cf1953d1dd9aff320fef0',
+                DFYN_STAKING_REWARDS_FRM_DFYN: '',
          }
 }
 
@@ -76,6 +79,7 @@ const lps = {
                 AZUKI_ETH_COMETH_LP: '0x92bb3233f59561fc1fec53efc3339e4af8e917f4',
                 DOKI_MUST_COMETH_LP: '0x9cb31b03089eca4c0f42554256d0217326d15ae7',
                 DOKI_ETH_COMETH_LP: '0xcCeD5cB001D6081c4561bf7911F11Ccd9aAA1474',
+                FRM_DFYN_DFYN_LP: '',
         }
 }
 
@@ -86,7 +90,8 @@ const routers = {
                 JETSWAP_ROUTER: '0x5C6EC38fb0e2609672BDf628B1fD605A523E5923',
                 QUICKSWAP_ROUTER: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff',
                 POLYCAT_ROUTER: '0x94930a328162957ff1dd48900af67b5439336cbd',
-                COMETH_ROUTER: '0x93bcDc45f7e62f89a8e901DC4A0E2c6C427D9F25', //is this the DOKI router? ask KingD
+                COMETH_ROUTER: '0x93bcDc45f7e62f89a8e901DC4A0E2c6C427D9F25', 
+                DFYN_ROUTER: '0xA102072A4C07F06EC3B4900FDC4C7B80b6c57429',
         }
 }
 
