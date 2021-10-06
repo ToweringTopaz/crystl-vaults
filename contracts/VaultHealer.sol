@@ -20,6 +20,8 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     // Info of each user.
     struct UserInfo {
         uint256 shares; // Shares for standard auto-compound rewards
+        uint256 totalDeposits;
+        uint256 totalWithdrawals;
     }
 
     
@@ -85,6 +87,16 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         }
         return user.shares * wantLockedTotal / _sharesTotal;
     }
+    function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
+        PoolInfo storage pool = _poolInfo[_pid];
+        UserInfo storage user = pool.user[_user];
+        
+        deposited = user.totalDeposits;
+        withdrawn = user.totalWithdrawals;
+        uint staked = pool.sharesTotal == 0 ? 0 : user.shares * pool.strat.wantLockedTotal() / pool.sharesTotal;
+        earned = int(withdrawn + staked) - int(deposited);
+    }
+    
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
         return _poolInfo[findPid(_strat)].sharesTotal;
@@ -126,6 +138,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
             user.shares += sharesAdded;
             pool.sharesTotal += sharesAdded;
             
+            user.totalDeposits = _wantAmt - pendingDeposit.amount;
             delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);
@@ -147,9 +160,13 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         UserInfo storage user = pool.user[msg.sender];
 
         require(user.shares > 0, "user.shares is 0");
-
+        
+        uint userBalanceBefore = pool.want.balanceOf(_to);
+        
         uint256 sharesRemoved = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
 
+        user.totalWithdrawals += pool.want.balanceOf(_to) - userBalanceBefore;
+        
         user.shares -= sharesRemoved;
         pool.sharesTotal -= sharesRemoved;
 
