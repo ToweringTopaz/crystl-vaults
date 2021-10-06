@@ -138,7 +138,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
             user.shares += sharesAdded;
             pool.sharesTotal += sharesAdded;
             
-            user.totalDeposits = _wantAmt - pendingDeposit.amount;
+            pool.user[_to].totalDeposits = _wantAmt - pendingDeposit.amount;
             delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);
