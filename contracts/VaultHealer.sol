@@ -169,7 +169,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     }
 
     // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) external {
+    function withdrawAll(uint256 _pid) external nonReentrant {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
 
