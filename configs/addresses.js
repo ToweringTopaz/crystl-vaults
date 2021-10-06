@@ -79,7 +79,7 @@ const lps = {
                 AZUKI_ETH_COMETH_LP: '0x92bb3233f59561fc1fec53efc3339e4af8e917f4',
                 DOKI_MUST_COMETH_LP: '0x9cb31b03089eca4c0f42554256d0217326d15ae7',
                 DOKI_ETH_COMETH_LP: '0xcCeD5cB001D6081c4561bf7911F11Ccd9aAA1474',
-                FRM_DFYN_DFYN_LP: '',
+                FRM_DFYN_DFYN_LP: '0xf6057Ea194B73e185c72112Ca47522473b2a5F4a',
         }
 }
 
