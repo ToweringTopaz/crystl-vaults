@@ -109,7 +109,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         }
         
         // Withdraw fee
-        uint256 withdrawFee = FullMath.mulDivRoundingUp(
+        uint256 withdrawFee = FullMath.mulDiv(
             _wantAmt,
             WITHDRAW_FEE_FACTOR_MAX - settings.withdrawFeeFactor,
             WITHDRAW_FEE_FACTOR_MAX
