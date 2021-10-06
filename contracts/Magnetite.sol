@@ -36,7 +36,7 @@ contract Magnetite is Ownable {
         _setPath(router, _path, AutoPath.FALSE);
     }
 
-    function setPath_(address router, address[] calldata _path) external {
+    function setAutoPath_(address router, address[] calldata _path) external {
         require(msg.sender == address(this));
         _setPath(router, _path, AutoPath.AUTO);
     }
@@ -81,7 +81,7 @@ contract Magnetite is Ownable {
                     assert(i == j ||path[i] != path[j]); //no repeating steps
                 }
             }
-            if (pathAuth()) this.setPath_(router, path);
+            if (pathAuth()) this.setAutoPath_(router, path);
         }
     }
     function viewPath(address router, address a, address b) public view returns (address[] memory path) {

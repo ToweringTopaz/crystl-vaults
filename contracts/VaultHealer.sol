@@ -23,9 +23,6 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         uint256 totalDeposits;
         uint256 totalWithdrawals;
     }
-
-    
-
     struct PoolInfo {
         IERC20 want; // Address of the want token.
         IStrategy strat; // Strategy address that will auto compound want tokens
