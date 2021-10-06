@@ -61,23 +61,37 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         }
     }
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
-    function withdraw(address /*_from*/, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external onlyVaultChef returns (uint256 sharesRemoved) {
+    function withdraw(address /*_from*/, address _to, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultChef returns (uint sharesRemoved, uint wantAmt) {
         
-        uint wantBalanceBefore = _wantBalance();
-        uint wantLockedBefore = wantBalanceBefore + vaultSharesTotal();
-
         //User's balance, in want tokens
+        uint wantBal = _wantBalance();
+        uint wantLockedBefore = wantBal + vaultSharesTotal();
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal);
         
-        if (_wantAmt + settings.dust > userWant) { // user requested all, very nearly all, or more than their balance
+        // user requested all, very nearly all, or more than their balance, so withdraw all
+        if (_wantAmt + settings.dust > userWant) {
+            //user is the sole shareholder withdrawing all
+            if (_userShares == _sharesTotal) {
+                //clear out anything left
+                uint vaultSharesRemaining = vaultSharesTotal();
+                if (vaultSharesRemaining > 0) _vaultWithdraw(vaultSharesRemaining);
+                if (vaultSharesTotal() > 0) _emergencyVaultWithdraw();
+                _wantAmt = _wantBalance();
+                //if receiver is 0, don't leave tokens behind in abandoned vault
+                if (settings.withdrawFeeReceiver != address(0))
+                    _wantAmt = collectWithdrawFee(_wantAmt);
+                _approveWant(vaultChefAddress, _wantAmt);
+                return (_sharesTotal, _wantAmt);
+            }
             _wantAmt = userWant;
-        }      
+        }
         
         // Check if strategy has tokens from panic
-        if (_wantAmt > wantBalanceBefore) {
-            _vaultWithdraw(_wantAmt - wantBalanceBefore);
-            uint wantBal = _wantBalance();
-            if (_wantAmt > wantBal) _wantAmt = wantBal;
+        if (_wantAmt > wantBal) {
+            _vaultWithdraw(_wantAmt - wantBal);
+            wantBal = _wantBalance();
+            if (_wantAmt > wantBal)
+                _wantAmt = wantBal;
         }
         
         //Account for reflect, pool withdraw fee, etc; charge these to user
@@ -91,38 +105,27 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
             wantLockedBefore
         );
         
-        //User removing too many shares? Security checkpoint.
-        if (sharesRemoved > _userShares) sharesRemoved = _userShares;
-        
         //Get final withdrawal amount
-        if (sharesRemoved < _sharesTotal) { // Calculate final withdrawal amount
-            _wantAmt = FullMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
-        } else { // last depositor is withdrawing
-            assert(sharesRemoved == _sharesTotal); //for testing, should never fail
-            
-            //clear out anything left
-            uint vaultSharesRemaining = vaultSharesTotal();
-            if (vaultSharesRemaining > 0) _vaultWithdraw(vaultSharesRemaining);
-            if (vaultSharesTotal() > 0) _emergencyVaultWithdraw();
-            
-            _wantAmt = _wantBalance();
-        }
+        if (sharesRemoved > _userShares) sharesRemoved = _userShares;
+        _wantAmt = FullMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
         
         // Withdraw fee
+        _wantAmt = collectWithdrawFee(_wantAmt);
+        
+        _approveWant(vaultChefAddress, _wantAmt);
+        return (sharesRemoved, _wantAmt);
+    }
+    function collectWithdrawFee(uint _wantAmt) private returns (uint) {
         uint256 withdrawFee = FullMath.mulDiv(
             _wantAmt,
             WITHDRAW_FEE_FACTOR_MAX - settings.withdrawFeeFactor,
             WITHDRAW_FEE_FACTOR_MAX
         );
-        //if withdrawFee > 0 && receiver is 0, strategy keeps fees
-        if (withdrawFee > 0 && settings.withdrawFeeReceiver != address(0))
-            _transferWant(settings.withdrawFeeReceiver, withdrawFee);
-        _wantAmt -= withdrawFee;
         
-        require(_wantAmt > 0, "Too small - nothing gained");
-        _transferWant(_to, _wantAmt);
-        
-        return sharesRemoved;
+        //if receiver is 0, strategy keeps fee
+        address receiver = settings.withdrawFeeReceiver;
+        if (receiver != address(0))
+            _transferWant(receiver, withdrawFee);
+        return _wantAmt - withdrawFee;
     }
-
 }

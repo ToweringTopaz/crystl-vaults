@@ -11,7 +11,7 @@ interface IStrategy {
     function paused() external view returns (bool); // Is strategy paused
     function earn(address _to) external; // Main want token compounding function
     function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
-    function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved);
+    function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
 }
 
 contract VaultHealer is ReentrancyGuard, Magnetite {
@@ -156,16 +156,14 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
 
     function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) internal {
         PoolInfo storage pool = _poolInfo[_pid];
-        require(address(pool.strat) != address(0), "That strategy does not exist");
         UserInfo storage user = pool.user[msg.sender];
 
         require(user.shares > 0, "user.shares is 0");
         
-        uint userBalanceBefore = pool.want.balanceOf(_to);
+        (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
         
-        uint256 sharesRemoved = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
-
-        user.totalWithdrawals += pool.want.balanceOf(_to) - userBalanceBefore;
+        pool.want.transferFrom(address(pool.strat), _to, wantAmt);
+        user.totalWithdrawals += wantAmt;
         
         user.shares -= sharesRemoved;
         pool.sharesTotal -= sharesRemoved;
