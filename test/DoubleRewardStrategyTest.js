@@ -28,14 +28,14 @@ const WANT = apeSwapVaults[0].want;
 const EARNED = apeSwapVaults[0].earned;
 const PATHS = apeSwapVaults[0].paths;
 const PID = apeSwapVaults[0].PID;
-const ROUTER = vaultSettings.standard[3];
+const ROUTER = vaultSettings.standard[0];
 
-const [,,,,,,,,, TOLERANCE] = vaultSettings.standard;
+const TOLERANCE = vaultSettings.standard[9];
 
 // const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
-const minBlocksBetweenSwaps = vaultSettings.standard[8];
+const minBlocksBetweenSwaps = vaultSettings.standard[12];
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
