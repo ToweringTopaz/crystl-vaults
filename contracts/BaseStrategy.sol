@@ -11,9 +11,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
+import "./PausableTL.sol";
 import "hardhat/console.sol";
 
-abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
+abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     using SafeMath for uint256;
     using Math for uint256;
     using SafeERC20 for IERC20;
