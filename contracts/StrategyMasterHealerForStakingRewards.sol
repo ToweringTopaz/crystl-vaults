@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "./libs/IStakingRewards.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
+contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 

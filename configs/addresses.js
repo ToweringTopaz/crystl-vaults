@@ -54,7 +54,7 @@ const tokens = {
                 DOKI_STAKING_REWARDS_AZUKI_ETH: '0x69cb6f98e45c13a230d292be0a6af93a6521c39b',
                 DOKI_STAKING_REWARDS_DOKI_MUST: '0x2146bac214d9bf2da56c3d4a69b9149e457f9d8c',
                 DOKI_STAKING_REWARDS_DOKI_ETH: '0xbbdc1681e43549d3871cf1953d1dd9aff320fef0',
-                DFYN_STAKING_REWARDS_FRM_DFYN: '',
+                DFYN_STAKING_REWARDS_FRM_DFYN: '0x44fcF521747BA7f152d78b0b206D43580A2bdf73',
          }
 }
 
