@@ -8,8 +8,8 @@ const apeSwapVaults = [
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_CRYSTL_APE_LP, // Want
-            BANANA, // Earned - there is a second reward in CRYSTL!
-            CRYSTL, //EarnedBeta
+            CRYSTL, // Earned - there is a second reward in CRYSTL!
+            BANANA, //EarnedBeta
         ],
         strategyConfig: [
             7, // uint256 _pid 
@@ -30,8 +30,8 @@ const apeSwapVaults = [
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_BANANA_APE_LP, // Want
-            BANANA, // Earned
-            CRYSTL, //EarnedBeta
+            WMATIC, // Earned
+            BANANA, //EarnedBeta
         ],
         strategyConfig: [
             0, // uint256 _pid 
