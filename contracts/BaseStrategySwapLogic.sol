@@ -88,9 +88,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         // Converts farm tokens into want tokens
         //Try/catch means we carry on even if compounding fails for some reason
         try this._swapEarnedToWant(_to, wantBalanceBefore) returns (bool success) {
-            if (success) {
                 _farm(); //deposit the want tokens so they can begin earning
-            }
         } catch (bytes memory e) {//Generate a log on failure
             uint[] memory earnBals = new uint[](lpTokenLength);
             for (uint i; i < lpTokenLength; i++) {
