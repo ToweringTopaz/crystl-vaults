@@ -5,7 +5,7 @@ import "./libs/IStakingRewards.sol";
 import "./BaseStrategyLPSingle.sol";
 import "./libs/IDragonLair.sol";
 
-contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
+contract StrategyMasterHealerForQuickSwapdQuick is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
