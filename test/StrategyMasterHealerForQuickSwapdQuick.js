@@ -24,8 +24,6 @@ const DEPLOYMENT_VARS = [quickVaults[0].addresses, ...quickVaults[0].strategyCon
 const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = quickVaults[0].addresses
 const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = quickVaults[0].strategyConfig;
 
-const WMATIC2 = '0x4c28f48448720e9000907bc2611f73022fdce1fa'; //this is a DFYN specific address for WETH/WMATIC
-
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
 
@@ -75,20 +73,20 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
         console.log("Fetched Router instance");
 
-        if (TOKEN0 == ethers.utils.getAddress(WMATIC2) ){
+        if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("400") });
         } else {
             console.log("Trying swap...")
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC2, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
         }
         console.log("Swapped MATIC for token0")
 
-        if (TOKEN1 == ethers.utils.getAddress(WMATIC2)) {
+        if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("400") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC2, ROUTE, WETH, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
         }
         console.log("Swapped MATIC for token1")
 
