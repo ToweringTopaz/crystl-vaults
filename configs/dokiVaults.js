@@ -4,7 +4,7 @@ const { WMATIC, DAI, CRYSTL, AZUKI, MUST, DOKI, WETH, USDC  } = tokens.polygon;
 const dokiVaults = [
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.DOKI_STAKING_REWARDS_AZUKI_MUST, // Masterchef
             routers.polygon.COMETH_ROUTER, // UniRouter
             lps.polygon.AZUKI_MUST_COMETH_LP, // Want
@@ -26,7 +26,7 @@ const dokiVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.DOKI_STAKING_REWARDS_AZUKI_ETH, // Masterchef
             routers.polygon.COMETH_ROUTER, // UniRouter
             lps.polygon.AZUKI_ETH_COMETH_LP, // Want
@@ -48,7 +48,7 @@ const dokiVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.DOKI_STAKING_REWARDS_DOKI_MUST, // Masterchef
             routers.polygon.COMETH_ROUTER, // UniRouter
             lps.polygon.DOKI_MUST_COMETH_LP, // Want
@@ -70,7 +70,7 @@ const dokiVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.DOKI_STAKING_REWARDS_DOKI_ETH, // Masterchef
             routers.polygon.COMETH_ROUTER, // UniRouter
             lps.polygon.DOKI_ETH_COMETH_LP, // Want

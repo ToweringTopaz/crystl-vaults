@@ -1,29 +1,29 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { QUICK, WMATIC, CRYSTL, KOM, DAI } = tokens.polygon;
+const { DFYN, WMATIC, WMATIC_DFYN, CRYSTL, DAI, FRM, WETH, ROUTE } = tokens.polygon;
 
-const quickVaults = [
+const dfynVaults = [
     {
         addresses: [
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            masterChefs.polygon.QUICK_STAKING_REWARDS_QUICK_KOM, // Masterchef
-            routers.polygon.QUICKSWAP_ROUTER, // UniRouter
-            lps.polygon.QUICK_KOM_QUICK_LP, // Want
-            QUICK, // Earned
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.DFYN_STAKING_REWARDS_FRM_DFYN, // Masterchef
+            routers.polygon.DFYN_ROUTER, // UniRouter
+            lps.polygon.DFYN_FRM_DFYN_LP, // Want
+            DFYN, // Earned
         ],
         strategyConfig: [
-            0, // uint256 _pid 
+            999, // uint256 _pid 
             1, // uint256 tolerance
-            [QUICK, WMATIC], // address[] memory _earnedToWmaticPath
-            [QUICK, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [QUICK, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
-            [QUICK], // address[] memory _earnedToToken0Path
-            [QUICK, WMATIC, KOM], // address[] memory _earnedToToken1Path
-            [QUICK], // address[] memory _token0ToEarnedPath
-            [KOM, WMATIC, QUICK], // address[] memory _token1ToEarnedPath
+            [DFYN, WMATIC], // address[] memory _earnedToWmaticPath
+            [DFYN, WMATIC_DFYN, DAI], // address[] memory _earnedToUsdcPath
+            [DFYN, WMATIC_DFYN, CRYSTL], // address[] memory _earnedToCrystlPath
+            [DFYN], // address[] memory _earnedToToken0Path
+            [DFYN, ROUTE, WETH, FRM], // address[] memory _earnedToToken1Path
+            [DFYN], // address[] memory _token0ToEarnedPath
+            [FRM, WETH, ROUTE, DFYN], // address[] memory _token1ToEarnedPath
         ]
     },
 ]
 
 module.exports = {
-    quickVaults
+    dfynVaults
 }

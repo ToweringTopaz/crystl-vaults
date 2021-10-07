@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "./libs/IStakingRewards.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
+contract StrategyMasterHealerForStakingRewardsForDfyn is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -49,6 +49,23 @@ contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
         _resetAllowances();
     }
 
+    function _safeSwapWnative(
+        uint256 _amountIn,
+        address[] memory _path,
+        address _to
+    ) internal override {
+        uint256[] memory amounts = IUniRouter02(uniRouterAddress).getAmountsOut(_amountIn, _path);
+        uint256 amountOut = amounts[amounts.length.sub(1)];
+
+        IUniRouter02(uniRouterAddress).swapExactTokensForTokens(
+            _amountIn,
+            amountOut.mul(slippageFactor).div(1000),
+            _path,
+            _to,
+            block.timestamp.add(600)
+        );
+    }
+
     function _vaultDeposit(uint256 _amount) internal override {
         IStakingRewards(masterchefAddress).stake(_amount);
     }
@@ -61,6 +78,7 @@ contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
         IStakingRewards(masterchefAddress).getReward();
     }
     
+    //I'm pretty confident this one below is right - it's the balance that the vault holds of shares in the farm
     function vaultSharesTotal() public override view returns (uint256) {
         uint256 amount = IStakingRewards(masterchefAddress).balanceOf(address(this));
         return amount;
@@ -97,7 +115,8 @@ contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
         );
 
     }
-
+    // interestingly, you do get the reward with this exit function, 
+    // which you don't with a Masterchef emergency withdraw
     function _emergencyVaultWithdraw() internal override {
         IStakingRewards(masterchefAddress).exit(); 
     }

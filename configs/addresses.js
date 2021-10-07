@@ -12,6 +12,7 @@ const tokens = {
         polygon: {
                 CRYSTL: '0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64',
                 WMATIC: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+                WMATIC_DFYN: '0x4c28f48448720e9000907bc2611f73022fdce1fa',
                 WETH: '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
                 DINO: '0xAa9654BECca45B5BDFA5ac646c939C62b527D394',
                 USDC: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
@@ -35,7 +36,8 @@ const tokens = {
                 MUST: '0x9C78EE466D6Cb57A4d01Fd887D2b5dFb2D46288f',
                 DOKI: '0x5C7F7Fe4766fE8f0fa9b41E2E4194d939488ff1C',
                 DFYN: '0xC168E40227E4ebD8C1caE80F7a55a4F0e6D66C97',
-                FRM: '0xd99baFe5031cC8B345cb2e8c80135991F12D7130',
+                FRM: '0xd99baFe5031cC8B345cb2e8c80135991F12D7130', // 0x0cdf14B01692c57fD8d066A053B3A0FA0Aa2Fc11
+                ROUTE: '0x16eccfdbb4ee1a85a33f3a9b21175cd7ae753db4',
         }
 }
  
@@ -79,7 +81,7 @@ const lps = {
                 AZUKI_ETH_COMETH_LP: '0x92bb3233f59561fc1fec53efc3339e4af8e917f4',
                 DOKI_MUST_COMETH_LP: '0x9cb31b03089eca4c0f42554256d0217326d15ae7',
                 DOKI_ETH_COMETH_LP: '0xcCeD5cB001D6081c4561bf7911F11Ccd9aAA1474',
-                FRM_DFYN_DFYN_LP: '0xf6057Ea194B73e185c72112Ca47522473b2a5F4a',
+                DFYN_FRM_DFYN_LP: '0x0c77b6682b6ffffe9599b41e39eba1c1bcf923d8',
         }
 }
 
