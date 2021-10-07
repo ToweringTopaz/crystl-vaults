@@ -13,7 +13,7 @@ const dfynVaults = [
         strategyConfig: [
             999, // uint256 _pid 
             1, // uint256 tolerance
-            [DFYN, WMATIC], // address[] memory _earnedToWmaticPath
+            [DFYN, WMATIC_DFYN], // address[] memory _earnedToWmaticPath
             [DFYN, WMATIC_DFYN, DAI], // address[] memory _earnedToUsdcPath
             [DFYN, WMATIC_DFYN, CRYSTL], // address[] memory _earnedToCrystlPath
             [DFYN], // address[] memory _earnedToToken0Path
