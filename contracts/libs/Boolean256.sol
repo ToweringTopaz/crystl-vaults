@@ -19,6 +19,13 @@ library Boolean256 {
         return value ? bool256.wrap(_b | (1 << i)) : bool256.wrap(_b ^ (1 << i));
     }
     
+    function set(bool256 b, uint i) internal pure returns (bool256) {
+        return set(b, i, true);
+    }
+    function unset(bool256 b, uint i) internal pure returns (bool256) {
+        return set(b, i, false);
+    }
+    
     //sets all 256 variables to true or false
     function setAll(bool256, bool value) internal pure returns (bool256) {
         return value ? bool256.wrap(type(uint).max) : bool256.wrap(0);

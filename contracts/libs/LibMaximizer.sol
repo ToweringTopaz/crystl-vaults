@@ -28,8 +28,8 @@ struct PoolInfo {
     IStrategy strat; // Strategy address that will auto compound want tokens
     uint256 sharesTotal;
     uint256 xTokensTotal;
-    bool256 allImports; // all pids from which this pool import shares
-    bool256 allExports; // all pids to whom this pool export shares
+    bool256 allImports; // all pids from which this pool imports shares
+    bool256 allExports; // all pids to whom this pool exports shares
     mapping (uint8 => uint) xTokens; //for each pool, totals
     mapping (address => UserInfo) user;
     bytes poolData; //unused for now

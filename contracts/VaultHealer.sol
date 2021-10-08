@@ -19,19 +19,6 @@ interface IStrategy {
 contract VaultHealer is ReentrancyGuard, Magnetite {
     using SafeERC20 for IERC20;
 
-    // Info of each user.
-    struct UserInfo {
-        uint256 shares; // Shares for standard auto-compound rewards
-        uint256 totalDeposits;
-        uint256 totalWithdrawals;
-    }
-    struct PoolInfo {
-        IERC20 want; // Address of the want token.
-        IStrategy strat; // Strategy address that will auto compound want tokens
-        uint256 sharesTotal;
-        mapping (address => UserInfo) user;
-    }
-
     struct PendingDeposit {
         IERC20 token;
         address from;
@@ -73,6 +60,19 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         
         _strats[_strat] = _poolInfo.length;
         emit AddPool(_strat);
+    }
+    
+    function enableMaximizers(uint[] calldata fromPids, uint[] calldata toPids) external onlyOwner nonReentrant {
+        for (uint i; i < fromPids.length; i++) {
+            PoolInfo storage fromPool = poolInfo[i];
+            for (uint j; j < toPids.length; j++) {
+                if (i == j) continue;
+                PoolInfo storage toPool = poolInfo[j];
+                
+                fromPool.allExports = fromPool.allExports.set(j);
+                toPool.allImports = toPool.allImports.set(j);
+            }
+        }
     }
 
     // View function to see staked Want tokens on frontend.

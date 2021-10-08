@@ -79,7 +79,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return _magnetite;
     }
 
-    function _earn(address _to) internal whenEarnIsReady {
+    function _earn(address _to) internal virtual whenEarnIsReady {
         
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         
@@ -101,7 +101,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     }
 
     //External call allows us to revert atomically, separate from everything else
-    function _swapEarnedToWant(address _to, uint256 _wantBal) external onlyThisContract returns (bool success) {
+    function _swapEarnedToWant(address _to, uint256 _wantBal) external virtual onlyThisContract returns (bool success) {
 
         for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8.
             address earnedAddress = earned[i];
@@ -109,10 +109,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
             if (earnedAddress == wantAddress)
                 earnedAmt -= _wantBal; //ignore pre-existing want tokens
-            
-            uint dust = settings.dust; //minimum number of tokens to bother trying to compound
-    
-            if (earnedAmt > dust) {
+            W
+            if (earnedAmt > settings.dust) { //minimum number of tokens to bother trying to compound
                 success = true; //We have something worth compounding
                 earnedAmt = distributeFees(earnedAddress, earnedAmt, _to); // handles all fees for this earned token
                 
