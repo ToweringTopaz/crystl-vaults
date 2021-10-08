@@ -28,14 +28,14 @@ const WANT = apeSwapVaults[0].want;
 const EARNED = apeSwapVaults[0].earned;
 const PATHS = apeSwapVaults[0].paths;
 const PID = apeSwapVaults[0].PID;
-const ROUTER = vaultSettings.standard[3];
+const ROUTER = vaultSettings.standard[0];
 
-const [,,,,,,,,, TOLERANCE] = vaultSettings.standard;
+const TOLERANCE = vaultSettings.standard[9];
 
 // const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
-const minBlocksBetweenSwaps = vaultSettings.standard[8];
+const minBlocksBetweenSwaps = vaultSettings.standard[12];
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
@@ -100,7 +100,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         await network.provider.send("hardhat_setBalance", [
             owner.address,
-            "0x3635c9adc5dea00000", //amount of 1000 in hex
+            "0x21E19E0C9BAB2400000", //amount of 1000 in hex
         ]);
         console.log("4")
 
@@ -109,15 +109,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
         console.log("6")
 
@@ -194,7 +194,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(await ethers.provider.getBlockNumber())
 
             await vaultHealer.earnSome([poolLength-1]);
-                        console.log(vaultSharesTotalBeforeCallingEarnSome)
 
             vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(vaultSharesTotalAfterCallingEarnSome)

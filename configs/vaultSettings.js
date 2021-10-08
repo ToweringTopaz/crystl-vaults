@@ -3,10 +3,10 @@ const { FEE_ADDRESS, BURN_ADDRESS } = accounts.polygon;
 
 const vaultSettings = {
 	standard: [
-		FEE_ADDRESS, // rewardFee
-		FEE_ADDRESS, // withdrawFee
-		BURN_ADDRESS, //buybackFee
 		routers.polygon.APESWAP_ROUTER, //aperouter
+		FEE_ADDRESS, // withdrawFee
+		FEE_ADDRESS, // rewardFee		
+		BURN_ADDRESS, //buybackFee
 		50, //uint16 controllerFee;
         50, //uint16 rewardRate;
         400, //uint16 buybackRate;
@@ -14,14 +14,14 @@ const vaultSettings = {
         9500, //uint256 slippageFactor;
         1, //uint256 tolerance;
         false, //bool feeOnTransfer;
-        100000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
+        1000000000000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
         10 //uint256 minBlocksBetweenSwaps;
 	],
 	reflect: [
-		FEE_ADDRESS, // rewardFee
-		FEE_ADDRESS, // withdrawFee
-		BURN_ADDRESS, //buybackFee
 		routers.polygon.APESWAP_ROUTER, //aperouter
+		FEE_ADDRESS, // withdrawFee
+		FEE_ADDRESS, // rewardFee
+		BURN_ADDRESS, //buybackFee
 		50, //uint16 controllerFee;
         50, //uint16 rewardRate;
         400, //uint16 buybackRate;
@@ -33,10 +33,10 @@ const vaultSettings = {
         10 //uint256 minBlocksBetweenSwaps;
 	],
 	doubleReflect: [
+		routers.polygon.APESWAP_ROUTER, //aperouter
 		FEE_ADDRESS, // rewardFee
 		FEE_ADDRESS, // withdrawFee
 		BURN_ADDRESS, //buybackFee
-		routers.polygon.APESWAP_ROUTER, //aperouter
 		50, //uint16 controllerFee;
         50, //uint16 rewardRate;
         400, //uint16 buybackRate;

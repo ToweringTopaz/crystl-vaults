@@ -10,15 +10,18 @@ contract Magnetite is Ownable {
     
     mapping(bytes32 => address[]) private _paths;
     address constant private WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address constant private WNATIVE2 = 0x4c28f48448720e9000907BC2611F73022fdcE1fA; //Dfyn edge case
     bytes constant private COMMON_TOKENS = abi.encode([
         WNATIVE, //wmatic (wnative always first)
+        WNATIVE2,
         0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
         0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
         0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
         0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
         0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063  //dai
     ]);
-    uint constant private NUM_COMMON = 6;
+
+    uint constant private NUM_COMMON = 7;
     uint constant private WNATIVE_MULTIPLIER = 30000; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 100000; // Token B direct swap weighted 10x
     uint constant private BASE_MULTIPLIER = 10000;
@@ -36,7 +39,7 @@ contract Magnetite is Ownable {
         _setPath(router, _path, AutoPath.FALSE);
     }
 
-    function setPath_(address router, address[] calldata _path) external {
+    function setAutoPath_(address router, address[] calldata _path) external {
         require(msg.sender == address(this));
         _setPath(router, _path, AutoPath.AUTO);
     }
@@ -81,7 +84,7 @@ contract Magnetite is Ownable {
                     assert(i == j ||path[i] != path[j]); //no repeating steps
                 }
             }
-            if (pathAuth()) this.setPath_(router, path);
+            if (pathAuth()) this.setAutoPath_(router, path);
         }
     }
     function viewPath(address router, address a, address b) public view returns (address[] memory path) {
@@ -166,7 +169,8 @@ contract Magnetite is Ownable {
         IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
-        address[6] memory allCom = allCommons();
+
+        address[NUM_COMMON] memory allCom = allCommons();
         
         //populate pair tokens
         for (uint i; i < b.length; i++) {
@@ -177,7 +181,7 @@ contract Magnetite is Ownable {
         }
         
         //calculate liquidity
-        for (uint i; i < NUM_COMMON + 1; i++) {
+        for (uint i; i < pairData.length; i++) {
             address pair = factory.getPair(a, pairData[i].token);
             if (pair != address(0)) {
                 uint liq = IERC20(a).balanceOf(pair);
@@ -188,11 +192,11 @@ contract Magnetite is Ownable {
             }
         }
         //find weighted most liquid pair
-        for (uint i; i < b.length; i++) {
+        for (uint i; i < pairData.length; i++) {
             pairData[i].liquidity = pairData[i].liquidity * B_MULTIPLIER / BASE_MULTIPLIER;
         }
         uint best;
-        for (uint i = 1; i < NUM_COMMON + 1; i++) {
+        for (uint i = 1; i < pairData.length; i++) {
             if (compare(pairData[best], pairData[i])) best = i;
         }
         require(pairData[best].liquidity > 0, "no liquidity");
@@ -201,13 +205,16 @@ contract Magnetite is Ownable {
     }
     
     function compare(PairData memory x, PairData memory y) private pure returns (bool yBetter) {
-        uint xmul = x.token == WNATIVE ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
-        uint ymul = y.token == WNATIVE ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
+        uint xmul = isWnative(x.token) ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
+        uint ymul = isWnative(y.token) ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
         return y.liquidity * ymul > x.liquidity * xmul;
     }
-    
-    function allCommons() public pure returns (address[6] memory tokens) {
-        tokens = abi.decode(COMMON_TOKENS,(address[6]));
+
+    function allCommons() public pure returns (address[NUM_COMMON] memory tokens) {
+        tokens = abi.decode(COMMON_TOKENS,(address[7]));
+    }
+    function isWnative(address token) private pure returns (bool) {
+        return token == WNATIVE || token == WNATIVE2;
     }
 
 }

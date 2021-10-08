@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 //Generic UniswapV2 library modified to have variable initcodehash and swap fees, so it'll work with any unirouter
 
 interface IUniPair is IERC20 {
+    function factory() external pure returns (address);
     function token0() external view returns (address);
     function token1() external view returns (address);
     function mint(address to) external returns (uint liquidity);

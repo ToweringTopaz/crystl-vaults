@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./libs/ITactic.sol";
 
 import "./BaseStrategy.sol";
 
+interface IMasterchef {
+    function deposit(uint256 _pid, uint256 _amount) external;
+    function withdraw(uint256 _pid, uint256 _amount) external;
+    function emergencyWithdraw(uint256 _pid) external;
+    function userInfo(uint256 _pid, address _address) external view returns (uint256, uint256);
+    function harvest(uint256 _pid, address _to) external;
+}
+
 //Delegates to simple "tactic" contracts in order to interact with almost any pool or farm
 abstract contract BaseStrategyTactician is BaseStrategy {
     using Address for address;
-    using SafeERC20 for IERC20;
     
     address public immutable masterchefAddress;
     ITactic public immutable tactic;

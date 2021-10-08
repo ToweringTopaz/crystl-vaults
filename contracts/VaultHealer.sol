@@ -7,9 +7,30 @@ import "./Magnetite.sol";
 
 import "./libs/LibMaximizer.sol";
 
+interface IStrategy {
+    function wantAddress() external view returns (address); // Want address
+    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
+    function paused() external view returns (bool); // Is strategy paused
+    function earn(address _to) external; // Main want token compounding function
+    function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
+    function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
+}
+
 contract VaultHealer is ReentrancyGuard, Magnetite {
     using SafeERC20 for IERC20;
 
+    // Info of each user.
+    struct UserInfo {
+        uint256 shares; // Shares for standard auto-compound rewards
+        uint256 totalDeposits;
+        uint256 totalWithdrawals;
+    }
+    struct PoolInfo {
+        IERC20 want; // Address of the want token.
+        IStrategy strat; // Strategy address that will auto compound want tokens
+        uint256 sharesTotal;
+        mapping (address => UserInfo) user;
+    }
 
     struct PendingDeposit {
         IERC20 token;
@@ -66,6 +87,16 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         }
         return user.shares * wantLockedTotal / _sharesTotal;
     }
+    function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
+        PoolInfo storage pool = _poolInfo[_pid];
+        UserInfo storage user = pool.user[_user];
+        
+        deposited = user.totalDeposits;
+        withdrawn = user.totalWithdrawals;
+        uint staked = pool.sharesTotal == 0 ? 0 : user.shares * pool.strat.wantLockedTotal() / pool.sharesTotal;
+        earned = int(withdrawn + staked) - int(deposited);
+    }
+    
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external virtual view returns (uint) {
         return _poolInfo[findPid(_strat)].sharesTotal;
@@ -107,6 +138,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
             user.shares += sharesAdded;
             pool.sharesTotal += sharesAdded;
             
+            pool.user[_to].totalDeposits = _wantAmt - pendingDeposit.amount;
             delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);
@@ -124,13 +156,15 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
 
     function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) virtual internal {
         PoolInfo storage pool = _poolInfo[_pid];
-        require(address(pool.strat) != address(0), "That strategy does not exist");
         UserInfo storage user = pool.user[msg.sender];
 
         require(user.shares > 0, "user.shares is 0");
-
-        uint256 sharesRemoved = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
-
+        
+        (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
+        
+        pool.want.transferFrom(address(pool.strat), _to, wantAmt);
+        user.totalWithdrawals += wantAmt;
+        
         user.shares -= sharesRemoved;
         pool.sharesTotal -= sharesRemoved;
 
@@ -138,7 +172,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     }
 
     // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) virtual external {
+    function withdrawAll(uint256 _pid) external nonReentrant {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
 
