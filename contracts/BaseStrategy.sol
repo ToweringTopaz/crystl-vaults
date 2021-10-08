@@ -11,6 +11,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
+import "./libs/IWETH.sol";
+
 import "hardhat/console.sol";
 
 abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
@@ -165,12 +167,19 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
     function distributeFees(uint256 _earnedAmt, address _to) internal returns (uint256) {
         if (controllerFee > 0) {
             uint256 fee = _earnedAmt.mul(controllerFee).div(FEE_MAX);
-    
+
+            if (earnedAddress == wNativeAddress) {
+                // Earn token is WMATIC
+                IWETH(earnedAddress).withdraw(fee);
+                (bool sent, bytes memory data) = _to.call{value: fee}("");
+                require(sent, "Failed to send Ether");
+            } else {
             _safeSwapWnative(
                 fee,
                 earnedToWnativePath,
                 _to
             );
+        }
             
             _earnedAmt = _earnedAmt.sub(fee);
         }
