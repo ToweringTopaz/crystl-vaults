@@ -77,7 +77,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return _magnetite;
     }
 
-    function _earn(address _to) internal whenEarnIsReady {
+    function _earn(address _to) internal virtual whenEarnIsReady {
         
         console.log("Getting want balance");
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
