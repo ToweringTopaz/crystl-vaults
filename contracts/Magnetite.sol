@@ -20,6 +20,7 @@ contract Magnetite is Ownable {
         0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
         0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063  //dai
     ]);
+
     uint constant private NUM_COMMON = 7;
     uint constant private WNATIVE_MULTIPLIER = 30000; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 100000; // Token B direct swap weighted 10x
@@ -168,6 +169,7 @@ contract Magnetite is Ownable {
         IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
+
         address[NUM_COMMON] memory allCom = allCommons();
         
         //populate pair tokens
@@ -207,7 +209,7 @@ contract Magnetite is Ownable {
         uint ymul = isWnative(y.token) ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
         return y.liquidity * ymul > x.liquidity * xmul;
     }
-    
+
     function allCommons() public pure returns (address[NUM_COMMON] memory tokens) {
         tokens = abi.decode(COMMON_TOKENS,(address[7]));
     }
