@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./Magnetite.sol";
-
-import "./libs/LibMaximizer.sol";
 
 interface IStrategy {
     function wantAddress() external view returns (address); // Want address
@@ -19,6 +17,18 @@ interface IStrategy {
 contract VaultHealer is ReentrancyGuard, Magnetite {
     using SafeERC20 for IERC20;
 
+    // Info of each user.
+    struct UserInfo {
+        uint256 shares; // Shares for standard auto-compound rewards
+        uint256 totalDeposits;
+        uint256 totalWithdrawals;
+    }
+    struct PoolInfo {
+        IERC20 want; // Address of the want token.
+        IStrategy strat; // Strategy address that will auto compound want tokens
+        uint256 sharesTotal;
+        mapping (address => UserInfo) user;
+    }
     struct PendingDeposit {
         IERC20 token;
         address from;
@@ -28,7 +38,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     PoolInfo[] internal _poolInfo; // Info of each pool.
     
     //pid+1 for any of our strategies. +1 allows us to distinguish pid 0 from an unauthorized address
-    mapping(address => uint) internal _strats;
+    mapping(address => uint) private _strats;
     
     PendingDeposit private pendingDeposit;
 
@@ -51,7 +61,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
-    function addPool(address _strat) external virtual onlyOwner nonReentrant {
+    function addPool(address _strat) external onlyOwner nonReentrant {
         require(!isStrat(_strat), "Existing strategy");
         _poolInfo.push();
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
@@ -61,22 +71,9 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         _strats[_strat] = _poolInfo.length;
         emit AddPool(_strat);
     }
-    
-    function enableMaximizers(uint[] calldata fromPids, uint[] calldata toPids) external onlyOwner nonReentrant {
-        for (uint i; i < fromPids.length; i++) {
-            PoolInfo storage fromPool = poolInfo[i];
-            for (uint j; j < toPids.length; j++) {
-                if (i == j) continue;
-                PoolInfo storage toPool = poolInfo[j];
-                
-                fromPool.allExports = fromPool.allExports.set(j);
-                toPool.allImports = toPool.allImports.set(j);
-            }
-        }
-    }
 
     // View function to see staked Want tokens on frontend.
-    function stakedWantTokens(uint256 _pid, address _user) external virtual view returns (uint256) {
+    function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = _poolInfo[_pid];
         UserInfo storage user = pool.user[_user];
 
@@ -98,7 +95,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     }
     
     //enables sharesTotal function on strategy
-    function sharesTotal(address _strat) external virtual view returns (uint) {
+    function sharesTotal(address _strat) external view returns (uint) {
         return _poolInfo[findPid(_strat)].sharesTotal;
     }
     function isStrat(address _strat) public view returns (bool) {
@@ -111,16 +108,16 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external virtual nonReentrant {
+    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant {
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external virtual nonReentrant {
+    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant {
         _deposit(_pid, _wantAmt, _to);
     }
 
-    function _deposit(uint256 _pid, uint256 _wantAmt, address _to) internal virtual {
+    function _deposit(uint256 _pid, uint256 _wantAmt, address _to) internal {
         PoolInfo storage pool = _poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
 
@@ -145,16 +142,16 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _wantAmt) external virtual nonReentrant {
+    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant {
         _withdraw(_pid, _wantAmt, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external virtual nonReentrant {
+    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant {
         _withdraw(_pid, _wantAmt, _to);
     }
 
-    function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) virtual internal {
+    function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) internal {
         PoolInfo storage pool = _poolInfo[_pid];
         UserInfo storage user = pool.user[msg.sender];
 
