@@ -101,8 +101,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             if (earnedAmt > dust) {
                 console.log("dust check passed");
                 success = true; //We have something worth compounding
-                earnedAmt = distributeFees(earnedAddress, earnedAmt, _to); // handles all fees for this earned token
                 console.log("distributing fees");
+                earnedAmt = distributeFees(earnedAddress, earnedAmt, _to); // handles all fees for this earned token
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
                 console.log("lpTokenLength is %s", lpTokenLength);
