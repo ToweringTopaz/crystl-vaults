@@ -20,7 +20,7 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 // THESE FIVE VARIABLES BELOW NEED TO BE SET CORRECTLY FOR A GIVEN TEST //
 //////////////////////////////////////////////////////////////////////////
 
-const deployed_contract_address = "0xd047e42f5ae25184c08695613450738fbdb52166";
+const deployed_contract_address = "0xA6Ee9b6d8d0853614257297BF140fcD3200394fC";
 
 describe(`Testing deployed contract at address ${deployed_contract_address}` , () => {
     before(async () => {
@@ -45,7 +45,7 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
         
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyMasterHealer.address);
+        // await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyMasterHealer.address);
         console.log("Added pool to VaultHealer");
 
         await network.provider.send("hardhat_setBalance", [
