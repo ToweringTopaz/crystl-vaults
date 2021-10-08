@@ -32,8 +32,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     uint256 public burnedAmount; //Total CRYSTL burned by this vault
     Magnetite private _magnetite; //the contract responsible for pathing
 
-    event EarnFailure(uint[] earnedBal, bytes data);
-
     constructor(
         address _wantAddress,
         address magnetite_,
@@ -81,54 +79,51 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
 
     function _earn(address _to) internal whenEarnIsReady {
         
+        console.log("Getting want balance");
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         
+        console.log("Harvesting");
         _vaultHarvest(); // Harvest farm tokens
-    
-        // Converts farm tokens into want tokens
-        //Try/catch means we carry on even if compounding fails for some reason
-        try this._swapEarnedToWant(_to, wantBalanceBefore) returns (bool) {
-                _farm(); //deposit the want tokens so they can begin earning
-        } catch (bytes memory e) {//Generate a log on failure
-            uint[] memory earnBals = new uint[](lpTokenLength);
-            for (uint i; i < lpTokenLength; i++) {
-                earnBals[i] = IERC20(lpToken[i]).balanceOf(address(this));
-            }
-            emit EarnFailure(earnBals, e);
-        }
+        console.log("Harvest complete");        
         
-        lastEarnBlock = block.number;
-    }
-
-    //External call allows us to revert atomically, separate from everything else
-    function _swapEarnedToWant(address _to, uint256 _wantBal) external onlyThisContract returns (bool success) {
-
+        uint dust = settings.dust; //minimum number of tokens to bother trying to compound
+        bool success;
+        
         for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8.
             address earnedAddress = earned[i];
-            
+            console.log("Using earnedAddress %s", earnedAddress);
             uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
+            console.log("earnedAmt is %s", earnedAmt);
             if (earnedAddress == wantAddress)
-                earnedAmt -= _wantBal; //ignore pre-existing want tokens
-            
-            uint dust = settings.dust; //minimum number of tokens to bother trying to compound
-    
+                earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
+            console.log("earnedAmt is %s", earnedAmt);
+                
             if (earnedAmt > dust) {
+                console.log("dust check passed");
                 success = true; //We have something worth compounding
                 earnedAmt = distributeFees(earnedAddress, earnedAmt, _to); // handles all fees for this earned token
-                
+                console.log("distributing fees");
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
+                console.log("lpTokenLength is %s", lpTokenLength);
                 for (uint j; j < lpTokenLength; i++) {
+                    console.log("swapping %s earned to %s", earnedAmt/lpTokenLength, lpToken[j]);
                     _safeSwap(earnedAmt / lpTokenLength, earnedAddress, lpToken[j], address(this));
                 }
             }
         }
-        require(success, "dust-earnedToLP");
         //lpTokenLength == 1 means single-stake, not LP
-        if (lpTokenLength > 1) {
-            // Get want tokens, ie. add liquidity
-            PrismLibrary2.optimalMint(wantAddress, lpToken[0], lpToken[1]);
+        if (success) {
+            if (lpTokenLength > 1) {
+                // Get want tokens, ie. add liquidity
+                console.log("calling optimalMint");
+                PrismLibrary2.optimalMint(wantAddress, lpToken[0], lpToken[1]);
+            }
+            console.log("farming");
+            _farm();
+            console.log("farm complete");
         }
+        lastEarnBlock = block.number;
     }
     
     //Checks whether a swap is burning crystl, and if so, tracks it
