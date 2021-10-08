@@ -170,11 +170,9 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, Pausable {
 
             if (earnedAddress == wNativeAddress) {
                 // Earn token is WMATIC
-                IWETH(earnedAddress).withdraw(fee);
-                (bool sent, bytes memory data) = _to.call{value: fee}("");
-                require(sent, "Failed to send Ether");
+                IERC20(earnedAddress).safeTransfer(_to, fee);
             } else {
-            _safeSwapWnative(
+            _safeSwap(
                 fee,
                 earnedToWnativePath,
                 _to

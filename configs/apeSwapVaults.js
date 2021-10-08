@@ -1,10 +1,10 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { BANANA, WMATIC, CRYSTL, KOM, DAI } = tokens.polygon;
+const { BANANA, WMATIC, CRYSTL, DAI } = tokens.polygon;
 
 const apeSwapVaults = [
     {
         addresses: [
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_CRYSTL_APE_LP, // Want
@@ -14,19 +14,19 @@ const apeSwapVaults = [
         strategyConfig: [
             7, // uint256 _pid 
             1, // uint256 tolerance
-            [BANANA, WMATIC], // address[] memory _earnedToWmaticPath
-            [BANANA, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
-            [BANANA, WMATIC], // address[] memory _earnedToToken0Path
-            [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToToken1Path
-            [WMATIC, BANANA], // address[] memory _token0ToEarnedPath
-            [CRYSTL, WMATIC, BANANA], // address[] memory _token1ToEarnedPath
-            [CRYSTL, WMATIC, BANANA] // address[] memory _EarnedBetaToEarnedPath
+            [CRYSTL, WMATIC], // address[] memory _earnedToWmaticPath
+            [CRYSTL, WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [CRYSTL], // address[] memory _earnedToCrystlPath
+            [CRYSTL, WMATIC], // address[] memory _earnedToToken0Path
+            [CRYSTL], // address[] memory _earnedToToken1Path
+            [WMATIC, CRYSTL], // address[] memory _token0ToEarnedPath
+            [CRYSTL], // address[] memory _token1ToEarnedPath
+            [BANANA, WMATIC, CRYSTL] // address[] memory _EarnedBetaToEarnedPath
         ],
     },
     {
         addresses: [
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_BANANA_APE_LP, // Want
@@ -36,14 +36,14 @@ const apeSwapVaults = [
         strategyConfig: [
             0, // uint256 _pid 
             1, // uint256 tolerance
-            [BANANA, WMATIC], // address[] memory _earnedToWmaticPath
-            [BANANA, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [BANANA, WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
-            [BANANA, WMATIC], // address[] memory _earnedToToken0Path
-            [BANANA], // address[] memory _earnedToToken1Path
-            [WMATIC, BANANA], // address[] memory _token0ToEarnedPath
-            [BANANA], // address[] memory _token1ToEarnedPath
-            [CRYSTL, WMATIC, BANANA] // address[] memory _EarnedBetaToEarnedPath
+            [WMATIC], // address[] memory _earnedToWmaticPath
+            [WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
+            [WMATIC], // address[] memory _earnedToToken0Path
+            [WMATIC, BANANA], // address[] memory _earnedToToken1Path
+            [WMATIC], // address[] memory _token0ToEarnedPath
+            [BANANA, WMATIC], // address[] memory _token1ToEarnedPath
+            [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
         ],
     },
 ]
