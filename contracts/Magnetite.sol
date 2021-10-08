@@ -179,7 +179,7 @@ contract Magnetite is Ownable {
         }
         
         //calculate liquidity
-        for (uint i; i < NUM_COMMON + 1; i++) {
+        for (uint i; i < pairData.length; i++) {
             address pair = factory.getPair(a, pairData[i].token);
             if (pair != address(0)) {
                 uint liq = IERC20(a).balanceOf(pair);
@@ -190,11 +190,11 @@ contract Magnetite is Ownable {
             }
         }
         //find weighted most liquid pair
-        for (uint i; i < b.length; i++) {
+        for (uint i; i < pairData.length; i++) {
             pairData[i].liquidity = pairData[i].liquidity * B_MULTIPLIER / BASE_MULTIPLIER;
         }
         uint best;
-        for (uint i = 1; i < NUM_COMMON + 1; i++) {
+        for (uint i = 1; i < pairData.length; i++) {
             if (compare(pairData[best], pairData[i])) best = i;
         }
         require(pairData[best].liquidity > 0, "no liquidity");
