@@ -106,7 +106,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
                 console.log("lpTokenLength is %s", lpTokenLength);
-                for (uint j; j < lpTokenLength; i++) {
+                for (uint j; j < lpTokenLength; j++) {
                     console.log("swapping %s earned to %s", earnedAmt/lpTokenLength, lpToken[j]);
                     _safeSwap(earnedAmt / lpTokenLength, earnedAddress, lpToken[j], address(this));
                 }
