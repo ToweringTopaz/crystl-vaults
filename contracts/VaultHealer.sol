@@ -22,6 +22,7 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
         uint256 shares; // Shares for standard auto-compound rewards
         uint256 totalDeposits;
         uint256 totalWithdrawals;
+        mapping (address => uint256) allowances; //for ERC20 transfers
     }
     struct PoolInfo {
         IERC20 want; // Address of the want token.
@@ -96,14 +97,15 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
-        return _poolInfo[findPid(_strat)].sharesTotal;
+        uint pid = findPid(_strat);
+        return _poolInfo[pid].sharesTotal;
     }
     function isStrat(address _strat) public view returns (bool) {
         return _strats[_strat] > 0;
     }
     function findPid(address _strat) public view returns (uint) {
         uint pidPlusOne = _strats[_strat];
-        require(pidPlusOne > 0, "address is not a strategy on this VaultHealer");
+        require(pidPlusOne > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
         return pidPlusOne - 1;
     }
 
@@ -204,4 +206,49 @@ contract VaultHealer is ReentrancyGuard, Magnetite {
     function pathAuth() internal override view returns (bool) {
         return super.pathAuth() || isStrat(msg.sender);
     }
+    
+    /////////ERC20 functions for shareTokens, enabling boosted vaults
+    //The findPid function ensures that the caller is a valid strategy and maps the address to its pid
+    function erc20TotalSupply() external view returns (uint256) {
+        uint pid = findPid(msg.sender); //authenticates as strategy
+        return _poolInfo[pid].sharesTotal;
+    }
+    function erc20BalanceOf(address account) external view returns (uint256) {
+        uint pid = findPid(msg.sender); //authenticates as strategy
+        return _poolInfo[pid].user[account].shares;
+    }
+    function erc20Transfer(address sender, address recipient, uint256 amount) external nonReentrant returns (bool) {
+        uint pid = findPid(msg.sender); //authenticates as strategy
+        UserInfo storage _sender = _poolInfo[pid].user[sender];
+        UserInfo storage _recipient = _poolInfo[pid].user[recipient];
+        require(_sender.shares >= amount, "VaultHealer: insufficient balance");
+        _sender.shares -= amount;
+        _recipient.shares += amount;
+        return true;
+    }
+    function erc20Allowance(address owner, address spender) external view returns (uint256) {
+        uint pid = findPid(msg.sender); //authenticates as strategy
+        return _poolInfo[pid].user[owner].allowances[spender];
+    }
+    function erc20Approve(address owner, address spender, uint256 amount) external nonReentrant returns (bool) {
+        uint pid = findPid(msg.sender); //authenticates as strategy
+        _poolInfo[pid].user[owner].allowances[spender] = amount;
+        return true;
+    }
+    function erc20TransferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external nonReentrant returns (bool) {
+        uint pid = findPid(msg.sender); //authenticates as strategy
+        UserInfo storage _sender = _poolInfo[pid].user[sender];
+        UserInfo storage _recipient = _poolInfo[pid].user[recipient];
+        require(_sender.shares >= amount, "VaultHealer: insufficient balance");
+        require(_sender.allowances[recipient] >= amount, "VaultHealer: insufficient allowance");
+        _sender.allowances[recipient] -= amount;
+        _sender.shares -= amount;
+        _recipient.shares += amount;
+        return true;
+    }
+    
 }

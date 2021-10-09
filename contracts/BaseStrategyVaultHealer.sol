@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./libs/IVaultHealer.sol";
+import "./VaultHealer.sol";
 
 import "./BaseStrategySwapLogic.sol";
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
-    address immutable public vaultHealerAddress;
+    VaultHealer immutable public vaultHealer;
     
     constructor(address _vaultHealerAddress) {
-        vaultHealerAddress = _vaultHealerAddress;
+        vaultHealer = VaultHealer(_vaultHealerAddress);
     }
     
-    function sharesTotal() external override view returns (uint) {
-        return IVaultHealer(vaultHealerAddress).sharesTotal(address(this));
+    function sharesTotal() public override view returns (uint) {
+        return vaultHealer.sharesTotal(address(this));
     }
     
     //The owner of the connected vaulthealer gets administrative power in the strategy, automatically.
     modifier onlyGov() override {
-        require(msg.sender == IVaultHealer(vaultHealerAddress).owner(), "!gov");
+        require(msg.sender == vaultHealer.owner(), "!gov");
         _;
     }
     modifier onlyVaultHealer {
-        require(msg.sender == vaultHealerAddress, "!vaulthealer");
+        require(msg.sender == address(vaultHealer), "!vaulthealer");
         _;
     }
     //This is to prevent reentrancy. Earn should be called with the vaulthealer, which has nonReentrant
@@ -35,7 +35,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
     //In this particular setup, vaulthealer inherits the Magnetite contract and provides path data
     function magnetite() public override view returns (Magnetite) {
-        return Magnetite(vaultHealerAddress);
+        return Magnetite(address(vaultHealer));
     }
     
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
@@ -49,7 +49,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
-        IVaultHealer(vaultHealerAddress).executePendingDeposit(address(this), _wantAmt);
+        vaultHealer.executePendingDeposit(address(this), _wantAmt);
 
         _farm(); //deposits the tokens in the pool
         
@@ -80,7 +80,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
                 //if receiver is 0, don't leave tokens behind in abandoned vault
                 if (settings.withdrawFeeReceiver != address(0))
                     _wantAmt = collectWithdrawFee(_wantAmt);
-                _approveWant(vaultHealerAddress, _wantAmt);
+                _approveWant(address(vaultHealer), _wantAmt);
                 return (_sharesTotal, _wantAmt);
             }
             _wantAmt = userWant;
@@ -113,7 +113,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         // Withdraw fee
         _wantAmt = collectWithdrawFee(_wantAmt);
         
-        _approveWant(vaultHealerAddress, _wantAmt);
+        _approveWant(address(vaultHealer), _wantAmt);
         return (sharesRemoved, _wantAmt);
     }
     
