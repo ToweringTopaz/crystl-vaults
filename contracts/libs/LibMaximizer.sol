@@ -37,21 +37,24 @@ library LibMaximizer {
         int shares = pool.user[_user].shares; //directly owned shares of the pool
         
         for (uint i; i < _poolInfo.length; i++) {
-
-            //user has shares here, pointing to the pool we want?
-            int userSharesOut = _poolInfo[i].user[_user].sharesOut[_pid];
-            if (userSharesOut == 0) continue;
-            
-            //shares that were automatically deposited by pool i
-            int sharesIn = pool.sharesIn[i];
-            if (sharesIn == 0) continue;   
-            
-            int sharesOutTotal = _poolInfo[i].sharesOut[_pid];
-            
-            shares += userSharesOut * sharesIn / sharesOutTotal;
+            shares += subBalance(_poolInfo, i, _pid, _user);
         }
         assert(shares >= 0);
         return uint(shares);
+    }
+    //Looks at pidIn for ownership of any pidOut tokens the user might withdraw
+    function subBalance(PoolInfo[] storage _poolInfo, uint _pidIn, uint _pidOut, address _user) internal view returns (int) {
+        //user has shares here, pointing to the pool we want?
+        int userSharesOut = _poolInfo[_pidIn].user[_user].sharesOut[_pidOut];
+        if (userSharesOut == 0) return 0;
+        
+        //shares that were automatically deposited by pool "In"
+        int sharesIn = _poolInfo[_pidIn].sharesIn[_pidIn];
+        if (sharesIn == 0) return 0;
+        
+        int sharesOutTotal = _poolInfo[_pidIn].sharesOut[_pidOut];
+        
+        return FullMath.mulDiv(userSharesOut, sharesIn, sharesOutTotal);
     }
     
     //user deposits to pid, standard autocompounding
@@ -98,7 +101,7 @@ library LibMaximizer {
     //pidIn earns shares to pidOut
     function earn(PoolInfo[] storage _poolInfo, uint _pidIn, uint _pidOut, uint _sharesAdded) internal {
         PoolInfo storage poolOut = _poolInfo[_pidOut];
-        
+        int sharesAdded = int(_sharesAdded);
         poolOut.sharesTotal += sharesAdded;
         poolOut.sharesIn[_pidIn] += sharesAdded;
     }
@@ -107,8 +110,9 @@ library LibMaximizer {
         PoolInfo storage poolIn = _poolInfo[_pidIn];
         PoolInfo storage poolOut = _poolInfo[_pidOut];
         
+        int sharesRemoved = int(_sharesRemoved);
         int balance = int(balanceOf(_poolInfo, _pidIn, _user));
-        
+        require(sharesRemoved <= balance, "libmaxi: insufficient balance");
         
     }
     
