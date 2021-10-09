@@ -9,7 +9,7 @@ import "./BaseStrategyTactician.sol";
 contract StrategyVHStandard is BaseStrategyVHERC20, BaseStrategyTactician {
 
     constructor(
-        LibStrategy.SettingsInput memory _settings,
+        LibBaseStrategy.SettingsInput memory _settings,
         address[] memory _earned
     ) BaseStrategy(_settings)
         BaseStrategyVaultHealer(_settings.vaultHealerAddress)

@@ -14,7 +14,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         vaultHealer = VaultHealer(_vaultHealerAddress);
         settings.magnetite = Magnetite(_vaultHealerAddress);
         LibVaultHealer.Config memory _config = VaultHealer(_vaultHealerAddress).getConfig();
-        LibStrategy._updateConfig(settings, _config);
+        LibBaseStrategy._updateConfig(settings, _config);
     }
     
     function sharesTotal() public override view returns (uint) {
@@ -42,7 +42,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
     
     function pushConfig(LibVaultHealer.Config calldata _config) external onlyVaultHealer {
-        LibStrategy._updateConfig(settings, _config);
+        LibBaseStrategy._updateConfig(settings, _config);
     }
     
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
