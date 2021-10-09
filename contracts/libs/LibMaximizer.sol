@@ -96,18 +96,18 @@ library LibMaximizer {
         poolOut.sharesIn[_pidIn] += offset;
     }
     //pidIn earns shares to pidOut
-    function add(PoolInfo[] storage _poolInfo, uint _pidIn, uint _pidOut, uint _sharesAdded) internal {
+    function earn(PoolInfo[] storage _poolInfo, uint _pidIn, uint _pidOut, uint _sharesAdded) internal {
         PoolInfo storage poolOut = _poolInfo[_pidOut];
         
-        poolOut.sharesTotal; //+sharesAdded
-        poolOut.sharesIn[_pidIn]; //+sharesAdded
+        poolOut.sharesTotal += sharesAdded;
+        poolOut.sharesIn[_pidIn] += sharesAdded;
     }
-    //remove shares from pidIn(earn pidOut), withdrawing to user
+    //remove shares from pidIn(earn pidOut), withdrawing from user. Withdraws other shares of same pidIn if necessary to complete withdrawal
     function remove(PoolInfo[] storage _poolInfo, uint _pidIn, uint _pidOut, address _user, uint _sharesRemoved) internal {
         PoolInfo storage poolIn = _poolInfo[_pidIn];
         PoolInfo storage poolOut = _poolInfo[_pidOut];
         
-        uint balance = poolIn.user[_user].shares;
+        int balance = int(balanceOf(_poolInfo, _pidIn, _user));
         
         
     }
