@@ -9,11 +9,9 @@ import "./libs/IUniRouter.sol";
 contract Magnetite is Ownable {
     
     mapping(bytes32 => address[]) private _paths;
-    address constant private WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
-    address constant private WNATIVE2 = 0x4c28f48448720e9000907BC2611F73022fdcE1fA; //Dfyn edge case
+    address constant private WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     bytes constant private COMMON_TOKENS = abi.encode([
-        WNATIVE, //wmatic (wnative always first)
-        WNATIVE2,
+        address(0), //slot for wnative
         0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
         0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
         0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
@@ -21,7 +19,7 @@ contract Magnetite is Ownable {
         0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063  //dai
     ]);
 
-    uint constant private NUM_COMMON = 7;
+    uint constant private NUM_COMMON = 6;
     uint constant private WNATIVE_MULTIPLIER = 30000; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 100000; // Token B direct swap weighted 10x
     uint constant private BASE_MULTIPLIER = 10000;
@@ -170,7 +168,7 @@ contract Magnetite is Ownable {
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
 
-        address[NUM_COMMON] memory allCom = allCommons();
+        address[NUM_COMMON] memory allCom = allCommons(router);
         
         //populate pair tokens
         for (uint i; i < b.length; i++) {
@@ -197,24 +195,29 @@ contract Magnetite is Ownable {
         }
         uint best;
         for (uint i = 1; i < pairData.length; i++) {
-            if (compare(pairData[best], pairData[i])) best = i;
+            if (compare(router, pairData[best], pairData[i])) best = i;
         }
         require(pairData[best].liquidity > 0, "no liquidity");
         
         return pairData[best].token;
     }
     
-    function compare(PairData memory x, PairData memory y) private pure returns (bool yBetter) {
-        uint xmul = isWnative(x.token) ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
-        uint ymul = isWnative(y.token) ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
+    function compare(address router, PairData memory x, PairData memory y) private pure returns (bool yBetter) {
+        address wNative = wnative(router);
+        uint xmul = x.token == wNative ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
+        uint ymul = y.token == wNative ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
         return y.liquidity * ymul > x.liquidity * xmul;
     }
 
-    function allCommons() public pure returns (address[NUM_COMMON] memory tokens) {
-        tokens = abi.decode(COMMON_TOKENS,(address[7]));
+    function allCommons(address router) public pure returns (address[NUM_COMMON] memory tokens) {
+        tokens = abi.decode(COMMON_TOKENS,(address[6]));
+        tokens[0] = wnative(router);
     }
-    function isWnative(address token) private pure returns (bool) {
-        return token == WNATIVE || token == WNATIVE2;
+    function wnative(address router) internal pure returns (address) {
+        try IUniRouter02(router).WETH() returns (address weth) {
+            return weth;
+        } catch {
+            return WNATIVE_DEFAULT;
+        }
     }
-
 }

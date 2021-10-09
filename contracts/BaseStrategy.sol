@@ -39,6 +39,10 @@ abstract contract BaseStrategy is PausableTL {
     
     uint256 public lastEarnBlock = block.number;
     
+    //Some routers such as dfyn use a non-standard WNATIVE token. We can get it from the router
+    address constant WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address internal WNATIVE;
+    
     modifier onlyEarner virtual { _; } //overridden to restrict "earn"
     modifier onlyGov virtual; //"gov"
     
@@ -95,6 +99,9 @@ abstract contract BaseStrategy is PausableTL {
         require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
         try _settings.router.factory() returns (address) {}
         catch { revert("Invalid router"); }
+        try _settings.router.WETH() returns (address weth) { //use router's wnative
+            WNATIVE = weth;
+        } catch { WNATIVE = WNATIVE_DEFAULT; }
         
         settings = _settings;
         

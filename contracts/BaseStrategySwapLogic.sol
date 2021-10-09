@@ -20,7 +20,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     //Token constants used for fees, etc
     address constant DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
     address constant CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
-    address constant WNATIVE = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+
     
     address immutable public wantAddress; //The token which is deposited and earns a yield 
     uint256 immutable earnedLength; //number of earned tokens;
