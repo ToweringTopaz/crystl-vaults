@@ -121,4 +121,16 @@ library FullMath {
             result++;
         }
     }
+    
+    function mulDiv(int a, int b, int denominator) internal pure returns (int result) {
+        bool neg = (a < 0)!=(b < 0)!=(denominator < 0);
+        uint _a = a < 0 ? uint(-a) : uint(a);    
+        uint _b = b < 0 ? uint(-b) : uint(b);
+        uint _d = denominator < 0 ? uint(-denominator) : uint(denominator);
+        uint _result = mulDiv(_a,_b,_d);
+        require(_result <= uint(type(int).max));
+        return neg ? -int(_result) : int(_result);
+        
+    }
+    
 }

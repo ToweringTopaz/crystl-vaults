@@ -61,6 +61,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         lpTokenLength = _lpTokenLength;
     }
     
+    function _update() internal virtual returns (uint _sharesTotal); //maximizer accounting
+    
     function _wantBalance() internal override view returns (uint256) {
         return IERC20(wantAddress).balanceOf(address(this));
     }
