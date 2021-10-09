@@ -46,6 +46,72 @@ const apeSwapVaults = [
             [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
         ],
     },
+    {
+        addresses: [
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+            routers.polygon.APESWAP_ROUTER, // UniRouter
+            lps.polygon.MATIC_BANANA_APE_LP, // Want
+            WMATIC, // Earned
+            BANANA, //EarnedBeta
+        ],
+        strategyConfig: [
+            0, // uint256 _pid 
+            1, // uint256 tolerance
+            [WMATIC], // address[] memory _earnedToWmaticPath
+            [WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
+            [WMATIC], // address[] memory _earnedToToken0Path
+            [WMATIC, BANANA], // address[] memory _earnedToToken1Path
+            [WMATIC], // address[] memory _token0ToEarnedPath
+            [BANANA, WMATIC], // address[] memory _token1ToEarnedPath
+            [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
+        ],
+    },
+    {
+        addresses: [
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+            routers.polygon.APESWAP_ROUTER, // UniRouter
+            lps.polygon.MATIC_BANANA_APE_LP, // Want
+            WMATIC, // Earned
+            BANANA, //EarnedBeta
+        ],
+        strategyConfig: [
+            0, // uint256 _pid 
+            1, // uint256 tolerance
+            [WMATIC], // address[] memory _earnedToWmaticPath
+            [WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
+            [WMATIC], // address[] memory _earnedToToken0Path
+            [WMATIC, BANANA], // address[] memory _earnedToToken1Path
+            [WMATIC], // address[] memory _token0ToEarnedPath
+            [BANANA, WMATIC], // address[] memory _token1ToEarnedPath
+            [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
+        ],
+    },
+    {
+        addresses: [
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+            routers.polygon.APESWAP_ROUTER, // UniRouter
+            lps.polygon.MATIC_BANANA_APE_LP, // Want
+            WMATIC, // Earned
+            BANANA, //EarnedBeta
+        ],
+        strategyConfig: [
+            0, // uint256 _pid 
+            1, // uint256 tolerance
+            [WMATIC], // address[] memory _earnedToWmaticPath
+            [WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
+            [WMATIC], // address[] memory _earnedToToken0Path
+            [WMATIC, BANANA], // address[] memory _earnedToToken1Path
+            [WMATIC], // address[] memory _token0ToEarnedPath
+            [BANANA, WMATIC], // address[] memory _token1ToEarnedPath
+            [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
+        ],
+    },
 ]
 
 module.exports = {
