@@ -113,7 +113,7 @@ library LibMaximizer {
         int sharesRemoved = int(_sharesRemoved);
         int balance = int(balanceOf(_poolInfo, _pidIn, _user));
         require(sharesRemoved <= balance, "libmaxi: insufficient balance");
-        
+        //todo
     }
     
     
