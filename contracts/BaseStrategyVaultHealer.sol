@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
 import "./VaultHealer.sol";
@@ -12,6 +12,9 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
     constructor(address _vaultHealerAddress) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
+        settings.magnetite = Magnetite(_vaultHealerAddress);
+        LibVaultHealer.Config memory _config = VaultHealer(_vaultHealerAddress).getConfig();
+        LibStrategy._updateConfig(settings, _config);
     }
     
     function sharesTotal() public override view returns (uint) {
@@ -34,8 +37,12 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
     
     //In this particular setup, vaulthealer inherits the Magnetite contract and provides path data
-    function magnetite() public override view returns (Magnetite) {
+    function magnetite() public view returns (Magnetite) {
         return Magnetite(address(vaultHealer));
+    }
+    
+    function pushConfig(LibVaultHealer.Config calldata _config) external onlyVaultHealer {
+        LibStrategy._updateConfig(settings, _config);
     }
     
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares

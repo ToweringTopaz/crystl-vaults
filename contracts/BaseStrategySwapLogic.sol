@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -21,25 +21,22 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     address constant DAI = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
     address constant CRYSTL = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
 
-    
-    address immutable public wantAddress; //The token which is deposited and earns a yield 
-    uint256 immutable earnedLength; //number of earned tokens;
-    uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
+    uint256 constant WITHDRAW_FEE_FACTOR_MAX = 10000; //means 0% withdraw fee minimum
+
+    address public wantAddress; //The token which is deposited and earns a yield 
+    uint256 earnedLength; //number of earned tokens;
+    uint256 lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
     
     address[EARNED_LEN] public earned;
     address[LP_LEN] public lpToken;
     
-    uint256 public burnedAmount; //Total CRYSTL burned by this vault
-    Magnetite private _magnetite; //the contract responsible for pathing
+    LibBaseStrategy.VaultStats public vaultStats;
 
     constructor(
-        address _wantAddress,
-        address magnetite_,
+        LibBaseStrategy.SettingsInput memory _settingsIn,
         address[] memory _earned
     ) {
-        
-        wantAddress = _wantAddress;
-        _magnetite = Magnetite(magnetite_);
+        wantAddress = _settingsIn.wantAddress;
         
         uint i;
         //The number of earned tokens should not be expected to change
@@ -50,15 +47,19 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         
         //Look for LP tokens. If not, want must be a single-stake
         uint _lpTokenLength;
-        try IUniPair(_wantAddress).token0() returns (address _token0) {
+        try IUniPair(_settingsIn.wantAddress).token0() returns (address _token0) {
             lpToken[0] = _token0;
-            lpToken[1] = IUniPair(_wantAddress).token1();
+            lpToken[1] = IUniPair(_settingsIn.wantAddress).token1();
             _lpTokenLength = 2;
         } catch { //if not LP, then single stake
-            lpToken[0] = _wantAddress;
+            lpToken[0] = _settingsIn.wantAddress;
             _lpTokenLength = 1;
         }
         lpTokenLength = _lpTokenLength;
+    }
+    
+    function burnedAmount() external view returns (uint) {
+        return vaultStats.totalBurned;
     }
     
     function _wantBalance() internal override view returns (uint256) {
@@ -71,10 +72,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     //approves the want token for transfer out
     function _approveWant(address _to, uint256 _amount) override internal {
         IERC20(wantAddress).safeIncreaseAllowance(_to, _amount);   
-    }
-    
-    function magnetite() public virtual view returns (Magnetite) {
-        return _magnetite;
     }
 
     function _earn(address _to) internal virtual whenEarnIsReady {
@@ -89,7 +86,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         bool success;
         
-        for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8.
+        for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8. 
             address earnedAddress = earned[i];
             console.log("Using earnedAddress %s", earnedAddress);
             uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
@@ -102,7 +99,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 console.log("dust check passed");
                 success = true; //We have something worth compounding
                 console.log("distributing fees");
-                earnedAmt = distributeFees(earnedAddress, earnedAmt, _to); // handles all fees for this earned token
+                earnedAmt = LibBaseStrategy.distributeFees(settings, vaultStats, earnedAddress, earnedAmt, _to); // handles all fees for this earned token
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
                 console.log("lpTokenLength is %s", lpTokenLength);
@@ -126,89 +123,13 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         lastEarnBlock = block.number;
     }
     
-    //Checks whether a swap is burning crystl, and if so, tracks it
-    modifier updateBurn(address _tokenOut, address _to) {
-        address burnAddress = settings.buybackFeeReceiver;
-        if (_tokenOut == CRYSTL && _to == settings.buybackFeeReceiver) {
-            uint burnedBefore = IERC20(CRYSTL).balanceOf(settings.buybackFeeReceiver);
-            _;
-            burnedAmount += IERC20(CRYSTL).balanceOf(settings.buybackFeeReceiver) - burnedBefore;
-        } else {
-            _;
-        }
-    }
-    
     function _safeSwap(
         uint256 _amountIn,
         address _tokenA,
         address _tokenB,
         address _to
-    ) internal updateBurn(_tokenB, _to) {
-        
-        //Handle one-token paths which are simply a transfer
-        if (_tokenA == _tokenB) {
-            if (_to != address(this)) //skip transfers to self
-                IERC20(_tokenA).safeTransfer(_to, _amountIn);
-            return;
-        }
-        address[] memory path = magnetite().findAndSavePath(address(settings.router), _tokenA, _tokenB);
-        
-        uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
-        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
-        
-        //allow router to pull the correct amount in
-        IERC20(_tokenA).safeIncreaseAllowance(address(settings.router), _amountIn);
-        
-        if (settings.feeOnTransfer) { //reflect mode on
-            settings.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                _amountIn,
-                amountOut,
-                path,
-                _to,
-                block.timestamp
-            );
-        } else { //reflect mode off
-            settings.router.swapExactTokensForTokens(
-                _amountIn,
-                amountOut,
-                path,
-                _to,
-                block.timestamp
-            );
-        }
-    }
-    
-    function distributeFees(address _earnedAddress, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
-        earnedAmt = _earnedAmt;
-        
-        uint controllerFee = settings.controllerFee;
-        uint rewardRate = settings.rewardRate;
-        uint buybackRate = settings.buybackRate;
-        
-        // To pay for earn function
-        if (controllerFee > 0) {
-            uint256 fee = _earnedAmt * controllerFee / FEE_MAX;
-            _safeSwap(fee, _earnedAddress, WNATIVE, _to);
-            earnedAmt -= fee;
-        }
-        //distribute rewards
-        if (rewardRate > 0) {
-            uint256 fee = _earnedAmt * rewardRate / FEE_MAX;
-            if (_earnedAddress == CRYSTL)
-                IERC20(_earnedAddress).safeTransfer(settings.rewardFeeReceiver, fee);
-            else
-                _safeSwap(fee, _earnedAddress, DAI, settings.rewardFeeReceiver);
-
-            earnedAmt -= fee;
-        }
-        //burn crystl
-        if (buybackRate > 0) {
-            uint256 buyBackAmt = _earnedAmt * buybackRate / FEE_MAX;
-            _safeSwap(buyBackAmt, _earnedAddress, CRYSTL, settings.buybackFeeReceiver);
-            earnedAmt -= buyBackAmt;
-        }
-        
-        return earnedAmt;
+    ) internal {
+        LibBaseStrategy._safeSwap(settings, _amountIn, _tokenA, _tokenB, _to);
     }
     
     function collectWithdrawFee(uint _wantAmt) internal returns (uint) {

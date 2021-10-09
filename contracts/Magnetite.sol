@@ -4,65 +4,24 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./libs/IUniRouter.sol";
+import "./libs/LibMagnetite.sol";
 
 //Automatically generates and stores paths
 contract Magnetite is Ownable {
     
     mapping(bytes32 => address[]) private _paths;
-    address constant private WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
-    bytes constant private COMMON_TOKENS = abi.encode([
-        address(0), //slot for wnative
-        0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
-        0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
-        0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
-        0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
-        0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063  //dai
-    ]);
 
-    uint constant private NUM_COMMON = 6;
-    uint constant private WNATIVE_MULTIPLIER = 30000; // Wnative weighted 3x
-    uint constant private B_MULTIPLIER = 100000; // Token B direct swap weighted 10x
-    uint constant private BASE_MULTIPLIER = 10000;
-    struct PairData {
-        address token;
-        address lp;
-        uint liquidity;
-    }
-
-    enum AutoPath { FALSE, SUBPATH, AUTO }
-    event SetPath(AutoPath indexed _auto, address router, address[] path);
-    
     //Adds or modifies a swap path
     function overridePath(address router, address[] calldata _path) external onlyOwner {
-        _setPath(router, _path, AutoPath.FALSE);
+        LibMagnetite._setPath(_paths, router, _path, LibMagnetite.AutoPath.MANUAL);
     }
 
     function setAutoPath_(address router, address[] calldata _path) external {
         require(msg.sender == address(this));
-        _setPath(router, _path, AutoPath.AUTO);
+        LibMagnetite._setPath(_paths, router, _path, LibMagnetite.AutoPath.AUTO);
     }
-    function _setPath(address router, address[] calldata _path, AutoPath _auto) internal { 
-        uint len = _path.length;
-
-        bytes32 hashAB = keccak256(abi.encodePacked(router,_path[0], _path[len - 1]));
-        bytes32 hashBA = keccak256(abi.encodePacked(router,_path[len - 1], _path[0]));
-        address[] storage pathAB = _paths[hashAB];
-        if (pathAB.length > 0 && _auto != AutoPath.FALSE) return;
-        address[] storage pathBA = _paths[hashBA];
-        
-        for (uint i; i < len; i++) {
-            pathAB.push() = _path[i];
-            pathBA.push() = _path[len - i - 1];
-        }
-            
-        emit SetPath(_auto, router, pathAB);
-        emit SetPath(_auto, router, pathBA);
-        
-        //fill sub-paths
-        if (len > 2) {
-            _setPath(router, _path[1:], AutoPath.SUBPATH);
-            _setPath(router, _path[:len-1], AutoPath.SUBPATH);
-        }
+    function _setPath(address router, address[] calldata _path, LibMagnetite.AutoPath _auto) internal { 
+        LibMagnetite._setPath(_paths, router, _path, _auto);
     }
     function getPathFromStorage(address router, address a, address b) public view returns (address[] memory path) {
         if (a == b) {
@@ -75,149 +34,18 @@ contract Magnetite is Ownable {
     function findAndSavePath(address router, address a, address b) public returns (address[] memory path) {
         path = getPathFromStorage(router, a, b); // [A C E D B]
         if (path.length == 0) {
-            path = generatePath(router, a, b);
-            assert(path.length > 1);
-            for (uint i; i < path.length; i++) {
-                for (uint j; j < path.length; j++) {
-                    assert(i == j ||path[i] != path[j]); //no repeating steps
-                }
-            }
-            if (pathAuth()) this.setAutoPath_(router, path);
+            path = LibMagnetite.generatePath(router, a, b);
+
+            if (pathAuth()) LibMagnetite._setPath(_paths, router, path, LibMagnetite.AutoPath.AUTO);
         }
     }
-    function viewPath(address router, address a, address b) public view returns (address[] memory path) {
+    function viewPath(address router, address a, address b) external view returns (address[] memory path) {
         path = getPathFromStorage(router, a, b); // [A C E D B]
         if (path.length == 0) {
-            path = generatePath(router, a, b);
-            assert(path.length > 1);
-            for (uint i; i < path.length; i++) {
-                for (uint j; j < path.length; j++) {
-                    assert(i == j ||path[i] != path[j]); //no repeating steps
-                }
-            }
+            path = LibMagnetite.generatePath(router, a, b);
         }
     }
     function pathAuth() internal virtual view returns (bool) {
         return msg.sender == tx.origin || msg.sender == owner();
-    }
-    
-    function generatePath(address router, address a, address b) private view returns (address[] memory path) {
-    
-        address[] memory _b = new address[](2);
-        _b[0] = b;
-        address c = findPair(router, a, _b);
-        _b[0] = a;
-        address d = findPair(router, b, _b);
-        if (c == b || d == a) {
-            path = new address[](2);
-            path[0] = a;
-            path[1] = b;
-            return path;
-        } else if (c == d) {
-            path = new address[](3);
-            path[0] = a;
-            path[1] = c;
-            path[2] = b;
-            return path;
-        }
-        _b[1] = c;
-        address e0 = findPair(router, d, _b);
-        if (e0 == a) {
-            path = new address[](3);
-            path[0] = a;
-            path[1] = d;
-            path[2] = b;
-            return path;
-        } else if (e0 == c) {
-            path = new address[](4);
-            path[0] = a;
-            path[1] = c;
-            path[2] = d;
-            path[3] = b;
-            return path;
-        }
-        _b[0] = b;
-        _b[1] = d;
-        address e1 = findPair(router, c, _b);
-        if (e1 == b) {
-            path = new address[](3);
-            path[0] = a;
-            path[1] = c;
-            path[2] = b;
-            return path;
-        } else if (e1 == d) {
-            path = new address[](4);
-            path[0] = a;
-            path[1] = c;
-            path[2] = d;
-            path[3] = b;
-            return path;
-        } else {
-            require (e1 == e0, "no path found");
-            path = new address[](5);
-            path[0] = a;
-            path[1] = c;
-            path[2] = e0;
-            path[3] = d;
-            path[4] = b;
-            return path;
-        }
-    }   
-    function findPair(address router, address a, address[] memory b) private view returns (address) {
-        IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
-        
-        PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
-
-        address[NUM_COMMON] memory allCom = allCommons(router);
-        
-        //populate pair tokens
-        for (uint i; i < b.length; i++) {
-            pairData[i].token = b[i];   
-        }
-        for (uint i; i < NUM_COMMON; i++) {
-            pairData[i+b.length].token = allCom[i];
-        }
-        
-        //calculate liquidity
-        for (uint i; i < pairData.length; i++) {
-            address pair = factory.getPair(a, pairData[i].token);
-            if (pair != address(0)) {
-                uint liq = IERC20(a).balanceOf(pair);
-                if (liq > 0) {
-                    pairData[i].lp = pair;
-                    pairData[i].liquidity = liq;
-                }
-            }
-        }
-        //find weighted most liquid pair
-        for (uint i; i < pairData.length; i++) {
-            pairData[i].liquidity = pairData[i].liquidity * B_MULTIPLIER / BASE_MULTIPLIER;
-        }
-        uint best;
-        for (uint i = 1; i < pairData.length; i++) {
-            if (compare(router, pairData[best], pairData[i])) best = i;
-        }
-        require(pairData[best].liquidity > 0, "no liquidity");
-        
-        return pairData[best].token;
-    }
-    
-    function compare(address router, PairData memory x, PairData memory y) private pure returns (bool yBetter) {
-        address wNative = wnative(router);
-        uint xmul = x.token == wNative ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
-        uint ymul = y.token == wNative ? WNATIVE_MULTIPLIER : BASE_MULTIPLIER;
-        return y.liquidity * ymul > x.liquidity * xmul;
-    }
-
-    function allCommons(address router) public pure returns (address[NUM_COMMON] memory tokens) {
-        tokens = abi.decode(COMMON_TOKENS,(address[6]));
-        tokens[0] = wnative(router);
-    }
-    function wnative(address router) internal pure returns (address) {
-        try IUniRouter02(router).WETH() returns (address weth) {
-            return weth;
-        } catch {
-            return WNATIVE_DEFAULT;
-        }
     }
 }

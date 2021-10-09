@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.4;
 
 import "./BaseStrategySwapLogic.sol";
@@ -9,17 +9,12 @@ import "./BaseStrategyTactician.sol";
 contract StrategyVHStandard is BaseStrategyVHERC20, BaseStrategyTactician {
 
     constructor(
-        address _masterchefAddress,
-        address _tactic,
-        uint256 _pid,
-        address _vaultHealerAddress,
-        address _wantAddress,
-        Settings memory _settings,
+        LibStrategy.SettingsInput memory _settings,
         address[] memory _earned
     ) BaseStrategy(_settings)
-        BaseStrategyVaultHealer(_vaultHealerAddress)
-        BaseStrategyTactician(_masterchefAddress, _tactic, _pid)
-        BaseStrategySwapLogic(_wantAddress, address(0), _earned)
+        BaseStrategyVaultHealer(_settings.vaultHealerAddress)
+        BaseStrategyTactician(_settings)
+        BaseStrategySwapLogic(_settings.wantAddress, address(0), _earned)
     {}
         
 }

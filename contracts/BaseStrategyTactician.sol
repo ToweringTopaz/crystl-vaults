@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -19,18 +19,16 @@ interface IMasterchef {
 abstract contract BaseStrategyTactician is BaseStrategy {
     using Address for address;
     
-    address public immutable masterchefAddress;
-    ITactic public immutable tactic;
-    uint public immutable pid;
+    address public masterchefAddress;
+    ITactic public tactic;
+    uint public pid;
     
     constructor(
-        address _masterchefAddress,
-        address _tactic,
-        uint256 _pid
+        LibBaseStrategy.SettingsInput memory _settingsIn
     ) {
-        masterchefAddress = _masterchefAddress;
-        tactic = ITactic(_tactic);
-        pid = _pid;
+        masterchefAddress = _settingsIn.masterchefaddress;
+        tactic = ITactic(_settingsIn.tactic);
+        pid = _settingsIn.pid;
     }
     
     function _vaultDeposit(uint256 _amount) internal override {
