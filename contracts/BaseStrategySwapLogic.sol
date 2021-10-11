@@ -24,8 +24,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     uint256 constant WITHDRAW_FEE_FACTOR_MAX = 10000; //means 0% withdraw fee minimum
 
     address immutable public wantAddress; //The token which is deposited and earns a yield 
-    uint256 earnedLength; //number of earned tokens;
-    uint256 lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
+    uint256 immutable earnedLength; //number of earned tokens;
+    uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
     
     address[EARNED_LEN] public earned;
     address[LP_LEN] public lpToken;
