@@ -7,14 +7,13 @@ import "./BaseStrategySwapLogic.sol";
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
+    using LibVaultConfig for VaultFees;
     
     VaultHealer immutable public vaultHealer;
     
     constructor(address _vaultHealerAddress) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
         settings.magnetite = Magnetite(_vaultHealerAddress);
-        LibVaultHealer.Config memory _config = VaultHealer(_vaultHealerAddress).getConfig();
-        LibBaseStrategy._updateConfig(settings, _config);
     }
     
     function sharesTotal() public override view returns (uint) {
@@ -23,7 +22,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
     //The owner of the connected vaulthealer gets administrative power in the strategy, automatically.
     modifier onlyGov() override {
-        require(msg.sender == vaultHealer.owner(), "!gov");
+        require(msg.sender == vaultHealer.owner() || msg.sender == address(vaultHealer), "!gov");
         _;
     }
     modifier onlyVaultHealer {
@@ -35,21 +34,12 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function earn(address _to) external override onlyVaultHealer {
         _earn(_to);    
     }
-    
-    //In this particular setup, vaulthealer inherits the Magnetite contract and provides path data
-    function magnetite() public view returns (Magnetite) {
-        return Magnetite(address(vaultHealer));
-    }
-    
-    function pushConfig(LibVaultHealer.Config calldata _config) external onlyVaultHealer {
-        LibBaseStrategy._updateConfig(settings, _config);
-    }
-    
+
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer whenNotPaused returns (uint256 sharesAdded) {
         _earn(_from); //earn before deposit prevents abuse
        
-        if (_wantAmt == 0) return 0; //do nothing if nothing is requested
+        if (_wantAmt < settings.dust) return 0; //do nothing if nothing is requested
         
         uint256 wantLockedBefore = wantLockedTotal();
         
@@ -66,7 +56,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (_sharesTotal > 0) { //mulDiv prevents overflow for certain tokens/amounts
             sharesAdded = FullMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
         }
-        require(sharesAdded > 0, "deposit: no shares added");
+        require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(address /*_from*/, address /*_to*/, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
@@ -85,7 +75,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
                 if (vaultSharesTotal() > 0) _emergencyVaultWithdraw();
                 _wantAmt = _wantBalance();
                 //if receiver is 0, don't leave tokens behind in abandoned vault
-                if (settings.withdrawFeeReceiver != address(0))
+                if (vaultFees.withdraw.receiver != address(0))
                     _wantAmt = collectWithdrawFee(_wantAmt);
                 _approveWant(address(vaultHealer), _wantAmt);
                 return (_sharesTotal, _wantAmt);

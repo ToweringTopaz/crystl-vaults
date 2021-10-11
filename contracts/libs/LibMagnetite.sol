@@ -9,6 +9,12 @@ import "./IUniRouter.sol";
 library LibMagnetite {
     using LibMagnetite for address[];
     
+    struct PairData {
+        address token;
+        address lp;
+        uint liquidity;
+    }
+    
     address constant private WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     bytes constant private COMMON_TOKENS = abi.encode([
         address(0), //slot for wnative
@@ -22,11 +28,6 @@ library LibMagnetite {
     uint constant private NUM_COMMON = 6;
     uint constant private WNATIVE_MULTIPLIER = 3; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 10; // Token B direct swap weighted 10x
-    struct PairData {
-        address token;
-        address lp;
-        uint liquidity;
-    }
 
     enum AutoPath { MANUAL, SUBPATH, AUTO }
     event SetPath(AutoPath indexed _auto, address router, address[] path);

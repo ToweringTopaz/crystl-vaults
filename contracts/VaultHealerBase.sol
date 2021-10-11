@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./libs/LibVaultHealer.sol";
+import "./libs/LibVaultConfig.sol";
 
 interface IStrategy {
     function wantAddress() external view returns (address); // Want address
@@ -13,11 +13,12 @@ interface IStrategy {
     function earn(address _to) external; // Main want token compounding function
     function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
-    function pushConfig(LibVaultHealer.Config calldata _config) external; //vaulthealer uses this to update configuration
+    function setFees(VaultFees calldata _fees) external; //vaulthealer uses this to update configuration
 }
 
 abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
+    using LibVaultConfig for VaultFees;
 
     // Info of each user.
     struct UserInfo {
@@ -31,9 +32,7 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         IStrategy strat; // Strategy address that will auto compound want tokens
         uint256 sharesTotal;
         mapping (address => UserInfo) user;
-        bool overrideDefaults; // use config here instead of defaults?
-        LibVaultHealer.Config config;
-        bool paused;
+        bool overrideDefaults; // strategy's fee config doesn't change with the vaulthealer's default
     }
     struct PendingDeposit {
         IERC20 token;
@@ -41,9 +40,8 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         uint256 amount;
     }
 
-
     PoolInfo[] internal _poolInfo; // Info of each pool.
-    LibVaultHealer.Config public defaultConfig; // Settings which are generally applied to all strategies
+    VaultFees public defaultFees; // Settings which are generally applied to all strategies
     
     
     //pid+1 for any of our strategies. +1 allows us to distinguish pid 0 from an unauthorized address
@@ -52,14 +50,15 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
     event AddPool(address indexed strat);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event SetDefaultConfig(LibVaultHealer.Config _config);
-    event SetConfig(uint pid, LibVaultHealer.Config _config);
-    event ResetConfig(uint pid);
+    event SetDefaultFees(VaultFees _fees);
+    event SetDefaultFail(uint pid);
+    event SetFees(uint pid, VaultFees _fees);
+    event ResetFees(uint pid);
     
-    constructor(LibVaultHealer.Config memory _config) {
-        LibVaultHealer.checkConfig(_config);
-        defaultConfig = _config;
-        emit SetDefaultConfig(_config);
+    constructor(VaultFees memory _fees) {
+        _fees.check();
+        defaultFees = _fees;
+        emit SetDefaultFees(_fees);
     }
 
     function poolLength() external view returns (uint256) {
@@ -104,12 +103,11 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
         pool.want = IERC20(IStrategy(_strat).wantAddress());
         pool.strat = IStrategy(_strat);
+        IStrategy(_strat).setFees(defaultFees);
         
         _strats[_strat] = _poolInfo.length;
         emit AddPool(_strat);
     }
-    
-    
     
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
@@ -125,35 +123,24 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         return pidPlusOne - 1;
     }
     
-     function setDefaultConfig(LibVaultHealer.Config calldata _config) external onlyOwner {
-        defaultConfig = _config;
-        emit SetDefaultConfig(_config);
+     function setDefaultFees(VaultFees calldata _fees) external onlyOwner {
+        defaultFees = _fees;
+        emit SetDefaultFees(_fees);
         
         for (uint i; i < _poolInfo.length; i++) {
             if (_poolInfo[i].overrideDefaults) continue;
-            _poolInfo[i].strat.pushConfig(_config);
+            try _poolInfo[i].strat.setFees(_fees) {}
+            catch { emit SetDefaultFail(i); }
         }
     }   
-    function setConfig(uint _pid, LibVaultHealer.Config calldata _config) external onlyOwner {
+    function setFees(uint _pid, VaultFees calldata _fees) external onlyOwner {
         _poolInfo[_pid].overrideDefaults = true;
-        _poolInfo[_pid].config = _config;
-        emit SetConfig(_pid, _config);
+        _poolInfo[_pid].strat.setFees(_fees);
+        emit SetFees(_pid, _fees);
     }
-    function resetConfig(uint _pid) external onlyOwner {
+    function resetFees(uint _pid) external onlyOwner {
         _poolInfo[_pid].overrideDefaults = false;
-        delete _poolInfo[_pid].config;
-        emit ResetConfig(_pid);
+        _poolInfo[_pid].strat.setFees(defaultFees);
+        emit ResetFees(_pid);
     }
-    
-    function getConfig(uint _pid) external view returns (LibVaultHealer.Config memory config) {
-        return _poolInfo[_pid].overrideDefaults ? _poolInfo[_pid].config : defaultConfig;
-    }
-    function getConfig() external view returns (LibVaultHealer.Config memory config) {
-        uint _pidPlus1 =_strats[msg.sender];
-        return _pidPlus1 > 0 && _poolInfo[_pidPlus1].overrideDefaults ? _poolInfo[_pidPlus1].config : defaultConfig;
-    }
-    function paused(address strat) public view returns (bool) {
-        
-    }
-
 }

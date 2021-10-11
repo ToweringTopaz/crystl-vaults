@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./libs/LibVaultHealer.sol";
 import "./VaultHealerBase.sol";
 
 //Handles "gate" functions like deposit/withdraw

@@ -2,18 +2,23 @@
 pragma solidity ^0.8.4;
 
 import "./PausableTL.sol";
-import "./libs/LibBaseStrategy.sol";
-import "./libs/LibVaultHealer.sol";
+
+import "./libs/LibVaultConfig.sol";
 abstract contract BaseStrategy is PausableTL {
+    using LibVaultConfig for VaultSettings;
     
-    LibBaseStrategy.Settings public settings; //the major storage variables used to configure the vault
+    VaultSettings public settings; //the major storage variables used to configure the vault
     
     uint256 public lastEarnBlock = block.number;
     
-    //Some routers such as dfyn use a non-standard WNATIVE token. We can get it from the router usually, or use the default (LibStrategy)
-    address internal WNATIVE;
+    event SetSettings(VaultSettings _settings);
     
-    modifier onlyEarner virtual { _; } //overridden to restrict "earn"
+    constructor(VaultSettings memory _settings) {
+        _settings.check();
+        settings = _settings;
+        emit SetSettings(_settings);
+    }
+
     modifier onlyGov virtual; //"gov"
     
     modifier whenEarnIsReady virtual { //returns without action if earn is not ready
@@ -44,20 +49,15 @@ abstract contract BaseStrategy is PausableTL {
     function _emergencyVaultWithdraw() internal virtual;
     function _farm() internal virtual;
     
-    constructor(LibBaseStrategy.SettingsInput memory _settings) {
-        LibBaseStrategy.setSettings(settings, _settings);
-    }
-    
     //for front-end
-    function buyBackRate() external view returns (uint) { 
-        return settings.buybackRate;
-    }
     function tolerance() external view returns (uint) {
         return settings.tolerance;
     }
     
-    function setSettings(LibBaseStrategy.SettingsInput memory _settings) external onlyGov {
-        LibBaseStrategy.setSettings(settings, _settings);
+    function setSettings(VaultSettings calldata _settings) external onlyGov {
+        _settings.check();
+        settings = _settings;
+        emit SetSettings(_settings);
     }
     
     function pause() external onlyGov {
