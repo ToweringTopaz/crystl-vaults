@@ -26,10 +26,6 @@ abstract contract BaseStrategy is PausableTL {
             _;
         }
     }
-    modifier onlyThisContract { //external call by this contract only
-        require(msg.sender == address(this));
-        _;
-    }
     
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./PrismLibrary.sol";
 import "./LibVaultConfig.sol";
+import "./FullMath.sol";
 
 //Functions specific to the strategy code
 library LibVaultSwaps {
@@ -17,24 +18,25 @@ library LibVaultSwaps {
         uint128 totalBurned;
     }
     
-    address constant WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    IERC20 constant WNATIVE_DEFAULT = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
     uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
+    uint256 constant WITHDRAW_FEE_MAX = 10000; //means 0% withdraw fee minimum
     
-    function distributeFees(VaultSettings storage settings, VaultFees storage fees, VaultStats storage stats, address _earnedAddress, uint256 _earnedAmt, address _to) external returns (uint earnedAmt) {
+    function distribute(VaultFees storage fees, VaultSettings storage settings, VaultStats storage stats, IERC20 _earnedToken, uint256 _earnedAmt, address _to) external returns (uint earnedAmt) {
         uint burnedBefore = IERC20(fees.burn.token).balanceOf(fees.burn.receiver);
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
         uint256 fee = _earnedAmt * fees.earn.rate / FEE_MAX;
-        _safeSwap(settings, fee, _earnedAddress, fees.earn.token, _to);
+        safeSwap(settings, fee, _earnedToken, fees.earn.token, _to);
         earnedAmt -= fee; 
         //distribute rewards
         fee = _earnedAmt * fees.reward.rate / FEE_MAX;
-        _safeSwap(settings, fee, _earnedAddress, _earnedAddress == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
+        safeSwap(settings, fee, _earnedToken, _earnedToken == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
         earnedAmt -= fee;
         //burn crystl
         fee = _earnedAmt * fees.burn.rate / FEE_MAX;
-        _safeSwap(settings, fee, _earnedAddress, fees.burn.token, fees.burn.receiver);
+        safeSwap(settings, fee, _earnedToken, fees.burn.token, fees.burn.receiver);
         earnedAmt -= fee;
 
         unchecked { //overflow ok albeit unlikely
@@ -43,21 +45,21 @@ library LibVaultSwaps {
         }
     }
 
-    function _safeSwap(
+    function safeSwap(
         VaultSettings storage settings,
         uint256 _amountIn,
-        address _tokenA,
-        address _tokenB,
+        IERC20 _tokenA,
+        IERC20 _tokenB,
         address _to
     ) public {
         
         //Handle one-token paths which are simply a transfer
         if (_tokenA == _tokenB) {
             if (_to != address(this)) //skip transfers to self
-                IERC20(_tokenA).safeTransfer(_to, _amountIn);
+                _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = settings.magnetite.findAndSavePath(address(settings.router), _tokenA, _tokenB);
+        address[] memory path = settings.magnetite.findAndSavePath(address(settings.router), address(_tokenA), address(_tokenB));
         
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
@@ -86,11 +88,11 @@ library LibVaultSwaps {
     }
     
     //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
-    function optimalMint(address pair, address tokenA, address tokenB) internal returns (uint liquidity) {
-        (address token0, address token1) = PrismLibrary.sortTokens(tokenA, tokenB);
+    function optimalMint(IERC20 pair, IERC20 tokenA, IERC20 tokenB) internal returns (uint liquidity) {
+        (address token0, address token1) = PrismLibrary.sortTokens(address(tokenA), address(tokenB));
 
-        (uint112 reserve0, uint112 reserve1,) = IUniPair(pair).getReserves();
-        uint totalSupply = IUniPair(pair).totalSupply();
+        (uint112 reserve0, uint112 reserve1,) = IUniPair(address(pair)).getReserves();
+        uint totalSupply = pair.totalSupply();
         
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
@@ -104,13 +106,28 @@ library LibVaultSwaps {
             balance0 = reserve0 * balance1 / reserve1;
         }
 
-        IERC20(token0).safeTransfer(pair, balance0);
-        IERC20(token1).safeTransfer(pair, balance1);
-        liquidity = IUniPair(pair).mint(address(this));
+        IERC20(token0).safeTransfer(address(pair), balance0);
+        IERC20(token1).safeTransfer(address(pair), balance1);
+        liquidity = IUniPair(address(pair)).mint(address(this));
     }
-    function wnative(IUniRouter02 router) internal pure returns (address) {
+    
+    function collectWithdrawFee(VaultFees storage _fees, uint _wantAmt) internal returns (uint) {
+        uint256 withdrawFee = FullMath.mulDiv(
+            _wantAmt,
+            _fees.withdraw.rate,
+            FEE_MAX
+        );
+        
+        //if receiver is 0, strategy keeps fee
+        address receiver = _fees.withdraw.receiver;
+        if (receiver != address(0))
+            IERC20(_fees.withdraw.token).transfer(receiver, withdrawFee);
+        return _wantAmt - withdrawFee;
+    }
+    
+    function wnative(IUniRouter02 router) internal pure returns (IERC20) {
         try IUniRouter02(router).WETH() returns (address weth) { //use router's wnative
-            return weth;
+            return IERC20(weth);
         } catch { return WNATIVE_DEFAULT; }
     }
     
