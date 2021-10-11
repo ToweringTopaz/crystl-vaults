@@ -7,6 +7,7 @@ import "./BaseStrategySwapLogic.sol";
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
+    using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;    
     
@@ -78,7 +79,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
                 //if receiver is 0, don't leave tokens behind in abandoned vault
                 if (vaultFees.withdraw.receiver != address(0))
                     _wantAmt = vaultFees.collectWithdrawFee(_wantAmt);
-                _approveWant(address(vaultHealer), _wantAmt);
+                wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
                 return (_sharesTotal, _wantAmt);
             }
             _wantAmt = userWant;
@@ -111,7 +112,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         // Withdraw fee
         _wantAmt = vaultFees.collectWithdrawFee(_wantAmt);
         
-        _approveWant(address(vaultHealer), _wantAmt);
+        wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
         return (sharesRemoved, _wantAmt);
     }
     

@@ -7,22 +7,23 @@ import "./libs/ITactic.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract StrategyVHStandard is BaseStrategyVHERC20 {
     using Address for address;
-
+    using SafeERC20 for IERC20;
+    
     address public immutable masterchef;
     ITactic public immutable tactic;
     uint public immutable pid;
 
     constructor(
-        address _wantAddress,
+        IERC20 _wantToken,
         address _vaultHealerAddress,
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
         VaultSettings memory _settings,
-        address[] memory _earned
+        IERC20[] memory _earned
     )
         BaseStrategy(_settings)
-        BaseStrategySwapLogic(_wantAddress, _earned)
+        BaseStrategySwapLogic(_wantToken, _earned)
         BaseStrategyVaultHealer(_vaultHealerAddress)
     {
         masterchef = _masterchefAddress;
@@ -33,7 +34,7 @@ contract StrategyVHStandard is BaseStrategyVHERC20 {
     function _vaultDeposit(uint256 _amount) internal override {
         
         //token allowance for the pool to pull the correct amount of funds only
-        _approveWant(masterchef, _amount);
+        wantToken.safeIncreaseAllowance(masterchef, _amount);
         
         address(tactic).functionDelegateCall(abi.encodeWithSelector(
             tactic._vaultDeposit.selector, masterchef, pid, _amount

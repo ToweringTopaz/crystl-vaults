@@ -39,8 +39,6 @@ abstract contract BaseStrategy is PausableTL {
     function wantLockedTotal() public view returns (uint256) {
         return _wantBalance() + vaultSharesTotal();
     }
-
-    function _approveWant(address _to, uint256 _amount) internal virtual;
     
     function _emergencyVaultWithdraw() internal virtual;
     function _farm() internal virtual;
