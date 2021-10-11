@@ -14,6 +14,9 @@ interface IStrategy {
 
     // Sum of all shares of users to wantLockedTotal
     function sharesTotal() external view returns (uint256);
+    
+    // Univ2 router used by this strategy
+    function uniRouterAddress() external view returns (address);
 
     // Main want token compounding function
     function earn() external;
