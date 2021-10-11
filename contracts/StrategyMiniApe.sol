@@ -2,9 +2,9 @@
 pragma solidity ^0.8.4;
 
 import "./libs/IMiniChefV2.sol";
-import "./BaseStrategyLP.sol";
+import "./BaseStrategyLPDouble.sol";
 
-contract StrategyMiniApe is BaseStrategyLP {
+contract StrategyMiniApe is BaseStrategyLPDouble {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 

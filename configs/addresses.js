@@ -88,6 +88,7 @@ const lps = {
                 DFYN_FRM_DFYN_LP: '0x0c77b6682b6ffffe9599b41e39eba1c1bcf923d8',
                 WMATIC_BNB_APE_LP: '0x0359001070cf696d5993e0697335157a6f7db289', //pid = 6
                 USDC_DAI_APE_LP: '0x5b13b583d4317ab15186ed660a1e4c65c10da659', //pid = 5
+                WMATIC_WBTC_APE_LP: '0xe82635a105c520fd58e597181cbf754961d51e3e', //pid = 4
         }
 }
 

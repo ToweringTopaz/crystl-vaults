@@ -4,10 +4,10 @@ const { tokens } = require('../configs/addresses.js');
 const { WMATIC } = tokens.polygon;
 const { expect, assert } = require('chai');
 const { ethers } = require('hardhat');
-const { IUniRouter02_abi } = require('./IUniRouter02_abi.js');
-const { token_abi } = require('./token_abi.js');
-const { vaultHealer_abi } = require('./vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
-const { IWETH_abi } = require('./IWETH_abi.js');
+const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
+const { token_abi } = require('./abi_files/token_abi.js');
+const { vaultHealer_abi } = require('./abi_files/vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
+const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -18,9 +18,9 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[3].addresses, ...apeSwapVaults[3].strategyConfig];
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[3].addresses
-const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[3].strategyConfig;
+const DEPLOYMENT_VARS = [apeSwapVaults[4].addresses, ...apeSwapVaults[4].strategyConfig];
+const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[4].addresses
+const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[4].strategyConfig;
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
@@ -44,22 +44,22 @@ describe('StrategyMasterHealer contract', () => {
         
         await network.provider.send("hardhat_setBalance", [
             owner.address,
-            "0x3635c9adc5dea00000", //amount of 1000 in hex
+            "0x21E19E0C9BAB2400000", //amount of 1000 in hex
         ]);
 
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
     });
 
