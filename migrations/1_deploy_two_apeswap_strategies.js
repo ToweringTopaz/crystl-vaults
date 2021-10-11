@@ -4,20 +4,20 @@ const { apeSwapVaults } = require('../configs/apeSwapVaults');
 module.exports = async function (deployer, network) {
     await deployer.deploy(
         StrategyMiniApe,
-        apeSwapVaults[0].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
-        ...apeSwapVaults[0].strategyConfig // all other contract configuration variables
+        apeSwapVaults[2].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
+        ...apeSwapVaults[2].strategyConfig // all other contract configuration variables
     )
-    const MaticCrystlStrategyInstance = await StrategyMiniApe.deployed();
+    const WmaticBnbStrategyInstance = await StrategyMiniApe.deployed();
 
     await deployer.deploy(
         StrategyMiniApe,
-        apeSwapVaults[1].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
-        ...apeSwapVaults[1].strategyConfig // all other contract configuration variables
+        apeSwapVaults[3].addresses, // configuration addresses: vaulthealer, masterchef, unirouter, want, earned
+        ...apeSwapVaults[3].strategyConfig // all other contract configuration variables
     )
-    const MaticBananaStrategyInstance = await StrategyMiniApe.deployed();
+    const UsdcDaiStrategyInstance = await StrategyMiniApe.deployed();
 
     console.table({
-        MaticCrystlStrategy: MaticCrystlStrategyInstance.address,
-        MaticBananaStrategy: MaticBananaStrategyInstance.address
+        WmaticBnbStrategy: WmaticBnbStrategyInstance.address,
+        UsdcDaiStrategy: UsdcDaiStrategyInstance.address
     })
 };

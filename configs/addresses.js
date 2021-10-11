@@ -40,6 +40,7 @@ const tokens = {
                 FRM: '0xd99baFe5031cC8B345cb2e8c80135991F12D7130', // 0x0cdf14B01692c57fD8d066A053B3A0FA0Aa2Fc11
                 ROUTE: '0x16eccfdbb4ee1a85a33f3a9b21175cd7ae753db4',
                 dQUICK: '0xf28164A485B0B2C90639E47b0f377b4a438a16B1',
+                BNB: '0xa649325aa7c5093d12d6f98eb4378deae68ce23f',
         }
 }
  
@@ -85,6 +86,8 @@ const lps = {
                 DOKI_MUST_COMETH_LP: '0x9cb31b03089eca4c0f42554256d0217326d15ae7',
                 DOKI_ETH_COMETH_LP: '0xcCeD5cB001D6081c4561bf7911F11Ccd9aAA1474',
                 DFYN_FRM_DFYN_LP: '0x0c77b6682b6ffffe9599b41e39eba1c1bcf923d8',
+                WMATIC_BNB_APE_LP: '0x0359001070cf696d5993e0697335157a6f7db289', //pid = 6
+                USDC_DAI_APE_LP: '0x5b13b583d4317ab15186ed660a1e4c65c10da659', //pid = 5
         }
 }
 
