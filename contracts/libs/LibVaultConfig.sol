@@ -23,7 +23,7 @@ struct VaultFees {
 struct VaultFee {
     IERC20 token;
     address receiver;
-    uint96 rate;
+    uint16 rate;
 }
 
 library LibVaultConfig {
