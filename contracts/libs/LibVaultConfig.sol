@@ -34,7 +34,7 @@ library LibVaultConfig {
     uint256 constant WITHDRAW_FEE_LL = 0; //means 0% withdraw fee minimum
     uint256 constant SLIPPAGE_FACTOR_UL = 9950; // Must allow for at least 0.5% slippage (rounding errors)
     
-    function check(VaultFees memory _fees) external pure {
+    function check(VaultFees memory _fees) internal pure {
         
         require(_fees.reward.receiver != address(0), "Invalid reward address");
         require(_fees.burn.receiver != address(0), "Invalid buyback address");
@@ -43,7 +43,7 @@ library LibVaultConfig {
         require(_fees.withdraw.rate <= WITHDRAW_FEE_MAX, "_withdrawFeeFactor too high");
     }
     
-    function check(VaultSettings memory _settings) external pure {
+    function check(VaultSettings memory _settings) internal pure {
         try IUniRouter02(_settings.router).factory() returns (address) {}
         catch { revert("Invalid router"); }
         require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");

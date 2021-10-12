@@ -21,7 +21,7 @@ library LibVaultSwaps {
     IERC20 constant WNATIVE_DEFAULT = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
     uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
     
-    function distribute(VaultFees storage fees, VaultSettings storage settings, VaultStats storage stats, IERC20 _earnedToken, uint256 _earnedAmt, address _to) external returns (uint earnedAmt) {
+    function distribute(VaultFees storage fees, VaultSettings storage settings, VaultStats storage stats, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
         uint burnedBefore = IERC20(fees.burn.token).balanceOf(fees.burn.receiver);
 
         earnedAmt = _earnedAmt;
@@ -50,7 +50,7 @@ library LibVaultSwaps {
         IERC20 _tokenA,
         IERC20 _tokenB,
         address _to
-    ) public {
+    ) internal {
         
         //Handle one-token paths which are simply a transfer
         if (_tokenA == _tokenB) {

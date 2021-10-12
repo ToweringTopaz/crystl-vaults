@@ -32,7 +32,7 @@ library LibMagnetite {
     enum AutoPath { MANUAL, SUBPATH, AUTO }
     event SetPath(AutoPath indexed _auto, address router, address[] path);
 
-    function _setPath(mapping(bytes32 => address[]) storage _paths, address router, address[] memory _path, AutoPath _auto) public { 
+    function _setPath(mapping(bytes32 => address[]) storage _paths, address router, address[] memory _path, AutoPath _auto) internal { 
         uint len = _path.length;
 
         bytes32 hashAB = keccak256(abi.encodePacked(router,_path[0], _path[len - 1]));
@@ -69,7 +69,7 @@ library LibMagnetite {
         }
     }
     
-    function generatePath(address router, address a, address b) public view returns (address[] memory path) {
+    function generatePath(address router, address a, address b) internal view returns (address[] memory path) {
     
         address[] memory _b = new address[](2);
         _b[0] = b;
@@ -119,7 +119,7 @@ library LibMagnetite {
         path[4] = b;
         return path;
     }   
-    function findPair(address router, address a, address[] memory b) public view returns (address) {
+    function findPair(address router, address a, address[] memory b) internal view returns (address) {
         IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
