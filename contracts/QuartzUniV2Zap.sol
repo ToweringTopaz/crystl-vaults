@@ -124,7 +124,7 @@ contract QuartzUniV2Zap {
     }
     function _approveTokenIfNeeded(address token, IUniRouter02 router) private {
         if (!approvals[keccak256(abi.encodePacked(token,router))]) {
-            IERC20(token).safeApprove(address(vaultHealer), type(uint256).max);
+            IERC20(token).safeApprove(address(router), type(uint256).max);
             approvals[keccak256(abi.encodePacked(token,router))] = true;
         }
     }
