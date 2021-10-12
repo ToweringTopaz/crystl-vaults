@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./libs/LibVaultConfig.sol";
 
 interface IStrategy {
-    function wantAddress() external view returns (address); // Want address
+    function wantToken() external view returns (IERC20); // Want address
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
     function paused() external view returns (bool); // Is strategy paused
     function earn(address _to) external; // Main want token compounding function
@@ -101,7 +101,7 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         require(!isStrat(_strat), "Existing strategy");
         _poolInfo.push();
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
-        pool.want = IERC20(IStrategy(_strat).wantAddress());
+        pool.want = IStrategy(_strat).wantToken();
         pool.strat = IStrategy(_strat);
         IStrategy(_strat).setFees(defaultFees);
         
