@@ -51,14 +51,26 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         console.log("3")
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
-        VaultHealer = await ethers.getContractFactory("VaultHealer");
-        vaultHealer = await VaultHealer.deploy();
+        VaultHealer = await ethers.getContractFactory("VaultHealer", {
+            libraries: {
+                LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
+                LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
+              },
+        });
+        vaultHealer = await VaultHealer.deploy( 
+            VaultFees(
+            vaultSettings.standard[1], //withdraw fee  
+            vaultSettings.standard[5], //earn fee - to user who calls earn
+            vaultSettings.standard[3], //reward address?
+            vaultSettings.standard[6] //burn address?
+            ) 
+        );
         console.log(vaultHealer.address);
         
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
             // libraries: {
-            //     LibBaseStrategy: "0xc8959897D1b8CE850B494a898F402946FA80D673",
-            //     LibPathStorage: "0x42e3b158bFd6ADc5F2734B4b5f925898bA033c0F"
+            //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
+            //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
             //   },
         });
         console.log("2")
