@@ -1,7 +1,8 @@
 // import hre from "hardhat";
 
-const { tokens } = require('../configs/addresses.js');
+const { tokens, accounts } = require('../configs/addresses.js');
 const { WMATIC, CRYSTL, DAI } = tokens.polygon;
+const { FEE_ADDRESS, BURN_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./IUniRouter02_abi.js');
@@ -52,45 +53,46 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         console.log("3")
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
-            libraries: {
-                LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
-                LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-              },
+            // libraries: {
+            //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
+            //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
+            //   },
         });
-        vaultHealer = await VaultHealer.deploy( 
-            VaultFees(
-            vaultSettings.standard[1], //withdraw fee  
-            vaultSettings.standard[5], //earn fee - to user who calls earn
-            vaultSettings.standard[3], //reward address?
-            vaultSettings.standard[6] //burn address?
-            ) 
-        );
-        console.log(vaultHealer.address);
+        const feeConfig = 
+            [
+            // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
+                [ ZERO_ADDRESS, FEE_ADDRESS, 10 ],
+                [ WMATIC, FEE_ADDRESS, 50 ], //earn fee: wmatic is paid; receiver is ignored; 0.5% rate
+                [ DAI, FEE_ADDRESS, 50 ], //reward fee: paid in DAI; standard fee address; 0.5% rate
+                [ CRYSTL, BURN_ADDRESS, 400 ] //burn fee: crystl to burn address; 4% rate
+            ]
+        
+        vaultHealer = await VaultHealer.deploy(feeConfig);
+        // console.log(vaultHealer.address);
         
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
             // libraries: {
-            //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
+            //     LibVaultSwaps: "0x1B20Dab7BE777a9CFC363118BC46f7905A7628a1",
             //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
             //   },
         });
         console.log("2")
         
         const DEPLOYMENT_VARS = [
+            apeSwapVaults[0]['want'],
+            vaultHealer.address,
             apeSwapVaults[0]['masterchef'],
             apeSwapVaults[0]['tactic'],
             apeSwapVaults[0]['PID'],
-            vaultHealer.address,
-            apeSwapVaults[0]['want'],
             vaultSettings.standard,
             apeSwapVaults[0]['earned'],
-            apeSwapVaults[0]['paths']
             ];
 
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
         // TOKEN0 = await strategyMasterHealer.lpToken[0];
         // TOKEN1 = await strategyMasterHealer.lpToken[1];
         // console.log(await strategyMasterHealer.lpToken)
-        
+        console.log('SMH deployed');
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0 = await LPtoken.token0()
         TOKEN1 = await LPtoken.token1()
