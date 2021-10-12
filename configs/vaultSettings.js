@@ -28,7 +28,7 @@ const vaultSettings = {
 		1000000000000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
         true, //bool feeOnTransfer;
 		ZERO_ADDRESS //Magnetite == vaultHealer; this value is initialized automatically later
-	],
+	]
 }
 const feeConfig = {
 	standard: [
