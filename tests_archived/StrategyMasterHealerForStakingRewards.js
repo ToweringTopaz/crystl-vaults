@@ -1,7 +1,7 @@
 // import hre from "hardhat";
 
 const { tokens } = require('../configs/addresses.js');
-const { WMATIC, CRYSTL, DAI, WETH } = tokens.polygon;
+const { WMATIC, CRYSTL, DAI, WETH, ROUTE } = tokens.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./IUniRouter02_abi.js');
@@ -10,8 +10,6 @@ const { vaultHealer_abi } = require('./vaultHealer_abi.js'); //TODO - this would
 const { IWETH_abi } = require('./IWETH_abi.js');
 const { IMasterchef_abi } = require('./IMasterchef_abi.js');
 const { IUniswapV2Pair_abi } = require('./IUniswapV2Pair_abi.js');
-const { deployed_contract_abi } = require('./deployed_contract_abi.js');
-
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -20,20 +18,40 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 // THESE FIVE VARIABLES BELOW NEED TO BE SET CORRECTLY FOR A GIVEN TEST //
 //////////////////////////////////////////////////////////////////////////
 
-const deployed_contract_address = "0xd047e42f5ae25184c08695613450738fbdb52166";
+const STRATEGY_CONTRACT_TYPE = 'StrategyMasterHealerForStakingRewards'; //<-- change strategy type to the contract deployed for this strategy
+const { dfynVaults } = require('../configs/dfynVaults'); //<-- replace all references to 'dfynVaults' (for example), with the right '...Vaults' name
+const DEPLOYMENT_VARS = [dfynVaults[0].addresses, ...dfynVaults[0].strategyConfig];
+const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = dfynVaults[0].addresses
+const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = dfynVaults[0].strategyConfig;
 
-describe(`Testing deployed contract at address ${deployed_contract_address}` , () => {
+const WMATIC2 = '0x4c28f48448720e9000907bc2611f73022fdce1fa'; //this is a DFYN specific address for WETH/WMATIC
+
+const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
+const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
+
+describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
+    connected to vaultHealer @  ${VAULT_HEALER}
+    depositing these LP tokens: ${LIQUIDITY_POOL}
+    into Masterchef:            ${MASTERCHEF} 
+    using Router:               ${ROUTER} 
+    with earned token:          ${EARNED}
+    Tolerance:                  ${TOLERANCE}
+    earnedToWmaticPath: ${dfynVaults[0].strategyConfig[2]}
+    earnedToUsdcPath:   ${dfynVaults[0].strategyConfig[3]}
+    earnedToCrystlPath: ${dfynVaults[0].strategyConfig[4]}
+    earnedToToken0Path: ${dfynVaults[0].strategyConfig[5]}
+    earnedToToken1Path: ${dfynVaults[0].strategyConfig[6]}
+    token0ToEarnedPath: ${dfynVaults[0].strategyConfig[7]}
+    token1ToEarnedPath: ${dfynVaults[0].strategyConfig[8]}
+    `, () => {
     before(async () => {
         [owner, addr1, addr2, _] = await ethers.getSigners();
         console.log("Fetched account signers")
 
-        strategyMasterHealer = await ethers.getContractAt(deployed_contract_abi, deployed_contract_address);
+        StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE); //<-- this needs to change for different tests!!
+        strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
         console.log("Strategy contract deployed");
         
-        TOKEN0 = await strategyMasterHealer.token0Address(); 
-        TOKEN1 = await strategyMasterHealer.token1Address(); 
-        VAULT_HEALER = await strategyMasterHealer.vaultChefAddress();
-
         vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         vaultHealerOwner = await vaultHealer.owner();
         console.log("Fetched VaultHealer contract and owner");
@@ -50,26 +68,27 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
 
         await network.provider.send("hardhat_setBalance", [
             owner.address,
-            "0x3635c9adc5dea00000", //amount of 1000 in hex
+            "0x3635c9adc5dea00000", //amount of 1000 ether in hex
         ]);
         console.log("Funded main address with 1000 MATIC")
-        const ROUTER = await strategyMasterHealer.uniRouterAddress();
+
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
         console.log("Fetched Router instance");
 
-        if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
+        if (TOKEN0 == ethers.utils.getAddress(WMATIC2) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("400") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, WETH, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            console.log("Trying swap...")
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC2, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
         }
         console.log("Swapped MATIC for token0")
 
-        if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
+        if (TOKEN1 == ethers.utils.getAddress(WMATIC2)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("400") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC2, ROUTE, WETH, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("400") })
         }
         console.log("Swapped MATIC for token1")
 
@@ -104,7 +123,6 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
             await token1.approve(uniswapRouter.address, token1Balance);
 
             await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, owner.address, Date.now() + 900)
-            const LIQUIDITY_POOL = await strategyMasterHealer.wantAddress();
             LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, LIQUIDITY_POOL);
             initialLPtokenBalance = await LPtoken.balanceOf(owner.address);
             expect(initialLPtokenBalance).to.not.equal(0);

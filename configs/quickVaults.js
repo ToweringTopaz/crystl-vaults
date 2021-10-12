@@ -4,14 +4,14 @@ const { QUICK, WMATIC, CRYSTL, KOM, DAI } = tokens.polygon;
 const quickVaults = [
     {
         addresses: [
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
-            masterChefs.polygon.QUICK_STAKING_REWARDS_QUICK_KOM, // Masterchef
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.QUICK_STAKING_REWARDS_QUICK_KOM_V2, // Masterchef
             routers.polygon.QUICKSWAP_ROUTER, // UniRouter
             lps.polygon.QUICK_KOM_QUICK_LP, // Want
             QUICK, // Earned
         ],
         strategyConfig: [
-            0, // uint256 _pid 
+            999, // uint256 _pid 
             1, // uint256 tolerance
             [QUICK, WMATIC], // address[] memory _earnedToWmaticPath
             [QUICK, WMATIC, DAI], // address[] memory _earnedToUsdcPath

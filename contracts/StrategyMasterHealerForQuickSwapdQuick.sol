@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./libs/IMiniChefV2.sol";
-import "./BaseStrategyLPDouble.sol";
+import "./libs/IStakingRewards.sol";
+import "./BaseStrategyLPSingle.sol";
+import "./libs/IDragonLair.sol";
 
-contract StrategyMiniApe is BaseStrategyLPDouble {
+contract StrategyMasterHealerForQuickSwapdQuick is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public masterchefAddress; //actually a minichef in this case
+    address public masterchefAddress;
     uint256 public pid;
+    address public constant dQuick = 0xf28164A485B0B2C90639E47b0f377b4a438a16B1;
 
     constructor(
-        address[6] memory _configAddress, //vaulthealer, miniape, unirouter, want, earned, earnedBeta
+        address[5] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned
         uint256 _pid,
         uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
@@ -21,8 +23,7 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         address[] memory _earnedToToken0Path,
         address[] memory _earnedToToken1Path,
         address[] memory _token0ToEarnedPath,
-        address[] memory _token1ToEarnedPath,
-        address[] memory _earnedBetaToEarnedPath
+        address[] memory _token1ToEarnedPath
     ) {
         govAddress = msg.sender;
         vaultChefAddress = _configAddress[0];
@@ -32,10 +33,9 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         wantAddress = _configAddress[3];
         token0Address = IUniPair(wantAddress).token0();
         token1Address = IUniPair(wantAddress).token1();
-
+        
         pid = _pid;
         earnedAddress = _configAddress[4];
-        earnedBetaAddress = _configAddress[5];
         tolerance = _tolerance;
 
         earnedToWnativePath = _earnedToWmaticPath;
@@ -45,27 +45,27 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         earnedToToken1Path = _earnedToToken1Path;
         token0ToEarnedPath = _token0ToEarnedPath;
         token1ToEarnedPath = _token1ToEarnedPath;
-        earnedBetaToEarnedPath = _earnedBetaToEarnedPath;
 
         transferOwnership(vaultChefAddress);
         
         _resetAllowances();
     }
 
-    function _vaultDeposit(uint256 _amount) internal virtual override {
-        IMiniChefV2(masterchefAddress).deposit(pid, _amount, address(this));
+    function _vaultDeposit(uint256 _amount) internal override {
+        IStakingRewards(masterchefAddress).stake(_amount);
     }
     
     function _vaultWithdraw(uint256 _amount) internal override {
-        IMiniChefV2(masterchefAddress).withdraw(pid, _amount, address(this));
+        IStakingRewards(masterchefAddress).withdraw(_amount);
     }
     
     function _vaultHarvest() internal override {
-        IMiniChefV2(masterchefAddress).harvest(pid, address(this));
+        IStakingRewards(masterchefAddress).getReward();
+        IDragonLair(dQuick).leave(IERC20(dQuick).balanceOf(address(this)));
     }
     
     function vaultSharesTotal() public override view returns (uint256) {
-        (uint256 amount,) = IMiniChefV2(masterchefAddress).userInfo(pid, address(this));
+        uint256 amount = IStakingRewards(masterchefAddress).balanceOf(address(this));
         return amount;
     }
     
@@ -86,12 +86,6 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
             uniRouterAddress,
             type(uint256).max
         );
-        
-        IERC20(earnedBetaAddress).safeApprove(uniRouterAddress, uint256(0));
-        IERC20(earnedBetaAddress).safeIncreaseAllowance(
-            uniRouterAddress,
-            type(uint256).max
-        );
 
         IERC20(token0Address).safeApprove(uniRouterAddress, uint256(0));
         IERC20(token0Address).safeIncreaseAllowance(
@@ -106,9 +100,9 @@ contract StrategyMiniApe is BaseStrategyLPDouble {
         );
 
     }
-    
+
     function _emergencyVaultWithdraw() internal override {
-        IMiniChefV2(masterchefAddress).emergencyWithdraw(pid, address(this));
+        IStakingRewards(masterchefAddress).exit(); 
     }
 
     function _beforeDeposit(address _to) internal override {

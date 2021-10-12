@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "./libs/IStakingRewards.sol";
 import "./BaseStrategyLPSingle.sol";
 
-contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
+contract StrategyMasterHealerForStakingRewards is BaseStrategyLPSingle {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -61,7 +61,6 @@ contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
         IStakingRewards(masterchefAddress).getReward();
     }
     
-    //I'm pretty confident this one below is right - it's the balance that the vault holds of shares in the farm
     function vaultSharesTotal() public override view returns (uint256) {
         uint256 amount = IStakingRewards(masterchefAddress).balanceOf(address(this));
         return amount;
@@ -98,8 +97,7 @@ contract StrategyMasterHealerForQuickswap is BaseStrategyLPSingle {
         );
 
     }
-    // interestingly, you do get the reward with this exit function, 
-    // which you don't with a Masterchef emergency withdraw
+
     function _emergencyVaultWithdraw() internal override {
         IStakingRewards(masterchefAddress).exit(); 
     }

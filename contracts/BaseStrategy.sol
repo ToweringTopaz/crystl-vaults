@@ -12,6 +12,8 @@ import "./libs/IStrategyCrystl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter02.sol";
 import "./PausableTL.sol";
+import "./libs/IWETH.sol";
+
 import "hardhat/console.sol";
 
 abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
@@ -166,12 +168,17 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     function distributeFees(uint256 _earnedAmt, address _to) internal returns (uint256) {
         if (controllerFee > 0) {
             uint256 fee = _earnedAmt.mul(controllerFee).div(FEE_MAX);
-    
-            _safeSwapWnative(
+
+            if (earnedAddress == wNativeAddress) {
+                // Earn token is WMATIC
+                IERC20(earnedAddress).safeTransfer(_to, fee);
+            } else {
+            _safeSwap(
                 fee,
                 earnedToWnativePath,
                 _to
             );
+        }
             
             _earnedAmt = _earnedAmt.sub(fee);
         }
