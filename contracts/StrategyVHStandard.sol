@@ -31,6 +31,10 @@ contract StrategyVHStandard is BaseStrategyVHERC20 {
         pid = _pid;
     }
     
+    function vaultSharesTotal() public override view returns (uint256) {
+        return tactic.vaultSharesTotal(masterchef, pid, address(this));
+    }
+    
     function _vaultDeposit(uint256 _amount) internal override {
         
         //token allowance for the pool to pull the correct amount of funds only
@@ -51,10 +55,6 @@ contract StrategyVHStandard is BaseStrategyVHERC20 {
         address(tactic).functionDelegateCall(abi.encodeWithSelector(
             tactic._vaultHarvest.selector, masterchef, pid
         ), "vaultharvest failed");
-    }
-    
-    function vaultSharesTotal() public override view returns (uint256) {
-        return tactic.vaultSharesTotal(masterchef, pid, address(this));
     }
     
     function _emergencyVaultWithdraw() internal override {

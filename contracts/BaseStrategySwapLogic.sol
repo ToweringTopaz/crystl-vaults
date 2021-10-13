@@ -54,6 +54,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             _lpTokenLength = 1;
         }
         lpTokenLength = _lpTokenLength;
+        
+        vaultFees.withdraw.token = _wantToken;
     }
     
     function buyBackRate() external view returns (uint) { 
@@ -63,15 +65,14 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return vaultStats.totalBurned;
     }
     
-    function _wantBalance() internal override view returns (uint256) {
-        return wantToken.balanceOf(address(this));
-    }
-    
     function setFees(VaultFees calldata _fees) external virtual onlyGov {
         _fees.check();
         vaultFees = _fees;
-        vaultFees.withdraw.token = wantToken;
         emit SetFees(_fees);
+    }
+
+    function _wantBalance() internal override view returns (uint256) {
+        return wantToken.balanceOf(address(this));
     }
 
     function _earn(address _to) internal virtual whenEarnIsReady {

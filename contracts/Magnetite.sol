@@ -23,15 +23,7 @@ contract Magnetite is Ownable {
     function _setPath(address router, address[] calldata _path, LibMagnetite.AutoPath _auto) internal { 
         LibMagnetite._setPath(_paths, router, _path, _auto);
     }
-    function getPathFromStorage(address router, address a, address b) public view returns (address[] memory path) {
-        if (a == b) {
-            path = new address[](1);
-            path[0] = a;
-            return path;
-        }
-        path = _paths[keccak256(abi.encodePacked(router, a, b))];
-    }
-    function findAndSavePath(address router, address a, address b) public returns (address[] memory path) {
+    function findAndSavePath(address router, address a, address b) external returns (address[] memory path) {
         path = getPathFromStorage(router, a, b); // [A C E D B]
         if (path.length == 0) {
             path = LibMagnetite.generatePath(router, a, b);
@@ -44,6 +36,14 @@ contract Magnetite is Ownable {
         if (path.length == 0) {
             path = LibMagnetite.generatePath(router, a, b);
         }
+    }
+    function getPathFromStorage(address router, address a, address b) public view returns (address[] memory path) {
+        if (a == b) {
+            path = new address[](1);
+            path[0] = a;
+            return path;
+        }
+        path = _paths[keccak256(abi.encodePacked(router, a, b))];
     }
     function pathAuth() internal virtual view returns (bool) {
         return msg.sender == tx.origin || msg.sender == owner();

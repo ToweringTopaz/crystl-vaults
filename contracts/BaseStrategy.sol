@@ -27,21 +27,19 @@ abstract contract BaseStrategy is PausableTL {
         }
     }
     
+    function earn(address _to) external virtual;
+    function sharesTotal() external virtual view returns (uint256);
+    function vaultSharesTotal() public virtual view returns (uint256);
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;
     function _vaultHarvest() internal virtual;
-    function earn(address _to) external virtual;
-    
-    function sharesTotal() external virtual view returns (uint256);
-    function vaultSharesTotal() public virtual view returns (uint256);
+    function _emergencyVaultWithdraw() internal virtual;
+    function _farm() internal virtual;
     function _wantBalance() internal virtual view returns (uint256);
 
     function wantLockedTotal() public view returns (uint256) {
         return _wantBalance() + vaultSharesTotal();
     }
-    
-    function _emergencyVaultWithdraw() internal virtual;
-    function _farm() internal virtual;
     
     //for front-end
     function tolerance() external view returns (uint) {
