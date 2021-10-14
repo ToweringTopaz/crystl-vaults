@@ -42,7 +42,7 @@ module.exports = {
       },
       forking: {
         url: archiveMainnetNodeURL,
-        blockNumber: 19957309,
+        blockNumber: 20205701,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",

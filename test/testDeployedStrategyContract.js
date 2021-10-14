@@ -4,13 +4,13 @@ const { tokens } = require('../configs/addresses.js');
 const { WMATIC, CRYSTL, DAI, WETH } = tokens.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { IUniRouter02_abi } = require('./IUniRouter02_abi.js');
-const { token_abi } = require('./token_abi.js');
-const { vaultHealer_abi } = require('./vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
-const { IWETH_abi } = require('./IWETH_abi.js');
-const { IMasterchef_abi } = require('./IMasterchef_abi.js');
-const { IUniswapV2Pair_abi } = require('./IUniswapV2Pair_abi.js');
-const { deployed_contract_abi } = require('./deployed_contract_abi.js');
+const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
+const { token_abi } = require('./abi_files/token_abi.js');
+const { vaultHealer_abi } = require('./abi_files/vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
+const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
+const { IMasterchef_abi } = require('./abi_files/IMasterchef_abi.js');
+const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
+const { deployed_contract_abi } = require('./abi_files/deployed_contract_abi.js');
 
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
@@ -20,7 +20,8 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 // THESE FIVE VARIABLES BELOW NEED TO BE SET CORRECTLY FOR A GIVEN TEST //
 //////////////////////////////////////////////////////////////////////////
 
-const deployed_contract_address = "0xA6Ee9b6d8d0853614257297BF140fcD3200394fC";
+const deployed_contract_address = "0xdF820B4649E14047AFb73751876dDcAf05BEeD2d";
+const PID_onVaultHealer = 20;
 
 describe(`Testing deployed contract at address ${deployed_contract_address}` , () => {
     before(async () => {
@@ -46,7 +47,7 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
         // await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyMasterHealer.address);
-        console.log("Added pool to VaultHealer");
+        //console.log("Added pool to VaultHealer");
 
         await network.provider.send("hardhat_setBalance", [
             owner.address,
@@ -59,17 +60,17 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("300") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, WETH, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, WETH, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("300") })
         }
         console.log("Swapped MATIC for token0")
 
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("300") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("300") })
         }
         console.log("Swapped MATIC for token1")
 
@@ -107,6 +108,7 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
             const LIQUIDITY_POOL = await strategyMasterHealer.wantAddress();
             LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, LIQUIDITY_POOL);
             initialLPtokenBalance = await LPtoken.balanceOf(owner.address);
+            console.log(initialLPtokenBalance);
             expect(initialLPtokenBalance).to.not.equal(0);
         })
         
@@ -114,13 +116,13 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
         it('Should deposit users whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             await LPtoken.approve(vaultHealer.address, initialLPtokenBalance); //no, I have to approve the vaulthealer surely?
             
-            poolLength = await vaultHealer.poolLength()
             const LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(owner.address);
+            const vaultSharesTotalBeforeFirstDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            await vaultHealer["deposit(uint256,uint256)"](poolLength-1,initialLPtokenBalance); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["deposit(uint256,uint256)"](PID_onVaultHealer,initialLPtokenBalance); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             const vaultSharesTotalAfterFirstDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            expect(LPtokenBalanceBeforeFirstDeposit).to.equal(vaultSharesTotalAfterFirstDeposit); //will this work for 2nd deposit? on normal masterchef?
+            expect(LPtokenBalanceBeforeFirstDeposit).to.equal(vaultSharesTotalAfterFirstDeposit.sub(vaultSharesTotalBeforeFirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
         })
         
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
@@ -140,7 +142,7 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
                 await ethers.provider.send("evm_mine"); //creates a 10 block delay
             }
 
-            await vaultHealer.earnSome([poolLength-1]);
+            await vaultHealer.earnSome([PID_onVaultHealer]);
             
             vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
 
@@ -177,9 +179,9 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
             }
             
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(owner.address);
-            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
+            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(PID_onVaultHealer, owner.address);
             
-            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
+            await vaultHealer["withdraw(uint256,uint256)"](PID_onVaultHealer, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
             
             const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(owner.address);
             const vaultSharesTotalAfterFirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() 
@@ -201,7 +203,7 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
             const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(owner.address);
             const vaultSharesTotalBeforeSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            await vaultHealer["deposit(uint256,uint256)"](poolLength-1, LPtokenBalanceBeforeSecondDeposit); //owner (default signer) deposits LP tokens into specified pid vaulthealer
+            await vaultHealer["deposit(uint256,uint256)"](PID_onVaultHealer, LPtokenBalanceBeforeSecondDeposit); //owner (default signer) deposits LP tokens into specified pid vaulthealer
             
             const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(owner.address);
             const vaultSharesTotalAfterSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0;
@@ -216,12 +218,12 @@ describe(`Testing deployed contract at address ${deployed_contract_address}` , (
             }
             
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(owner.address);
-            const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
+            const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(PID_onVaultHealer, owner.address);
 
-            await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFinalWithdrawal); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](PID_onVaultHealer, UsersStakedTokensBeforeFinalWithdrawal); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(owner.address);
-            UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, owner.address);
+            UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(PID_onVaultHealer, owner.address);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
