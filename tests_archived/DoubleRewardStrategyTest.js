@@ -71,33 +71,18 @@ describe('StrategyMasterHealer contract', () => {
         }
     });
 
-    describe('Deployment', () => {
-        it('Should set the right VaultHealer address - PRODUCTION_VAULT_HEALER', async () => {
-            expect(await strategyMasterHealer.vaultChefAddress()).to.equal(ethers.utils.getAddress(VAULT_HEALER)); //getAddress ensures that address is checksummed
+    describe(`Testing deployment:
+    `, () => {
+        it('Should set the pid such that our want tokens correspond with the masterchef pools LP tokens', async () => {
+            masterchef = await ethers.getContractAt(IMasterchef_abi, MASTERCHEF); 
+            poolInfo = await masterchef.poolInfo(PID);
+            lpToken = poolInfo[0];
+            expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
         })
 
-        it('Should set the right Masterchef address', async () => {
-            expect(await strategyMasterHealer.masterchefAddress()).to.equal(ethers.utils.getAddress(MASTERCHEF));
-        })
-
-        it('Should set the right Router address', async () => {
-            expect(await strategyMasterHealer.uniRouterAddress()).to.equal(ethers.utils.getAddress(ROUTER));
-        })
-
-        it('Should set the right LP address', async () => {
-            expect(await strategyMasterHealer.wantAddress()).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
-        })
-
-        it('Should set the right Reward/Earned address', async () => {
-            expect(await strategyMasterHealer.earnedAddress()).to.equal(ethers.utils.getAddress(EARNED));
-        })
-
-        it('Should set the right pid for the eventual farm it gets vaulted in', async () => {
-            expect(await strategyMasterHealer.pid()).to.equal(PID);
-        })
-
-        it('Should set the right tolerance', async () => { //could do a less than 3 check here?
-            expect(await strategyMasterHealer.tolerance()).to.equal(TOLERANCE);
+        it(`Should set tolerance in the range of 1-3
+        `, async () => { 
+            expect(await strategyMasterHealer.tolerance()).to.be.within(1,3);
         })
         //and paths too?
     })
@@ -136,6 +121,10 @@ describe('StrategyMasterHealer contract', () => {
         // Check balance to ensure it increased as expected
         it('Should compound the LPs upon calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+
+            for (i=0; i<100;i++) {
+                await ethers.provider.send("evm_mine"); //creates a 100 block delay
+            }
 
             await vaultHealer.earnSome([poolLength-1]);
             
