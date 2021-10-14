@@ -21,8 +21,9 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
 
         // Converts farm tokens into want tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
+        uint256 dustAmt = 1000000000000000; //1e15
 
-        if (earnedAmt > 0) {
+        if (earnedAmt > dustAmt) {
             earnedAmt = distributeFees(earnedAmt, _to);
             earnedAmt = distributeRewards(earnedAmt);
             earnedAmt = buyBack(earnedAmt);
