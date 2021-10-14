@@ -89,6 +89,8 @@ const lps = {
                 WMATIC_BNB_APE_LP: '0x0359001070cf696d5993e0697335157a6f7db289', //pid = 6
                 USDC_DAI_APE_LP: '0x5b13b583d4317ab15186ed660a1e4c65c10da659', //pid = 5
                 WMATIC_WBTC_APE_LP: '0xe82635a105c520fd58e597181cbf754961d51e3e', //pid = 4
+                WMATIC_WETH_APE_LP: '0x6cf8654e85ab489ca7e70189046d507eba233613', //pid = 1
+                WMATIC_USDT_APE_LP: '0x65d43b64e3b31965cd5ea367d4c2b94c03084797', //pid = 3
         }
 }
 

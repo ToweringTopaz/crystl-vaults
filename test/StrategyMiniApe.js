@@ -18,9 +18,9 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[4].addresses, ...apeSwapVaults[4].strategyConfig];
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[4].addresses
-const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[4].strategyConfig;
+const DEPLOYMENT_VARS = [apeSwapVaults[6].addresses, ...apeSwapVaults[6].strategyConfig];
+const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[6].addresses
+const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[6].strategyConfig;
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
@@ -51,15 +51,15 @@ describe('StrategyMasterHealer contract', () => {
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
         }
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
         }
     });
 
