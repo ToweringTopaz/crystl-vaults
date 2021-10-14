@@ -21,11 +21,9 @@ abstract contract BaseStrategyLPSingle is BaseStrategyLP {
 
         // Converts farm tokens into want tokens
         uint256 earnedAmt = IERC20(earnedAddress).balanceOf(address(this));
-        console.log(earnedAmt);
         uint256 dustAmt = 10000000000000000; //1e15 - has to be at least this to be able to swap back into WBTC!
 
         if (earnedAmt > dustAmt) {
-            console.log("Made it past conditional");
             earnedAmt = distributeFees(earnedAmt, _to);
             earnedAmt = distributeRewards(earnedAmt);
             earnedAmt = buyBack(earnedAmt);
