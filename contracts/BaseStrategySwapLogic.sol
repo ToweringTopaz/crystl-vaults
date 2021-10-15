@@ -96,7 +96,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
                 for (uint j; j < lpTokenLength; j++) {
-                    _safeSwap(earnedAmt / lpTokenLength, earnedToken, lpToken[j], address(this));
+                    LibVaultSwaps.safeSwap(settings, earnedAmt / lpTokenLength, earnedToken, lpToken[j], address(this));
                 }
             }
         }
@@ -109,15 +109,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             _farm();
         }
         lastEarnBlock = block.number;
-    }
-    
-    function _safeSwap(
-        uint256 _amountIn,
-        IERC20 _tokenA,
-        IERC20 _tokenB,
-        address _to
-    ) internal {
-        LibVaultSwaps.safeSwap(settings, _amountIn, _tokenA, _tokenB, _to);
     }
     
     //Safely deposits want tokens in farm
