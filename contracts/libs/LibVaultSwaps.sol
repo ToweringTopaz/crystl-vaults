@@ -124,7 +124,7 @@ library LibVaultSwaps {
         return _wantAmt - withdrawFee;
     }
     
-    function wnative(IUniRouter02 router) internal pure returns (IERC20) {
+    function wnative(IUniRouter02 router) private pure returns (IERC20) {
         try IUniRouter02(router).WETH() returns (address weth) { //use router's wnative
             return IERC20(weth);
         } catch { return WNATIVE_DEFAULT; }
