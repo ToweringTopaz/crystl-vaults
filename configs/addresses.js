@@ -6,6 +6,14 @@ const accounts = {
                 STAGING_VAULT_HEALER: '0x94C0BBC3A594d0C7Af0179eD21d0b9b4018e3085',
                 PRODUCTION_VAULT_HEALER: '0xD4d696ad5A7779F4D3A0Fc1361adf46eC51C632d',
                 KINGD_TEST_VAULT_HEALER: '0x5FcC2Ead048a707D6b5AE273e481E71C63330084',
+        },
+        cronos_testnet: {
+                ADMIN_ADDRESS: "",
+                FEE_ADDRESS: "",
+                NEW_TEST_VAULT_HEALER: '',
+                STAGING_VAULT_HEALER: '',
+                PRODUCTION_VAULT_HEALER: '',
+                KINGD_TEST_VAULT_HEALER: '',
         }
 }
  
@@ -41,6 +49,12 @@ const tokens = {
                 ROUTE: '0x16eccfdbb4ee1a85a33f3a9b21175cd7ae753db4',
                 dQUICK: '0xf28164A485B0B2C90639E47b0f377b4a438a16B1',
                 BNB: '0xa649325aa7c5093d12d6f98eb4378deae68ce23f',
+        },
+        cronos_testnet: {
+                CRO: '0x0006de65dfb28bd0174878c2bb7b7c8c7303ddcb', //says its an ERC20
+                WCRO: '0x77e66c840e7198c95500f7f547543e1466c5cb2c', //also an ERC20
+                CRX: '0x0006dE65DfB28bD0174878c2Bb7B7C8C7303ddCb', //??same as CRO?
+                PHOTON: '0x7a9F89bcef3840eccC218293aEd7B1317CF077c9',
         }
 }
  
@@ -61,6 +75,9 @@ const tokens = {
                 DOKI_STAKING_REWARDS_DOKI_ETH: '0xbbdc1681e43549d3871cf1953d1dd9aff320fef0',
                 DFYN_STAKING_REWARDS_FRM_DFYN: '0x44fcF521747BA7f152d78b0b206D43580A2bdf73',
                 QUICK_STAKING_REWARDS_QUICK_KOM_V2: '0x91061e09e9c7819CBbb92a418240954A4D8a9fed',
+         },
+         cronos_testnet: {
+
          }
 }
 
@@ -91,6 +108,9 @@ const lps = {
                 WMATIC_WBTC_APE_LP: '0xe82635a105c520fd58e597181cbf754961d51e3e', //pid = 4
                 WMATIC_WETH_APE_LP: '0x6cf8654e85ab489ca7e70189046d507eba233613', //pid = 1
                 WMATIC_USDT_APE_LP: '0x65d43b64e3b31965cd5ea367d4c2b94c03084797', //pid = 3
+        },
+        cronos_testnet: {
+                CRO_CRX_CRODEX_LP: '0xe330F8dD787699f3B033920873458355aCf25619', //pid  = ?
         }
 }
 
@@ -103,6 +123,9 @@ const routers = {
                 POLYCAT_ROUTER: '0x94930a328162957ff1dd48900af67b5439336cbd',
                 COMETH_ROUTER: '0x93bcDc45f7e62f89a8e901DC4A0E2c6C427D9F25', 
                 DFYN_ROUTER: '0xA102072A4C07F06EC3B4900FDC4C7B80b6c57429',
+        },
+        cronos_testnet: {
+                CRODEX_ROUTER: '0x9e544d8e44ed8d40f658d8563a25bcbd8071ee24', //I think - contract not verified!
         }
 }
 

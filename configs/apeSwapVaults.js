@@ -4,11 +4,11 @@ const { BANANA, WMATIC, CRYSTL, DAI, BNB, USDC, WBTC, USDT, WETH } = tokens.poly
 const apeSwapVaults = [
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_CRYSTL_APE_LP, // Want
-            CRYSTL, // Earned - there is a second reward in CRYSTL!
+            CRYSTL, // Earned 
             BANANA, //EarnedBeta
         ],
         strategyConfig: [
@@ -26,7 +26,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.MATIC_BANANA_APE_LP, // Want
@@ -48,7 +48,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.WMATIC_BNB_APE_LP, // Want
@@ -70,7 +70,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.USDC_DAI_APE_LP, // Want
@@ -92,7 +92,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.WMATIC_WBTC_APE_LP, // Want
@@ -114,7 +114,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.WMATIC_WETH_APE_LP, // Want
@@ -136,7 +136,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [
-            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.WMATIC_USDT_APE_LP, // Want
