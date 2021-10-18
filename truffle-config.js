@@ -17,6 +17,11 @@ module.exports = {
       skipDryRun: true,
       gasPrice: 30000000000
     },
+    cronos_testnet: {
+      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, "https://cronos-testnet-3.crypto.org:8545"),
+      network_id: "*",
+      skipDryRun: true
+    }
   },
   plugins: [
     'truffle-plugin-verify'
