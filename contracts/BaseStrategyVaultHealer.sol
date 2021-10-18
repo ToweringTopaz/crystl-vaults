@@ -37,7 +37,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer whenNotPaused returns (uint256 sharesAdded) {
+    function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
         _earn(_from); //earn before deposit prevents abuse
        
         if (_wantAmt < settings.dust) return 0; //do nothing if nothing is requested
@@ -68,21 +68,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal);
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
-        if (_wantAmt + settings.dust > userWant) {
-            if (_userShares == _sharesTotal) { //user is the sole shareholder withdrawing all
-                //clear out anything left
-                uint vaultSharesRemaining = vaultSharesTotal();
-                if (vaultSharesRemaining > 0) _vaultWithdraw(vaultSharesRemaining);
-                if (vaultSharesTotal() > 0) _emergencyVaultWithdraw();
-                _wantAmt = _wantBalance();
-                //if receiver is 0, don't leave tokens behind in abandoned vault
-                if (vaultFees.withdraw.receiver != address(0))
-                    _wantAmt = vaultFees.collectWithdrawFee(_wantAmt);
-                wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
-                return (_sharesTotal, _wantAmt);
-            }
+        if (_wantAmt + settings.dust > userWant)
             _wantAmt = userWant;
-        }
         
         // Check if strategy has tokens from panic
         if (_wantAmt > wantBal) {
@@ -110,12 +97,13 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         
         require(_wantAmt > 0, "nothing to withdraw after slippage");
         
-        // Withdraw fee
-        _wantAmt = vaultFees.collectWithdrawFee(_wantAmt);
-        
         wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
         return (sharesRemoved, _wantAmt);
     }
     
-
+    function _pause() internal override {}
+    function _unpause() internal override {}
+    function paused() public override returns (bool) {
+        return vaultHealer.paused(address(this));
+    }
 }

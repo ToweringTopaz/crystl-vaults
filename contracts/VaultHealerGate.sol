@@ -11,12 +11,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
     PendingDeposit private pendingDeposit;
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant {
+    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant whenNotPaused(_pid) {
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant {
+    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant whenNotPaused(_pid) {
         _deposit(_pid, _wantAmt, _to);
     }
 
@@ -59,6 +59,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         UserInfo storage user = pool.user[msg.sender];
 
         require(user.shares > 0, "user.shares is 0");
+        
+        //todo: withdraw fee
         
         (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
         

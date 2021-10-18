@@ -9,11 +9,12 @@ import "./libs/LibVaultConfig.sol";
 interface IStrategy {
     function wantToken() external view returns (IERC20); // Want address
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
-    function paused() external view returns (bool); // Is strategy paused
     function earn(address _to) external; // Main want token compounding function
     function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
     function setFees(VaultFees calldata _fees) external; //vaulthealer uses this to update configuration
+    function panic() external;
+    function unpanic() external;
 }
 
 abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
@@ -30,10 +31,12 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
     }
     struct PoolInfo {
         IERC20 want; // Address of the want token.
+        bool paused; //vault is paused?
         IStrategy strat; // Strategy address that will auto compound want tokens
-        uint256 sharesTotal;
+        bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
+        VaultFees fees;
         mapping (address => UserInfo) user;
-        bool overrideDefaults; // strategy's fee config doesn't change with the vaulthealer's default
+        uint256 sharesTotal;
         bytes data;
     }
     struct PendingDeposit {
@@ -44,7 +47,7 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
-    
+    uint8 public withdrawFeeRate; // in basis points: 255 = 2.55% max possible withdrawal fee
     
     //pid+1 for any of our strategies. +1 allows us to distinguish pid 0 from an unauthorized address
     mapping(address => uint) private _strats;
@@ -56,6 +59,8 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
     event SetDefaultFail(uint pid);
     event SetFees(uint pid, VaultFees _fees);
     event ResetFees(uint pid);
+    event Paused(uint pid);
+    event Unpaused(uint pid);
     
     constructor(VaultFees memory _fees) {
         _fees.check();
@@ -125,40 +130,94 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         return pidPlusOne - 1;
     }
     
+    function getFees(uint pid) public view returns (VaultFees memory) {
+        PoolInfo storage pool = _poolInfo[pid];
+        if (pool.overrideDefaultFees) 
+            return pool.fees;
+        else
+            return defaultFees;
+    }
+    
      function setDefaultFees(VaultFees calldata _fees) external onlyOwner {
         defaultFees = _fees;
         emit SetDefaultFees(_fees);
         
         for (uint i; i < _poolInfo.length; i++) {
-            if (_poolInfo[i].overrideDefaults) continue;
+            if (_poolInfo[i].overrideDefaultFees) continue;
             try _poolInfo[i].strat.setFees(_fees) {}
             catch { emit SetDefaultFail(i); }
         }
     }   
     function setFees(uint _pid, VaultFees calldata _fees) external onlyOwner {
-        _poolInfo[_pid].overrideDefaults = true;
-        _poolInfo[_pid].strat.setFees(_fees);
+        _poolInfo[_pid].overrideDefaultFees = true;
+        _poolInfo[_pid].fees = _fees;
         emit SetFees(_pid, _fees);
     }
     function resetFees(uint _pid) external onlyOwner {
-        _poolInfo[_pid].overrideDefaults = false;
-        _poolInfo[_pid].strat.setFees(defaultFees);
+        _poolInfo[_pid].overrideDefaultFees = false;
+        delete _poolInfo[_pid].fees;
         emit ResetFees(_pid);
     }
     
     function earnAll() external nonReentrant {
         for (uint256 i; i < _poolInfo.length; i++) {
-            try _poolInfo[i].strat.earn(_msgSender()) {}
-            catch {}
+            if (!paused(i)) {
+                try _poolInfo[i].strat.earn(_msgSender()) {}
+                catch {}
+            }
         }
     }
 
     function earnSome(uint256[] memory pids) external nonReentrant {
         for (uint256 i; i < pids.length; i++) {
-            if (_poolInfo.length >= pids[i]) {
+            if (_poolInfo.length >= pids[i] && !paused(pids[i])) {
                 try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
                 catch {}
             }
         }
+    }
+    function earn(uint256 pid) external nonReentrant whenNotPaused(pid) {
+        _poolInfo[pid].strat.earn(_msgSender());
+    }
+    
+    
+    //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
+    ///////////////////////
+    function pause(uint pid) external onlyOwner {
+        _pause(pid);
+    }
+    function unpause(uint pid) external onlyOwner {
+        _unpause(pid);
+    }
+    function panic(uint pid) external onlyOwner {
+        _pause(pid);
+        _poolInfo[pid].strat.panic();
+    }
+    function unpanic(uint pid) external onlyOwner {
+        _unpause(pid);
+        _poolInfo[pid].strat.unpanic();
+    }
+    
+    function paused(address _strat) external view returns (bool) {
+        return paused(findPid(_strat));
+    }
+    function paused(uint pid) public view returns (bool) {
+        return _poolInfo[pid].paused;
+    }
+    modifier whenNotPaused(uint pid) {
+        require(!paused(pid), "Pausable: paused");
+        _;
+    }
+    modifier whenPaused(uint pid) {
+        require(paused(pid), "Pausable: not paused");
+        _;
+    }
+    function _pause(uint pid) internal virtual whenNotPaused(pid) {
+        _poolInfo[pid].paused = true;
+        emit Paused(pid);
+    }
+    function _unpause(uint pid) internal virtual whenPaused(pid) {
+        _poolInfo[pid].paused = false;
+        emit Unpaused(pid);
     }
 }

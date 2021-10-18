@@ -110,22 +110,6 @@ library LibVaultSwaps {
         liquidity = IUniPair(address(pair)).mint(address(this));
     }
     
-    function collectWithdrawFee(VaultFees storage _fees, uint _wantAmt) internal returns (uint) {
-        uint256 withdrawFee = FullMath.mulDiv(
-            _wantAmt,
-            _fees.withdraw.rate,
-            FEE_MAX
-        );
-        
-        //if receiver is 0, strategy keeps fee
-        address receiver = _fees.withdraw.receiver;
-        if (receiver != address(0)) {
-            try IERC20(_fees.withdraw.token).transfer(receiver, withdrawFee) {}
-            catch {}
-        }
-        return _wantAmt - withdrawFee;
-    }
-    
     function wnative(IUniRouter02 router) private pure returns (IERC20) {
         try IUniRouter02(router).WETH() returns (address weth) { //use router's wnative
             return IERC20(weth);

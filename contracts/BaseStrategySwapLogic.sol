@@ -54,8 +54,12 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             _lpTokenLength = 1;
         }
         lpTokenLength = _lpTokenLength;
-        
-        vaultFees.withdraw.token = _wantToken;
+    }
+    
+    modifier whenEarnIsReady { //returns without action if earn is not ready
+        if (block.number >= lastEarnBlock + settings.minBlocksBetweenEarns && !paused()) {
+            _;
+        }
     }
     
     function buyBackRate() external view returns (uint) { 

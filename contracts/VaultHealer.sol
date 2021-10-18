@@ -7,7 +7,7 @@ import "./Magnetite.sol";
 
 contract VaultHealer is VaultHealerGate, VaultHealerERC20, Magnetite {
     
-    constructor(VaultFees memory _fees)
+    constructor(VaultFees memory _fees, uint8 _withdrawFee)
         VaultHealerBase(_fees) {}
     
     //allows strats to generate paths

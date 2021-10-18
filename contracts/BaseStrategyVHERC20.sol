@@ -41,7 +41,7 @@ abstract contract BaseStrategyVHERC20 is BaseStrategyVaultHealer, IERC20 {
         address recipient,
         uint256 amount
     ) external override returns (bool) {
-        require(vaultHealer.erc20TransferFrom(sender, recipient, amount));
+        require(vaultHealer.erc20TransferFrom(msg.sender, sender, recipient, amount));
         emit Transfer(sender, recipient, amount);
         return true;
     }

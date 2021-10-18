@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./PausableTL.sol";
-
 import "./libs/LibVaultConfig.sol";
-abstract contract BaseStrategy is PausableTL {
+abstract contract BaseStrategy {
     using LibVaultConfig for VaultSettings;
     
     VaultSettings public settings; //the major storage variables used to configure the vault
     
     uint256 public lastEarnBlock = block.number;
+    
+    uint constant PANIC_LOCK_DURATION = 6 hours;
+    uint public panicLockExpiry; //panic can only happen again after the time has elapsed
     
     event SetSettings(VaultSettings _settings);
     
@@ -20,12 +21,6 @@ abstract contract BaseStrategy is PausableTL {
     }
 
     modifier onlyGov virtual; //"gov"
-    
-    modifier whenEarnIsReady { //returns without action if earn is not ready
-        if (block.number >= lastEarnBlock + settings.minBlocksBetweenEarns && !paused()) {
-            _;
-        }
-    }
 
     function vaultSharesTotal() public virtual view returns (uint256);
     function _vaultDeposit(uint256 _amount) internal virtual;
@@ -35,6 +30,13 @@ abstract contract BaseStrategy is PausableTL {
     function _farm() internal virtual;
     function _wantBalance() internal virtual view returns (uint256);
 
+    //support VH-based pause or standard openzeppelin method
+    function _pause() internal virtual;
+    function _unpause() internal virtual;
+    function paused() public virtual returns (bool) {
+        return false;
+    }
+    
     function wantLockedTotal() public view returns (uint256) {
         return _wantBalance() + vaultSharesTotal();
     }
@@ -57,6 +59,7 @@ abstract contract BaseStrategy is PausableTL {
         _unpause();
     }
     function panic() external onlyGov {
+        require (panicLockExpiry < block.timestamp, "panic once per 6 hours");
         _pause();
         _emergencyVaultWithdraw();
     }
