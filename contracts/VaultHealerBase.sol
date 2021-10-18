@@ -26,6 +26,7 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         uint256 totalDeposits;
         uint256 totalWithdrawals;
         mapping (address => uint256) allowances; //for ERC20 transfers
+        bytes data;
     }
     struct PoolInfo {
         IERC20 want; // Address of the want token.
@@ -33,6 +34,7 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         uint256 sharesTotal;
         mapping (address => UserInfo) user;
         bool overrideDefaults; // strategy's fee config doesn't change with the vaulthealer's default
+        bytes data;
     }
     struct PendingDeposit {
         IERC20 token;
@@ -142,5 +144,21 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         _poolInfo[_pid].overrideDefaults = false;
         _poolInfo[_pid].strat.setFees(defaultFees);
         emit ResetFees(_pid);
+    }
+    
+    function earnAll() external nonReentrant {
+        for (uint256 i; i < _poolInfo.length; i++) {
+            try _poolInfo[i].strat.earn(_msgSender()) {}
+            catch {}
+        }
+    }
+
+    function earnSome(uint256[] memory pids) external nonReentrant {
+        for (uint256 i; i < pids.length; i++) {
+            if (_poolInfo.length >= pids[i]) {
+                try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
+                catch {}
+            }
+        }
     }
 }

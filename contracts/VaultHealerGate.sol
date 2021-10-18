@@ -75,22 +75,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function withdrawAll(uint256 _pid) external nonReentrant {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
-
-    function earnAll() external nonReentrant {
-        for (uint256 i; i < _poolInfo.length; i++) {
-            try _poolInfo[i].strat.earn(_msgSender()) {}
-            catch {}
-        }
-    }
-
-    function earnSome(uint256[] memory pids) external nonReentrant {
-        for (uint256 i; i < pids.length; i++) {
-            if (_poolInfo.length >= pids[i]) {
-                try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
-                catch {}
-            }
-        }
-    }
+    
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint _amount) external {
         require(isStrat(msg.sender));
