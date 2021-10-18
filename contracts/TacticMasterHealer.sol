@@ -26,8 +26,8 @@ contract TacticMasterHealer is ITactic {
         IMasterchef(masterchefAddress).withdraw(pid, 0);
     }
     
-    function vaultSharesTotal(address masterchefAddress, uint pid, address strategyAddress) external override view returns (uint256) {
-        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, strategyAddress);
+    function vaultSharesTotal(address masterchefAddress, uint pid) external override view returns (uint256) {
+        (uint256 amount,) = IMasterchef(masterchefAddress).userInfo(pid, msg.sender);
         return amount;
     }
     

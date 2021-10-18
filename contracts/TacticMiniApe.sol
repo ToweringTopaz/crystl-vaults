@@ -25,8 +25,8 @@ contract TacticMiniApe is ITactic {
     function _vaultHarvest(address masterchefAddress, uint pid) external override {
         IMiniChefV2(masterchefAddress).harvest(pid, address(this));
     }
-    function vaultSharesTotal(address masterchefAddress, uint pid, address strategyAddress) external override view returns (uint256) {
-        (uint256 amount,) = IMiniChefV2(masterchefAddress).userInfo(pid, strategyAddress);
+    function vaultSharesTotal(address masterchefAddress, uint pid) external override view returns (uint256) {
+        (uint256 amount,) = IMiniChefV2(masterchefAddress).userInfo(pid, msg.sender);
         return amount;
     }
     function _emergencyVaultWithdraw(address masterchefAddress, uint pid) external override {

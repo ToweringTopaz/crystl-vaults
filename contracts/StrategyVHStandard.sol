@@ -32,7 +32,7 @@ contract StrategyVHStandard is BaseStrategyVHERC20 {
     }
     
     function vaultSharesTotal() public override view returns (uint256) {
-        return tactic.vaultSharesTotal(masterchef, pid, address(this));
+        return tactic.vaultSharesTotal(masterchef, pid);
     }
     
     function _vaultDeposit(uint256 _amount) internal override {

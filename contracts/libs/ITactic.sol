@@ -7,7 +7,7 @@ interface ITactic {
     function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external;
     function _vaultWithdraw(address masterchefAddress, uint pid, uint256 _amount) external;
     function _vaultHarvest(address masterchefAddress, uint pid) external;
-    function vaultSharesTotal(address masterchefAddress, uint pid, address strategyAddress) external view returns (uint256);
+    function vaultSharesTotal(address masterchefAddress, uint pid) external view returns (uint256);
     function _emergencyVaultWithdraw(address masterchefAddress, uint pid) external;
     
 }
