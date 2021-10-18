@@ -103,7 +103,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
     function _pause() internal override {}
     function _unpause() internal override {}
-    function paused() public override returns (bool) {
+    function paused() public view override returns (bool) {
         return vaultHealer.paused(address(this));
     }
 }
