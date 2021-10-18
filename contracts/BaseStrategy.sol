@@ -32,7 +32,6 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     address public rewardAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
     address public withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
     address public vaultChefAddress;
-    address public govAddress;
 
     uint256 public lastEarnBlock = block.number;
     uint256 public sharesTotal;
@@ -73,7 +72,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     );
     
     modifier onlyGov() {
-        require(msg.sender == govAddress, "!gov");
+        require(msg.sender == Ownable(vaultChefAddress).owner(), "!gov");
         _;
     }
 
@@ -249,10 +248,6 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     function unpanic() external onlyGov {
         _unpause();
         _farm();
-    }
-
-    function setGov(address _govAddress) external onlyGov {
-        govAddress = _govAddress;
     }
     
     function setSettings(

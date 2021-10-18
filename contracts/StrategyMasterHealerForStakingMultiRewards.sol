@@ -24,7 +24,6 @@ contract StrategyMasterHealerForStakingMultiRewards is BaseStrategyLPDouble {
         address[] memory _token1ToEarnedPath,
         address[] memory _earnedBetaToEarnedPath
     ) {
-        govAddress = msg.sender;
         vaultChefAddress = _configAddress[0];
         masterchefAddress = _configAddress[1];
         uniRouterAddress = _configAddress[2];
