@@ -18,11 +18,9 @@ abstract contract VaultHealerERC20 is VaultHealerBase {
     }
     function erc20Transfer(address sender, address recipient, uint256 amount) external nonReentrant returns (bool) {
         uint pid = findPid(msg.sender); //authenticates as strategy
-        UserInfo storage _sender = _poolInfo[pid].user[sender];
-        UserInfo storage _recipient = _poolInfo[pid].user[recipient];
-        require(_sender.shares >= amount, "VaultHealer: insufficient balance");
-        _sender.shares -= amount;
-        _recipient.shares += amount;
+
+        _transfer(pid, sender, recipient, amount);
+
         return true;
     }
     function erc20Allowance(address owner, address spender) external view returns (uint256) {
@@ -35,18 +33,25 @@ abstract contract VaultHealerERC20 is VaultHealerBase {
         return true;
     }
     function erc20TransferFrom(
+        address spender,
         address sender,
         address recipient,
         uint256 amount
     ) external nonReentrant returns (bool) {
         uint pid = findPid(msg.sender); //authenticates as strategy
         UserInfo storage _sender = _poolInfo[pid].user[sender];
+        require(_sender.allowances[spender] >= amount, "VaultHealer: insufficient allowance");
+        _sender.allowances[spender] -= amount;
+        
+        _transfer(pid, sender, recipient, amount);
+        
+        return true;
+    }
+    function _transfer(uint pid, address sender, address recipient, uint256 amount) private {
+        UserInfo storage _sender = _poolInfo[pid].user[sender];
         UserInfo storage _recipient = _poolInfo[pid].user[recipient];
         require(_sender.shares >= amount, "VaultHealer: insufficient balance");
-        require(_sender.allowances[recipient] >= amount, "VaultHealer: insufficient allowance");
-        _sender.allowances[recipient] -= amount;
         _sender.shares -= amount;
         _recipient.shares += amount;
-        return true;
     }
 }
