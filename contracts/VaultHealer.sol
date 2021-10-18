@@ -14,4 +14,8 @@ contract VaultHealer is VaultHealerGate, VaultHealerERC20, Magnetite {
     function pathAuth() internal override view returns (bool) {
         return super.pathAuth() || isStrat(msg.sender);
     }
+    
+    function setPath(address router, address[] calldata path) external onlyOwner {
+        _setPath(router, path, LibMagnetite.AutoPath.MANUAL);
+    }
 }
