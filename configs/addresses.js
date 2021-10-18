@@ -51,10 +51,11 @@ const tokens = {
                 BNB: '0xa649325aa7c5093d12d6f98eb4378deae68ce23f',
         },
         cronos_testnet: {
-                CRO: '0x0006de65dfb28bd0174878c2bb7b7c8c7303ddcb', //says its an ERC20
-                WCRO: '0x77e66c840e7198c95500f7f547543e1466c5cb2c', //also an ERC20
-                CRX: '0x0006dE65DfB28bD0174878c2Bb7B7C8C7303ddCb', //??same as CRO?
+                WCRO: '0x77e66c840e7198c95500f7f547543e1466c5cb2c', //wrapped CRO - an ERC20
+                CRX: '0x0006dE65DfB28bD0174878c2Bb7B7C8C7303ddCb', //the crodex token - crodex is a dex
                 PHOTON: '0x7a9F89bcef3840eccC218293aEd7B1317CF077c9',
+                USDC: '0xeFd605C7718De6d18Df9a32CAC2379196b1065A8',
+                BUSD: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B', //BUSD Mock
         }
 }
  
@@ -67,8 +68,9 @@ const tokens = {
                 POLYPULSAR_GAMMA_MASTERCHEF: '0xa375495919205251a05f3b259b4d3cc30a4d3ed5',
                 TAKO_MASTERCHEF: '0xB19300246e19929a617C4260189f7B759597B8d8',
                 POLYROLL_MASTERCHEF: '0x3C58EA8D37f4fc6882F678f822E383Df39260937',
-                QUICK_STAKING_REWARDS_QUICK_KOM: '0x2f58B48A013BAde935e43f7bCc31f1378Ae68d55', //actually a StakingRewards contract, specifically for the QUICK-KOM pair
                 APESWAP_MINICHEF: '0x54aff400858Dcac39797a81894D9920f16972D1D',
+                
+                QUICK_STAKING_REWARDS_QUICK_KOM: '0x2f58B48A013BAde935e43f7bCc31f1378Ae68d55', //actually a StakingRewards contract, specifically for the QUICK-KOM pair
                 DOKI_STAKING_REWARDS_AZUKI_MUST: '0xc0a1dFb85734E465C5dadc5683DE58358C906598',
                 DOKI_STAKING_REWARDS_AZUKI_ETH: '0x69cb6f98e45c13a230d292be0a6af93a6521c39b',
                 DOKI_STAKING_REWARDS_DOKI_MUST: '0x2146bac214d9bf2da56c3d4a69b9149e457f9d8c',
@@ -77,7 +79,7 @@ const tokens = {
                 QUICK_STAKING_REWARDS_QUICK_KOM_V2: '0x91061e09e9c7819CBbb92a418240954A4D8a9fed',
          },
          cronos_testnet: {
-
+                PHOTONSWAP_MASTERCHEF: ''
          }
 }
 
@@ -111,6 +113,8 @@ const lps = {
         },
         cronos_testnet: {
                 CRO_CRX_CRODEX_LP: '0xe330F8dD787699f3B033920873458355aCf25619', //pid  = ?
+                WCRO_PHOTON_PHOTON_LP: '0x5bd46c8144C80153F801097eC0c07EbC19E55DcF',
+                WCRO_BUSD_CRONA_LP: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B',
         }
 }
 
@@ -126,6 +130,8 @@ const routers = {
         },
         cronos_testnet: {
                 CRODEX_ROUTER: '0x9e544d8e44ed8d40f658d8563a25bcbd8071ee24', //I think - contract not verified!
+                PHOTONSWAP_ROUTER: '0xbb5ce818AB3afB02d60914e2D1c684B5Df0bA07d',
+                CRONASWAP_ROUTER: '0x211609D726C72F2A2775D3Bd246B82a9D677f12f',
         }
 }
 

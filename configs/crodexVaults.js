@@ -1,27 +1,25 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { BANANA, WMATIC, CRYSTL, DAI, CRO } = tokens.cronos;
+const { WCRO, CRX, USDC } = tokens.cronos_testnet;
 
 const crodexVaults = [
     {
         addresses: [
-            accounts.cronos.PRODUCTION_VAULT_HEALER, // Vault Healer
-            masterChefs.cronos.APESWAP_MINICHEF, // Masterchef
-            routers.cronos.APESWAP_ROUTER, // UniRouter
-            lps.cronos.MATIC_CRYSTL_APE_LP, // Want
-            CRYSTL, // Earned 
-            BANANA, //EarnedBeta
+            accounts.cronos_testnet.PRODUCTION_VAULT_HEALER, // Vault Healer
+            masterChefs.cronos_testnet.APESWAP_MINICHEF, // Masterchef
+            routers.cronos_testnet.APESWAP_ROUTER, // UniRouter
+            lps.cronos_testnet.MATIC_CRO_APE_LP, // Want
+            WCRO, // Earned 
         ],
         strategyConfig: [
             7, // uint256 _pid 
             1, // uint256 tolerance
-            [CRYSTL, WMATIC], // address[] memory _earnedToWmaticPath
-            [CRYSTL, WMATIC, DAI], // address[] memory _earnedToUsdcPath
-            [CRYSTL], // address[] memory _earnedToCrystlPath
-            [CRYSTL, WMATIC], // address[] memory _earnedToToken0Path
-            [CRYSTL], // address[] memory _earnedToToken1Path
-            [WMATIC, CRYSTL], // address[] memory _token0ToEarnedPath
-            [CRYSTL], // address[] memory _token1ToEarnedPath
-            [BANANA, WMATIC, CRYSTL] // address[] memory _EarnedBetaToEarnedPath
+            [WCRO], // address[] memory _earnedToWnativePath
+            [WCRO, USDC], // address[] memory _earnedToUsdcPath
+            [WCRO], // address[] memory _earnedToCrystlPath
+            [WCRO], // address[] memory _earnedToToken0Path
+            [WCRO, CRX], // address[] memory _earnedToToken1Path
+            [WCRO], // address[] memory _token0ToEarnedPath
+            [CRX, WCRO], // address[] memory _token1ToEarnedPath
         ],
     },
     
