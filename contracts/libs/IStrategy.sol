@@ -29,4 +29,7 @@ interface IStrategy {
 
     // Transfer want tokens strategy -> vaultChef
     function withdraw(address _userAddress, uint256 _wantAmt) external returns (uint256);
+    
+    // Returns the strategy's recorded burned amount
+    function burnedAmount() external view returns (uint256);
 }
