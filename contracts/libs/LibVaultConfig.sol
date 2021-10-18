@@ -15,6 +15,7 @@ struct VaultSettings {
 }
 
 struct VaultFees {
+    VaultFee withdraw;
     VaultFee earn; //rate paid to user who called earn()
     VaultFee reward; //"reward" fees on earnings are sent here
     VaultFee burn; //burn address for CRYSTL
@@ -23,10 +24,6 @@ struct VaultFee {
     IERC20 token;
     address receiver;
     uint16 rate;
-}
-struct WithdrawFee {
-    address receiver;
-    uint8 rate;
 }
 
 library LibVaultConfig {
