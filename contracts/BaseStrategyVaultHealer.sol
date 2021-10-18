@@ -108,6 +108,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (sharesRemoved > _userShares) sharesRemoved = _userShares;
         _wantAmt = FullMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
         
+        require(_wantAmt > 0, "nothing to withdraw after slippage");
+        
         // Withdraw fee
         _wantAmt = vaultFees.collectWithdrawFee(_wantAmt);
         

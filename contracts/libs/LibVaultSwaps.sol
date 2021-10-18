@@ -119,8 +119,10 @@ library LibVaultSwaps {
         
         //if receiver is 0, strategy keeps fee
         address receiver = _fees.withdraw.receiver;
-        if (receiver != address(0))
-            IERC20(_fees.withdraw.token).transfer(receiver, withdrawFee);
+        if (receiver != address(0)) {
+            try IERC20(_fees.withdraw.token).transfer(receiver, withdrawFee) {}
+            catch {}
+        }
         return _wantAmt - withdrawFee;
     }
     
