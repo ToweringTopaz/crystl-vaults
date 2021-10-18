@@ -20,7 +20,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _deposit(_pid, _wantAmt, _to);
     }
 
-    function _deposit(uint256 _pid, uint256 _wantAmt, address _to) internal {
+    function _deposit(uint256 _pid, uint256 _wantAmt, address _to) private {
         PoolInfo storage pool = _poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
 
@@ -54,7 +54,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _withdraw(_pid, _wantAmt, _to);
     }
 
-    function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) internal {
+    function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) private {
         PoolInfo storage pool = _poolInfo[_pid];
         UserInfo storage user = pool.user[msg.sender];
 

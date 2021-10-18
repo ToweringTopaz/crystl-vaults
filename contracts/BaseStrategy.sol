@@ -21,14 +21,12 @@ abstract contract BaseStrategy is PausableTL {
 
     modifier onlyGov virtual; //"gov"
     
-    modifier whenEarnIsReady virtual { //returns without action if earn is not ready
+    modifier whenEarnIsReady { //returns without action if earn is not ready
         if (block.number >= lastEarnBlock + settings.minBlocksBetweenEarns && !paused()) {
             _;
         }
     }
-    
-    function earn(address _to) external virtual;
-    function sharesTotal() external virtual view returns (uint256);
+
     function vaultSharesTotal() public virtual view returns (uint256);
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;

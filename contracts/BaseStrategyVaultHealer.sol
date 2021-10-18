@@ -18,7 +18,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         settings.magnetite = Magnetite(_vaultHealerAddress);
     }
     
-    function sharesTotal() public override view returns (uint) {
+    function sharesTotal() external view returns (uint) {
         return vaultHealer.sharesTotal(address(this));
     }
     
@@ -31,9 +31,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         require(msg.sender == address(vaultHealer), "!vaulthealer");
         _;
     }
-    //This is to prevent reentrancy. Earn should be called with the vaulthealer, which has nonReentrant
-    //checks on deposit, withdraw, and earn.
-    function earn(address _to) external override onlyVaultHealer {
+    //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
+    function earn(address _to) external onlyVaultHealer {
         _earn(_to);    
     }
 
