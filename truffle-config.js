@@ -5,6 +5,15 @@ require('dotenv').config();
 const MY_PRIVATE_KEY = process.env.MY_PRIVATE_KEY;
 const PRIVATE_RPC = process.env.PRIVATE_RPC;
 
+const getHDWallet = () => {
+  for (const env of [process.env.MNEMONIC, process.env.PRIVATE_KEY]) {
+    if (env && env !== "") {
+      return env;
+    }
+  }
+  throw Error("Private Key Not Set! Please set up .env");
+}
+
 module.exports = {
   networks: {
     polygon: {
@@ -17,9 +26,19 @@ module.exports = {
       skipDryRun: true,
       gasPrice: 30000000000
     },
+    development: {
+      host: "https://cronos-testnet-3.crypto.org",     // Localhost (default: none)
+      port: 8545,            // Standard Ethereum port (default: none)
+      network_id: "*",       // Any network (default: none)
+    },
     cronos_testnet: {
-      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, "https://cronos-testnet-3.crypto.org:8545"),
+      provider: new HDWalletProvider(MY_PRIVATE_KEY, "https://cronos-testnet-3.crypto.org"), // TODO
       network_id: "*",
+      skipDryRun: true
+    },
+    cassini_cronos_testnet: {
+      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, "https://cassini.crypto.org:8545/"),
+      network_id: 339,
       skipDryRun: true
     }
   },
@@ -32,13 +51,16 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.8.4",    // Fetch exact version from solc-bin (default: truffle's version)
-      settings: {          // See the solidity docs for advice about optimization and evmVersion
-        optimizer: {
-          enabled: true,
-          runs: 200
-        },
-      }
+      version: "0.8.0",    // Fetch exact version from solc-bin (default: truffle's version)
+      // settings: {          // See the solidity docs for advice about optimization and evmVersion
+      //   optimizer: {
+      //     enabled: true,
+      //     runs: 200
+      //   },
+      // }
     },
+  },
+  db: {
+    enabled: false
   }
 }

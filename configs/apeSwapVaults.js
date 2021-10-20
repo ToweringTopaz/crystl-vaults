@@ -3,7 +3,7 @@ const { BANANA, WMATIC, CRYSTL, DAI, BNB, USDC, WBTC, USDT, WETH } = tokens.poly
 
 const apeSwapVaults = [
     {
-        addresses: [
+        addresses: [ //0
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
@@ -25,7 +25,7 @@ const apeSwapVaults = [
         ],
     },
     {
-        addresses: [
+        addresses: [ //1
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
@@ -47,7 +47,7 @@ const apeSwapVaults = [
         ],
     },
     {
-        addresses: [
+        addresses: [ //2
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
@@ -69,7 +69,7 @@ const apeSwapVaults = [
         ],
     },
     {
-        addresses: [
+        addresses: [ //3
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
@@ -91,7 +91,7 @@ const apeSwapVaults = [
         ],
     },
     {
-        addresses: [
+        addresses: [ //4
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
@@ -113,7 +113,7 @@ const apeSwapVaults = [
         ],
     },
     {
-        addresses: [
+        addresses: [ //5
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
@@ -135,7 +135,7 @@ const apeSwapVaults = [
         ],
     },
     {
-        addresses: [
+        addresses: [ //6
             accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
