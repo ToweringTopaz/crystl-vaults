@@ -32,7 +32,7 @@ module.exports = {
       network_id: "*",       // Any network (default: none)
     },
     cronos_testnet: {
-      provider: new HDWalletProvider(MY_PRIVATE_KEY, "https://cronos-testnet-3.crypto.org"), // TODO
+      provider: new HDWalletProvider(getHDWallet(), "https://cronos-testnet-3.crypto.org:8545/"), // TODO
       network_id: "*",
       skipDryRun: true
     },
