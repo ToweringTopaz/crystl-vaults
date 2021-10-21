@@ -156,6 +156,28 @@ const apeSwapVaults = [
             [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
         ],
     },
+    {
+        addresses: [ //7
+            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+            routers.polygon.APESWAP_ROUTER, // UniRouter
+            lps.polygon.WMATIC_DAI_APE_LP, // Want
+            WMATIC, // Earned
+            BANANA, //EarnedBeta
+        ],
+        strategyConfig: [
+            2, // uint256 _pid 
+            1, // uint256 tolerance
+            [WMATIC], // address[] memory _earnedToWmaticPath
+            [WMATIC, DAI], // address[] memory _earnedToUsdcPath
+            [WMATIC, CRYSTL], // address[] memory _earnedToCrystlPath
+            [WMATIC], // address[] memory _earnedToToken0Path
+            [WMATIC, DAI], // address[] memory _earnedToToken1Path
+            [WMATIC], // address[] memory _token0ToEarnedPath
+            [DAI, WMATIC], // address[] memory _token1ToEarnedPath
+            [BANANA, WMATIC] // address[] memory _EarnedBetaToEarnedPath
+        ],
+    },
 ]
 
 module.exports = {

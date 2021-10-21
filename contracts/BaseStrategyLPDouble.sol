@@ -24,7 +24,7 @@ abstract contract BaseStrategyLPDouble is BaseStrategyLP {
 
         // Converts farm tokens into want tokens
         uint256 earnedBetaAmt = IERC20(earnedBetaAddress).balanceOf(address(this));
-        uint256 dustAmt = 10000000000000; //1e13
+        uint256 dustAmt = 1000000000000000; //1e15
         
         //converts earnedBeta into Earned
         if (earnedBetaAmt > 0) {

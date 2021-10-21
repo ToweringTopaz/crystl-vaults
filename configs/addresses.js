@@ -110,6 +110,7 @@ const lps = {
                 WMATIC_WBTC_APE_LP: '0xe82635a105c520fd58e597181cbf754961d51e3e', //pid = 4
                 WMATIC_WETH_APE_LP: '0x6cf8654e85ab489ca7e70189046d507eba233613', //pid = 1
                 WMATIC_USDT_APE_LP: '0x65d43b64e3b31965cd5ea367d4c2b94c03084797', //pid = 3
+                WMATIC_DAI_APE_LP: '0xd32f3139a214034a0f9777c87ee0a064c1ff6ae2', //pid = 2
         },
         cronos_testnet: {
                 CRO_CRX_CRODEX_LP: '0xe330F8dD787699f3B033920873458355aCf25619', //pid  = ?

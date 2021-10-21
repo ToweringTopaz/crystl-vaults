@@ -1,13 +1,14 @@
 // import hre from "hardhat";
 
 const { tokens } = require('../configs/addresses.js');
-const { WMATIC } = tokens.polygon;
-const { expect, assert } = require('chai');
+const { WMATIC, CRYSTL, DAI } = tokens.polygon;
+const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
 const { token_abi } = require('./abi_files/token_abi.js');
 const { vaultHealer_abi } = require('./abi_files/vaultHealer_abi.js'); //TODO - this would have to change if we change the vaulthealer
 const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
+const { IMinichef_abi } = require('./abi_files/IMinichef_abi.js');
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -18,9 +19,9 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[6].addresses, ...apeSwapVaults[6].strategyConfig];
-const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[6].addresses
-const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[6].strategyConfig;
+const DEPLOYMENT_VARS = [apeSwapVaults[7].addresses, ...apeSwapVaults[7].strategyConfig];
+const [VAULT_HEALER, MINICHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[7].addresses
+const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[7].strategyConfig;
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
@@ -51,24 +52,23 @@ describe('StrategyMasterHealer contract', () => {
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("450") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("450") })
         }
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("100") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("450") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("100") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("450") })
         }
     });
 
     describe(`Testing deployment:
     `, () => {
         it('Should set the pid such that our want tokens correspond with the masterchef pools LP tokens', async () => {
-            masterchef = await ethers.getContractAt(IMasterchef_abi, MASTERCHEF); 
-            poolInfo = await masterchef.poolInfo(PID);
-            lpToken = poolInfo[0];
+            minichef = await ethers.getContractAt(IMinichef_abi, MINICHEF); 
+            lpToken = await minichef.lpToken(PID);
             expect(lpToken).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
         })
 
@@ -122,7 +122,7 @@ describe('StrategyMasterHealer contract', () => {
             balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             
-            for (i=0; i<10;i++) {
+            for (i=0; i<1000;i++) {
                 await ethers.provider.send("evm_mine"); //creates a 10 block delay
             }
 
