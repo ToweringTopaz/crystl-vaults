@@ -8,15 +8,21 @@ import "./VaultHealerBase.sol";
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
     
+    struct PendingDeposit {
+        IERC20 token;
+        address from;
+        uint256 amount;
+    }
+    
     PendingDeposit private pendingDeposit;
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrant whenNotPaused(_pid) {
+    function deposit(uint256 _pid, uint256 _wantAmt) external nonReentrantPid(_pid) whenNotPaused(_pid) {
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant whenNotPaused(_pid) {
+    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrantPid(_pid) whenNotPaused(_pid) {
         _deposit(_pid, _wantAmt, _to);
     }
 
@@ -45,12 +51,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant {
+    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrantPid(_pid) {
         _withdraw(_pid, _wantAmt, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant {
+    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrantPid(_pid) {
         _withdraw(_pid, _wantAmt, _to);
     }
 
@@ -74,7 +80,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) external nonReentrant {
+    function withdrawAll(uint256 _pid) external nonReentrantPid(_pid) {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
     

@@ -17,7 +17,7 @@ interface IStrategy {
     function unpanic() external;
 }
 
-abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
+abstract contract VaultHealerBase is Ownable {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
 
@@ -38,11 +38,6 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         mapping (address => UserInfo) user;
         uint256 sharesTotal;
         bytes data;
-    }
-    struct PendingDeposit {
-        IERC20 token;
-        address from;
-        uint256 amount;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
@@ -66,6 +61,33 @@ abstract contract VaultHealerBase is ReentrancyGuard, Ownable {
         _fees.check();
         defaultFees = _fees;
         emit SetDefaultFees(_fees);
+        
+        _reentrancyStatus = _NOT_ENTERED;
+    }
+    
+    uint private _reentrancyStatus;
+    uint private constant _NOT_ENTERED = type(uint).max;
+    uint private constant _ENTERED = type(uint).max - 1;
+    
+    //identical in effect to OpenZeppelin nonReentrant
+    modifier nonReentrant() {
+        require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
+        _reentrancyStatus = _ENTERED;
+        _;
+        _reentrancyStatus = _NOT_ENTERED;
+    }
+    //identical in effect to OpenZeppelin nonReentrant but stores the pid
+    modifier nonReentrantPid(uint pid) {
+        require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
+        require (pid < _poolInfo.length, "VaultHealer: bad pid");
+        _reentrancyStatus = pid + 1;
+        _;
+        _reentrancyStatus = _NOT_ENTERED;
+    }
+    //function call must be a reentrant call by the strategy associated with the PID stored at _reentrancyStatus
+    modifier onlyReentrantPid() {
+        require(_reentrancyStatus == _strats[msg.sender]);
+        _;
     }
 
     function poolLength() external view returns (uint256) {
