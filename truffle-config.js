@@ -37,8 +37,8 @@ module.exports = {
       skipDryRun: true
     },
     cassini_cronos_testnet: {
-      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, "https://cassini.crypto.org:8545/"),
-      network_id: 339,
+      provider: () => new HDWalletProvider(getHDWallet(), "https://cassini.crypto.org:8545/"),
+      network_id: "*",
       skipDryRun: true
     }
   },

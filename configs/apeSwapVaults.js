@@ -158,7 +158,7 @@ const apeSwapVaults = [
     },
     {
         addresses: [ //7
-            accounts.polygon.PRODUCTION_VAULT_HEALER, // Vault Healer
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
             masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
             routers.polygon.APESWAP_ROUTER, // UniRouter
             lps.polygon.WMATIC_DAI_APE_LP, // Want
