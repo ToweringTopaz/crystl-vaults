@@ -8,12 +8,12 @@ const accounts = {
                 KINGD_TEST_VAULT_HEALER: '0x5FcC2Ead048a707D6b5AE273e481E71C63330084',
         },
         cronos_testnet: {
-                ADMIN_ADDRESS: "",
-                FEE_ADDRESS: "",
-                NEW_TEST_VAULT_HEALER: '',
+                ADMIN_ADDRESS: "0x94b93044f635f6E12456374EC1C2EeaE6D8eD945",
+                FEE_ADDRESS: "0x94b93044f635f6E12456374EC1C2EeaE6D8eD945",
+                RICH_TEST_VAULT_HEALER: '0x8Eb25Aa9d759855dFA401770Ec7F2a633956C15f',
                 STAGING_VAULT_HEALER: '',
                 PRODUCTION_VAULT_HEALER: '',
-                KINGD_TEST_VAULT_HEALER: '',
+                TOPAZ_TEST_VAULT_HEALER: '0x3692C4BA0D4d8984b1c525A4165dAB8f62006788',
         }
 }
  
@@ -54,8 +54,9 @@ const tokens = {
                 WCRO: '0x77e66c840e7198c95500f7f547543e1466c5cb2c', //wrapped CRO - an ERC20
                 CRX: '0x0006dE65DfB28bD0174878c2Bb7B7C8C7303ddCb', //the crodex token - crodex is a dex
                 PHOTON: '0x7a9F89bcef3840eccC218293aEd7B1317CF077c9',
-                USDC: '0xeFd605C7718De6d18Df9a32CAC2379196b1065A8',
+                USDC: '0x25f0965F285F03d6F6B3B21c8EC3367412Fd0ef6',
                 BUSD: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B', //BUSD Mock
+                CRONA: '0x27b9843E2B1566a99314902F1a6c77AAA98bd9DD',
         }
 }
  
@@ -79,7 +80,9 @@ const tokens = {
                 QUICK_STAKING_REWARDS_QUICK_KOM_V2: '0x91061e09e9c7819CBbb92a418240954A4D8a9fed',
          },
          cronos_testnet: {
-                PHOTONSWAP_MASTERCHEF: ''
+                PHOTONSWAP_MASTERCHEF: '',
+                CRONASWAP_MASTERCHEF: '0xeC4ef032Ff5EDC5c384Eb80aE87dC7084C9B2c10',
+                CRODEX_MASTERCHEF: '',
          }
 }
 
@@ -114,8 +117,10 @@ const lps = {
         },
         cronos_testnet: {
                 CRO_CRX_CRODEX_LP: '0xe330F8dD787699f3B033920873458355aCf25619', //pid  = ?
-                WCRO_PHOTON_PHOTON_LP: '0x5bd46c8144C80153F801097eC0c07EbC19E55DcF',
-                WCRO_BUSD_CRONA_LP: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B',
+                WCRO_PHOTON_PHOTON_LP: '0x5bd46c8144C80153F801097eC0c07EbC19E55DcF', //on cassini?
+                WCRO_BUSD_CRONA_LP: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B', //finished now?
+                CRONA_CRO_CRONA_LP: '0x12bc93D9e53bBcB5e8485a620754F2A49Ab7dE6a', //pid = 1
+                USDC_CRO_CRONA_LP: '0x3AD39bFD1714D6F9ED2963b46af770183b93D0e2', //pid = 2
         }
 }
 

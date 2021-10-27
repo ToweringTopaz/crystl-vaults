@@ -5,9 +5,9 @@ const crodexVaults = [
     {
         addresses: [
             accounts.cronos_testnet.RICH_TEST_VAULT_HEALER, // Vault Healer
-            masterChefs.cronos_testnet.APESWAP_MINICHEF, // Masterchef
-            routers.cronos_testnet.APESWAP_ROUTER, // UniRouter
-            lps.cronos_testnet.MATIC_CRO_APE_LP, // Want
+            masterChefs.cronos_testnet.PHOTONSWAP_MASTERCHEF, // Masterchef
+            routers.cronos_testnet.PHOTONSWAP_ROUTER, // UniRouter
+            lps.cronos_testnet.WCRO_PHOTON_PHOTON_LP, // Want
             WCRO, // Earned 
         ],
         strategyConfig: [
