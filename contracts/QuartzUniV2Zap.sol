@@ -96,10 +96,12 @@ contract QuartzUniV2Zap {
             require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
             swapAmountIn = router.getSwapAmount(fullInvestment, reserveA, reserveB);
             swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+
         } else if (token1 == address(tokenIn)) {
             require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
             swapAmountIn = router.getSwapAmount(fullInvestment, reserveB, reserveA);
             swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+            
         } else {
             swapAmountIn = fullInvestment/2;
             
@@ -139,6 +141,8 @@ contract QuartzUniV2Zap {
     }
 
     function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router) private {
+        require(LibQuartz.hasSufficientLiquidity(tokenIn, router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from tokenIn to WNATIVE');
+        require(LibQuartz.hasSufficientLiquidity(tokenOut, router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from WNATIVE to tokenOut');
         address[] memory path = new address[](3);
         path[0] = tokenIn;
         path[1] = router.WETH();
