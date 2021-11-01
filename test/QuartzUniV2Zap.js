@@ -1,7 +1,7 @@
 // import hre from "hardhat";
 
 const { tokens } = require('../configs/addresses.js');
-const { WMATIC } = tokens.polygon;
+const { WMATIC, CRYSTL } = tokens.polygon;
 const { expect, assert } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
@@ -24,6 +24,7 @@ const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSw
 
 const TOKEN0 = ethers.utils.getAddress(TOKEN0_TO_EARNED_PATH[0]);
 const TOKEN1 = ethers.utils.getAddress(TOKEN1_TO_EARNED_PATH[0]);
+const TOKEN_OTHER = CRYSTL;
 
 describe('StrategyMasterHealer contract', () => {
     before(async () => {
@@ -54,48 +55,19 @@ describe('StrategyMasterHealer contract', () => {
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("3000") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
         }
         if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("3000") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
         }
+
+        await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], owner.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
     });
-
-    describe('Deployment', () => {
-        it('Should set the right VaultHealer address - PRODUCTION_VAULT_HEALER', async () => {
-            expect(await strategyMasterHealer.vaultChefAddress()).to.equal(ethers.utils.getAddress(VAULT_HEALER)); //getAddress ensures that address is checksummed
-        })
-
-        it('Should set the right Masterchef address', async () => {
-            expect(await strategyMasterHealer.masterchefAddress()).to.equal(ethers.utils.getAddress(MASTERCHEF));
-        })
-
-        it('Should set the right Router address', async () => {
-            expect(await strategyMasterHealer.uniRouterAddress()).to.equal(ethers.utils.getAddress(ROUTER));
-        })
-
-        it('Should set the right LP address', async () => {
-            expect(await strategyMasterHealer.wantAddress()).to.equal(ethers.utils.getAddress(LIQUIDITY_POOL));
-        })
-
-        it('Should set the right Reward/Earned address', async () => {
-            expect(await strategyMasterHealer.earnedAddress()).to.equal(ethers.utils.getAddress(EARNED));
-        })
-
-        it('Should set the right pid for the eventual farm it gets vaulted in', async () => {
-            expect(await strategyMasterHealer.pid()).to.equal(PID);
-        })
-
-        it('Should set the right tolerance', async () => { //could do a less than 3 check here?
-            expect(await strategyMasterHealer.tolerance()).to.equal(TOLERANCE);
-        })
-        //and paths too?
-    })
 
     describe('Transactions', () => {
         // Create LPs for the vault
@@ -114,6 +86,37 @@ describe('StrategyMasterHealer contract', () => {
             expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap); //will this work for 2nd Zap? on normal masterchef?
         })
         
+        it('Should zap token1 into the vault (convert to underlying, add liquidity, and stake)', async () => {
+            token1 = await ethers.getContractAt(token_abi, TOKEN1);
+            var token1Balance = await token1.balanceOf(owner.address);
+            await token1.approve(quartzUniV2Zap.address, token1Balance);
+            
+            const vaultSharesTotalBeforeFirstZap = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            poolLength = await vaultHealer.poolLength()
+
+            await quartzUniV2Zap.quartzIn(poolLength-1, 0, token1.address, token1Balance); //To Do - change min in amount from 0
+            
+            const vaultSharesTotalAfterFirstZap = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+
+            expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap); //will this work for 2nd Zap? on normal masterchef?
+        })
+
+        it('Should zap a token that is neither token0 nor token1 into the vault (convert to underlying, add liquidity, and stake)', async () => {
+            // assume(TOKEN_OTHER != TOKEN0 && TOKEN_OTHER != TOKEN1);
+            tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
+            var tokenOtherBalance = await tokenOther.balanceOf(owner.address);
+            await tokenOther.approve(quartzUniV2Zap.address, tokenOtherBalance);
+            
+            const vaultSharesTotalBeforeFirstZap = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            poolLength = await vaultHealer.poolLength()
+
+            await quartzUniV2Zap.quartzIn(poolLength-1, 0, tokenOther.address, tokenOtherBalance); //To Do - change min in amount from 0
+            
+            const vaultSharesTotalAfterFirstZap = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+
+            expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap); //will this work for 2nd Zap? on normal masterchef?
+        })
+
         // Withdraw 100%
         it('Should withdraw remaining balance back to owner, minus withdrawal fee (0.1%)', async () => {
             LPtoken = await ethers.getContractAt(token_abi, LIQUIDITY_POOL);

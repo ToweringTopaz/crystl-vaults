@@ -12,7 +12,7 @@ const chainIds = {
 /////////////////////////////////////////////////////////////////
 
 // Ensure that we have mnemonic phrase set as an environment variable
-const mnemonic = process.env.MNEMONIC;
+const mnemonic = process.env.MY_MNEMONIC;
 if (!mnemonic) {
   throw new Error("Please set your MNEMONIC in a .env file");
 }

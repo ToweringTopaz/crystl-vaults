@@ -16,6 +16,7 @@
 pragma solidity ^0.8.0;
 
 import "./libs/LibQuartz.sol";
+import "./libs/IUniswapV2Factory.sol";
 
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;
@@ -81,31 +82,40 @@ contract QuartzUniV2Zap {
     }
 
     function _swapAndStake(uint pid, uint256 tokenAmountOutMin, IERC20 tokenIn) private {
-        (IUniRouter02 router,,IUniswapV2Pair pair) = vaultHealer.getRouterAndPair(pid);
-
-        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
-        require(reserveA > MINIMUM_AMOUNT && reserveB > MINIMUM_AMOUNT, 'Quartz: Liquidity pair reserves too low');
+        (IUniRouter02 router,,IUniswapV2Pair pair) = vaultHealer.getRouterAndPair(pid);        
         
         address token0 = pair.token0();
         address token1 = pair.token1();
+        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
-        address[] memory path = new address[](2);
-        path[0] = address(tokenIn);
         uint256 swapAmountIn;
         uint256 fullInvestment = IERC20(tokenIn).balanceOf(address(this));
-        
+        _approveTokenIfNeeded(address(tokenIn), router);
+
         if (token0 == address(tokenIn)) {
-            path[1] = token1;
+            require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
             swapAmountIn = router.getSwapAmount(fullInvestment, reserveA, reserveB);
-        } else {
-            require(token1 == address(tokenIn), 'Quartz: Input token not present in liquidity pair');
-            path[1] = token0;
+            swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+        } else if (token1 == address(tokenIn)) {
+            require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
             swapAmountIn = router.getSwapAmount(fullInvestment, reserveB, reserveA);
+            swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+        } else {
+            swapAmountIn = fullInvestment/2;
+            
+            if(LibQuartz.hasSufficientLiquidity(token0, address(tokenIn), router, MINIMUM_AMOUNT)) {
+                swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+            } else {
+                swapViaWETH(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+            }
+            
+            if(LibQuartz.hasSufficientLiquidity(token1, address(tokenIn), router, MINIMUM_AMOUNT)) {
+                swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+            } else {
+                swapViaWETH(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+            }
         }
         
-        _approveTokenIfNeeded(address(tokenIn), router);
-        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
-
         pair.optimalMint(IERC20(token0), IERC20(token1));
         uint256 amountLiquidity = pair.balanceOf(address(this));
 
@@ -113,7 +123,27 @@ contract QuartzUniV2Zap {
         vaultHealer.deposit(pid, amountLiquidity, msg.sender);
 
         assert(pair.balanceOf(address(this)) == 0);
-        router.returnAssets(path);
+
+        address[] memory tokens = new address[](3);
+        tokens[0] = token0;
+        tokens[1] = token1;
+        tokens[2] = address(tokenIn);
+        router.returnAssets(tokens);
+    }
+
+    function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router) private {
+        address[] memory path = new address[](2);
+        path[0] = tokenIn;
+        path[1] = tokenOut;
+        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
+    }
+
+    function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router) private {
+        address[] memory path = new address[](3);
+        path[0] = tokenIn;
+        path[1] = router.WETH();
+        path[2] = tokenOut;
+        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
     }
 
     function _approveTokenIfNeeded(address token) private {

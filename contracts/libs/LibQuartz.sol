@@ -23,6 +23,7 @@ import "./IVaultHealer.sol";
 import './IUniRouter02.sol';
 import "./IUniswapV2Pair.sol";
 import "./IWETH.sol";
+import "./IUniswapV2Factory.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
@@ -107,6 +108,19 @@ library LibQuartz {
         token0.safeTransfer(address(pair), balance0);
         token1.safeTransfer(address(pair), balance1);
         liquidity = pair.mint(address(this));
+    }
+
+    function hasSufficientLiquidity(address token0, address token1, IUniRouter02 router, uint256 min_amount) internal view returns (bool hasLiquidity) {
+        address factory_address = router.factory();
+        IUniswapV2Factory factory = IUniswapV2Factory(factory_address);
+        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
+        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+
+        if (reserveA > min_amount && reserveB > min_amount) {
+            return hasLiquidity = true;
+        } else {
+            return hasLiquidity = false;
+        }
     }
 
 }
