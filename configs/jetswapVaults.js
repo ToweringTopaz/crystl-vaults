@@ -8,6 +8,10 @@ const jetswapVaults = [
             masterChefs.polygon.JETSWAP_MASTERCHEF, // Masterchef
             routers.polygon.JETSWAP_ROUTER, // UniRouter
             lps.polygon.WBTC_WETH_JET_LP, // Want
+            accounts.polygon.FEE_ADDRESS, //rewardAddress & withdrawFeeAddress
+            accounts.polygon.BUYBACK_ADDRESS,
+            CRYSTL, //would usually be CRYSTL - replace with what in CRONOS?? WCRO for now...
+            WMATIC, //WNATIVE
             PWINGS, // Earned
         ],
         strategyConfig: [

@@ -12,7 +12,7 @@ contract StrategyMasterHealerForStakingMultiRewards is BaseStrategyLPDouble {
     uint256 public pid;
 
     constructor(
-        address[6] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned, earnedBeta
+        address[7] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned, earnedBeta
         uint256 _pid,
         uint256 _tolerance,
         address[] memory _earnedToWmaticPath,
@@ -29,11 +29,19 @@ contract StrategyMasterHealerForStakingMultiRewards is BaseStrategyLPDouble {
         uniRouterAddress = _configAddress[2];
 
         wantAddress = _configAddress[3];
-        token0Address = IUniPair(wantAddress).token0();
-        token1Address = IUniPair(wantAddress).token1();
+        token0Address = _token0ToEarnedPath[0];
+        token1Address = _token1ToEarnedPath[0];
+
+        rewardAddress = _configAddress[4];
+        withdrawFeeAddress = _configAddress[4];
+        buyBackAddress = _configAddress[5];
+
+        crystlAddress = _configAddress[6];
+        wNativeAddress = _earnedToWmaticPath[1];
+
         pid = _pid;
-        earnedAddress = _configAddress[4];
-        earnedBetaAddress = _configAddress[5];
+        earnedAddress = _earnedToWmaticPath[0];
+        earnedBetaAddress = _earnedBetaToEarnedPath[0];
         tolerance = _tolerance;
 
         earnedToWnativePath = _earnedToWmaticPath;

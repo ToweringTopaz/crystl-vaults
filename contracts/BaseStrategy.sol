@@ -25,12 +25,11 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     address public earnedAddress;
 
     address public uniRouterAddress;
-    address public usdAddress = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
-    address public crystlAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64;
-    address public wNativeAddress = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address public crystlAddress; //= 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64; //is used
+    address public wNativeAddress; // = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; //is used 
 
-    address public rewardAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
-    address public withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637;
+    address public rewardAddress; // = 0x5386881b46C37CdD30A748f7771CF95D7B213637; //is used
+    address public withdrawFeeAddress; //= 0x5386881b46C37CdD30A748f7771CF95D7B213637; //is used
     address public vaultChefAddress;
 
     uint256 public lastEarnBlock = block.number;
@@ -38,7 +37,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     uint256 public tolerance;
     uint256 public burnedAmount;
 
-    address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
+    address public buyBackAddress; // = 0x000000000000000000000000000000000000dEaD;
     uint256 public controllerFee = 50; // 0.50%
     uint256 public rewardRate = 50; // 0.50%
     uint256 public buyBackRate = 400; // 4%

@@ -1,5 +1,5 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { CRONA, CRX, USDC, WCRO } = tokens.cronos_testnet;
+const { CRONA, USDC, WCRO } = tokens.cronos_testnet;
 
 const cronaswapVaults = [
     {
@@ -8,7 +8,9 @@ const cronaswapVaults = [
             masterChefs.cronos_testnet.CRONASWAP_MASTERCHEF, // Masterchef
             routers.cronos_testnet.CRONASWAP_ROUTER, // UniRouter
             lps.cronos_testnet.CRONA_CRO_CRONA_LP, // Want
-            CRONA, // Earned 
+            accounts.cronos_testnet.FEE_ADDRESS, //rewardAddress & withdrawFeeAddress
+            accounts.cronos_testnet.BUYBACK_ADDRESS,
+            WCRO, //would usually be CRYSTL - replace with what in CRONOS?? WCRO for now...
         ],
         strategyConfig: [
             1, // uint256 _pid 
@@ -28,7 +30,9 @@ const cronaswapVaults = [
             masterChefs.cronos_testnet.CRONASWAP_MASTERCHEF, // Masterchef
             routers.cronos_testnet.CRONASWAP_ROUTER, // UniRouter
             lps.cronos_testnet.USDC_CRO_CRONA_LP, // Want
-            CRONA, // Earned 
+            accounts.cronos_testnet.FEE_ADDRESS, //rewardAddress & withdrawFeeAddress
+            accounts.cronos_testnet.BUYBACK_ADDRESS,
+            WCRO, //would usually be CRYSTL - replace with what in CRONOS?? WCRO for now... 
         ],
         strategyConfig: [
             2, // uint256 _pid 

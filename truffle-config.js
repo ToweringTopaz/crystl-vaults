@@ -35,6 +35,7 @@ module.exports = {
       provider: new HDWalletProvider(getHDWallet(), "https://cronos-testnet-3.crypto.org:8545/"), // TODO
       network_id: "*",
       skipDryRun: true,
+      timeoutBlocks: 200,
     },
     cassini_cronos_testnet: {
       provider: () => new HDWalletProvider(getHDWallet(), "https://cassini.crypto.org:8545/"),
