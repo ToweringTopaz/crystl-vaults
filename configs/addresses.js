@@ -53,7 +53,7 @@ const tokens = {
                 BNB: '0xa649325aa7c5093d12d6f98eb4378deae68ce23f',
         },
         cronos_testnet: {
-                WCRO: '0x77e66c840e7198c95500f7f547543e1466c5cb2c', //wrapped CRO - an ERC20
+                WCRO: '0xDd7FBd7e655DE4B8eccb2B3254F6B69B569F0A9a', //wrapped CRO - an ERC20
                 CRX: '0x0006dE65DfB28bD0174878c2Bb7B7C8C7303ddCb', //the crodex token - crodex is a dex
                 PHOTON: '0x7a9F89bcef3840eccC218293aEd7B1317CF077c9',
                 USDC: '0x25f0965F285F03d6F6B3B21c8EC3367412Fd0ef6',
