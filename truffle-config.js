@@ -4,14 +4,17 @@ require('dotenv').config();
  //const POLYGON_DEPLOYER_KEY = process.env.POLYGON_DEPLOYER_KEY;
 const MY_PRIVATE_KEY = process.env.MY_PRIVATE_KEY;
 const PRIVATE_RPC = process.env.PRIVATE_RPC;
+const SPEEDY_RPC = process.env.SPEEDY_RPC;
+const POLYGON_PUBLIC_RPC = process.env.POLYGON_PUBLIC_RPC;
 
 module.exports = {
   networks: {
     polygon: {
-      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, PRIVATE_RPC),
+      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, POLYGON_PUBLIC_RPC),
       //provider: () => new HDWalletProvider(POLYGON_DEPLOYER_KEY, `https://matic-mainnet.chainstacklabs.com`),
       //provider: () => new HDWalletProvider(POLYGON_DEPLOYER_KEY, `https://rpc-mainnet.matic.network`),
       network_id: 137,
+      networkCheckTimeout: 1000000,
       confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true,

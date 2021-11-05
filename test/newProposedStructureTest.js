@@ -67,7 +67,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 [ CRYSTL, BURN_ADDRESS, 400 ] //burn fee: crystl to burn address; 4% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(feeConfig);
+        vaultHealer = await VaultHealer.deploy(feeConfig, 10);
         // console.log(vaultHealer.address);
         
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
