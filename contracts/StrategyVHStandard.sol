@@ -6,7 +6,7 @@ import "./libs/ITactic.sol";
 
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract StrategyVHStandard is BaseStrategyVHERC20 {
-    using Address for address;
+    // using Address for address;
     using SafeERC20 for IERC20;
     
     address public immutable masterchef;
