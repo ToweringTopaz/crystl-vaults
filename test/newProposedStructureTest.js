@@ -231,7 +231,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<minBlocksBetweenSwaps+1;i++) {
+            for (i=0; i<minBlocksBetweenSwaps+100;i++) {
                 await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
             }
             console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)

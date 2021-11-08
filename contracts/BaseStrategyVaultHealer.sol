@@ -24,11 +24,11 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
     //The owner of the connected vaulthealer gets administrative power in the strategy, automatically.
     modifier onlyGov() override {
-        //require(msg.sender == vaultHealer.owner() || msg.sender == address(vaultHealer), "!gov");
+        require(msg.sender == vaultHealer.owner() || msg.sender == address(vaultHealer), "!gov");
         _;
     }
     modifier onlyVaultHealer {
-        //require(msg.sender == address(vaultHealer), "!vaulthealer");
+        require(msg.sender == address(vaultHealer), "!vaulthealer");
         _;
     }
     //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
@@ -57,7 +57,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (_sharesTotal > 0) { //mulDiv prevents overflow for certain tokens/amounts
             sharesAdded = FullMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
         }
-        //require(sharesAdded > settings.dust, "deposit: no/dust shares added");
+        require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(address /*_from*/, address /*_to*/, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
