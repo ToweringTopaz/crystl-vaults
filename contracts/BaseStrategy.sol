@@ -14,8 +14,6 @@ import "./libs/IUniRouter02.sol";
 import "./PausableTL.sol";
 import "./libs/IWETH.sol";
 
-import "hardhat/console.sol";
-
 abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     using SafeMath for uint256;
     using Math for uint256;
@@ -25,11 +23,11 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     address public earnedAddress;
 
     address public uniRouterAddress;
-    address public crystlAddress; //= 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64; //is used
+    address public crystlAddress = 0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64; //is used
     address public wNativeAddress; // = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270; //is used 
 
-    address public rewardAddress; // = 0x5386881b46C37CdD30A748f7771CF95D7B213637; //is used
-    address public withdrawFeeAddress; //= 0x5386881b46C37CdD30A748f7771CF95D7B213637; //is used
+    address public rewardAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637; //is used
+    address public withdrawFeeAddress = 0x5386881b46C37CdD30A748f7771CF95D7B213637; //is used
     address public vaultChefAddress;
 
     uint256 public lastEarnBlock = block.number;
@@ -37,7 +35,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     uint256 public tolerance;
     uint256 public burnedAmount;
 
-    address public buyBackAddress; // = 0x000000000000000000000000000000000000dEaD;
+    address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
     uint256 public controllerFee = 50; // 0.50%
     uint256 public rewardRate = 50; // 0.50%
     uint256 public buyBackRate = 400; // 4%
@@ -50,6 +48,7 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     uint256 public constant WITHDRAW_FEE_FACTOR_LL = 9900;
 
     uint256 public slippageFactor = 900; // 10% default slippage tolerance
+    uint96 public dustAmt = 1e15; //has to be at least this to be able to swap back into WBTC!
     uint256 public constant SLIPPAGE_FACTOR_UL = 995;
 
     address[] public earnedToWnativePath;
@@ -61,7 +60,8 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         uint256 _rewardRate,
         uint256 _buyBackRate,
         uint256 _withdrawFeeFactor,
-        uint256 _slippageFactor
+        uint256 _slippageFactor,
+        uint96 dustAmt
     );
 
     event SetAddress(
@@ -254,7 +254,8 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         uint256 _rewardRate,
         uint256 _buyBackRate,
         uint256 _withdrawFeeFactor,
-        uint256 _slippageFactor
+        uint256 _slippageFactor,
+        uint96 _dustAmt
     ) external onlyGov {
         require(_controllerFee.add(_rewardRate).add(_buyBackRate) <= FEE_MAX_TOTAL, "Max fee of 100%");
         require(_withdrawFeeFactor >= WITHDRAW_FEE_FACTOR_LL, "_withdrawFeeFactor too low");
@@ -265,13 +266,15 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         buyBackRate = _buyBackRate;
         withdrawFeeFactor = _withdrawFeeFactor;
         slippageFactor = _slippageFactor;
+        dustAmt = _dustAmt;
 
         emit SetSettings(
             _controllerFee,
             _rewardRate,
             _buyBackRate,
             _withdrawFeeFactor,
-            _slippageFactor
+            _slippageFactor,
+            _dustAmt
         );
     }
 
