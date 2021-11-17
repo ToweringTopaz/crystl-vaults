@@ -29,6 +29,7 @@ library LibVaultSwaps {
         earnedAmt = _earnedAmt;
         // To pay for earn function
         uint256 fee = _earnedAmt * fees.earn.rate / FEE_MAX;
+        // console.log(fees.earn.token);
         safeSwap(settings, fee, _earnedToken, fees.earn.token, _to);
         earnedAmt -= fee;
         console.log("1 - paid for earn function");
@@ -66,8 +67,11 @@ library LibVaultSwaps {
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = settings.magnetite.findAndSavePath(address(settings.router), address(_tokenA), address(_tokenB));
-        
+        //address[] memory path = settings.magnetite.findAndSavePath(address(settings.router), address(_tokenA), address(_tokenB));
+        address[] memory path = new address[](2);
+        path[0] = address(_tokenA);
+        path[1] = address(_tokenB);
+
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
         uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
         

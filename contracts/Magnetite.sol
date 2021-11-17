@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./libs/IUniRouter.sol";
 import "./libs/LibMagnetite.sol";
+import "hardhat/console.sol";
 
 //Automatically generates and stores paths
 contract Magnetite is Ownable {
@@ -23,13 +24,24 @@ contract Magnetite is Ownable {
     function _setPath(address router, address[] calldata _path, LibMagnetite.AutoPath _auto) internal { 
         LibMagnetite._setPath(_paths, router, _path, _auto);
     }
-    function findAndSavePath(address router, address a, address b) external returns (address[] memory path) {
-        path = getPathFromStorage(router, a, b); // [A C E D B]
+    function findAndSavePath(address router, address a, address b) external returns (address path1) {
+        console.log("got into the function");
+        address[] memory path = getPathFromStorage(router, a, b); // [A C E D B]
+        console.log("got past the path function");
         if (path.length == 0) {
+            console.log("path length = 0");
             path = LibMagnetite.generatePath(router, a, b);
-
-            if (pathAuth()) LibMagnetite._setPath(_paths, router, path, LibMagnetite.AutoPath.AUTO);
+            console.log(path[0]);
+            if (pathAuth()) {
+                LibMagnetite._setPath(_paths, router, path, LibMagnetite.AutoPath.AUTO);
+                console.log("came into this pathAuth conditional");
+                console.log(path[0]);
+                console.log(path[1]);
+            }
         }
+        path1 = path[0];
+        console.log(path1);
+        return path1;
     }
     function viewPath(address router, address a, address b) external view returns (address[] memory path) {
         path = getPathFromStorage(router, a, b); // [A C E D B]
