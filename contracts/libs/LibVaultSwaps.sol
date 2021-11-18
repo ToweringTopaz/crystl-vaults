@@ -67,12 +67,22 @@ library LibVaultSwaps {
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
-        //address[] memory path = settings.magnetite.findAndSavePath(address(settings.router), address(_tokenA), address(_tokenB));
-        address[] memory path = new address[](2);
-        path[0] = address(_tokenA);
-        path[1] = address(_tokenB);
+        address[] memory path = settings.magnetite.findAndSavePath(address(settings.router), address(_tokenA), address(_tokenB));
+        
+        /////////////////////////////////////////////////////////////////////////////////////////////
+        //this code snippet below could be removed if findAndSavePath returned a right-sized array //
+        uint256 counter=0;
+        while (path[counter] != address(0)) {
+            counter++;
+        }
+        address[] memory cleanedUpPath = new address[](counter);
+        for (uint256 i=0; i<counter; i++) {
+            cleanedUpPath[i] =path[i];
+        }
+        console.log(cleanedUpPath.length);
+        //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
-        uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, path);
+        uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, cleanedUpPath);
         uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
         
         //allow router to pull the correct amount in
@@ -81,18 +91,18 @@ library LibVaultSwaps {
         if (_tokenB != wnative(settings.router) || _to.isContract() ) {
             if (settings.feeOnTransfer) { //reflect mode on
                 settings.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                    _amountIn, amountOut, path, _to, block.timestamp);
+                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             } else { //reflect mode off
                 settings.router.swapExactTokensForTokens(
-                    _amountIn,amountOut, path, _to, block.timestamp);
+                    _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
             }
         } else { //Non-contract address (extcodesize zero) receives native ETH
             if (settings.feeOnTransfer) { //reflect mode on
                 settings.router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-                    _amountIn, amountOut, path, _to, block.timestamp);
+                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             } else { //reflect mode off
                 settings.router.swapExactTokensForETH(
-                    _amountIn,amountOut, path, _to, block.timestamp);
+                    _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
             }            
         }
 

@@ -27,17 +27,27 @@ describe(`Testing magnetite`, () => {
     describe(`Testing magnetite functions`, () => {
         // Create LPs for the vault
         it('findAndSavePath should take a router address and two token addresses and find a path between them', async () => {
-            // var routerAddress = SUSHISWAP_ROUTER;
-            console.log(routerAddress);
-            // var token1Address = WMATIC;
-            console.log(token1Address);
-            // var token2Address = SUSHI;
-            console.log(token2Address);
 
             var path = await magnetite.findAndSavePath(routerAddress, token1Address, token2Address);
-            
-            console.log(path[0]);
-            console.log(path[1]);
+
+            console.log(path);
+
+            expect(path[0]).to.equal(WMATIC);
+        })
+
+        it('viewPath should find an existing path on the contract and return it', async () => {
+
+            var path = await magnetite.viewPath(routerAddress, token1Address, token2Address);
+
+            console.log(path);
+
+            expect(path[0]).to.equal(WMATIC);
+        })
+
+        it('getPathFromStorage should find an existing path on the contract and return it', async () => {
+
+            var path = await magnetite.getPathFromStorage(routerAddress, token1Address, token2Address);
+
             console.log(path);
 
             expect(path[0]).to.equal(WMATIC);
