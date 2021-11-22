@@ -36,6 +36,7 @@ library LibVaultSwaps {
 
         //distribute rewards
         fee = _earnedAmt * fees.reward.rate / FEE_MAX;
+        console.log(fee);
         safeSwap(settings, fee, _earnedToken, _earnedToken == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
         earnedAmt -= fee;
         console.log("2 - distributed rewards");
@@ -73,8 +74,8 @@ library LibVaultSwaps {
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
         uint256 counter=0;
         console.log(path.length);
-        while (path[counter] != address(0)) {
-            counter++;
+        for (counter; counter<path.length; counter++){
+            if (path[counter]==address(0)) break;
         }
         address[] memory cleanedUpPath = new address[](counter);
         for (uint256 i=0; i<counter; i++) {

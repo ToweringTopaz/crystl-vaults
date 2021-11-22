@@ -13,8 +13,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "hardhat/console.sol";
 
-contract StakingPool is Ownable, Initializable {
+contract StakingPool is Ownable, Initializable, ERC1155Holder {
+    //NOTE: still need to create a way to get tokens off of the contract??
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -25,14 +29,14 @@ contract StakingPool is Ownable, Initializable {
 
     // Info of each pool.
     struct PoolInfo {
-        IERC20 lpToken;           // Address of LP token contract.
+        IERC1155 wantToken;           // Address of want token contract.
         uint256 allocPoint;       // How many allocation points assigned to this pool. Rewards to distribute per block.
         uint256 lastRewardBlock;  // Last block number that Rewards distribution occurs.
         uint256 accRewardTokenPerShare; // Accumulated Rewards per share, times 1e30. See below.
     }
 
     // The stake token
-    IERC20 public STAKE_TOKEN;
+    uint256 public STAKE_TOKEN_PID;
     // The reward token
     IERC20 public REWARD_TOKEN;
 
@@ -52,6 +56,8 @@ contract StakingPool is Ownable, Initializable {
     uint256 public startBlock;
 	// The block number when mining ends.
     uint256 public bonusEndBlock;
+    // The vaultHealer where the staking / want tokens all reside
+    IERC1155 public vaultHealer;
 
     event Deposit(address indexed user, uint256 amount);
     event DepositRewards(uint256 amount);
@@ -62,23 +68,25 @@ contract StakingPool is Ownable, Initializable {
     event EmergencyRewardWithdraw(address indexed user, uint256 amount);
     event EmergencySweepWithdraw(address indexed user, IERC20 indexed token, uint256 amount);
 
-    function initialize(
-        IERC20 _stakeToken,
+  constructor (
+        IERC1155 _vaultHealer,
+        uint256 _stakeTokenPid,
         IERC20 _rewardToken,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
-    ) external initializer
+    )
     {
-        STAKE_TOKEN = _stakeToken;
+        STAKE_TOKEN_PID = _stakeTokenPid;
         REWARD_TOKEN = _rewardToken;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
+        vaultHealer = _vaultHealer;
 
         // staking pool
         poolInfo = PoolInfo({
-            lpToken: _stakeToken,
+            wantToken: _vaultHealer,
             allocPoint: 1000,
             lastRewardBlock: startBlock,
             accRewardTokenPerShare: 0
@@ -139,6 +147,7 @@ contract StakingPool is Ownable, Initializable {
     /// @param _amount The amount of staking tokens to deposit
     function deposit(uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
+        console.log(user.amount);
         uint256 finalDepositAmount = 0;
         updatePool();
         if (user.amount > 0) {
@@ -155,9 +164,9 @@ contract StakingPool is Ownable, Initializable {
             }
         }
         if (_amount > 0) {
-            uint256 preStakeBalance = STAKE_TOKEN.balanceOf(address(this));
-            poolInfo.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            finalDepositAmount = STAKE_TOKEN.balanceOf(address(this)) - preStakeBalance;
+            uint256 preStakeBalance = vaultHealer.balanceOf(address(this), STAKE_TOKEN_PID);
+            poolInfo.wantToken.safeTransferFrom(address(msg.sender), address(this), STAKE_TOKEN_PID, _amount, bytes(""));
+            finalDepositAmount = vaultHealer.balanceOf(address(this), STAKE_TOKEN_PID) - preStakeBalance;
             user.amount = user.amount + finalDepositAmount;
             totalStaked = totalStaked + finalDepositAmount;
         }
@@ -185,7 +194,7 @@ contract StakingPool is Ownable, Initializable {
         }
         if(_amount > 0) {
             user.amount = user.amount - _amount;
-            poolInfo.lpToken.safeTransfer(address(msg.sender), _amount);
+            poolInfo.wantToken.safeTransferFrom(address(this), address(msg.sender), STAKE_TOKEN_PID, _amount, bytes(""));
             totalStaked = totalStaked - _amount;
         }
 
@@ -198,8 +207,8 @@ contract StakingPool is Ownable, Initializable {
     /// @return wei balace of conract
     function rewardBalance() public view returns (uint256) {
         uint256 balance = REWARD_TOKEN.balanceOf(address(this));
-        if (STAKE_TOKEN == REWARD_TOKEN)
-            return balance - totalStaked;
+        // if (STAKE_TOKEN_PID == REWARD_TOKEN) //this is NOT possible now, I think?
+        //     return balance - totalStaked;
         return balance;
     }
 
@@ -218,14 +227,14 @@ contract StakingPool is Ownable, Initializable {
 
     /// @dev Obtain the stake balance of this contract
     function totalStakeTokenBalance() public view returns (uint256) {
-        if (STAKE_TOKEN == REWARD_TOKEN)
-            return totalStaked;
-        return STAKE_TOKEN.balanceOf(address(this));
+        // if (STAKE_TOKEN_PID == REWARD_TOKEN) //TODO - again, check the logic here - can I just comment this out?
+        //     return totalStaked;
+        return vaultHealer.balanceOf(address(this), STAKE_TOKEN_PID);
     }
 
     /// @dev Obtain the stake token fees (if any) earned by reflect token
     function getStakeTokenFeeBalance() public view returns (uint256) {
-        return STAKE_TOKEN.balanceOf(address(this)) - totalStaked;
+        return vaultHealer.balanceOf(address(this), STAKE_TOKEN_PID) - totalStaked;
     }
 
     /* Admin Functions */
@@ -239,7 +248,14 @@ contract StakingPool is Ownable, Initializable {
         /// @dev Remove excess stake tokens earned by reflect fees
     function skimStakeTokenFees() external onlyOwner {
         uint256 stakeTokenFeeBalance = getStakeTokenFeeBalance();
-        STAKE_TOKEN.safeTransfer(msg.sender, stakeTokenFeeBalance);
+        //STAKE_TOKEN_PID.safeTransfer(msg.sender, stakeTokenFeeBalance);
+        vaultHealer.safeTransferFrom(
+        address(this),
+        msg.sender,
+        STAKE_TOKEN_PID,
+        stakeTokenFeeBalance,
+        bytes("")
+    );
         emit SkimStakeTokenFees(msg.sender, stakeTokenFeeBalance);
     }
 
@@ -248,7 +264,7 @@ contract StakingPool is Ownable, Initializable {
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw() external {
         UserInfo storage user = userInfo[msg.sender];
-        poolInfo.lpToken.safeTransfer(address(msg.sender), user.amount);
+        poolInfo.wantToken.safeTransferFrom(address(this), address(msg.sender), STAKE_TOKEN_PID, user.amount, bytes(""));
         totalStaked = totalStaked - user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
@@ -267,7 +283,7 @@ contract StakingPool is Ownable, Initializable {
     ///   Tokens are sent to owner
     /// @param token The address of the BEP20 token to sweep
     function sweepToken(IERC20 token) external onlyOwner {
-        require(address(token) != address(STAKE_TOKEN), "can not sweep stake token");
+        require(address(token) != address(vaultHealer), "can not sweep stake token"); //TODO - check that logic makes sense here? replaced STAKE_TOKEN_ID with vaultHealer
         uint256 balance = token.balanceOf(address(this));
         token.transfer(msg.sender, balance);
         emit EmergencySweepWithdraw(msg.sender, token, balance);
