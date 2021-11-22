@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./BaseStrategyVHERC20.sol";
+import "./BaseStrategyVaultHealer.sol";
 import "./libs/ITactic.sol";
 
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
-contract StrategyVHStandard is BaseStrategyVHERC20 {
+contract StrategyVHStandard is BaseStrategyVaultHealer {
     using Address for address;
     using SafeERC20 for IERC20;
     

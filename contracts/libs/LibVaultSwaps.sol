@@ -72,6 +72,7 @@ library LibVaultSwaps {
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
         uint256 counter=0;
+        console.log(path.length);
         while (path[counter] != address(0)) {
             counter++;
         }

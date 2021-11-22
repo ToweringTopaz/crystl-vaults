@@ -5,7 +5,7 @@ import "./VaultHealerGate.sol";
 import "./VaultHealerERC20.sol";
 import "./Magnetite.sol";
 
-contract VaultHealer is VaultHealerGate, VaultHealerERC20, Magnetite {
+contract VaultHealer is VaultHealerGate, Magnetite {
     
     constructor(VaultFees memory _fees, uint8 _withdrawFee)
         VaultHealerBase(_fees) {}

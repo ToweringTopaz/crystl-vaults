@@ -43,7 +43,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
             uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt, pool.sharesTotal);
             user.shares += sharesAdded;
             pool.sharesTotal += sharesAdded;
-            
+            //we mint tokens for the user via the 1155 contract
+            _mint(
+                _to,
+                _pid, //use the pid of the strategy 
+                sharesAdded,
+                bytes("0") //leave this blank for now?
+            );
+
             pool.user[_to].totalDeposits = _wantAmt - pendingDeposit.amount;
             delete pendingDeposit;
         }
@@ -75,6 +82,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
         
         user.shares -= sharesRemoved;
         pool.sharesTotal -= sharesRemoved;
+        //do we need approval to burn?
+
+        //burn the tokens equal to sharesRemoved
+        _burn(
+            _to,
+            _pid,
+            sharesRemoved
+        );
 
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }

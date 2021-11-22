@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./libs/LibVaultConfig.sol";
 
 interface IStrategy {
@@ -17,7 +18,7 @@ interface IStrategy {
     function unpanic() external;
 }
 
-abstract contract VaultHealerBase is Ownable {
+abstract contract VaultHealerBase is Ownable, ERC1155 {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
 
@@ -57,7 +58,7 @@ abstract contract VaultHealerBase is Ownable {
     event Paused(uint pid);
     event Unpaused(uint pid);
     
-    constructor(VaultFees memory _fees) {
+    constructor(VaultFees memory _fees) ERC1155("") {
         _fees.check();
         defaultFees = _fees;
         emit SetDefaultFees(_fees);
