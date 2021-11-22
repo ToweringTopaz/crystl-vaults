@@ -166,7 +166,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await token0.approve(uniswapRouter.address, token0Balance);
 
             var token0BalanceUser2 = await token0.balanceOf(user2.address);
-            console.log(token0BalanceUser2)
             await token0.connect(user2).approve(uniswapRouter.address, token0BalanceUser2);
 
             token1 = await ethers.getContractAt(token_abi, TOKEN1);
@@ -174,7 +173,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await token1.approve(uniswapRouter.address, token1Balance);
 
             var token1BalanceUser2 = await token1.balanceOf(user2.address);
-            console.log(token1BalanceUser2)
             await token1.connect(user2).approve(uniswapRouter.address, token1BalanceUser2);
 
             await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, user1.address, Date.now() + 900)
@@ -198,15 +196,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         it('Should mint ERC1155 tokens for the user, with the pid of the strategy', async () => {
             userBalanceOfStrategyTokens = await vaultHealer.balanceOf(user1.address, pid);
-            console.log(userBalanceOfStrategyTokens);
             expect(userBalanceOfStrategyTokens).to.be.gt("0") //equal(vaultSharesTotalAfterFirstDeposit); 
         })
 
         it('Should allow user to stake those tokens in the stakingPool, showing a balanceOf in the pool afterwards', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, pid);
             //need to do approval first?
+            await vaultHealer.connect(user1).setApprovalForAll(stakingPool.address, true); //dangerous to approve all forever?
+
             await stakingPool.connect(user1).deposit(userBalanceOfStrategyTokensBeforeStaking);
-            expect(userBalanceOfStakingPool).to.equal(userBalanceOfStrategyTokensBeforeStaking); 
+            user = await stakingPool.userInfo(user1.address);
+            userBalanceOfStakingPool = user.amount;
+            expect(userBalanceOfStakingPool).to.equal(userBalanceOfStrategyTokensBeforeStaking); //will only be true on first deposit?
         })
 
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
