@@ -210,129 +210,152 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(userBalanceOfStakingPool).to.equal(userBalanceOfStrategyTokensBeforeStaking); //will only be true on first deposit?
         })
 
+        it('Should accumulate rewards for the staked user over time', async () => {
+            userRewardDebtAtStart = await stakingPool.pendingReward(user1.address);
+
+            for (i=0; i<100;i++) { //minBlocksBetweenSwaps
+                await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
+                }
+            
+            userRewardDebtAfterTime = await stakingPool.pendingReward(user1.address);;
+            expect(userRewardDebtAfterTime).to.be.gt(userRewardDebtAtStart); //will only be true on first deposit?
+        })
+
+        it('Should should allow the user to unstake their receipt tokens', async () => {
+            user = await stakingPool.userInfo(user1.address);
+            userBalanceOfStakingPoolBeforeWithdrawal = user.amount;
+
+            await stakingPool.connect(user1).withdraw(userBalanceOfStakingPool);
+
+            user = await stakingPool.userInfo(user1.address);
+            userBalanceOfStakingPoolAfterWithdrawal = user.amount;
+            
+            expect(userBalanceOfStakingPoolBeforeWithdrawal).to.be.gt(userBalanceOfStakingPoolAfterWithdrawal); //will only be true on first deposit?
+        })
+
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
         // Check balance to ensure it increased as expected
-        // it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
-        //     const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-        //     crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-        //     daiToken = await ethers.getContractAt(token_abi, DAI);
+        it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
+            const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+            daiToken = await ethers.getContractAt(token_abi, DAI);
 
-        //     balanceCrystlAtBurnAddressBeforeEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
-        //     balanceMaticAtUserAddressBeforeEarn = await user1.getBalance(); //maticToken.balanceOf(user1.address); //CHANGE THIS
+            balanceCrystlAtBurnAddressBeforeEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
+            balanceMaticAtUserAddressBeforeEarn = await user1.getBalance(); //maticToken.balanceOf(user1.address); //CHANGE THIS
 
-        //     balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-        //     balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-        //     console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
-        //     console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
+            balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
+            console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-        //     for (i=0; i<1000;i++) { //minBlocksBetweenSwaps
-        //         await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
-        //     }
+            for (i=0; i<1000;i++) { //minBlocksBetweenSwaps
+                await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
+            }
 
-        //     await vaultHealer.earnSome([poolLength-1]);
-        //     console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
+            await vaultHealer.earnSome([pid]);
+            console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
-        //     vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-        //     console.log(`vaultSharesTotalAfterCallingEarnSome: ${vaultSharesTotalAfterCallingEarnSome}`)
+            vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            console.log(`vaultSharesTotalAfterCallingEarnSome: ${vaultSharesTotalAfterCallingEarnSome}`)
 
-        //     const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
+            const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
 
-        //     expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
-        // })
+            expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
+        })
         
-        // // follow the flow of funds in the transaction to ensure burn, compound fee, and LP creation are all accurate.
-        // it('Should burn a small amount of CRYSTL with each earn, resulting in a small increase in the CRYSTL balance of the burn address', async () => {
-        //     const balanceCrystlAtBurnAddressAfterEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
-        //     expect(balanceCrystlAtBurnAddressAfterEarn).to.be.gt(balanceCrystlAtBurnAddressBeforeEarn);
-        // })
+        // follow the flow of funds in the transaction to ensure burn, compound fee, and LP creation are all accurate.
+        it('Should burn a small amount of CRYSTL with each earn, resulting in a small increase in the CRYSTL balance of the burn address', async () => {
+            const balanceCrystlAtBurnAddressAfterEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
+            expect(balanceCrystlAtBurnAddressAfterEarn).to.be.gt(balanceCrystlAtBurnAddressBeforeEarn);
+        })
 
-        // // will redesign this test once we change the payout to WMATIC - at the moment it's tricky to see the increase in user's matic balance, as they also pay out gas
-        // // it('Should pay a small amount of MATIC to the user with each earn, resulting in a small increase in the MATIC balance of the user', async () => {
-        // //     const balanceMaticAtUserAddressAfterEarn = await user1.getBalance();
-        // //     console.log(balanceMaticAtUserAddressBeforeEarn);
-        // //     console.log(balanceMaticAtUserAddressAfterEarn);
-        // //     expect(balanceMaticAtUserAddressAfterEarn).to.be.gt(balanceMaticAtUserAddressBeforeEarn);        
-        // // }) 
+        // will redesign this test once we change the payout to WMATIC - at the moment it's tricky to see the increase in user's matic balance, as they also pay out gas
+        // it('Should pay a small amount of MATIC to the user with each earn, resulting in a small increase in the MATIC balance of the user', async () => {
+        //     const balanceMaticAtUserAddressAfterEarn = await user1.getBalance();
+        //     console.log(balanceMaticAtUserAddressBeforeEarn);
+        //     console.log(balanceMaticAtUserAddressAfterEarn);
+        //     expect(balanceMaticAtUserAddressAfterEarn).to.be.gt(balanceMaticAtUserAddressBeforeEarn);        
+        // }) 
 
-        // it('Should pay a small amount to the rewardAddress with each earn, resulting in a small increase in CRYSTL or DAI balance of the rewardAddress', async () => {
-        //     const balanceCrystlAtFeeAddressAfterEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-        //     const balanceDaiAtFeeAddressAfterEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-        //     expect(balanceCrystlAtFeeAddressAfterEarn.add(balanceDaiAtFeeAddressAfterEarn)).to.be.gt(balanceCrystlAtFeeAddressBeforeEarn.add(balanceDaiAtFeeAddressBeforeEarn));
-        // })
+        it('Should pay a small amount to the rewardAddress with each earn, resulting in a small increase in CRYSTL or DAI balance of the rewardAddress', async () => {
+            const balanceCrystlAtFeeAddressAfterEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            const balanceDaiAtFeeAddressAfterEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            expect(balanceCrystlAtFeeAddressAfterEarn.add(balanceDaiAtFeeAddressAfterEarn)).to.be.gt(balanceCrystlAtFeeAddressBeforeEarn.add(balanceDaiAtFeeAddressBeforeEarn));
+        })
         
 
-        // // Unstake 50% of LPs. 
-        // // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
-        // it('Should unstake 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
-        //     const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user1.address);
-        //     const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, user1.address);
+        // Unstake 50% of LPs. 
+        // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
+        it('Should unstake 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
+            const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user1.address);
+            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
 
-        //     await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
+            await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
             
-        //     const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(user1.address);
-        //     vaultSharesTotalAfterFirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() 
+            const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(user1.address);
+            vaultSharesTotalAfterFirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() 
 
-        //     expect(LPtokenBalanceAfterFirstWithdrawal.sub(LPtokenBalanceBeforeFirstWithdrawal))
-        //     .to.equal(
-        //         (vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
-        //         // .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-        //         // .mul(vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
-        //         // .div(WITHDRAW_FEE_FACTOR_MAX))
-        //         )
-        //         ;
-        // })
-        // // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
-        // it('Should deposit user2\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
-        //     const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
-        //     await LPtoken.connect(user2).approve(vaultHealer.address, LPtokenBalanceOfUser2BeforeFirstDeposit); //no, I have to approve the vaulthealer surely?
-        //     console.log("lp token approved by user 2")
-        //     await vaultHealer.connect(user2)["deposit(uint256,uint256)"](poolLength-1,LPtokenBalanceOfUser2BeforeFirstDeposit);
-        //     const vaultSharesTotalAfterUser2FirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
-        //     console.log(`deposited ${ethers.utils.formatEther(LPtokenBalanceOfUser2BeforeFirstDeposit)} lp tokens`)
+            expect(LPtokenBalanceAfterFirstWithdrawal.sub(LPtokenBalanceBeforeFirstWithdrawal))
+            .to.equal(
+                (vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
+                // .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                // .mul(vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
+                // .div(WITHDRAW_FEE_FACTOR_MAX))
+                )
+                ;
+        })
+        // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
+        it('Should deposit user2\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
+            const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
+            await LPtoken.connect(user2).approve(vaultHealer.address, LPtokenBalanceOfUser2BeforeFirstDeposit); //no, I have to approve the vaulthealer surely?
+            console.log("lp token approved by user 2")
+            await vaultHealer.connect(user2)["deposit(uint256,uint256)"](pid,LPtokenBalanceOfUser2BeforeFirstDeposit);
+            const vaultSharesTotalAfterUser2FirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log(`deposited ${ethers.utils.formatEther(LPtokenBalanceOfUser2BeforeFirstDeposit)} lp tokens`)
 
-        //     expect(LPtokenBalanceOfUser2BeforeFirstDeposit).to.equal(vaultSharesTotalAfterUser2FirstWithdrawal.sub(vaultSharesTotalAfterFirstWithdrawal)); //will this work for 2nd deposit? on normal masterchef?
-        // })
+            expect(LPtokenBalanceOfUser2BeforeFirstDeposit).to.equal(vaultSharesTotalAfterUser2FirstWithdrawal.sub(vaultSharesTotalAfterFirstWithdrawal)); //will this work for 2nd deposit? on normal masterchef?
+        })
 
-        // // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
-        // it('Should accurately increase vaultSharesTotal upon second deposit by user1', async () => {
-        //     await LPtoken.approve(vaultHealer.address, initialLPtokenBalance);
-        //     const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(user1.address);
-        //     const vaultSharesTotalBeforeSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
+        it('Should accurately increase vaultSharesTotal upon second deposit by user1', async () => {
+            await LPtoken.approve(vaultHealer.address, initialLPtokenBalance);
+            const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(user1.address);
+            const vaultSharesTotalBeforeSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-        //     await vaultHealer["deposit(uint256,uint256)"](poolLength-1, LPtokenBalanceBeforeSecondDeposit); //user1 (default signer) deposits LP tokens into specified pid vaulthealer
+            await vaultHealer["deposit(uint256,uint256)"](pid, LPtokenBalanceBeforeSecondDeposit); //user1 (default signer) deposits LP tokens into specified pid vaulthealer
             
-        //     const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(user1.address);
-        //     const vaultSharesTotalAfterSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0;
+            const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(user1.address);
+            const vaultSharesTotalAfterSecondDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0;
 
-        //     expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.equal(vaultSharesTotalAfterSecondDeposit.sub(vaultSharesTotalBeforeSecondDeposit)); //will this work for 2nd deposit? on normal masterchef?
-        // })
+            expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.equal(vaultSharesTotalAfterSecondDeposit.sub(vaultSharesTotalBeforeSecondDeposit)); //will this work for 2nd deposit? on normal masterchef?
+        })
         
-        // // Withdraw 100%
-        // it('Should withdraw remaining user1 balance back to user1, minus withdrawal fee (0.1%)', async () => {
-        //     const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address);
-        //     const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, user1.address);
+        // Withdraw 100%
+        it('Should withdraw remaining user1 balance back to user1, minus withdrawal fee (0.1%)', async () => {
+            const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address);
+            const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
 
-        //     await vaultHealer["withdraw(uint256,uint256)"](poolLength-1, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
-        //     const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
-        //     UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(poolLength-1, user1.address);
+            const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
+            UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
 
-        //     expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
-        //     .to.equal(
-        //         (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
-        //         // .sub(
-        //         //     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-        //         //     .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
-        //         //     .div(WITHDRAW_FEE_FACTOR_MAX)
-        //         // )
-        //         );
-        // })
+            expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
+            .to.equal(
+                (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                // .sub(
+                //     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                //     .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                //     .div(WITHDRAW_FEE_FACTOR_MAX)
+                // )
+                );
+        })
 
-        // //ensure no funds left in the vault.
-        // it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
-        //     console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
-        //     expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
-        // })
+        //ensure no funds left in the vault.
+        it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
+            console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
+            expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
+        })
         
     })
 })

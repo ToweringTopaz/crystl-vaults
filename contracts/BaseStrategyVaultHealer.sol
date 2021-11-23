@@ -12,6 +12,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultSwaps for VaultFees;    
     
     VaultHealer immutable public vaultHealer;
+    address public stakingPoolAddress;
     
     constructor(address _vaultHealerAddress) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
@@ -65,7 +66,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //User's balance, in want tokens
         uint wantBal = _wantBalance();
         uint wantLockedBefore = wantBal + vaultSharesTotal();
-        uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal);
+        uint256 userWant = FullMath.mulDiv(_userShares+ stakingPool.balanceOf(user), wantLockedBefore, _sharesTotal) ;
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)

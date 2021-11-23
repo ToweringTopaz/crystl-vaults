@@ -3,6 +3,8 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./VaultHealerBase.sol";
+import "hardhat/console.sol";
+
 
 //Handles "gate" functions like deposit/withdraw
 abstract contract VaultHealerGate is VaultHealerBase {
@@ -68,19 +70,38 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) private {
+        //create an instance of pool for the relevant pid, and an instance of user for this pool and the msg.sender
         PoolInfo storage pool = _poolInfo[_pid];
         UserInfo storage user = pool.user[msg.sender];
 
+        //check that user actually has shares in this pid
         require(user.shares > 0, "user.shares is 0");
         
+        //unstake here if need be
+        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress);
+        stakingPool.withdraw(however much is needed: _wantAmt-balanceOf(_to, _pid));
+
+        //check that user is holding sufficient receipt tokens
+        require(balanceOf(_to, _pid) >= _wantAmt/pool.strat.wantLockedTotal()*totalSupply(_pid));
+        // console.log(balanceOf(_to, _pid));
+        // console.log(totalSupply(_pid));
+        // console.log(_wantAmt);
+        // console.log(pool.strat.wantLockedTotal());
         //todo: withdraw fee
         
-        (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
-        
+        //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
+        //TELL THE STRAT HOW MUCH TO WITHDRAW!! - wantAmt, as long as wantAmt is allowed...
+        // (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
+        (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _pid), totalSupply(_pid));
+
+        //this call transfers wantTokens from the strat to the user
         pool.want.transferFrom(address(pool.strat), _to, wantAmt);
+        //updates total withdrawals
         user.totalWithdrawals += wantAmt;
         
+        //updates the users shares in this pid
         user.shares -= sharesRemoved;
+        //updates total shares in this pid
         pool.sharesTotal -= sharesRemoved;
         //do we need approval to burn?
 

@@ -4,7 +4,8 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import "./libs/IStakingPool.sol";
 import "./libs/LibVaultConfig.sol";
 
 interface IStrategy {
@@ -18,7 +19,7 @@ interface IStrategy {
     function unpanic() external;
 }
 
-abstract contract VaultHealerBase is Ownable, ERC1155 {
+abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
 
@@ -39,6 +40,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155 {
         mapping (address => UserInfo) user;
         uint256 sharesTotal;
         bytes data;
+        IStakingPool stakingPool;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
