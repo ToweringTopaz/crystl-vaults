@@ -1,7 +1,7 @@
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 require('dotenv').config();
 
- //const POLYGON_DEPLOYER_KEY = process.env.POLYGON_DEPLOYER_KEY;
+//const POLYGON_DEPLOYER_KEY = process.env.POLYGON_DEPLOYER_KEY;
 const MY_PRIVATE_KEY = process.env.MY_PRIVATE_KEY;
 const PRIVATE_RPC = process.env.PRIVATE_RPC;
 
@@ -26,22 +26,14 @@ module.exports = {
       skipDryRun: true,
       gasPrice: 30000000000
     },
-    development: {
-      host: "https://cronos-testnet-3.crypto.org",     // Localhost (default: none)
-      port: 8545,            // Standard Ethereum port (default: none)
-      network_id: "*",       // Any network (default: none)
-    },
-    cronos_testnet: {
-      provider: new HDWalletProvider(getHDWallet(), "https://cronos-testnet-3.crypto.org:8545/"), // TODO
-      network_id: "*",
+    cronos: {
+      provider: new HDWalletProvider(getHDWallet(), "https://evm-cronos.crypto.org/"), // TODO - addin :8545? https://cronosrpc-1.xstaking.sg/  
+      network_id: "*", //25
       skipDryRun: true,
       timeoutBlocks: 200,
+      networkCheckTimeout: 999999,
+      gasLimit: 3000000,
     },
-    cassini_cronos_testnet: {
-      provider: () => new HDWalletProvider(getHDWallet(), "https://cassini.crypto.org:8545/"),
-      network_id: "*",
-      skipDryRun: true
-    }
   },
   plugins: [
     'truffle-plugin-verify'
