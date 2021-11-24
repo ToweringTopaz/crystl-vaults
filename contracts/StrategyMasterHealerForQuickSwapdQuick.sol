@@ -14,10 +14,10 @@ contract StrategyMasterHealerForQuickSwapdQuick is BaseStrategyLPSingle {
     address public constant dQuick = 0xf28164A485B0B2C90639E47b0f377b4a438a16B1;
 
     constructor(
-        address[7] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned
+        address[4] memory _configAddress, //vaulthealer, stakingRewards, unirouter, want, earned
         uint256 _pid,
         uint256 _tolerance,
-        address[] memory _earnedToWmaticPath,
+        address[] memory _earnedToWnativePath,
         address[] memory _earnedToUsdcPath,
         address[] memory _earnedToCrystlPath,
         address[] memory _earnedToToken0Path,
@@ -33,18 +33,13 @@ contract StrategyMasterHealerForQuickSwapdQuick is BaseStrategyLPSingle {
         token0Address = _token0ToEarnedPath[0];
         token1Address = _token1ToEarnedPath[0];
 
-        rewardAddress = _configAddress[4];
-        withdrawFeeAddress = _configAddress[4];
-        buyBackAddress = _configAddress[5];
-
-        crystlAddress = _configAddress[6];
-        wNativeAddress = _earnedToWmaticPath[1];
+        wNativeAddress = _earnedToWnativePath[_earnedToWnativePath.length-1];
 
         pid = _pid;
-        earnedAddress = _earnedToWmaticPath[0];
+        earnedAddress = _earnedToWnativePath[0];
         tolerance = _tolerance;
 
-        earnedToWnativePath = _earnedToWmaticPath;
+        earnedToWnativePath = _earnedToWnativePath;
         earnedToUsdPath = _earnedToUsdcPath;
         earnedToCrystlPath = _earnedToCrystlPath;
         earnedToToken0Path = _earnedToToken0Path;

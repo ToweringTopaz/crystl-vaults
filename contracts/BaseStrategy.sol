@@ -36,9 +36,9 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
     uint256 public burnedAmount;
 
     address public buyBackAddress = 0x000000000000000000000000000000000000dEaD;
-    uint256 public controllerFee = 50; // 0.50%
-    uint256 public rewardRate = 50; // 0.50%
-    uint256 public buyBackRate = 400; // 4%
+    uint256 public controllerFee = 0; // 0.50%
+    uint256 public rewardRate = 500; // 0.50%
+    uint256 public buyBackRate = 0; // 4%
 
     uint256 public constant FEE_MAX_TOTAL = 10000;
     uint256 public constant FEE_MAX = 10000; // 100 = 1%

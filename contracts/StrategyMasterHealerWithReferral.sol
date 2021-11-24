@@ -15,7 +15,7 @@ contract StrategyMasterHealerWithReferral is BaseStrategyLPSingle {
         address[4] memory _configAddress, //vaulthealer, masterchef, unirouter, want, earned
         uint256 _pid,
         uint256 _tolerance,
-        address[] memory _earnedToWmaticPath,
+        address[] memory _earnedToWnativePath,
         address[] memory _earnedToUsdcPath,
         address[] memory _earnedToCrystlPath,
         address[] memory _earnedToToken0Path,

@@ -23,7 +23,7 @@ contract StrategyMasterHealer is BaseStrategyLPSingle {
         address[] memory _token0ToEarnedPath,
         address[] memory _token1ToEarnedPath
     ) {
-         vaultChefAddress = _configAddress[0];
+        vaultChefAddress = _configAddress[0];
         masterchefAddress = _configAddress[1];
         uniRouterAddress = _configAddress[2];
 
