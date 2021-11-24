@@ -13,9 +13,15 @@ const accounts = {
                 FEE_ADDRESS: "0x94b93044f635f6E12456374EC1C2EeaE6D8eD945", //TODO - update in prod!!
                 BUYBACK_ADDRESS: "0x000000000000000000000000000000000000dEaD", //TODO - update in prod!!
                 RICH_TEST_VAULT_HEALER: '0xdEB5C65E2e802DC6364FCe8B45f03Ad9D19b04Fc', //0x8Eb25Aa9d759855dFA401770Ec7F2a633956C15f
-                STAGING_VAULT_HEALER: '',
-                PRODUCTION_VAULT_HEALER: '',
                 TOPAZ_TEST_VAULT_HEALER: '0x3692C4BA0D4d8984b1c525A4165dAB8f62006788',
+        },
+        cronos: {
+                ADMIN_ADDRESS: "0xCE34Ccb6481fdc85953fd870343b24816A325351", //TODO - update in prod!!
+                FEE_ADDRESS: "0x5386881b46C37CdD30A748f7771CF95D7B213637", //TODO - update in prod!!
+                BUYBACK_ADDRESS: "0x000000000000000000000000000000000000dEaD", //TODO - update in prod!!
+                RICH_TEST_VAULT_HEALER: '0x56199D7B7326D9A7920a3a92E3d9aB5de100Ec21', 
+                STAGING_VAULT_HEALER: '',
+                PRODUCTION_VAULT_HEALER: '0x4dF0dDc29cE92106eb8C8c17e21083D4e3862533',
         }
 }
  
@@ -59,6 +65,19 @@ const tokens = {
                 USDC: '0x25f0965F285F03d6F6B3B21c8EC3367412Fd0ef6',
                 BUSD: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B', //BUSD Mock
                 CRONA: '0x27b9843E2B1566a99314902F1a6c77AAA98bd9DD',
+        },
+        cronos: {
+                WCRO: '0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23', //18 decimals
+                WETH: '0xe44Fd7fCb2b1581822D0c862B68222998a0c299a', //18 decimals
+                WBTC: '0x062E66477Faf219F25D27dCED647BF57C3107d52', //8 decimals
+                USDC: '0xc21223249CA28397B4B6541dfFaEcC539BfF0c59', //6 decimals
+                USDT: '0x66e428c3f67a68878562e79A0234c1F83c208770', //6 decimals
+                DAI: '0xF2001B145b43032AAF5Ee2884e456CCd805F677D', //18 decimals
+                CRX: '0xe243CCab9E66E6cF1215376980811ddf1eb7F689', //the crodex token - crodex is a dex
+                PHOTON: '0xbdd4e5660839a088573191A9889A262c0Efc0983',
+                DXP: '0xe0c41FF9a7032de445771E12C14868CbE061C993', 
+                CRONA: '0xadbd1231fb360047525BEdF962581F3eee7b49fe',
+                VVS: '0x2D03bECE6747ADC00E1a131BBA1469C15fD11e03',
         }
 }
  
@@ -85,6 +104,23 @@ const tokens = {
                 PHOTONSWAP_MASTERCHEF: '',
                 CRONASWAP_MASTERCHEF: '0xeC4ef032Ff5EDC5c384Eb80aE87dC7084C9B2c10',
                 CRODEX_MASTERCHEF: '',
+         },
+         cronos: {
+                PHOTONSWAP_MASTERCHEF: '0xBC02e3b80e830d9da28976Dd62562C4BDa0a90cd',
+                CRONASWAP_MASTERCHEF: '0x77ea4a4cf9f77a034e4291e8f457af7772c2b254',
+                VVS_MASTERCHEF: '0xDccd6455AE04b03d785F12196B492b18129564bc',
+
+                CRODEX_STAKING_REWARDS_CRO_CRX: '0xDb752eB155F6075d4Ba0e09c371eB5eBB0D4bAA5',
+                CRODEX_STAKING_REWARDS_USDT_CRX: '0xc2FF850F3921C1dbeD263aa1Fa94FE2A898870a8',
+                CRODEX_STAKING_REWARDS_USDC_CRX: '0x681E1dC139FEB9024F1C63b37673cFCD630817Bb',
+                CRODEX_STAKING_REWARDS_USDT_USDC: '0xcdd27c1C74631700CA0Fa165f3450435C8D009f4',
+                CRODEX_STAKING_REWARDS_USDT_DAI: '0x0f1e250f10F6AEb95A1B73DFd1d7f47a420236C4',
+                CRODEX_STAKING_REWARDS_WBTC_USDT: '0x81E200976B7928aEFD34CE51544e65FE73e88bE4',
+                CRODEX_STAKING_REWARDS_USDT_WETH: '0x8857591ea846cB23795538a7521c868f0E0D6844',
+                CRODEX_STAKING_REWARDS_WCRO_USDT: '0x5d05Ce6ae9FDC9dC3fBba240a98320Bc604f80a7',
+                CRODEX_STAKING_REWARDS_WCRO_USDC: '0x55B0FC13045B0bf6CD74631246b92f7abCFcCca2',
+                CRODEX_STAKING_REWARDS_WCRO_DAI: '0x12EE4bc798Fd985195b0d293c2c61fBf3DcDfe04',
+
          }
 }
 
@@ -123,7 +159,29 @@ const lps = {
                 WCRO_BUSD_CRONA_LP: '0x6534f4F9c14042F45F1DD6045b02D09DC9f6472B', //finished now?
                 CRONA_CRO_CRONA_LP: '0x12bc93D9e53bBcB5e8485a620754F2A49Ab7dE6a', //pid = 1
                 USDC_CRO_CRONA_LP: '0x3AD39bFD1714D6F9ED2963b46af770183b93D0e2', //pid = 2
-        }
+        },
+        cronos: {
+                CRO_CRX_CRODEX_LP: '0xd141aeD3FA86f411808D5D74BEbBC038e94f300D', //pid  = 999
+                USDT_CRX_CRODEX_LP: '0x89e1135b2C82FEb19F5ecb78e35C309A6aEF7b01',  //pid  = 999
+                USDC_CRX_CRODEX_LP: '0xa6E9f20A93E0b50f074bc2FC693E8Add3812F8c4', //pid  = 999
+                USDT_USDC_CRODEX_LP: '0xaa9d281B761d8988Af83B4E2bF3fC8f5dB2E7aE5', //pid  = 999
+                USDT_DAI_CRODEX_LP: '0x297049Bd11C1c53381e5a1730Ae1cbf27e258739', //pid  = 999
+                WBTC_USDT_CRODEX_LP: '0xA9005A6C054a432a7A53d413d5afE5D216cf69e3', //pid  = 999
+                USDT_WETH_CRODEX_LP: '0xc061A750B252f36337e960BbC2A7dB96b3Bc7906', //pid  = 999
+                WCRO_USDT_CRODEX_LP: '0x47AB43F8176696CA569b14A24621A46b318096A7', //pid  = 999
+                WCRO_USDC_CRODEX_LP: '0x182414159C3eeF1435aF91Bcf0d12AbcBe277A46', //pid  = 999
+                WCRO_DAI_CRODEX_LP: '0x586e3658d0299d5e79B53aA51B641d6A0B8A4Dd3', //pid  = 999
+
+                WCRO_PHOTON_PHOTON_LP: '0x2F47AE6d9d8e45BFb3b1358fD0f77652ad3AB18F', //
+                WCRO_BUSD_CRONA_LP: '', //finished now?
+                CRONA_CRO_CRONA_LP: '', //pid = 1
+                USDC_CRO_CRONA_LP: '', //pid = 2
+                CRO_ETH_VVS_LP: '0xA111C17f8B8303280d3EB01BBcd61000AA7F39F9', //pid =1
+                CRO_WBTC_VVS_LP: '0x8F09fFf247B8fDB80461E5Cf5E82dD1aE2EBd6d7', //pid = 2
+                CRO_USDC_VVS_LP: '0xe61db569e231b3f5530168aa2c9d50246525b6d6', //pid = 3
+                CRO_VVS_VVS_LP: '0xbf62c67ea509e86f07c8c69d0286c0636c50270b', //pid = 4
+        },
+
 }
 
 const routers = {
@@ -140,7 +198,13 @@ const routers = {
                 CRODEX_ROUTER: '0x9e544d8e44ed8d40f658d8563a25bcbd8071ee24', //I think - contract not verified!
                 PHOTONSWAP_ROUTER: '0xbb5ce818AB3afB02d60914e2D1c684B5Df0bA07d',
                 CRONASWAP_ROUTER: '0x211609D726C72F2A2775D3Bd246B82a9D677f12f',
-        }
+        },
+        cronos: {
+                CRODEX_ROUTER: '0xeC0A7a0C2439E8Cb67b992b12ecd020Ea943c7Be', //I think - contract not verified!
+                PHOTONSWAP_ROUTER: '0x69004509291F4a4021fA169FafdCFc2d92aD02Aa',
+                CRONASWAP_ROUTER: '0xcd7d16fB918511BF7269eC4f48d61D79Fb26f918',
+                VVS_ROUTER: '0x145863Eb42Cf62847A6Ca784e6416C1682b1b2Ae',
+        },
 }
 
 module.exports = {
