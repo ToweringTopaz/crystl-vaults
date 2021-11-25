@@ -66,7 +66,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //User's balance, in want tokens
         uint wantBal = _wantBalance();
         uint wantLockedBefore = wantBal + vaultSharesTotal();
-        uint256 userWant = FullMath.mulDiv(_userShares+ stakingPool.balanceOf(user), wantLockedBefore, _sharesTotal) ;
+        uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)
@@ -106,5 +106,9 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function _unpause() internal override {}
     function paused() public view override returns (bool) {
         return vaultHealer.paused(address(this));
+    }
+
+    function setStakingPoolAddress(address _stakingPoolAddress) external {
+        stakingPoolAddress = _stakingPoolAddress;
     }
 }

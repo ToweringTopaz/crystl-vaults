@@ -74,19 +74,16 @@ abstract contract VaultHealerGate is VaultHealerBase {
         PoolInfo storage pool = _poolInfo[_pid];
         UserInfo storage user = pool.user[msg.sender];
 
+        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
         //check that user actually has shares in this pid
-        require(user.shares > 0, "user.shares is 0");
+        uint256 userStakedAndUnstakedShares = balanceOf(_to, _pid) + stakingPool.userStakedAmount(_to); //TODO - ask TT if there's another way to access this?
+        require(userStakedAndUnstakedShares > 0, "User has 0 shares");
         
         //unstake here if need be
-        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress);
-        stakingPool.withdraw(however much is needed: _wantAmt-balanceOf(_to, _pid));
+        if (_wantAmt > balanceOf(_to, _pid) && stakingPool.userStakedAmount(_to) > 0) {
+            stakingPool.withdraw(_wantAmt-balanceOf(_to, _pid));
+            }
 
-        //check that user is holding sufficient receipt tokens
-        require(balanceOf(_to, _pid) >= _wantAmt/pool.strat.wantLockedTotal()*totalSupply(_pid));
-        // console.log(balanceOf(_to, _pid));
-        // console.log(totalSupply(_pid));
-        // console.log(_wantAmt);
-        // console.log(pool.strat.wantLockedTotal());
         //todo: withdraw fee
         
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat

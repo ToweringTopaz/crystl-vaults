@@ -125,6 +125,11 @@ contract StakingPool is Ownable, Initializable, ERC1155Holder {
         return user.amount * accRewardTokenPerShare / 1e30 - user.rewardDebt;
     }
 
+    function userStakedAmount(address _user) external view returns (uint256) {
+        UserInfo storage user = userInfo[_user];
+        return user.amount;
+    }
+
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
         if (block.number <= poolInfo.lastRewardBlock) {

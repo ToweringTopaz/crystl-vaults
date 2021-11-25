@@ -10,6 +10,7 @@ import "./libs/LibVaultConfig.sol";
 
 interface IStrategy {
     function wantToken() external view returns (IERC20); // Want address
+    function stakingPoolAddress() external view returns (address);
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
     function earn(address _to) external; // Main want token compounding function
     function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
@@ -32,15 +33,15 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         bytes data;
     }
     struct PoolInfo {
-        IERC20 want; // Address of the want token.
+        IERC20 want; //  want token.
         bool paused; //vault is paused?
-        IStrategy strat; // Strategy address that will auto compound want tokens
+        IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
         mapping (address => UserInfo) user;
         uint256 sharesTotal;
         bytes data;
-        IStakingPool stakingPool;
+        // address stakingPoolAddress;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
@@ -136,11 +137,16 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         pool.want = IStrategy(_strat).wantToken();
         pool.strat = IStrategy(_strat);
         IStrategy(_strat).setFees(defaultFees);
+        // pool.stakingPoolAddress = IStrategy(_strat).stakingPoolAddress();
         
         _strats[_strat] = _poolInfo.length;
         emit AddPool(_strat);
     }
     
+    //     function addStakingPool(uint256 _pid, address _stakingPool) external onlyOwner nonReentrant {
+    //     require(!isStrat(_strat), "Existing strategy");
+    //     _poolInfo[_pid] = IStrategy(_strat).stakingPoolAddress();
+    // }
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
         uint pid = findPid(_strat);

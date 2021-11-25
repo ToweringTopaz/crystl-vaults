@@ -99,9 +99,28 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             params: [vaultHealerOwner],
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
-
+        
         await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyMasterHealer.address);
         pid = await vaultHealer.poolLength() -1;
+
+        //create the staking pool for the boosted vault
+        StakingPool = await ethers.getContractFactory("StakingPool", {});
+        //need the wantToken address from the strategy!
+        stakingPool = await StakingPool.deploy(
+            vaultHealer.address, //and what about the pid? yes, the stakingPool needs it!, right up front...
+            pid, //I'm hardcoding this for now - how can we do it in future??
+            "0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64", //reward token = crystl
+            1000000, //is this in WEI? assume so...
+            21131210, //this is the block we're currently forking from - WATCH OUT if we change forking block
+            21771725 //also watch out that we don't go past this, but we shouldn't
+        )
+        
+        strategyMasterHealer.setStakingPoolAddress(stakingPool.address);
+        
+        uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
+
+        //fund the staking pool with reward token, Crystl 
+        await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], stakingPool.address, Date.now() + 900, { value: ethers.utils.parseEther("45") })
 
         await network.provider.send("hardhat_setBalance", [
             user1.address,
@@ -112,8 +131,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user2.address,
             "0x21E19E0C9BAB2400000", //amount of 1000 in hex
         ]);
-
-        uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
 
         if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
@@ -141,19 +158,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
 
-        //create the staking pool for the boosted vault
-        StakingPool = await ethers.getContractFactory("StakingPool", {});
-        //need the wantToken address from the strategy!
-        stakingPool = await StakingPool.deploy(
-            vaultHealer.address, //and what about the pid? yes, the stakingPool needs it!, right up front...
-            pid, //I'm hardcoding this for now - how can we do it in future??
-            "0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64", 
-            1000000, //is this in WEI? assume so...
-            21131210, //this is the block we're currently forking from - WATCH OUT if we change forking block
-            21771725 //also watch out that we don't go past this, but we shouldn't
-        )
-        //fund the staking pool with reward token, Crystl 
-        await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], stakingPool.address, Date.now() + 900, { value: ethers.utils.parseEther("45") })
+        
 
     });
 
