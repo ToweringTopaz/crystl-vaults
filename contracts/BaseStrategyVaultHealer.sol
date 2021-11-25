@@ -78,7 +78,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
             
             wantBal = _wantBalance();
             
-            if (_wantAmt > wantBal) _wantAmt = wantBal;
         }
         
         //Account for reflect, pool withdraw fee, etc; charge these to user
@@ -96,6 +95,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (sharesRemoved > _userShares) sharesRemoved = _userShares;
         _wantAmt = FullMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
         
+        if (_wantAmt > wantBal) _wantAmt = wantBal;
         require(_wantAmt > 0, "nothing to withdraw after slippage");
         
         wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);

@@ -80,17 +80,21 @@ abstract contract VaultHealerGate is VaultHealerBase {
         require(userStakedAndUnstakedShares > 0, "User has 0 shares");
         
         //unstake here if need be
-        if (_wantAmt > balanceOf(_to, _pid) && stakingPool.userStakedAmount(_to) > 0) {
+        if (_wantAmt > balanceOf(_to, _pid) && stakingPool.userStakedAmount(_to) > 0) { //&&stakingPool exists! check that it's not a zero address?
             stakingPool.withdraw(_wantAmt-balanceOf(_to, _pid));
             }
 
         //todo: withdraw fee
-        
+        console.log(_wantAmt);
+        console.log(balanceOf(_to, _pid));
+        console.log(user.shares);
+        console.log(totalSupply(_pid));
+        console.log(pool.sharesTotal);
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
         //TELL THE STRAT HOW MUCH TO WITHDRAW!! - wantAmt, as long as wantAmt is allowed...
         // (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, user.shares, pool.sharesTotal);
         (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _pid), totalSupply(_pid));
-
+        console.log(wantAmt);
         //this call transfers wantTokens from the strat to the user
         pool.want.transferFrom(address(pool.strat), _to, wantAmt);
         //updates total withdrawals
