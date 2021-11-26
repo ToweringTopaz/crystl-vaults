@@ -7,8 +7,8 @@ abstract contract BaseStrategyLP is BaseStrategy {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public token0Address;
-    address public token1Address;
+    address public override token0Address;
+    address public override token1Address;
 
     address[] public earnedToToken0Path;
     address[] public earnedToToken1Path;
