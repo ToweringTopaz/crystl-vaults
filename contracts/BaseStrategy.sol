@@ -75,8 +75,8 @@ abstract contract BaseStrategy is Ownable, ReentrancyGuard, PausableTL {
         _;
     }
 
-    function token0Address() external view virtual; //required by front-end
-    function token1Address() external view virtual; //required by front-end
+    function token0Address() external view virtual returns (address); //required by front-end
+    function token1Address() external view virtual returns (address); //required by front-end
     function _vaultDeposit(uint256 _amount) internal virtual;
     function _vaultWithdraw(uint256 _amount) internal virtual;
     function _vaultHarvest() internal virtual;
