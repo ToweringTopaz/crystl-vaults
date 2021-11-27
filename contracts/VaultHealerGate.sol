@@ -50,7 +50,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 _to,
                 _pid, //use the pid of the strategy 
                 sharesAdded,
-                bytes("0") //leave this blank for now?
+                hex'' //leave this blank for now
             );
 
             pool.user[_to].totalDeposits = _wantAmt - pendingDeposit.amount;

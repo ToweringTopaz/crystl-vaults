@@ -48,7 +48,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
     uint8 public withdrawFeeRate; // in basis points: 255 = 2.55% max possible withdrawal fee
     
-    //pid+1 for any of our strategies. +1 allows us to distinguish pid 0 from an unauthorized address
+    //pid for any of our strategies
     mapping(address => uint) private _strats;
     
     event AddPool(address indexed strat);
@@ -65,6 +65,8 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         _fees.check();
         defaultFees = _fees;
         emit SetDefaultFees(_fees);
+
+        _poolInfo.push(); //so uninitialized pid variables (pid 0) can be assumed as invalid
         
         _reentrancyStatus = _NOT_ENTERED;
     }
@@ -84,7 +86,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     modifier nonReentrantPid(uint pid) {
         require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
         require (pid < _poolInfo.length, "VaultHealer: bad pid");
-        _reentrancyStatus = pid + 1;
+        _reentrancyStatus = pid;
         _;
         _reentrancyStatus = _NOT_ENTERED;
     }
@@ -139,7 +141,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         IStrategy(_strat).setFees(defaultFees);
         // pool.stakingPoolAddress = IStrategy(_strat).stakingPoolAddress();
         
-        _strats[_strat] = _poolInfo.length;
+        _strats[_strat] = _poolInfo.length - 1;
         emit AddPool(_strat);
     }
     
@@ -156,9 +158,9 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         return _strats[_strat] > 0;
     }
     function findPid(address _strat) public view returns (uint) {
-        uint pidPlusOne = _strats[_strat];
-        require(pidPlusOne > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
-        return pidPlusOne - 1;
+        uint pid = _strats[_strat];
+        require(pid > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
+        return pid;
     }
     
     function getFees(uint pid) public view returns (VaultFees memory) {
