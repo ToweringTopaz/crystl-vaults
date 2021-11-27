@@ -132,23 +132,4 @@ abstract contract VaultHealerGate is VaultHealerBase {
         );
     }
 
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-        if (from != address(0) && to != address(0)) {
-            for (uint i; i < ids.length; i++) {
-                uint pid = ids[i];
-                uint underlyingValue = amounts[i] * _poolInfo[pid].strat.wantLockedTotal() / totalSupply(pid);
-                transferData(pid, from).transfersOut += underlyingValue;
-                transferData(pid, to).transfersIn += underlyingValue;
-            }
-        }
-    }
 }
