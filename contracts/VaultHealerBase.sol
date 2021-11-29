@@ -3,22 +3,11 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+// import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IStakingPool.sol";
-import "./libs/LibVaultConfig.sol";
-
-interface IStrategy {
-    function wantToken() external view returns (IERC20); // Want address
-    function stakingPoolAddress() external view returns (address);
-    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
-    function earn(address _to) external; // Main want token compounding function
-    function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
-    function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
-    function setFees(VaultFees calldata _fees) external; //vaulthealer uses this to update configuration
-    function panic() external;
-    function unpanic() external;
-}
+// import "./libs/LibVaultConfig.sol";
+import "./libs/IStrategy.sol";
 
 abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     using SafeERC20 for IERC20;
@@ -46,7 +35,8 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
-    uint8 public withdrawFeeRate; // in basis points: 255 = 2.55% max possible withdrawal fee
+    uint16 public withdrawFeeRate; // in basis points: 255 = 2.55% max possible withdrawal fee
+    address public feeReceiver;
     
     //pid for any of our strategies
     mapping(address => uint) private _strats;
@@ -65,36 +55,38 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         _fees.check();
         defaultFees = _fees;
         emit SetDefaultFees(_fees);
+        feeReceiver = _fees.withdraw.receiver;
+        withdrawFeeRate = _fees.withdraw.rate;
 
         _poolInfo.push(); //so uninitialized pid variables (pid 0) can be assumed as invalid
         
-        _reentrancyStatus = _NOT_ENTERED;
+        //_reentrancyStatus = _NOT_ENTERED;
     }
     
-    uint private _reentrancyStatus;
-    uint private constant _NOT_ENTERED = type(uint).max;
-    uint private constant _ENTERED = type(uint).max - 1;
+    // uint private _reentrancyStatus;
+    // uint private constant _NOT_ENTERED = type(uint).max;
+    // uint private constant _ENTERED = type(uint).max - 1;
     
-    //identical in effect to OpenZeppelin nonReentrant
-    modifier nonReentrant() {
-        require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
-        _reentrancyStatus = _ENTERED;
-        _;
-        _reentrancyStatus = _NOT_ENTERED;
-    }
-    //identical in effect to OpenZeppelin nonReentrant but stores the pid
-    modifier nonReentrantPid(uint pid) {
-        require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
-        require (pid < _poolInfo.length, "VaultHealer: bad pid");
-        _reentrancyStatus = pid;
-        _;
-        _reentrancyStatus = _NOT_ENTERED;
-    }
-    //function call must be a reentrant call by the strategy associated with the PID stored at _reentrancyStatus
-    modifier onlyReentrantPid() {
-        require(_reentrancyStatus == _strats[msg.sender]);
-        _;
-    }
+    // //identical in effect to OpenZeppelin nonReentrant
+    // modifier nonReentrant() {
+    //     require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
+    //     _reentrancyStatus = _ENTERED;
+    //     _;
+    //     _reentrancyStatus = _NOT_ENTERED;
+    // }
+    // //identical in effect to OpenZeppelin nonReentrant but stores the pid
+    // modifier nonReentrantPid(uint pid) {
+    //     require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
+    //     require (pid < _poolInfo.length, "VaultHealer: bad pid");
+    //     _reentrancyStatus = pid;
+    //     _;
+    //     _reentrancyStatus = _NOT_ENTERED;
+    // }
+    // //function call must be a reentrant call by the strategy associated with the PID stored at _reentrancyStatus
+    // modifier onlyReentrantPid() {
+    //     require(_reentrancyStatus == _strats[msg.sender]);
+    //     _;
+    // }
 
     function poolLength() external view returns (uint256) {
         return _poolInfo.length;
@@ -110,29 +102,28 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = _poolInfo[_pid];
-        UserInfo storage user = pool.user[_user];
 
-        uint256 _sharesTotal = pool.sharesTotal;
+        uint256 _sharesTotal = balanceOf(_user, _pid);
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
         if (_sharesTotal == 0) {
             return 0;
         }
-        return user.shares * wantLockedTotal / _sharesTotal;
+        return balanceOf(_user, _pid) * wantLockedTotal / _sharesTotal;
     }
-    function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
-        PoolInfo storage pool = _poolInfo[_pid];
-        UserInfo storage user = pool.user[_user];
+    // function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
+    //     PoolInfo storage pool = _poolInfo[_pid];
+    //     UserInfo storage user = pool.user[_user];
         
-        deposited = user.totalDeposits;
-        withdrawn = user.totalWithdrawals;
-        uint staked = pool.sharesTotal == 0 ? 0 : user.shares * pool.strat.wantLockedTotal() / pool.sharesTotal;
-        earned = int(withdrawn + staked) - int(deposited);
-    }
+    //     deposited = user.totalDeposits;
+    //     withdrawn = user.totalWithdrawals;
+    //     uint staked = pool.sharesTotal == 0 ? 0 : user.shares * pool.strat.wantLockedTotal() / pool.sharesTotal;
+    //     earned = int(withdrawn + staked) - int(deposited);
+    // }
 
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
-    function addPool(address _strat) external onlyOwner nonReentrant {
+    function addPool(address _strat) external onlyOwner  { //nonReentrant
         require(!isStrat(_strat), "Existing strategy");
         _poolInfo.push();
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
@@ -192,7 +183,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         emit ResetFees(_pid);
     }
     
-    function earnAll() external nonReentrant {
+    function earnAll() external  { //nonReentrant
         for (uint256 i; i < _poolInfo.length; i++) {
             if (!paused(i)) {
                 try _poolInfo[i].strat.earn(_msgSender()) {}
@@ -201,7 +192,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         }
     }
 
-    function earnSome(uint256[] memory pids) external nonReentrant {
+    function earnSome(uint256[] memory pids) external  { //nonReentrant
         for (uint256 i; i < pids.length; i++) {
             if (_poolInfo.length >= pids[i] && !paused(pids[i])) {
                 try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
@@ -209,7 +200,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
             }
         }
     }
-    function earn(uint256 pid) external nonReentrant whenNotPaused(pid) {
+    function earn(uint256 pid) external  whenNotPaused(pid) { //nonReentrant
         _poolInfo[pid].strat.earn(_msgSender());
     }
     
