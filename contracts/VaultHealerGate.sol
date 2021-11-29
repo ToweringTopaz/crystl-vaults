@@ -53,9 +53,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         if (_wantAmt > 0) {
             
-            UserInfo storage user = pool.user[_to];
-            
-            pendingDeposit = PendingDeposit({
+            pendingDeposit = PendingDeposit({ //todo: understand better what this does
                 token: pool.want,
                 from: msg.sender,
                 amount: _wantAmt
@@ -70,8 +68,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 sharesAdded,
                 hex'' //leave this blank for now
             );
-
+        
+        //update the user's data for earn tracking purposes
         transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount;
+        
         delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);

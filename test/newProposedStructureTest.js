@@ -194,7 +194,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
             await vaultHealer["deposit(uint256,uint256)"](pid,initialLPtokenBalance);
             const vaultSharesTotalAfterFirstDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
-            console.log(`deposited ${ethers.utils.formatEther(vaultSharesTotalAfterFirstDeposit)} lp tokens`)
+            // console.log(`deposited ${ethers.utils.formatEther(vaultSharesTotalAfterFirstDeposit)} lp tokens`)
 
             expect(LPtokenBalanceBeforeFirstDeposit).to.equal(vaultSharesTotalAfterFirstDeposit); //will this work for 2nd deposit? on normal masterchef?
         })
@@ -250,18 +250,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-            console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
-            console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
+            // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
+            // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<1000;i++) { //minBlocksBetweenSwaps
-                await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
+            for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+                await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
             await vaultHealer.earnSome([pid]);
-            console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
+            // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            console.log(`vaultSharesTotalAfterCallingEarnSome: ${vaultSharesTotalAfterCallingEarnSome}`)
+            // console.log(`vaultSharesTotalAfterCallingEarnSome: ${vaultSharesTotalAfterCallingEarnSome}`)
 
             const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
 
@@ -303,9 +303,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(LPtokenBalanceAfterFirstWithdrawal.sub(LPtokenBalanceBeforeFirstWithdrawal))
             .to.equal(
                 (vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
-                // .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                // .mul(vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
-                // .div(WITHDRAW_FEE_FACTOR_MAX))
+                .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                .mul(vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalAfterFirstWithdrawal))
+                .div(WITHDRAW_FEE_FACTOR_MAX))
                 )
                 ;
         })
@@ -313,10 +313,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should deposit user2\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
             await LPtoken.connect(user2).approve(vaultHealer.address, LPtokenBalanceOfUser2BeforeFirstDeposit); //no, I have to approve the vaulthealer surely?
-            console.log("lp token approved by user 2")
+            // console.log("lp token approved by user 2")
             await vaultHealer.connect(user2)["deposit(uint256,uint256)"](pid,LPtokenBalanceOfUser2BeforeFirstDeposit);
             const vaultSharesTotalAfterUser2FirstWithdrawal = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
-            console.log(`deposited ${ethers.utils.formatEther(LPtokenBalanceOfUser2BeforeFirstDeposit)} lp tokens`)
+            // console.log(`deposited ${ethers.utils.formatEther(LPtokenBalanceOfUser2BeforeFirstDeposit)} lp tokens`)
 
             expect(LPtokenBalanceOfUser2BeforeFirstDeposit).to.equal(vaultSharesTotalAfterUser2FirstWithdrawal.sub(vaultSharesTotalAfterFirstWithdrawal)); //will this work for 2nd deposit? on normal masterchef?
         })
@@ -338,27 +338,37 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Withdraw 100%
         it('Should withdraw remaining user1 balance back to user1, minus withdrawal fee (0.1%)', async () => {
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address);
+            console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
+            console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
+
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
+            console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
+            console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
 
             await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
+            console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
+            console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
+
             UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
+            console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
+            console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
                 (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
-                // .sub(
-                //     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                //     .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
-                //     .div(WITHDRAW_FEE_FACTOR_MAX)
-                // )
+                .sub(
+                    (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                    .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                    .div(WITHDRAW_FEE_FACTOR_MAX)
+                )
                 );
         })
 
         //ensure no funds left in the vault.
         it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
-            console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
+            // console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
             expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
         })
         

@@ -100,15 +100,15 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 // console.log("just past the dust conditional");
 
                 success = true; //We have something worth compounding
-                console.log(settings.dust);
-                console.log(vaultStats.totalEarned);
-                console.log(earnedAmt);
-                console.log(_to);
+                // console.log(settings.dust);
+                // console.log(vaultStats.totalEarned);
+                // console.log(earnedAmt);
+                // console.log(_to);
 
                 earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
-                console.log("hello");
+                // console.log("hello");
                 for (uint j; j < lpTokenLength; j++) {
                     // console.log("about to make the swap");
                     LibVaultSwaps.safeSwap(settings, earnedAmt / lpTokenLength, earnedToken, lpToken[j], address(this));

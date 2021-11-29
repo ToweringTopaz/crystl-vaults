@@ -152,7 +152,6 @@ contract StakingPool is Ownable, Initializable, ERC1155Holder {
     /// @param _amount The amount of staking tokens to deposit
     function deposit(uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
-        console.log(user.amount);
         uint256 finalDepositAmount = 0;
         updatePool();
         if (user.amount > 0) {

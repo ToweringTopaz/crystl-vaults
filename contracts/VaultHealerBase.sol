@@ -103,7 +103,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = _poolInfo[_pid];
 
-        uint256 _sharesTotal = balanceOf(_user, _pid);
+        uint256 _sharesTotal = totalSupply(_pid); //balanceOf(_user, _pid);
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
         if (_sharesTotal == 0) {
             return 0;
