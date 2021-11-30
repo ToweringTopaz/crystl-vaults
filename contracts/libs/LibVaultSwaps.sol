@@ -24,34 +24,34 @@ library LibVaultSwaps {
     
     function distribute(VaultFees storage fees, VaultSettings storage settings, VaultStats storage stats, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
         uint burnedBefore = IERC20(fees.burn.token).balanceOf(fees.burn.receiver);
-        // console.log("made it into distribute function");
+        console.log("made it into distribute function");
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
         uint256 fee = _earnedAmt * fees.earn.rate / FEE_MAX;
         // console.log(fees.earn.token);
-        safeSwap(settings, fee, _earnedToken, fees.earn.token, _to);
+        if (fee > 0) safeSwap(settings, fee, _earnedToken, fees.earn.token, _to);
         earnedAmt -= fee;
-        // console.log("1 - paid for earn function");
+        console.log("1 - paid for earn function");
 
         //distribute rewards
         fee = _earnedAmt * fees.reward.rate / FEE_MAX;
-        // console.log(fee);
-        safeSwap(settings, fee, _earnedToken, _earnedToken == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
+        console.log(fee);
+        if (fee > 0) safeSwap(settings, fee, _earnedToken, _earnedToken == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
         earnedAmt -= fee;
-        // console.log("2 - distributed rewards");
+        console.log("2 - distributed rewards");
         
         //burn crystl
         fee = _earnedAmt * fees.burn.rate / FEE_MAX;
-        safeSwap(settings, fee, _earnedToken, fees.burn.token, fees.burn.receiver);
+        if (fee > 0) safeSwap(settings, fee, _earnedToken, fees.burn.token, fees.burn.receiver);
         earnedAmt -= fee;
-        // console.log("3 - burnt crystal");
+        console.log("3 - burnt crystal");
 
         unchecked { //overflow ok albeit unlikely
             stats.totalEarned += uint128(earnedAmt);
             stats.totalBurned += uint128(IERC20(fees.burn.token).balanceOf(fees.burn.receiver) - burnedBefore);
         }
-        // console.log("4 - exiting function...");
+        console.log("4 - exiting function...");
     }
 
     function safeSwap(

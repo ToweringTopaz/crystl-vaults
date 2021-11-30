@@ -58,11 +58,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         });
         const feeConfig = 
             [
-            // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
-                [ ZERO_ADDRESS, FEE_ADDRESS, 10 ],
-                [ WMATIC, FEE_ADDRESS, 50 ], //earn fee: wmatic is paid; receiver is ignored; 0.5% rate
-                [ DAI, FEE_ADDRESS, 50 ], //reward fee: paid in DAI; standard fee address; 0.5% rate
-                [ CRYSTL, BURN_ADDRESS, 400 ] //burn fee: crystl to burn address; 4% rate
+                [ ZERO_ADDRESS, FEE_ADDRESS, 10 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
+                [ WMATIC, FEE_ADDRESS, 500 ], //earn fee: wmatic is paid; receiver is ignored; 0% rate
+                [ DAI, FEE_ADDRESS, 0 ], //reward fee: paid in DAI; standard fee address; 0% rate
+                [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
         vaultHealer = await VaultHealer.deploy(feeConfig, 10);
@@ -204,7 +203,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(userBalanceOfStrategyTokens).to.be.gt("0") //equal(vaultSharesTotalAfterFirstDeposit); 
         })
 
-        it('Should allow user to stake those tokens in the stakingPool, showing a balanceOf in the pool afterwards', async () => {
+        it('Should allow user to boost by staking their receipt tokens in the stakingPool, showing a balanceOf in the pool afterwards', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, pid);
             //need to do approval first?
             await vaultHealer.connect(user1).setApprovalForAll(stakingPool.address, true); //dangerous to approve all forever?
@@ -242,14 +241,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Check balance to ensure it increased as expected
         it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-            daiToken = await ethers.getContractAt(token_abi, DAI);
+            maticToken = await ethers.getContractAt(token_abi, WMATIC);
 
-            balanceCrystlAtBurnAddressBeforeEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
-            balanceMaticAtUserAddressBeforeEarn = await user1.getBalance(); //maticToken.balanceOf(user1.address); //CHANGE THIS
+            balanceMaticAtFeeAddressBeforeEarn = await maticToken.balanceOf(user1.address); //CHANGE THIS
 
-            balanceDaiAtFeeAddressBeforeEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-            balanceCrystlAtFeeAddressBeforeEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
@@ -266,26 +261,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
 
             expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
-        })
-        
-        // follow the flow of funds in the transaction to ensure burn, compound fee, and LP creation are all accurate.
-        it('Should burn a small amount of CRYSTL with each earn, resulting in a small increase in the CRYSTL balance of the burn address', async () => {
-            const balanceCrystlAtBurnAddressAfterEarn = await crystlToken.balanceOf("0x000000000000000000000000000000000000dEaD");
-            expect(balanceCrystlAtBurnAddressAfterEarn).to.be.gt(balanceCrystlAtBurnAddressBeforeEarn);
-        })
+        }) 
 
-        // will redesign this test once we change the payout to WMATIC - at the moment it's tricky to see the increase in user's matic balance, as they also pay out gas
-        // it('Should pay a small amount of MATIC to the user with each earn, resulting in a small increase in the MATIC balance of the user', async () => {
-        //     const balanceMaticAtUserAddressAfterEarn = await user1.getBalance();
-        //     console.log(balanceMaticAtUserAddressBeforeEarn);
-        //     console.log(balanceMaticAtUserAddressAfterEarn);
-        //     expect(balanceMaticAtUserAddressAfterEarn).to.be.gt(balanceMaticAtUserAddressBeforeEarn);        
-        // }) 
-
-        it('Should pay a small amount to the rewardAddress with each earn, resulting in a small increase in CRYSTL or DAI balance of the rewardAddress', async () => {
-            const balanceCrystlAtFeeAddressAfterEarn = await crystlToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-            const balanceDaiAtFeeAddressAfterEarn = await daiToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
-            expect(balanceCrystlAtFeeAddressAfterEarn.add(balanceDaiAtFeeAddressAfterEarn)).to.be.gt(balanceCrystlAtFeeAddressBeforeEarn.add(balanceDaiAtFeeAddressBeforeEarn));
+        it('Should pay 5% of earnedAmt to the feeAddress with each earn, in WMATIC', async () => {
+            const balanceMaticAtFeeAddressAfterEarn = await maticToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            expect(balanceMaticAtFeeAddressAfterEarn).to.be.gt(balanceMaticAtFeeAddressBeforeEarn);
         })
         
 
