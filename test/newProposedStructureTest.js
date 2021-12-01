@@ -65,7 +65,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(feeConfig, 10);
+        vaultHealer = await VaultHealer.deploy(feeConfig);
         // console.log(vaultHealer.address);
         
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
@@ -233,7 +233,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             userRewardTokenBalanceBeforeWithdrawal = await crystlToken.balanceOf(user1.address);
 
-            await stakingPool.connect(user1).withdraw(userBalanceOfStakingPool);
+            await stakingPool.connect(user1)["withdraw(uint256)"](userBalanceOfStakingPool);
 
             user = await stakingPool.userInfo(user1.address);
             userBalanceOfStakingPoolAfterWithdrawal = user.amount;
@@ -338,22 +338,28 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Withdraw 100%
         it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, pid);
-            //need to do approval first?
+
             await vaultHealer.connect(user1).setApprovalForAll(stakingPool.address, true); //dangerous to approve all forever?
 
             await stakingPool.connect(user1).deposit(userBalanceOfStrategyTokensBeforeStaking);
-            user = await stakingPool.userInfo(user1.address);
-            userBalanceOfStakingPool = user.amount;
+            // user = await stakingPool.userInfo(user1.address);
+            // userBalanceOfStakingPool = user.amount;
 
-            const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address);
+            userWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
+            const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
+            console.log(userWantTokensBeforeWithdrawal);
+
             console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
 
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
             console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
+            userBoostedWantTokensBeforeWithdrawal = await vaultHealer.boostedWantTokens(pid, user1.address);
+            console.log("userBoostedWantTokensBeforeWithdrawal");
+            console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
-            await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal+userBoostedWantTokensBeforeWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
             console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
@@ -362,13 +368,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
             console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
+            
+            userBoostedWantTokensAfterWithdrawal = await vaultHealer.boostedWantTokens(pid, user1.address);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
-                (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                (UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                 .sub(
                     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                    .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                    .mul(UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                     .div(WITHDRAW_FEE_FACTOR_MAX)
                 )
                 );
@@ -378,6 +386,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
             // console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
             expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
+        })
+
+        it('Should leave zero user1 funds in stakingPool after 100% withdrawal', async () => {
+            // console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
+            expect(userBoostedWantTokensAfterWithdrawal.toNumber()).to.equal(0);
         })
         
     })

@@ -68,6 +68,7 @@ contract StakingPool is Ownable, Initializable, ERC1155Holder {
     event EmergencyRewardWithdraw(address indexed user, uint256 amount);
     event EmergencySweepWithdraw(address indexed user, IERC20 indexed token, uint256 amount);
 
+
   constructor (
         IERC1155 _vaultHealer,
         uint256 _stakeTokenPid,
@@ -179,10 +180,18 @@ contract StakingPool is Ownable, Initializable, ERC1155Holder {
         emit Deposit(msg.sender, finalDepositAmount);
     }
 
+    function withdraw(uint256 _amount, address _user) external {
+        require( msg.sender == address(vaultHealer) );
+        _withdraw(_amount, _user);
+    }
+    
+    function withdraw(uint256 _amount) external {
+        _withdraw(_amount, msg.sender);
+    }
     /// Withdraw rewards and/or staked tokens. Pass a 0 amount to withdraw only rewards
     /// @param _amount The amount of staking tokens to withdraw
-    function withdraw(uint256 _amount) public {
-        UserInfo storage user = userInfo[msg.sender];
+    function _withdraw(uint256 _amount, address _user) internal {
+        UserInfo storage user = userInfo[_user];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool();
         uint256 pending = user.amount * poolInfo.accRewardTokenPerShare / 1e30 - user.rewardDebt;
@@ -190,21 +199,21 @@ contract StakingPool is Ownable, Initializable, ERC1155Holder {
             uint256 currentRewardBalance = rewardBalance();
             if(currentRewardBalance > 0) {
                 if(pending > currentRewardBalance) {
-                    safeTransferReward(address(msg.sender), currentRewardBalance);
+                    safeTransferReward(_user, currentRewardBalance);
                 } else {
-                    safeTransferReward(address(msg.sender), pending);
+                    safeTransferReward(_user, pending);
                 }
             }
         }
         if(_amount > 0) {
             user.amount = user.amount - _amount;
-            poolInfo.wantToken.safeTransferFrom(address(this), address(msg.sender), STAKE_TOKEN_PID, _amount, bytes(""));
+            poolInfo.wantToken.safeTransferFrom(address(this), _user, STAKE_TOKEN_PID, _amount, bytes(""));
             totalStaked = totalStaked - _amount;
         }
 
         user.rewardDebt = user.amount * poolInfo.accRewardTokenPerShare / 1e30;
 
-        emit Withdraw(msg.sender, _amount);
+        emit Withdraw(_user, _amount);
     }
 
     /// Obtain the reward balance of this contract

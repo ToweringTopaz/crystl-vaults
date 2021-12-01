@@ -93,26 +93,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
         //check that user actually has shares in this pid
-        uint256 userStakedAndUnstakedShares = balanceOf(_to, _pid) + stakingPool.userStakedAmount(_to); //TODO - ask TT if there's another way to access this?
-        uint256 userBoostedAndUnboostedWant = userStakedAndUnstakedShares * pool.wantLockedTotal / totalSupply(_pid); //TODO - ask TT if there's another way to access this?
-
-        console.log("balanceOf");
+        uint256 userUnboostedWant = balanceOf(_to, _pid) * pool.strat.wantLockedTotal() / totalSupply(_pid);
         console.log(balanceOf(_to, _pid));
-        console.log("stakingPool.userStakedAmount");
-        console.log(stakingPool.userStakedAmount(_to));
+        uint256 userBoostedWant = stakingPool.userStakedAmount(_to) * pool.strat.wantLockedTotal() / totalSupply(_pid);
 
-        require(userBoostedAndUnboostedWant > 0, "User has 0 shares");
+        require(userUnboostedWant + userBoostedWant > 0, "User has 0 shares");
         
-        console.log(_wantAmt);
         //unstake here if need be
-        if (_wantAmt > balanceOf(_to, _pid) && stakingPool.userStakedAmount(_to) > 0) { //&&stakingPool exists! check that it's not a zero address?
+        if (_wantAmt > userUnboostedWant && userBoostedWant > 0) { //&&stakingPool exists! check that it's not a zero address?
             console.log("made it into the conditional");
-            stakingPool.withdraw(_wantAmt-balanceOf(_to, _pid));
-            console.log("withdrawn from staking pool");
-            console.log(_wantAmt-balanceOf(_to, _pid));
+            console.log(stakingPool.userStakedAmount(_to));
+            console.log(_wantAmt-userUnboostedWant);
+            console.log((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal());
+            stakingPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
             }
-
-        console.log(balanceOf(_to, _pid));
 
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
         //TELL THE STRAT HOW MUCH TO WITHDRAW!! - wantAmt, as long as wantAmt is allowed...
@@ -129,10 +123,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         transferData(_pid, _msgSender()).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        if (!paused(_pid) && withdrawFeeRate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            uint feeAmt = wantAmt * withdrawFeeRate / 10000;
+        if (!paused(_pid) && defaultFees.withdraw.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            uint feeAmt = wantAmt * defaultFees.withdraw.rate / 10000;
             wantAmt -= feeAmt;
-            pool.want.safeTransferFrom(address(pool.strat), feeReceiver, feeAmt);
+            pool.want.safeTransferFrom(address(pool.strat), defaultFees.withdraw.receiver, feeAmt);
         }
         
         //this call transfers wantTokens from the strat to the user
