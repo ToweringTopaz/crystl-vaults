@@ -94,12 +94,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
         //check that user actually has shares in this pid
         uint256 userStakedAndUnstakedShares = balanceOf(_to, _pid) + stakingPool.userStakedAmount(_to); //TODO - ask TT if there's another way to access this?
+        uint256 userBoostedAndUnboostedWant = userStakedAndUnstakedShares * pool.wantLockedTotal / totalSupply(_pid); //TODO - ask TT if there's another way to access this?
+
         console.log("balanceOf");
         console.log(balanceOf(_to, _pid));
         console.log("stakingPool.userStakedAmount");
         console.log(stakingPool.userStakedAmount(_to));
 
-        require(userStakedAndUnstakedShares > 0, "User has 0 shares");
+        require(userBoostedAndUnboostedWant > 0, "User has 0 shares");
         
         console.log(_wantAmt);
         //unstake here if need be
