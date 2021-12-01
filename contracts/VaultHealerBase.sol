@@ -110,6 +110,19 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         }
         return balanceOf(_user, _pid) * wantLockedTotal / _sharesTotal;
     }
+
+    // View function to see staked Want tokens on frontend.
+    function boostedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
+        PoolInfo storage pool = _poolInfo[_pid];
+        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
+
+        uint256 _sharesTotal = totalSupply(_pid);
+        uint256 wantLockedTotal = pool.strat.wantLockedTotal();
+        if (_sharesTotal == 0) {
+            return 0;
+        }
+        return stakingPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
+    }
     // function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
     //     PoolInfo storage pool = _poolInfo[_pid];
     //     UserInfo storage user = pool.user[_user];
