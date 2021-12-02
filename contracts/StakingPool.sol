@@ -206,6 +206,7 @@ contract StakingPool is Ownable, Initializable, ERC1155Holder {
             }
         }
         if(_amount > 0) {
+            if (user.amount - _amount < 1000000000000) _amount = user.amount; //todo: change this hardcoded value to settings.dust?
             user.amount = user.amount - _amount;
             poolInfo.wantToken.safeTransferFrom(address(this), _user, STAKE_TOKEN_PID, _amount, bytes(""));
             totalStaked = totalStaked - _amount;

@@ -226,7 +226,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should should allow the user to unstake their receipt tokens, and get correct amount back, and get reward out', async () => {
             user = await stakingPool.userInfo(user1.address);
             userBalanceOfStakingPoolBeforeWithdrawal = user.amount;
-            console.log(userBalanceOfStakingPoolBeforeWithdrawal)
+            // console.log(userBalanceOfStakingPoolBeforeWithdrawal)
             
             userBalanceInVaultBeforeWithdrawal = vaultHealer.stakedWantTokens(pid, user1.address)
 
@@ -238,7 +238,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user = await stakingPool.userInfo(user1.address);
             userBalanceOfStakingPoolAfterWithdrawal = user.amount;
             userBalanceInVaultAfterWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address)
-            console.log(userBalanceInVaultAfterWithdrawal)
+            // console.log(userBalanceInVaultAfterWithdrawal)
 
             expect(userBalanceOfStakingPoolBeforeWithdrawal).to.eq(userBalanceInVaultAfterWithdrawal); //will only be true on first deposit?
             
@@ -342,32 +342,32 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await vaultHealer.connect(user1).setApprovalForAll(stakingPool.address, true); //dangerous to approve all forever?
 
             await stakingPool.connect(user1).deposit(userBalanceOfStrategyTokensBeforeStaking);
-            // user = await stakingPool.userInfo(user1.address);
-            // userBalanceOfStakingPool = user.amount;
+            user = await stakingPool.userInfo(user1.address);
+            userBalanceOfStakingPool = user.amount;
 
             userWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
-            console.log(userWantTokensBeforeWithdrawal);
+            // console.log(userWantTokensBeforeWithdrawal);
 
-            console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
+            // console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
 
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
-            console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
+            // console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
             userBoostedWantTokensBeforeWithdrawal = await vaultHealer.boostedWantTokens(pid, user1.address);
-            console.log("userBoostedWantTokensBeforeWithdrawal");
-            console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
+            // console.log("userBoostedWantTokensBeforeWithdrawal");
+            // console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
             await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal+userBoostedWantTokensBeforeWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
-            console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
+            // console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
 
             UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
-            console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
+            // console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
             
             userBoostedWantTokensAfterWithdrawal = await vaultHealer.boostedWantTokens(pid, user1.address);
 

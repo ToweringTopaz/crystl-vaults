@@ -24,27 +24,20 @@ library LibVaultSwaps {
     
     function distribute(VaultFees storage fees, VaultSettings storage settings, VaultStats storage stats, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
         uint burnedBefore = IERC20(fees.burn.token).balanceOf(fees.burn.receiver);
-        console.log("made it into distribute function");
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
         uint256 fee = _earnedAmt * fees.earn.rate / FEE_MAX;
-        console.log(fee);
         if (fee > 0) {
             safeSwap(settings, fee, _earnedToken, fees.earn.token, _to);
             earnedAmt -= fee;
-            console.log("1 - paid for earn function");
             }
 
         //distribute rewards
         fee = _earnedAmt * fees.reward.rate / FEE_MAX;
-        console.log(fee);
         if (fee > 0) {
-            console.log(fees.reward.receiver);
-            console.log(address(fees.reward.token));
             safeSwap(settings, fee, _earnedToken, _earnedToken == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
             earnedAmt -= fee;
-            console.log("2 - distributed rewards");
             }
         
         //burn crystl
@@ -52,14 +45,12 @@ library LibVaultSwaps {
         if (fee > 0) {
             safeSwap(settings, fee, _earnedToken, fees.burn.token, fees.burn.receiver);
             earnedAmt -= fee;
-            console.log("3 - burnt crystal");
             }
 
         unchecked { //overflow ok albeit unlikely
             stats.totalEarned += uint128(earnedAmt);
             stats.totalBurned += uint128(IERC20(fees.burn.token).balanceOf(fees.burn.receiver) - burnedBefore);
         }
-        console.log("4 - exiting function...");
     }
 
     function safeSwap(
@@ -81,7 +72,6 @@ library LibVaultSwaps {
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
         uint256 counter=0;
-        console.log(path.length);
         for (counter; counter<path.length; counter++){
             if (path[counter]==address(0)) break;
         }
@@ -89,7 +79,6 @@ library LibVaultSwaps {
         for (uint256 i=0; i<counter; i++) {
             cleanedUpPath[i] =path[i];
         }
-        console.log(cleanedUpPath.length);
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, cleanedUpPath);
@@ -105,7 +94,6 @@ library LibVaultSwaps {
             } else { //reflect mode off
                 settings.router.swapExactTokensForTokens(
                     _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
-                    console.log("made the swap");
             }
         } else { //Non-contract address (extcodesize zero) receives native ETH
             if (settings.feeOnTransfer) { //reflect mode on
@@ -114,7 +102,6 @@ library LibVaultSwaps {
             } else { //reflect mode off
                 settings.router.swapExactTokensForETH(
                     _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
-                    console.log("made swap into ETH");
             }            
         }
 

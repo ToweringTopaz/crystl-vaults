@@ -94,17 +94,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
         //check that user actually has shares in this pid
         uint256 userUnboostedWant = balanceOf(_to, _pid) * pool.strat.wantLockedTotal() / totalSupply(_pid);
-        console.log(balanceOf(_to, _pid));
-        uint256 userBoostedWant = stakingPool.userStakedAmount(_to) * pool.strat.wantLockedTotal() / totalSupply(_pid);
+        uint256 userBoostedWant;
+        if (address(stakingPool) != address(0)) {
+            userBoostedWant = stakingPool.userStakedAmount(_to) * pool.strat.wantLockedTotal() / totalSupply(_pid);
+            } else userBoostedWant = 0;
 
         require(userUnboostedWant + userBoostedWant > 0, "User has 0 shares");
         
         //unstake here if need be
         if (_wantAmt > userUnboostedWant && userBoostedWant > 0) { //&&stakingPool exists! check that it's not a zero address?
-            console.log("made it into the conditional");
-            console.log(stakingPool.userStakedAmount(_to));
-            console.log(_wantAmt-userUnboostedWant);
-            console.log((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal());
             stakingPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
             }
 

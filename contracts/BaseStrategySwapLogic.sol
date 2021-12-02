@@ -83,34 +83,23 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     function _earn(address _to) internal virtual whenEarnIsReady {
         
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
-        // console.log("just before harvest");
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         bool success;
         
         for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8. 
-            // console.log("made it into the for loop");
             IERC20 earnedToken = earned[i];
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == wantToken)
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
                 
             if (earnedAmt > dust) {
-                // console.log("just past the dust conditional");
-
                 success = true; //We have something worth compounding
-                // console.log(settings.dust);
-                // console.log(vaultStats.totalEarned);
-                // console.log(earnedAmt);
-                // console.log(_to);
-
                 earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
-                // console.log("hello");
                 for (uint j; j < lpTokenLength; j++) {
-                    // console.log("about to make the swap");
                     LibVaultSwaps.safeSwap(settings, earnedAmt / lpTokenLength, earnedToken, lpToken[j], address(this));
                 }
             }
@@ -121,7 +110,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 // Get want tokens, ie. add liquidity
                 LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]);
             }
-            // console.log("just before _farm");
             _farm();
         }
         lastEarnBlock = block.number;

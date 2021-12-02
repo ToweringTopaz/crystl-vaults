@@ -105,8 +105,9 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     // View function to see staked Want tokens on frontend.
     function boostedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = _poolInfo[_pid];
+        if (pool.strat.stakingPoolAddress() == address(0)) return 0;
+        
         IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
-
         uint256 _sharesTotal = totalSupply(_pid);
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
         if (_sharesTotal == 0) {
@@ -114,15 +115,6 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         }
         return stakingPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
     }
-    // function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
-    //     PoolInfo storage pool = _poolInfo[_pid];
-    //     UserInfo storage user = pool.user[_user];
-        
-    //     deposited = user.totalDeposits;
-    //     withdrawn = user.totalWithdrawals;
-    //     uint staked = pool.sharesTotal == 0 ? 0 : user.shares * pool.strat.wantLockedTotal() / pool.sharesTotal;
-    //     earned = int(withdrawn + staked) - int(deposited);
-    // }
 
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
