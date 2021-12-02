@@ -31,12 +31,13 @@ const PATHS = apeSwapVaults[0].paths;
 const PID = apeSwapVaults[0].PID;
 const ROUTER = vaultSettings.standard[0];
 
-const TOLERANCE = vaultSettings.standard[9];
+const TOLERANCE = vaultSettings.standard[2];
 
 // const [TOKEN0_TO_EARNED_PATH,, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[0].paths;
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
 const minBlocksBetweenSwaps = vaultSettings.standard[12];
+var userRewardDebtAfterTime;
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
@@ -59,12 +60,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         const feeConfig = 
             [
                 [ ZERO_ADDRESS, FEE_ADDRESS, 10 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
-                [ WMATIC, FEE_ADDRESS, 500 ], //earn fee: wmatic is paid; receiver is ignored; 0% rate
-                [ DAI, FEE_ADDRESS, 0 ], //reward fee: paid in DAI; standard fee address; 0% rate
+                [ WMATIC, FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
+                [ WMATIC, FEE_ADDRESS, 500 ], //reward fee: paid in DAI; standard fee address; 0% rate
                 [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(feeConfig, 10);
+        vaultHealer = await VaultHealer.deploy(feeConfig);
         // console.log(vaultHealer.address);
         
         StrategyMasterHealer = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE, {
@@ -84,12 +85,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ];
 
         strategyMasterHealer = await StrategyMasterHealer.deploy(...DEPLOYMENT_VARS);
-        // TOKEN0 = await strategyMasterHealer.lpToken[0];
-        // TOKEN1 = await strategyMasterHealer.lpToken[1];
+        // TOKEN0ADDRESS = await strategyMasterHealer.lpToken[0];
+        // TOKEN1ADDRESS = await strategyMasterHealer.lpToken[1];
         // console.log(await strategyMasterHealer.lpToken)
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
-        TOKEN0 = await LPtoken.token0()
-        TOKEN1 = await LPtoken.token1()
+        TOKEN0ADDRESS = await LPtoken.token0()
+        TOKEN1ADDRESS = await LPtoken.token1()
 
         vaultHealerOwner = await vaultHealer.owner();
 
@@ -131,66 +132,63 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             "0x21E19E0C9BAB2400000", //amount of 1000 in hex
         ]);
 
-        if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
-            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
+        if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
-        if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
-            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
+        if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
+            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
 
-        if (TOKEN0 == ethers.utils.getAddress(WMATIC) ){
-            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0); 
+        if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
-        if (TOKEN1 == ethers.utils.getAddress(WMATIC)) {
-            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1); 
+        if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
+            wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
 
+        //create instances of token0 and token1
+        token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
+        token1 = await ethers.getContractAt(token_abi, TOKEN1ADDRESS);
         
+        //user 1 adds liquidity to get LP tokens
+        var token0BalanceUser1 = await token0.balanceOf(user1.address);
+        await token0.approve(uniswapRouter.address, token0BalanceUser1);
+        
+        var token1BalanceUser1 = await token1.balanceOf(user1.address);
+        await token1.approve(uniswapRouter.address, token1BalanceUser1);
+        
+        await uniswapRouter.addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser1, token1BalanceUser1, 0, 0, user1.address, Date.now() + 900)
 
+        //user 2 adds liquidity to get LP tokens
+        var token0BalanceUser2 = await token0.balanceOf(user2.address);
+        await token0.connect(user2).approve(uniswapRouter.address, token0BalanceUser2);
+        
+        var token1BalanceUser2 = await token1.balanceOf(user2.address);
+        await token1.connect(user2).approve(uniswapRouter.address, token1BalanceUser2);
+
+        await uniswapRouter.connect(user2).addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser2, token1BalanceUser2, 0, 0, user2.address, Date.now() + 900)
+        
     });
 
     describe(`Testing depositing into vault, compounding vault, withdrawing from vault:
     `, () => {
-        // Create LPs for the vault
-        it('Should create the right LP tokens for users to deposit in the vault', async () => {
-            token0 = await ethers.getContractAt(token_abi, TOKEN0);
-            var token0Balance = await token0.balanceOf(user1.address);
-            await token0.approve(uniswapRouter.address, token0Balance);
-
-            var token0BalanceUser2 = await token0.balanceOf(user2.address);
-            await token0.connect(user2).approve(uniswapRouter.address, token0BalanceUser2);
-
-            token1 = await ethers.getContractAt(token_abi, TOKEN1);
-            var token1Balance = await token1.balanceOf(user1.address);
-            await token1.approve(uniswapRouter.address, token1Balance);
-
-            var token1BalanceUser2 = await token1.balanceOf(user2.address);
-            await token1.connect(user2).approve(uniswapRouter.address, token1BalanceUser2);
-
-            await uniswapRouter.addLiquidity(TOKEN0, TOKEN1, token0Balance, token1Balance, 0, 0, user1.address, Date.now() + 900)
-            await uniswapRouter.connect(user2).addLiquidity(TOKEN0, TOKEN1, token0BalanceUser2, token1BalanceUser2, 0, 0, user2.address, Date.now() + 900)
-
-            // LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
-            initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
-            expect(initialLPtokenBalance).to.not.equal(0);
-        })
-        
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit user1\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
+            initialLPtokenBalance = LPtoken.balanceOf(user1.address);
             await LPtoken.approve(vaultHealer.address, initialLPtokenBalance); //no, I have to approve the vaulthealer surely?
-            const LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
+            LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
             await vaultHealer["deposit(uint256,uint256)"](pid,initialLPtokenBalance);
             const vaultSharesTotalAfterFirstDeposit = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             // console.log(`deposited ${ethers.utils.formatEther(vaultSharesTotalAfterFirstDeposit)} lp tokens`)
@@ -198,9 +196,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(LPtokenBalanceBeforeFirstDeposit).to.equal(vaultSharesTotalAfterFirstDeposit); //will this work for 2nd deposit? on normal masterchef?
         })
         
-        it('Should mint ERC1155 tokens for the user, with the pid of the strategy', async () => {
+        it('Should mint ERC1155 tokens for this user, with the pid of the strategy and equal to LP tokens deposited', async () => {
             userBalanceOfStrategyTokens = await vaultHealer.balanceOf(user1.address, pid);
-            expect(userBalanceOfStrategyTokens).to.be.gt("0") //equal(vaultSharesTotalAfterFirstDeposit); 
+            expect(userBalanceOfStrategyTokens).to.eq(LPtokenBalanceBeforeFirstDeposit); 
         })
 
         it('Should allow user to boost by staking their receipt tokens in the stakingPool, showing a balanceOf in the pool afterwards', async () => {
@@ -225,17 +223,38 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(userRewardDebtAfterTime).to.be.gt(userRewardDebtAtStart); //will only be true on first deposit?
         })
 
-        it('Should should allow the user to unstake their receipt tokens', async () => {
+        it('Should should allow the user to unstake their receipt tokens, and get correct amount back, and get reward out', async () => {
             user = await stakingPool.userInfo(user1.address);
             userBalanceOfStakingPoolBeforeWithdrawal = user.amount;
+            // console.log(userBalanceOfStakingPoolBeforeWithdrawal)
+            
+            userBalanceInVaultBeforeWithdrawal = vaultHealer.stakedWantTokens(pid, user1.address)
 
-            await stakingPool.connect(user1).withdraw(userBalanceOfStakingPool);
+            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+            userRewardTokenBalanceBeforeWithdrawal = await crystlToken.balanceOf(user1.address);
+
+            await stakingPool.connect(user1)["withdraw(uint256)"](userBalanceOfStakingPool);
 
             user = await stakingPool.userInfo(user1.address);
             userBalanceOfStakingPoolAfterWithdrawal = user.amount;
+            userBalanceInVaultAfterWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address)
+            // console.log(userBalanceInVaultAfterWithdrawal)
+
+            expect(userBalanceOfStakingPoolBeforeWithdrawal).to.eq(userBalanceInVaultAfterWithdrawal); //will only be true on first deposit?
             
-            expect(userBalanceOfStakingPoolBeforeWithdrawal).to.be.gt(userBalanceOfStakingPoolAfterWithdrawal); //will only be true on first deposit?
+            userRewardTokenBalanceAfterWithdrawal = await crystlToken.balanceOf(user1.address);
+            expect(userRewardTokenBalanceAfterWithdrawal.sub(userRewardTokenBalanceBeforeWithdrawal)).to.eq(userRewardDebtAfterTime.add(1000000)); //adding one extra block of reward - this right?
+
         })
+
+        //check that reward got returned to user1 on withdrawal
+
+        // it('should return reward to user upon unstaking', async () => {
+        //     // userRewardDebtBeforeWithdrawal = await stakingPool.pendingReward(user1.address);
+        //     crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+        //     userRewardTokenBalanceAfterWithdrawal = await crystlToken.balanceOf(user1.address);
+        //     expect(userRewardTokenBalanceAfterWithdrawal).to.eq(userRewardDebtAfterTime);
+        // })
 
         // Compound LPs (Call the earnSome function with this specific farm’s pid).
         // Check balance to ensure it increased as expected
@@ -243,7 +262,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const vaultSharesTotalBeforeCallingEarnSome = await strategyMasterHealer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             maticToken = await ethers.getContractAt(token_abi, WMATIC);
 
-            balanceMaticAtFeeAddressBeforeEarn = await maticToken.balanceOf(user1.address); //CHANGE THIS
+            balanceMaticAtFeeAddressBeforeEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
 
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
@@ -264,14 +283,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         }) 
 
         it('Should pay 5% of earnedAmt to the feeAddress with each earn, in WMATIC', async () => {
-            const balanceMaticAtFeeAddressAfterEarn = await maticToken.balanceOf("0x5386881b46C37CdD30A748f7771CF95D7B213637");
+            balanceMaticAtFeeAddressAfterEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
             expect(balanceMaticAtFeeAddressAfterEarn).to.be.gt(balanceMaticAtFeeAddressBeforeEarn);
+            //this doesn't work because user had to pay gas
         })
         
-
         // Unstake 50% of LPs. 
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
-        it('Should unstake 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
+        it('Should withdraw 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user1.address);
             const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
 
@@ -315,32 +334,49 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.equal(vaultSharesTotalAfterSecondDeposit.sub(vaultSharesTotalBeforeSecondDeposit)); //will this work for 2nd deposit? on normal masterchef?
         })
         
+
         // Withdraw 100%
-        it('Should withdraw remaining user1 balance back to user1, minus withdrawal fee (0.1%)', async () => {
-            const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address);
-            console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
+        it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
+            userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, pid);
+
+            await vaultHealer.connect(user1).setApprovalForAll(stakingPool.address, true); //dangerous to approve all forever?
+
+            await stakingPool.connect(user1).deposit(userBalanceOfStrategyTokensBeforeStaking);
+            user = await stakingPool.userInfo(user1.address);
+            userBalanceOfStakingPool = user.amount;
+
+            userWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
+            const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
+            // console.log(userWantTokensBeforeWithdrawal);
+
+            // console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
 
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
-            console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
+            // console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
+            userBoostedWantTokensBeforeWithdrawal = await vaultHealer.boostedWantTokens(pid, user1.address);
+            // console.log("userBoostedWantTokensBeforeWithdrawal");
+            // console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
-            await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](pid, UsersStakedTokensBeforeFinalWithdrawal+userBoostedWantTokensBeforeWithdrawal); //user1 (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
-            console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
+            // console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
 
             UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(pid, user1.address);
-            console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
+            // console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
+            // console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
+            
+            userBoostedWantTokensAfterWithdrawal = await vaultHealer.boostedWantTokens(pid, user1.address);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
-                (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                (UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                 .sub(
                     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                    .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
+                    .mul(UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                     .div(WITHDRAW_FEE_FACTOR_MAX)
                 )
                 );
@@ -351,6 +387,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
             expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
         })
+
+        it('Should leave zero user1 funds in stakingPool after 100% withdrawal', async () => {
+            // console.log(await crystlToken.balanceOf(strategyMasterHealer.address))
+            expect(userBoostedWantTokensAfterWithdrawal.toNumber()).to.equal(0);
+        })
         
     })
 })
+

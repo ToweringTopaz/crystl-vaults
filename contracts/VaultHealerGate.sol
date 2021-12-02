@@ -95,12 +95,17 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
         //check that user actually has shares in this pid
-        uint256 userStakedAndUnstakedShares = balanceOf(_to, _pid) + stakingPool.userStakedAmount(_to); //TODO - ask TT if there's another way to access this?
-        require(userStakedAndUnstakedShares > 0, "User has 0 shares");
+        uint256 userUnboostedWant = balanceOf(_to, _pid) * pool.strat.wantLockedTotal() / totalSupply(_pid);
+        uint256 userBoostedWant;
+        if (address(stakingPool) != address(0)) {
+            userBoostedWant = stakingPool.userStakedAmount(_to) * pool.strat.wantLockedTotal() / totalSupply(_pid);
+            } else userBoostedWant = 0;
+
+        require(userUnboostedWant + userBoostedWant > 0, "User has 0 shares");
         
         //unstake here if need be
-        if (_wantAmt > balanceOf(_to, _pid) && stakingPool.userStakedAmount(_to) > 0) { //&&stakingPool exists! check that it's not a zero address?
-            stakingPool.withdraw(_wantAmt-balanceOf(_to, _pid));
+        if (_wantAmt > userUnboostedWant && userBoostedWant > 0) { //&&stakingPool exists! check that it's not a zero address?
+            stakingPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
             }
 
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
@@ -118,10 +123,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         transferData(_pid, _msgSender()).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        if (!paused(_pid) && withdrawFeeRate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            uint feeAmt = wantAmt * withdrawFeeRate / 10000;
+        if (!paused(_pid) && defaultFees.withdraw.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            uint feeAmt = wantAmt * defaultFees.withdraw.rate / 10000;
             wantAmt -= feeAmt;
-            pool.want.safeTransferFrom(address(pool.strat), feeReceiver, feeAmt);
+            pool.want.safeTransferFrom(address(pool.strat), defaultFees.withdraw.receiver, feeAmt);
         }
         
         //this call transfers wantTokens from the strat to the user

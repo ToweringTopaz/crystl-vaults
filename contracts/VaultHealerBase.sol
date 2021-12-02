@@ -4,6 +4,8 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+// import "@openzeppelin/contracts/security/Pausable.sol";
+
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IStakingPool.sol";
 // import "./libs/LibVaultConfig.sol";
@@ -15,7 +17,6 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
 
     // Info of each user.
     struct UserInfo {
-        uint256 shares; // Shares for standard auto-compound rewards
         uint256 totalDeposits;
         uint256 totalWithdrawals;
         mapping (address => uint256) allowances; //for ERC20 transfers
@@ -28,15 +29,11 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
         mapping (address => UserInfo) user;
-        uint256 sharesTotal;
         bytes data;
-        // address stakingPoolAddress;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
-    uint16 public withdrawFeeRate; // in basis points: 255 = 2.55% max possible withdrawal fee
-    address public feeReceiver;
     
     //pid for any of our strategies
     mapping(address => uint) private _strats;
@@ -55,8 +52,6 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         _fees.check();
         defaultFees = _fees;
         emit SetDefaultFees(_fees);
-        feeReceiver = _fees.withdraw.receiver;
-        withdrawFeeRate = _fees.withdraw.rate;
 
         _poolInfo.push(); //so uninitialized pid variables (pid 0) can be assumed as invalid
         
@@ -94,10 +89,6 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     function poolInfo(uint pid) external view returns (address want, address strat) {
         return (address(_poolInfo[pid].want), address(_poolInfo[pid].strat));
     }
-    
-    function userInfo(uint _pid, address _user) external view returns (uint256 shares) {
-        return _poolInfo[_pid].user[_user].shares;
-    }
 
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
@@ -110,15 +101,20 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         }
         return balanceOf(_user, _pid) * wantLockedTotal / _sharesTotal;
     }
-    // function userTotals(uint256 _pid, address _user) external view returns (uint256 deposited, uint256 withdrawn, int256 earned) {
-    //     PoolInfo storage pool = _poolInfo[_pid];
-    //     UserInfo storage user = pool.user[_user];
+
+    // View function to see staked Want tokens on frontend.
+    function boostedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
+        PoolInfo storage pool = _poolInfo[_pid];
+        if (pool.strat.stakingPoolAddress() == address(0)) return 0;
         
-    //     deposited = user.totalDeposits;
-    //     withdrawn = user.totalWithdrawals;
-    //     uint staked = pool.sharesTotal == 0 ? 0 : user.shares * pool.strat.wantLockedTotal() / pool.sharesTotal;
-    //     earned = int(withdrawn + staked) - int(deposited);
-    // }
+        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
+        uint256 _sharesTotal = totalSupply(_pid);
+        uint256 wantLockedTotal = pool.strat.wantLockedTotal();
+        if (_sharesTotal == 0) {
+            return 0;
+        }
+        return stakingPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
+    }
 
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
@@ -140,10 +136,11 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     //     require(!isStrat(_strat), "Existing strategy");
     //     _poolInfo[_pid] = IStrategy(_strat).stakingPoolAddress();
     // }
+    
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
         uint pid = findPid(_strat);
-        return _poolInfo[pid].sharesTotal;
+        return totalSupply(pid);
     }
     function isStrat(address _strat) public view returns (bool) {
         return _strats[_strat] > 0;
@@ -154,13 +151,13 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         return pid;
     }
     
-    function getFees(uint pid) public view returns (VaultFees memory) {
-        PoolInfo storage pool = _poolInfo[pid];
-        if (pool.overrideDefaultFees) 
-            return pool.fees;
-        else
-            return defaultFees;
-    }
+    // function getFees(uint pid) public view returns (VaultFees memory) {
+    //     PoolInfo storage pool = _poolInfo[pid];
+    //     if (pool.overrideDefaultFees) 
+    //         return pool.fees;
+    //     else
+    //         return defaultFees;
+    // }
     
      function setDefaultFees(VaultFees calldata _fees) external onlyOwner {
         defaultFees = _fees;
