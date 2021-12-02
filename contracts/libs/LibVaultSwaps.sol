@@ -7,6 +7,7 @@ import "./PrismLibrary.sol";
 import "./LibVaultConfig.sol";
 import "./FullMath.sol";
 import "hardhat/console.sol";
+import "./IWETH.sol";
 
 //Functions specific to the strategy code
 library LibVaultSwaps {
@@ -110,6 +111,18 @@ library LibVaultSwaps {
 
     }
     
+    function safeSwapETH(
+        VaultSettings storage settings,
+        uint256 _amountIn,
+        IERC20 _tokenB,
+        address _to
+    ) internal {
+        IERC20 weth = wnative(settings.router);
+        IWETH(address(weth)).deposit{value: _amountIn}();
+
+        safeSwap(settings, _amountIn, weth, _tokenB, _to);
+    }
+
     //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
     function optimalMint(IERC20 pair, IERC20 tokenA, IERC20 tokenB) internal returns (uint liquidity) {
         (address token0, address token1) = PrismLibrary.sortTokens(address(tokenA), address(tokenB));

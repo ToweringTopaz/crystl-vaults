@@ -20,6 +20,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IERC20 token;
         address from;
         uint256 amount;
+        uint256 value; //as in msg.value/native eth
     }
     mapping(bytes32 => TransferData) private _transferData;
     PendingDeposit private pendingDeposit;
@@ -38,12 +39,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
         earned = int(stats.withdrawals + staked + stats.transfersOut) - int(stats.deposits + stats.transfersIn);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external  whenNotPaused(_pid) { //nonReentrantPid(_pid)
+    function deposit(uint256 _pid, uint256 _wantAmt) external payable whenNotPaused(_pid) { //nonReentrantPid(_pid)
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external  whenNotPaused(_pid) { //nonReentrantPid(_pid)
+    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external payable whenNotPaused(_pid) { //nonReentrantPid(_pid)
         _deposit(_pid, _wantAmt, _to);
     }
 
@@ -51,15 +52,16 @@ abstract contract VaultHealerGate is VaultHealerBase {
         PoolInfo storage pool = _poolInfo[_pid];
         require(address(pool.strat) != address(0), "That strategy does not exist");
 
-        if (_wantAmt > 0) {
+        if (_wantAmt > 0 || msg.value > 0) {
             
             pendingDeposit = PendingDeposit({ //todo: understand better what this does
                 token: pool.want,
                 from: msg.sender,
-                amount: _wantAmt
+                amount: _wantAmt,
+                value: msg.value
             });
 
-            uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt, totalSupply(_pid));
+            uint256 sharesAdded = pool.strat.deposit{value: msg.value}(msg.sender, _to, _wantAmt, totalSupply(_pid));
 
             //we mint tokens for the user via the 1155 contract
             _mint(
@@ -143,23 +145,23 @@ abstract contract VaultHealerGate is VaultHealerBase {
         );
     }
 
-function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    function _beforeTokenTransfer(
+            address operator,
+            address from,
+            address to,
+            uint256[] memory ids,
+            uint256[] memory amounts,
+            bytes memory data
+        ) internal virtual override {
+            super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        if (from != address(0) && to != address(0)) {
-            for (uint i; i < ids.length; i++) {
-                uint pid = ids[i];
-                uint underlyingValue = amounts[i] * _poolInfo[pid].strat.wantLockedTotal() / totalSupply(pid);
-                transferData(pid, from).transfersOut += underlyingValue;
-                transferData(pid, to).transfersIn += underlyingValue;
+            if (from != address(0) && to != address(0)) {
+                for (uint i; i < ids.length; i++) {
+                    uint pid = ids[i];
+                    uint underlyingValue = amounts[i] * _poolInfo[pid].strat.wantLockedTotal() / totalSupply(pid);
+                    transferData(pid, from).transfersOut += underlyingValue;
+                    transferData(pid, to).transfersIn += underlyingValue;
+                }
             }
         }
-    }
 }

@@ -9,7 +9,7 @@ interface IStrategy {
     function stakingPoolAddress() external view returns (address);
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
     function earn(address _to) external; // Main want token compounding function
-    function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
+    function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external payable returns (uint256);
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
     function setFees(VaultFees calldata _fees) external; //vaulthealer uses this to update configuration
     function panic() external;

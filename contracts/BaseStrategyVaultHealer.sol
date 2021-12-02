@@ -38,17 +38,26 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
+    function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external payable onlyVaultHealer returns (uint256 sharesAdded) {
+        require(_wantAmt > 0 || msg.value > 0, "Strategy: nothing to deposit");
         _earn(_from); //earn before deposit prevents abuse
-       
-        if (_wantAmt < settings.dust) return 0; //do nothing if nothing is requested
-        
+
         uint256 wantLockedBefore = wantLockedTotal();
+
+        if (msg.value > 0) { //convert all msg.value eth to want tokens
+            for (uint i; i < lpTokenLength; i++) {
+                LibVaultSwaps.safeSwapETH(settings, msg.value / lpTokenLength, lpToken[i], address(this));
+            }
+            if (lpTokenLength > 1) {
+                // Get want tokens, ie. add liquidity
+                LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]);
+            }
+        }
         
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
-        vaultHealer.executePendingDeposit(address(this), _wantAmt);
+        if (_wantAmt > 0) vaultHealer.executePendingDeposit(address(this), _wantAmt);
 
         _farm(); //deposits the tokens in the pool
         
