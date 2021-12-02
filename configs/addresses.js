@@ -47,6 +47,7 @@ const tokens = {
                 POLYROLL_MASTERCHEF: '0x3C58EA8D37f4fc6882F678f822E383Df39260937',
                 QUICK_MASTERCHEF: '0x2f58B48A013BAde935e43f7bCc31f1378Ae68d55',
                 APESWAP_MINICHEF: '0x54aff400858Dcac39797a81894D9920f16972D1D',
+                CRYSTL_MASTERHEALER: '0xeBCC84D2A73f0c9E23066089C6C24F4629Ef1e6d',
          }
 }
 
@@ -80,11 +81,20 @@ const routers = {
         }
 }
 
+const tactics = {
+        polygon: {
+                TACTIC_MASTERHEALER: '0xEF402F090975700830635D28B9a6829bfBBdcfa8', //possibly out of date
+                TACTIC_MASTERHEALER_REFERRAL: '0xAfdA790471f2c26cEf82568E22a0feACfA031cD3', //possibly out of date
+                TACTIC_MINIAPE: '0x48D446A5571592EC101e59FEb47A0aFdD4A42566', //possibly out of date
+        }
+}
+
 module.exports = {
         accounts,
         tokens,
         masterChefs,
         lps,
-        routers
+        routers,
+        tactics
 }
 
