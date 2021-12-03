@@ -12,13 +12,12 @@ const apeSwapVaults = [
         earned: [ BANANA, CRYSTL ],
     },
     {
-		masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+        want: lps.polygon.MATIC_BANANA_APE_LP, // Want
+        vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
+        masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
 		tactic: '0x6873808DBc09Aa85A3ebB996Adf91c41AeD4aCbf', //TacticMiniApe
-		vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
-		want: lps.polygon.MATIC_BANANA_APE_LP, // Want
-        earned: [ BANANA, WMATIC ],
-        paths: [], // all wmatic paths, so auto-gen
         PID: 0,
+        earned: [ BANANA, WMATIC ],
     },
 ]
 

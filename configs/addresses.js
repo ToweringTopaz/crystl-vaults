@@ -83,7 +83,7 @@ const routers = {
 
 const tactics = {
         polygon: {
-                TACTIC_MASTERHEALER: '0xEF402F090975700830635D28B9a6829bfBBdcfa8', //possibly out of date
+                TACTIC_MASTERHEALER: '0xEF402F090975700830635D28B9a6829bfBBdcfa8', //updated this one
                 TACTIC_MASTERHEALER_REFERRAL: '0xAfdA790471f2c26cEf82568E22a0feACfA031cD3', //possibly out of date
                 TACTIC_MINIAPE: '0x48D446A5571592EC101e59FEb47A0aFdD4A42566', //possibly out of date
         }

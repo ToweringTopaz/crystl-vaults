@@ -48,19 +48,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _pid, uint256 _wantAmt, address _to) private {
+        // console.log("made it into the deposit function in VH");
         PoolInfo storage pool = _poolInfo[_pid];
+
         require(address(pool.strat) != address(0), "That strategy does not exist");
 
         if (_wantAmt > 0) {
-            
             pendingDeposit = PendingDeposit({ //todo: understand better what this does
                 token: pool.want,
                 from: msg.sender,
                 amount: _wantAmt
             });
-
+            
             uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt, totalSupply(_pid));
-
+            // console.log("sharesAdded");
             //we mint tokens for the user via the 1155 contract
             _mint(
                 _to,
@@ -68,10 +69,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 sharesAdded,
                 hex'' //leave this blank for now
             );
-        
+            // console.log("made it past mint");
         //update the user's data for earn tracking purposes
-        transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount;
+        transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount; //todo: should this go here or higher up? above the strat.deposit?
         
+        pool.rewardDebt[_to] = balanceOf(_to, _pid)  * pool.strat.accRewardTokensPerShare() / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+
+        // console.log("made it past transferData");
         delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);
@@ -129,6 +133,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
         
         //this call transfers wantTokens from the strat to the user
         pool.want.safeTransferFrom(address(pool.strat), _to, wantAmt);
+
+        pool.rewardDebt[_to] = balanceOf(_to, _pid) * pool.strat.accRewardTokensPerShare() / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
 
@@ -141,11 +148,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function executePendingDeposit(address _to, uint _amount) external {
         require(isStrat(msg.sender));
         pendingDeposit.amount -= _amount;
+        console.log(_to);
+        console.log(pendingDeposit.from);
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,
             _to,
             _amount
         );
+        // console.log("made it to the end");
     }
 
 function _beforeTokenTransfer(

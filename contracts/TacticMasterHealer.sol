@@ -11,7 +11,7 @@ interface IMasterchef {
     function harvest(uint256 _pid, address _to) external;
 }
 
-//Polygon: 0x669eCb003c650e8BAC8a4D930c7aFFE44579Ba52
+//Polygon: 0xEF402F090975700830635D28B9a6829bfBBdcfa8
 contract TacticMasterHealer is ITactic {
     
     function _vaultDeposit(address masterchefAddress, uint pid, uint256 _amount) external virtual override {

@@ -81,7 +81,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     }
 
     function _earn(address _to) internal virtual whenEarnIsReady {
-        
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
