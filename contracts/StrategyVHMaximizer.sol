@@ -9,7 +9,9 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
     using Address for address;
     using SafeERC20 for IERC20;
-    
+    using LibVaultConfig for VaultFees;
+    using LibVaultSwaps for VaultFees;
+
     address public immutable masterchef;
     ITactic public immutable tactic;
     uint public immutable pid;
@@ -35,29 +37,23 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
     }
     
     function _earn(address _to) internal override whenEarnIsReady {
-        console.log("made it into earn");
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         bool success;
-        console.log("earnedLength");
-        console.log(earnedLength);
+
         for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8. 
             IERC20 earnedToken = earned[i];
-            uint256 earnedAmt = earnedToken.balanceOf(address(this));
-            console.log("earnedAmt");
-            console.log(earnedAmt);            
+            uint256 earnedAmt = earnedToken.balanceOf(address(this));           
             if (earnedToken == wantToken)
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                // earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
+                earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap earned to crystl for maximizer
-                console.log("about to swap");
                 LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64), address(this));
-                console.log("swapped");
             }
         }
 
@@ -71,7 +67,6 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
             crystlToken.safeApprove(address(vaultHealer), crystlBalance);
 
             vaultHealer.deposit(3, crystlBalance); //pid can be hardcoded here? let's say for now that it's 1?
-            console.log("deposit completed?");
             // uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, crystlBalance, totalSupply(_pid)); //need to pass in from, to, sharesTotal - which sharesTotal? sharesTotal of strat A in strat B?
         }
         lastEarnBlock = block.number;

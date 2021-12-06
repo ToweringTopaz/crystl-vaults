@@ -232,7 +232,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit user1\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
-            initialLPtokenBalance = LPtoken.balanceOf(user1.address);
+            initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
             await LPtoken.approve(vaultHealer.address, initialLPtokenBalance); //no, I have to approve the vaulthealer surely?
             LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
             await vaultHealer["deposit(uint256,uint256)"](maximizer_strat_pid,initialLPtokenBalance);
@@ -273,13 +273,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
         }) 
 
+        it('Should pay 5% of earnedAmt to the feeAddress with each earn, in WMATIC', async () => {
+            balanceMaticAtFeeAddressAfterEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
+            expect(balanceMaticAtFeeAddressAfterEarn).to.be.gt(balanceMaticAtFeeAddressBeforeEarn);
+            //this doesn't work because user had to pay gas
+        })
+
         // Compound LPs (Call the earnSome function with this specific farm’s maximizer_strat_pid).
         // Check balance to ensure it increased as expected
         it('Should wait 10 blocks, then compound the crystl Compounder by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            maticToken = await ethers.getContractAt(token_abi, WMATIC);
-
-            balanceMaticAtFeeAddressBeforeEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
 
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
@@ -298,12 +301,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
         }) 
-
-        it('Should pay 5% of earnedAmt to the feeAddress with each earn, in WMATIC', async () => {
-            balanceMaticAtFeeAddressAfterEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
-            expect(balanceMaticAtFeeAddressAfterEarn).to.be.gt(balanceMaticAtFeeAddressBeforeEarn);
-            //this doesn't work because user had to pay gas
-        })
         
         // Unstake 50% of LPs. 
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
@@ -313,6 +310,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal));
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+            user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user1.address);
+            console.log("user1CrystlBalanceBeforeWithdraw");
+            console.log(user1CrystlBalanceBeforeWithdraw);
 
             await vaultHealer["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
             
@@ -332,6 +333,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 )
                 ;
         })
+
+        // withdraw should also cause crystl to be returned to the user (all of it)
+        it('Should return crystl harvest to user when they withdraw (above test)', async () => {
+            user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
+            console.log("user1CrystlBalanceAfterWithdraw");
+            console.log(user1CrystlBalanceAfterWithdraw);
+
+            expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
+        })
+
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit user2\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
@@ -347,13 +358,26 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
         it('Should accurately increase vaultSharesTotal upon second deposit by user1', async () => {
             await LPtoken.approve(vaultHealer.address, initialLPtokenBalance);
+            console.log("initialLPtokenBalance");
+            console.log(ethers.utils.formatEther(initialLPtokenBalance));
+
             const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(user1.address);
+            console.log("LPtokenBalanceBeforeSecondDeposit");
+            console.log(ethers.utils.formatEther(LPtokenBalanceBeforeSecondDeposit));
+
             const vaultSharesTotalBeforeSecondDeposit = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log("vaultSharesTotalBeforeSecondDeposit");
+            console.log(ethers.utils.formatEther(vaultSharesTotalBeforeSecondDeposit));
 
             await vaultHealer["deposit(uint256,uint256)"](maximizer_strat_pid, LPtokenBalanceBeforeSecondDeposit); //user1 (default signer) deposits LP tokens into specified maximizer_strat_pid vaulthealer
             
             const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(user1.address);
-            const vaultSharesTotalAfterSecondDeposit = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0;
+            console.log("LPtokenBalanceAfterSecondDeposit");
+            console.log(ethers.utils.formatEther(LPtokenBalanceAfterSecondDeposit));
+
+            const vaultSharesTotalAfterSecondDeposit = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0;
+            console.log("vaultSharesTotalAfterSecondDeposit");
+            console.log(ethers.utils.formatEther(vaultSharesTotalAfterSecondDeposit));
 
             expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.equal(vaultSharesTotalAfterSecondDeposit.sub(vaultSharesTotalBeforeSecondDeposit)); //will this work for 2nd deposit? on normal masterchef?
         })
@@ -362,23 +386,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Withdraw 100%
         it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
-
-
-            userWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
-            // console.log(userWantTokensBeforeWithdrawal);
-
             // console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
 
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
             // console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
-            userBoostedWantTokensBeforeWithdrawal = await vaultHealer.boostedWantTokens(maximizer_strat_pid, user1.address);
-            // console.log("userBoostedWantTokensBeforeWithdrawal");
-            // console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
-            await vaultHealer["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFinalWithdrawal+userBoostedWantTokensBeforeWithdrawal); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
             // console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
@@ -387,15 +403,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
             // console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
-            
-            userBoostedWantTokensAfterWithdrawal = await vaultHealer.boostedWantTokens(maximizer_strat_pid, user1.address);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
-                (UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
+                (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
                 .sub(
                     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                    .mul(UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
+                    .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal))
                     .div(WITHDRAW_FEE_FACTOR_MAX)
                 )
                 );
@@ -405,7 +419,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
             // console.log(await crystlToken.balanceOf(strategyVHStandard.address))
             expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
-        })        
+        })    
+        
+        // withdraw should also cause crystl to be returned to the user (all of it)
+        it('Should return crystl harvest to user when they withdraw (above test)', async () => {
+            user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
+            console.log("user1CrystlBalanceAfterWithdraw");
+            console.log(user1CrystlBalanceAfterWithdraw);
+
+            expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
+        })
     })
 })
 
