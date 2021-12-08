@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./VaultHealerBase.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 
 //Handles "gate" functions like deposit/withdraw
@@ -70,8 +70,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         //update the user's data for earn tracking purposes
         transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount; //todo: should this go here or higher up? above the strat.deposit?
         
-        pool.rewardDebt[_to] = balanceOf(_to, _pid)  * pool.strat.accRewardTokensPerShare() / 1e30; //todo: should this go here or higher up? above the strat.deposit?
-
         delete pendingDeposit;
         }
         emit Deposit(_to, _pid, _wantAmt);
@@ -128,15 +126,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         //this call transfers wantTokens from the strat to the user
         pool.want.safeTransferFrom(address(pool.strat), _to, wantAmt);
 
-        //I"M NOW IMPLEMENTING THIS ON STRAT
-        // //todo: need a conditional here - only do this if it's a maximizer strategy! WHY not just do it from the strat?
-        // //todo: need to instantiate crystlToken here
-        // uint256 crystlAmt = crystlToken.balanceOf(address(pool.strat));
-        // //todo: need approval here
-        // pool.crystl.safeTransferFrom(address(pool.strat), _to, crystlAmt);
-
-        pool.rewardDebt[_to] = balanceOf(_to, _pid) * pool.strat.accRewardTokensPerShare() / 1e30; //todo: should this go here or higher up? above the strat.deposit?
-
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
 
@@ -172,6 +161,15 @@ function _beforeTokenTransfer(
                 uint underlyingValue = amounts[i] * _poolInfo[pid].strat.wantLockedTotal() / totalSupply(pid);
                 transferData(pid, from).transfersOut += underlyingValue;
                 transferData(pid, to).transfersIn += underlyingValue;
+
+                if (_poolInfo[pid].strat.CheckIsMaximizer()) {
+                    _poolInfo[pid].strat.earn(from); //does it matter who calls the earn?
+
+                    _poolInfo[pid].strat.UpdatePoolAndWithdrawCrystlOnWithdrawal(from, underlyingValue);
+
+                    _poolInfo[pid].strat.UpdatePoolAndRewarddebtOnDeposit(to, underlyingValue);
+                    }
+
             }
         }
     }

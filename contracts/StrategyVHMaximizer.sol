@@ -34,6 +34,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         tactic = ITactic(_tacticAddress);
         pid = _pid;
         crystlCompounder = IStrategy(_crystlCompounder);
+        isMaximizer = true;
     }
     
     function _earn(address _to) internal override whenEarnIsReady {

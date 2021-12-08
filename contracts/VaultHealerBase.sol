@@ -29,7 +29,6 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
-        mapping (address => uint256) rewardDebt;
         // bytes data;
     }
 

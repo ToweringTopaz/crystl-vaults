@@ -13,11 +13,13 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultSwaps for VaultFees;    
     
     VaultHealer immutable public vaultHealer; //why is this immutable?
-    IStrategy crystlCompounder;
+    IStrategy public crystlCompounder;
     address public stakingPoolAddress;
+
+    bool public isMaximizer;
     uint256 public accRewardTokensPerShare; //todo: do I need to initialize this?
     uint256 balanceCrystlCompounderLastUpdate;
-    mapping (address => uint256) rewardDebt;
+    mapping (address => uint256) public rewardDebt; //todo: does this need to be public?
 
     constructor(address _vaultHealerAddress) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
@@ -51,12 +53,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         
         uint256 wantLockedBefore = wantLockedTotal();
 
-        if (address(crystlCompounder) != address(0) && wantLockedBefore > 0) { // 
-            accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedBefore; //multiply or divide by 1e30??
-
-            balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-
-            rewardDebt[_from] += _wantAmt * accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+        if (address(crystlCompounder) != address(0) && wantLockedBefore > 0) { //
+            UpdatePoolAndRewarddebtOnDeposit(_from, _wantAmt);
             }
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
@@ -71,28 +69,28 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         }
         require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }
+
+    function UpdatePoolAndRewarddebtOnDeposit (address _from, uint256 _wantAmt) public {
+            accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+
+            balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+
+            rewardDebt[_from] += _wantAmt * accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+    }
+
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(address _from, address /*_to*/, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
         //User's balance, in want tokens
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
-        uint wantLockedBefore = wantBal + vaultSharesTotal();
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
         
         //todo: should the earn go inside the conditional? i.e. do we need to earn if it's not a maximizer? I think so actually...
         _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
-        
+        // should call earn on CC too? again, to be fair to individual who is withdrawing? Or what? they should get the rewards anyway right when we withdraw from the CC? yes, because it's using this same withdraw function!
         if (address(crystlCompounder) != address(0) && wantLockedBefore > 0) {
-            accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedBefore; //multiply or divide by 1e30??
-            uint256 pending = vaultHealer.balanceOf(_from, 2) * accRewardTokensPerShare / 1e30 - rewardDebt[_from];
-            
-            IERC20 REWARD_TOKEN = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64);
-            
-            if (pending >0) {
-                vaultHealer.withdraw(3, _wantAmt * pending / userWant);
-                REWARD_TOKEN.safeTransfer(_from, REWARD_TOKEN.balanceOf(address(this))); //check that this address is correct
-            }
-            balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-            }
+            UpdatePoolAndWithdrawCrystlOnWithdrawal(_from, _wantAmt);
+        }
 
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)
@@ -126,7 +124,21 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
         return (sharesRemoved, _wantAmt);
     }
-    
+
+    function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _wantAmt) public {
+            accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+            //calculate total crystl amount this user owns (pending is not quite the right term)
+            uint256 crystlShare = _wantAmt * accRewardTokensPerShare / 1e30 - rewardDebt[_from]; //can I include crystl that's in pending rewards in the staking pool here?
+            
+            IERC20 REWARD_TOKEN = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: remove this hardcoding
+            //withdraw proportional amount of crystl from crystlCompounder
+            if (crystlShare > 0) {
+                vaultHealer.withdraw(3, crystlShare);
+                REWARD_TOKEN.safeTransfer(_from, REWARD_TOKEN.balanceOf(address(this))); //check that this address is correct
+                }
+            balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+    }
+
     function _pause() internal override {} //no-op, since vaulthealer manages paused status
     function _unpause() internal override {}
     function paused() public view override returns (bool) {
@@ -136,4 +148,17 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function setStakingPoolAddress(address _stakingPoolAddress) external {
         stakingPoolAddress = _stakingPoolAddress;
     }
+
+    function getRewardDebt(address _user) external view returns (uint256) {
+        return rewardDebt[_user];
+    }
+
+    function increaseRewardDebt(address _user, uint256 amount) public {
+        rewardDebt[_user] += amount;
+    }
+
+function CheckIsMaximizer() external view returns (bool) {
+    return isMaximizer;
+}
+
 }
