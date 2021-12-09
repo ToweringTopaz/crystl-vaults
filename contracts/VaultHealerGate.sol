@@ -165,7 +165,7 @@ function _beforeTokenTransfer(
                 if (_poolInfo[pid].strat.CheckIsMaximizer()) {
                     _poolInfo[pid].strat.earn(from); //does it matter who calls the earn?
 
-                    _poolInfo[pid].strat.UpdatePoolAndWithdrawCrystlOnWithdrawal(from, underlyingValue);
+                    _poolInfo[pid].strat.UpdatePoolAndWithdrawCrystlOnWithdrawal(from, underlyingValue, balanceOf(from, pid));
 
                     _poolInfo[pid].strat.UpdatePoolAndRewarddebtOnDeposit(to, underlyingValue);
                     }

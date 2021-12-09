@@ -34,6 +34,14 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         tactic = ITactic(_tacticAddress);
         pid = _pid;
         crystlCompounder = IStrategy(_crystlCompounder);
+        // crystlCompounder.setFees(
+        //                 [
+        //         [ ZERO_ADDRESS, FEE_ADDRESS, 0 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
+        //         [ WMATIC, FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
+        //         [ WMATIC, FEE_ADDRESS, 0 ], //reward fee: paid in DAI; standard fee address; 0% rate
+        //         [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
+        //     ]
+        // );
         isMaximizer = true;
     }
     
@@ -54,7 +62,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
                 success = true; //We have something worth compounding
                 earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap earned to crystl for maximizer
-                LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64), address(this));
+                LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64), address(this)); //todo: change this from a hardcoding
             }
         }
 

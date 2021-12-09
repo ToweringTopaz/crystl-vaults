@@ -71,11 +71,12 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     function UpdatePoolAndRewarddebtOnDeposit (address _from, uint256 _wantAmt) public {
-            accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+        rewardDebt[_from] += _wantAmt * accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
 
-            balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
 
-            rewardDebt[_from] += _wantAmt * accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+        balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+
     }
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
@@ -84,12 +85,13 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
-        
+
         //todo: should the earn go inside the conditional? i.e. do we need to earn if it's not a maximizer? I think so actually...
         _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
+
         // should call earn on CC too? again, to be fair to individual who is withdrawing? Or what? they should get the rewards anyway right when we withdraw from the CC? yes, because it's using this same withdraw function!
         if (address(crystlCompounder) != address(0) && wantLockedBefore > 0) {
-            UpdatePoolAndWithdrawCrystlOnWithdrawal(_from, _wantAmt);
+            UpdatePoolAndWithdrawCrystlOnWithdrawal(_from, _wantAmt, userWant);
         }
 
         // user requested all, very nearly all, or more than their balance, so withdraw all
@@ -125,18 +127,23 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         return (sharesRemoved, _wantAmt);
     }
 
-    function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _wantAmt) public {
-            accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
-            //calculate total crystl amount this user owns (pending is not quite the right term)
-            uint256 crystlShare = _wantAmt * accRewardTokensPerShare / 1e30 - rewardDebt[_from]; //can I include crystl that's in pending rewards in the staking pool here?
-            
-            IERC20 REWARD_TOKEN = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: remove this hardcoding
-            //withdraw proportional amount of crystl from crystlCompounder
-            if (crystlShare > 0) {
-                vaultHealer.withdraw(3, crystlShare);
-                REWARD_TOKEN.safeTransfer(_from, REWARD_TOKEN.balanceOf(address(this))); //check that this address is correct
-                }
-            balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+    function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _wantAmt, uint256 _userWant) public {
+
+        accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+
+
+        //calculate total crystl amount this user owns (pending is not quite the right term)
+        uint256 crystlShare = _wantAmt * accRewardTokensPerShare / 1e30 - rewardDebt[_from] * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
+
+
+        IERC20 REWARD_TOKEN = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: remove this hardcoding
+        //withdraw proportional amount of crystl from crystlCompounder
+        if (crystlShare > 0) {
+            vaultHealer.withdraw(3, crystlShare);
+            REWARD_TOKEN.safeTransfer(_from, REWARD_TOKEN.balanceOf(address(this))); //check that this address is correct
+            rewardDebt[_from] -= rewardDebt[_from] * _wantAmt / _userWant;
+            }
+        balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 
     function _pause() internal override {} //no-op, since vaulthealer manages paused status
