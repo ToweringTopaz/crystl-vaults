@@ -14,7 +14,9 @@ interface IMasterchef {
     
     function userInfo(uint256 _pid, address _address) external view returns (uint256, uint256);
 
-    function poolInfo(uint256 _pid) external view returns (address, uint256, uint256, uint256, uint16);
+    function poolInfo(uint256 _pid) external view returns (address lpToken, uint256 allocPoint, uint256 lastRewardBlock, uint256 accCrystalPerShare, uint16 depositFeeBP);
     
     function harvest(uint256 _pid, address _to) external;
+
+    function totalAllocPoint() external view returns (uint256);
 }

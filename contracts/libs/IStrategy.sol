@@ -32,4 +32,8 @@ interface IStrategy {
     
     // Returns the strategy's recorded burned amount
     function burnedAmount() external view returns (uint256);
+
+    function pid() external view returns (uint256);
+    function tolerance() external view returns (uint256);
+    function masterchefAddress() external view returns (address);
 }
