@@ -3,33 +3,23 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-// import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-// import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IStakingPool.sol";
 // import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
 
-abstract contract VaultHealerBase is Ownable, ERC1155Supply {
+abstract contract VaultHealerBase is Ownable, ReentrancyGuard, ERC1155Supply {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
 
-    // Info of each user.
-    // struct UserInfo {
-    //     uint256 rewardDebt;
-    //     // uint256 totalDeposits;
-    //     // uint256 totalWithdrawals;
-    //     // mapping (address => uint256) allowances; //for ERC20 transfers
-    //     // bytes data;
-    // }
     struct PoolInfo {
         IERC20 want; //  want token.
         bool paused; //vault is paused?
         IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
-        // bytes data;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
@@ -54,35 +44,8 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         emit SetDefaultFees(_fees);
 
         _poolInfo.push(); //so uninitialized pid variables (pid 0) can be assumed as invalid
-        
-        //_reentrancyStatus = _NOT_ENTERED;
     }
     
-    // uint private _reentrancyStatus;
-    // uint private constant _NOT_ENTERED = type(uint).max;
-    // uint private constant _ENTERED = type(uint).max - 1;
-    
-    // //identical in effect to OpenZeppelin nonReentrant
-    // modifier nonReentrant() {
-    //     require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
-    //     _reentrancyStatus = _ENTERED;
-    //     _;
-    //     _reentrancyStatus = _NOT_ENTERED;
-    // }
-    // //identical in effect to OpenZeppelin nonReentrant but stores the pid
-    // modifier nonReentrantPid(uint pid) {
-    //     require (_reentrancyStatus == _NOT_ENTERED, "VaultHealer: reentrant call");
-    //     require (pid < _poolInfo.length, "VaultHealer: bad pid");
-    //     _reentrancyStatus = pid;
-    //     _;
-    //     _reentrancyStatus = _NOT_ENTERED;
-    // }
-    // //function call must be a reentrant call by the strategy associated with the PID stored at _reentrancyStatus
-    // modifier onlyReentrantPid() {
-    //     require(_reentrancyStatus == _strats[msg.sender]);
-    //     _;
-    // }
-
     function poolLength() external view returns (uint256) {
         return _poolInfo.length;
     }
@@ -119,7 +82,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
-    function addPool(address _strat) external onlyOwner  { //nonReentrant
+    function addPool(address _strat) external onlyOwner nonReentrant {
         require(!isStrat(_strat), "Existing strategy");
         _poolInfo.push();
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
@@ -180,7 +143,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         emit ResetFees(_pid);
     }
     
-    function earnAll() external  { //nonReentrant
+    function earnAll() external nonReentrant {
         for (uint256 i; i < _poolInfo.length; i++) {
             if (!paused(i)) {
                 try _poolInfo[i].strat.earn(_msgSender()) {}
@@ -189,7 +152,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         }
     }
 
-    function earnSome(uint256[] memory pids) external  { //nonReentrant
+    function earnSome(uint256[] memory pids) external nonReentrant {
         for (uint256 i; i < pids.length; i++) {
             if (_poolInfo.length >= pids[i] && !paused(pids[i])) {
                 try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
@@ -197,7 +160,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
             }
         }
     }
-    function earn(uint256 pid) external  whenNotPaused(pid) { //nonReentrant
+    function earn(uint256 pid) external whenNotPaused(pid) nonReentrant {
         _poolInfo[pid].strat.earn(_msgSender());
     }
     
