@@ -16,19 +16,22 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     using LibVaultConfig for VaultFees;
 
     // Info of each user.
-    // struct UserInfo {
-    //     uint256 rewardDebt;
+    struct UserInfo {
+        uint256 rewardDebt;
     //     // uint256 totalDeposits;
     //     // uint256 totalWithdrawals;
     //     // mapping (address => uint256) allowances; //for ERC20 transfers
     //     // bytes data;
-    // }
+    }
+
     struct PoolInfo {
         IERC20 want; //  want token.
         bool paused; //vault is paused?
         IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
+        uint256 accRewardTokensPerShare; //todo: do I need to initialize this?
+        uint256 balanceCrystlCompounderLastUpdate;
         // bytes data;
     }
 
