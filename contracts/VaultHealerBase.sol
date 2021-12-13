@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "./libs/IStakingPool.sol";
+import "./libs/IBoostPool.sol";
 // import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
 
@@ -105,15 +105,15 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     // View function to see staked Want tokens on frontend.
     function boostedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = _poolInfo[_pid];
-        if (pool.strat.stakingPoolAddress() == address(0)) return 0;
+        if (pool.strat.boostPoolAddress() == address(0)) return 0;
         
-        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
+        IBoostPool boostPool = IBoostPool(pool.strat.boostPoolAddress());
         uint256 _sharesTotal = totalSupply(_pid);
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
         if (_sharesTotal == 0) {
             return 0;
         }
-        return stakingPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
+        return boostPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
     }
 
     /**
@@ -126,15 +126,15 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         pool.want = IStrategy(_strat).wantToken();
         pool.strat = IStrategy(_strat);
         IStrategy(_strat).setFees(defaultFees);
-        // pool.stakingPoolAddress = IStrategy(_strat).stakingPoolAddress();
+        // pool.boostPoolAddress = IStrategy(_strat).boostPoolAddress();
         
         _strats[_strat] = _poolInfo.length - 1;
         emit AddPool(_strat);
     }
     
-    //     function addStakingPool(uint256 _pid, address _stakingPool) external onlyOwner nonReentrant {
+    //     function addBoostPool(uint256 _pid, address _boostPool) external onlyOwner nonReentrant {
     //     require(!isStrat(_strat), "Existing strategy");
-    //     _poolInfo[_pid] = IStrategy(_strat).stakingPoolAddress();
+    //     _poolInfo[_pid] = IStrategy(_strat).boostPoolAddress();
     // }
     
     //enables sharesTotal function on strategy

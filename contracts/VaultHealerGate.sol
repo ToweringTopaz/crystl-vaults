@@ -88,19 +88,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) private {
         //create an instance of pool for the relevant pid, and an instance of user for this pool and the msg.sender
         PoolInfo storage pool = _poolInfo[_pid];
-        IStakingPool stakingPool = IStakingPool(pool.strat.stakingPoolAddress());
+        IBoostPool boostPool = IBoostPool(pool.strat.boostPoolAddress());
         //check that user actually has shares in this pid
         uint256 userUnboostedWant = balanceOf(_to, _pid) * pool.strat.wantLockedTotal() / totalSupply(_pid);
         uint256 userBoostedWant;
-        if (address(stakingPool) != address(0)) {
-            userBoostedWant = stakingPool.userStakedAmount(_to) * pool.strat.wantLockedTotal() / totalSupply(_pid);
+        if (address(boostPool) != address(0)) {
+            userBoostedWant = boostPool.userStakedAmount(_to) * pool.strat.wantLockedTotal() / totalSupply(_pid);
             } else userBoostedWant = 0;
 
         require(userUnboostedWant + userBoostedWant > 0, "User has 0 shares");
         
         //unstake here if need be
-        if (_wantAmt > userUnboostedWant && userBoostedWant > 0) { //&&stakingPool exists! check that it's not a zero address?
-            stakingPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
+        if (_wantAmt > userUnboostedWant && userBoostedWant > 0) { //&&boostPool exists! check that it's not a zero address?
+            boostPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
             }
 
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat

@@ -6,7 +6,7 @@ import "./LibVaultConfig.sol";
 
 interface IStrategy {
     function wantToken() external view returns (IERC20); // Want address
-    function stakingPoolAddress() external view returns (address);
+    function boostPoolAddress() external view returns (address);
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
     function accRewardTokensPerShare() external view returns (uint256);
     function increaseRewardDebt(address _user, uint256 _amount) external;

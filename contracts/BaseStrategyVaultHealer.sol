@@ -14,7 +14,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     
     VaultHealer immutable public vaultHealer; //why is this immutable?
     IStrategy public maximizerVault;
-    address public stakingPoolAddress;
+    address public boostPoolAddress;
 
     bool public isMaximizer;
     uint256 public accRewardTokensPerShare; //todo: do I need to initialize this?
@@ -152,8 +152,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         return vaultHealer.paused(address(this));
     }
 
-    function setStakingPoolAddress(address _stakingPoolAddress) external {
-        stakingPoolAddress = _stakingPoolAddress;
+    function setBoostPoolAddress(address _boostPoolAddress) external {
+        boostPoolAddress = _boostPoolAddress;
     }
 
     function getRewardDebt(address _user) external view returns (uint256) {
