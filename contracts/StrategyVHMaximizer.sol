@@ -14,7 +14,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
 
     address public immutable masterchef;
     ITactic public immutable tactic;
-    uint public immutable pid;
+    // uint public immutable pid;
 
     constructor(
         IERC20 _wantToken,
@@ -29,11 +29,11 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
-        BaseStrategyVaultHealer(_vaultHealerAddress)
+        BaseStrategyVaultHealer(_vaultHealerAddress, _pid)
     {
         masterchef = _masterchefAddress;
         tactic = ITactic(_tacticAddress);
-        pid = _pid;
+        // pid = _pid;
         maximizerVault = IStrategy(_maximizerVault);
         maximizerRewardToken = IERC20(_maximizerRewardToken);
         // maximizerVault.setFees(

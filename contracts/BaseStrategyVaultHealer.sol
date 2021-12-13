@@ -12,17 +12,27 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;    
     
+    // Info of each user.
+    struct UserInfo {
+        uint256 rewardDebt;
+    //     // uint256 totalDeposits;
+    //     // uint256 totalWithdrawals;
+    //     // mapping (address => uint256) allowances; //for ERC20 transfers
+    //     // bytes data;
+    }
+
     VaultHealer immutable public vaultHealer; //why is this immutable?
     IStrategy public maximizerVault;
     address public boostPoolAddress;
-
+    uint public immutable pid;
     bool public isMaximizer;
 
     IERC20 maximizerRewardToken;
 
-    constructor(address _vaultHealerAddress) {
+    constructor(address _vaultHealerAddress, uint256 _pid) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
         settings.magnetite = Magnetite(_vaultHealerAddress);
+        pid = _pid;
     }
     
     function sharesTotal() external view returns (uint) {
@@ -70,7 +80,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     function UpdatePoolAndRewarddebtOnDeposit (address _from, uint256 _wantAmt) public {
-        vaultHealer.user.rewardDebt[_from] += _wantAmt * vaultHealer.pool.accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+        UserInfo storage user = vaultHealer.userInfo[pid][_from];
+        user.rewardDebt += _wantAmt * vaultHealer.pool.accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
 
         vaultHealer.pool.accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - vaultHealer.pool.balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
 
@@ -127,21 +138,21 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _wantAmt, uint256 _userWant) public {
-
-        accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+        UserInfo storage user = vaultHealer.userInfo[pid][_from];
+        vaultHealer.pool.accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - vaultHealer.pool.balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
 
 
         //calculate total crystl amount this user owns (pending is not quite the right term)
-        uint256 crystlShare = _wantAmt * accRewardTokensPerShare / 1e30 - rewardDebt[_from] * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
+        uint256 crystlShare = _wantAmt * vaultHealer.pool.accRewardTokensPerShare / 1e30 - user.rewardDebt * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
 
 
         //withdraw proportional amount of crystl from maximizerVault
         if (crystlShare > 0) {
             vaultHealer.withdraw(3, crystlShare);
             maximizerRewardToken.safeTransfer(_from, maximizerRewardToken.balanceOf(address(this))); //check that this address is correct
-            rewardDebt[_from] -= rewardDebt[_from] * _wantAmt / _userWant;
+            user.rewardDebt -= user.rewardDebt * _wantAmt / _userWant;
             }
-        balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vaultHealer.pool.balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 
     function _pause() internal override {} //no-op, since vaulthealer manages paused status
@@ -155,11 +166,13 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     function getRewardDebt(address _user) external view returns (uint256) {
-        return rewardDebt[_user];
+        UserInfo storage user = vaultHealer.userInfo[pid][_user];
+        return user.rewardDebt;
     }
 
     function increaseRewardDebt(address _user, uint256 amount) public {
-        rewardDebt[_user] += amount;
+        UserInfo storage user = vaultHealer.userInfo[pid][_user];
+        user.rewardDebt += amount;
     }
 
 function CheckIsMaximizer() external view returns (bool) {

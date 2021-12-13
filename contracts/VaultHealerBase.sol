@@ -36,6 +36,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
     
     //pid for any of our strategies

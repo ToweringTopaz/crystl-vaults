@@ -11,7 +11,7 @@ contract StrategyVHStandard is BaseStrategyVaultHealer {
     
     address public immutable masterchef;
     ITactic public immutable tactic;
-    uint public immutable pid;
+    // uint public immutable pid;
 
     constructor(
         IERC20 _wantToken,
@@ -24,11 +24,11 @@ contract StrategyVHStandard is BaseStrategyVaultHealer {
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
-        BaseStrategyVaultHealer(_vaultHealerAddress)
+        BaseStrategyVaultHealer(_vaultHealerAddress, pid)
     {
         masterchef = _masterchefAddress;
         tactic = ITactic(_tacticAddress);
-        pid = _pid;
+        // pid = _pid;
     }
     
     function vaultSharesTotal() public override view returns (uint256) {
