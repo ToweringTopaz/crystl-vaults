@@ -17,9 +17,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     address public boostPoolAddress;
 
     bool public isMaximizer;
-    uint256 public accRewardTokensPerShare; //todo: do I need to initialize this?
-    uint256 balanceCrystlCompounderLastUpdate;
-    mapping (address => uint256) public rewardDebt; //todo: does this need to be public?
+
     IERC20 maximizerRewardToken;
 
     constructor(address _vaultHealerAddress) {
@@ -72,11 +70,11 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     function UpdatePoolAndRewarddebtOnDeposit (address _from, uint256 _wantAmt) public {
-        rewardDebt[_from] += _wantAmt * accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+        vaultHealer.user.rewardDebt[_from] += _wantAmt * vaultHealer.pool.accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
 
-        accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+        vaultHealer.pool.accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - vaultHealer.pool.balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
 
-        balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vaultHealer.pool.balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
 
     }
 
