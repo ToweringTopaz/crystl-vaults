@@ -24,7 +24,8 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         uint256 _pid,
         VaultSettings memory _settings,
         IERC20[] memory _earned,
-        address _crystlCompounder
+        address _maximizerVault,
+        address _maximizerRewardToken
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
@@ -33,8 +34,9 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         masterchef = _masterchefAddress;
         tactic = ITactic(_tacticAddress);
         pid = _pid;
-        crystlCompounder = IStrategy(_crystlCompounder);
-        // crystlCompounder.setFees(
+        maximizerVault = IStrategy(_maximizerVault);
+        maximizerRewardToken = IERC20(_maximizerRewardToken);
+        // maximizerVault.setFees(
         //                 [
         //         [ ZERO_ADDRESS, FEE_ADDRESS, 0 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
         //         [ WMATIC, FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate

@@ -13,13 +13,14 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultSwaps for VaultFees;    
     
     VaultHealer immutable public vaultHealer; //why is this immutable?
-    IStrategy public crystlCompounder;
+    IStrategy public maximizerVault;
     address public stakingPoolAddress;
 
     bool public isMaximizer;
     uint256 public accRewardTokensPerShare; //todo: do I need to initialize this?
     uint256 balanceCrystlCompounderLastUpdate;
     mapping (address => uint256) public rewardDebt; //todo: does this need to be public?
+    IERC20 maximizerRewardToken;
 
     constructor(address _vaultHealerAddress) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
@@ -53,7 +54,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         
         uint256 wantLockedBefore = wantLockedTotal();
 
-        if (address(crystlCompounder) != address(0) && wantLockedBefore > 0) { //
+        if (address(maximizerVault) != address(0) && wantLockedBefore > 0) { //
             UpdatePoolAndRewarddebtOnDeposit(_from, _wantAmt);
             }
 
@@ -73,9 +74,9 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function UpdatePoolAndRewarddebtOnDeposit (address _from, uint256 _wantAmt) public {
         rewardDebt[_from] += _wantAmt * accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
 
-        accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+        accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
 
-        balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
 
     }
 
@@ -90,7 +91,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
 
         // should call earn on CC too? again, to be fair to individual who is withdrawing? Or what? they should get the rewards anyway right when we withdraw from the CC? yes, because it's using this same withdraw function!
-        if (address(crystlCompounder) != address(0) && wantLockedBefore > 0) {
+        if (address(maximizerVault) != address(0) && wantLockedBefore > 0) {
             UpdatePoolAndWithdrawCrystlOnWithdrawal(_from, _wantAmt, userWant);
         }
 
@@ -129,21 +130,20 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
 
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _wantAmt, uint256 _userWant) public {
 
-        accRewardTokensPerShare += (crystlCompounder.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
+        accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
 
 
         //calculate total crystl amount this user owns (pending is not quite the right term)
         uint256 crystlShare = _wantAmt * accRewardTokensPerShare / 1e30 - rewardDebt[_from] * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
 
 
-        IERC20 REWARD_TOKEN = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: remove this hardcoding
-        //withdraw proportional amount of crystl from crystlCompounder
+        //withdraw proportional amount of crystl from maximizerVault
         if (crystlShare > 0) {
             vaultHealer.withdraw(3, crystlShare);
-            REWARD_TOKEN.safeTransfer(_from, REWARD_TOKEN.balanceOf(address(this))); //check that this address is correct
+            maximizerRewardToken.safeTransfer(_from, maximizerRewardToken.balanceOf(address(this))); //check that this address is correct
             rewardDebt[_from] -= rewardDebt[_from] * _wantAmt / _userWant;
             }
-        balanceCrystlCompounderLastUpdate = crystlCompounder.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 
     function _pause() internal override {} //no-op, since vaulthealer manages paused status

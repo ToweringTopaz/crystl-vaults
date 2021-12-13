@@ -116,7 +116,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             apeSwapVaults[1]['PID'],
             vaultSettings.standard,
             apeSwapVaults[1]['earned'],
-            strategyCrystlCompounder.address
+            strategyCrystlCompounder.address,
+            CRYSTL
             ];
 
         strategyVHMaximizer = await StrategyVHMaximizer.deploy(...MAXIMIZER_VARS);
