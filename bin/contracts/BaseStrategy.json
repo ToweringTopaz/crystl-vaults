@@ -1,0 +1,2267 @@
+{
+    "contractName": "BaseStrategy",
+    "abi": [
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "contract IUniRouter02",
+                            "name": "router",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint16",
+                            "name": "slippageFactor",
+                            "type": "uint16"
+                        },
+                        {
+                            "internalType": "uint16",
+                            "name": "tolerance",
+                            "type": "uint16"
+                        },
+                        {
+                            "internalType": "uint64",
+                            "name": "minBlocksBetweenEarns",
+                            "type": "uint64"
+                        },
+                        {
+                            "internalType": "uint88",
+                            "name": "dust",
+                            "type": "uint88"
+                        },
+                        {
+                            "internalType": "bool",
+                            "name": "feeOnTransfer",
+                            "type": "bool"
+                        },
+                        {
+                            "internalType": "contract Magnetite",
+                            "name": "magnetite",
+                            "type": "address"
+                        }
+                    ],
+                    "indexed": false,
+                    "internalType": "struct VaultSettings",
+                    "name": "_settings",
+                    "type": "tuple"
+                }
+            ],
+            "name": "SetSettings",
+            "type": "event"
+        },
+        {
+            "inputs": [],
+            "name": "lastEarnBlock",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "panic",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "panicLockExpiry",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "pause",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "paused",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "contract IUniRouter02",
+                            "name": "router",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint16",
+                            "name": "slippageFactor",
+                            "type": "uint16"
+                        },
+                        {
+                            "internalType": "uint16",
+                            "name": "tolerance",
+                            "type": "uint16"
+                        },
+                        {
+                            "internalType": "uint64",
+                            "name": "minBlocksBetweenEarns",
+                            "type": "uint64"
+                        },
+                        {
+                            "internalType": "uint88",
+                            "name": "dust",
+                            "type": "uint88"
+                        },
+                        {
+                            "internalType": "bool",
+                            "name": "feeOnTransfer",
+                            "type": "bool"
+                        },
+                        {
+                            "internalType": "contract Magnetite",
+                            "name": "magnetite",
+                            "type": "address"
+                        }
+                    ],
+                    "internalType": "struct VaultSettings",
+                    "name": "_settings",
+                    "type": "tuple"
+                }
+            ],
+            "name": "setSettings",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "settings",
+            "outputs": [
+                {
+                    "internalType": "contract IUniRouter02",
+                    "name": "router",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint16",
+                    "name": "slippageFactor",
+                    "type": "uint16"
+                },
+                {
+                    "internalType": "uint16",
+                    "name": "tolerance",
+                    "type": "uint16"
+                },
+                {
+                    "internalType": "uint64",
+                    "name": "minBlocksBetweenEarns",
+                    "type": "uint64"
+                },
+                {
+                    "internalType": "uint88",
+                    "name": "dust",
+                    "type": "uint88"
+                },
+                {
+                    "internalType": "bool",
+                    "name": "feeOnTransfer",
+                    "type": "bool"
+                },
+                {
+                    "internalType": "contract Magnetite",
+                    "name": "magnetite",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "tolerance",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "unpanic",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "unpause",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "vaultSharesTotal",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "wantLockedTotal",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ],
+    "metadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"components\":[{\"internalType\":\"contract IUniRouter02\",\"name\":\"router\",\"type\":\"address\"},{\"internalType\":\"uint16\",\"name\":\"slippageFactor\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"tolerance\",\"type\":\"uint16\"},{\"internalType\":\"uint64\",\"name\":\"minBlocksBetweenEarns\",\"type\":\"uint64\"},{\"internalType\":\"uint88\",\"name\":\"dust\",\"type\":\"uint88\"},{\"internalType\":\"bool\",\"name\":\"feeOnTransfer\",\"type\":\"bool\"},{\"internalType\":\"contract Magnetite\",\"name\":\"magnetite\",\"type\":\"address\"}],\"indexed\":false,\"internalType\":\"struct VaultSettings\",\"name\":\"_settings\",\"type\":\"tuple\"}],\"name\":\"SetSettings\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"lastEarnBlock\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"panic\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"panicLockExpiry\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"contract IUniRouter02\",\"name\":\"router\",\"type\":\"address\"},{\"internalType\":\"uint16\",\"name\":\"slippageFactor\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"tolerance\",\"type\":\"uint16\"},{\"internalType\":\"uint64\",\"name\":\"minBlocksBetweenEarns\",\"type\":\"uint64\"},{\"internalType\":\"uint88\",\"name\":\"dust\",\"type\":\"uint88\"},{\"internalType\":\"bool\",\"name\":\"feeOnTransfer\",\"type\":\"bool\"},{\"internalType\":\"contract Magnetite\",\"name\":\"magnetite\",\"type\":\"address\"}],\"internalType\":\"struct VaultSettings\",\"name\":\"_settings\",\"type\":\"tuple\"}],\"name\":\"setSettings\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"settings\",\"outputs\":[{\"internalType\":\"contract IUniRouter02\",\"name\":\"router\",\"type\":\"address\"},{\"internalType\":\"uint16\",\"name\":\"slippageFactor\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"tolerance\",\"type\":\"uint16\"},{\"internalType\":\"uint64\",\"name\":\"minBlocksBetweenEarns\",\"type\":\"uint64\"},{\"internalType\":\"uint88\",\"name\":\"dust\",\"type\":\"uint88\"},{\"internalType\":\"bool\",\"name\":\"feeOnTransfer\",\"type\":\"bool\"},{\"internalType\":\"contract Magnetite\",\"name\":\"magnetite\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tolerance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpanic\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vaultSharesTotal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wantLockedTotal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/BaseStrategy.sol\":\"BaseStrategy\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/BaseStrategy.sol\":{\"keccak256\":\"0x9196e3eb9a10945c18c7a3892a83fa63ced8aa5c50b825fc7a6b9ea3945eddc1\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://4f42d0b2e7859df9210b721c3575bc2f1e9db15d3af7659c9ddcbfbab902b31d\",\"dweb:/ipfs/QmZw8cDqVXU2vCzgfFW3uyqvJtqN5ER2cz3JoyuYy1QbFB\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/Magnetite.sol\":{\"keccak256\":\"0x30a9ea722238168ed70da70e65c2a718fe1367815b460d34432a505dcd8cdac5\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://a212ff85b5aa344fb8a3b68eae39f71eaf28f6516283379b309e13f0251e5cef\",\"dweb:/ipfs/QmNb8EMxagZmpdvwmT4SnddZc7GuG7GJRng2UCgwJg1mRd\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/libs/IUniRouter.sol\":{\"keccak256\":\"0x4e177d4f98e134cef3cb542eeffc14e97f5be6e2cfb9191164239710732c20aa\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://2dd5eb86010d9127c9e44efae8f9d4d03b86314117dc1baa1e891565d99ef6c7\",\"dweb:/ipfs/QmNNWcvNW7BdXsu6GsjgGrEMXnzbYQuyNKFzNXSMDBEiXN\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/libs/LibMagnetite.sol\":{\"keccak256\":\"0x635e8a6202dd2f69ad0bb9f6cb2f4a02e045670e5f89215f14acfe97a8821668\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://032f1d5f12845c29813e291a80cc3f48ac4b33b3b48fd62c2cc61eb5408ba3e7\",\"dweb:/ipfs/QmNNpu3vonoZ1y2D3FepJh1vMtYmdjST6yGBHbbQUzD4gU\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/libs/LibVaultConfig.sol\":{\"keccak256\":\"0x8501bb013949419c576a79732974571254cde89636cdea3a741da67d1c784528\",\"license\":\"GPL-3.0-or-later\",\"urls\":[\"bzz-raw://68142668022d175fdffb8d76b5199868927a761a68da88143f370e92702b53d9\",\"dweb:/ipfs/QmUYnktApgr7fo8UJHrj2Us9M77Nvz1i7fQpvuefZZRcVZ\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/node_modules/@openzeppelin/contracts/access/Ownable.sol\":{\"keccak256\":\"0x6bb804a310218875e89d12c053e94a13a4607cdf7cc2052f3e52bd32a0dc50a1\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b2ebbbe6d0011175bd9e7268b83de3f9c2f9d8d4cbfbaef12aff977d7d727163\",\"dweb:/ipfs/Qmd5c7Vxtis9wzkDNhxwc6A2QT5H9xn9kfjhx7qx44vpro\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x027b891937d20ccf213fdb9c31531574256de774bda99d3a70ecef6e1913ed2a\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://087318b21c528119f649899f5b5580566dd8d7b0303d4904bd0e8580c3545f14\",\"dweb:/ipfs/Qmbn5Mj7aUn8hJuQ8VrQjjEXRsXyJKykgnjR9p4C3nfLtL\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/node_modules/@openzeppelin/contracts/utils/Context.sol\":{\"keccak256\":\"0x90565a39ae45c80f0468dc96c7b20d0afc3055f344c8203a0c9258239f350b9f\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://26e8b38a7ac8e7b4463af00cf7fff1bf48ae9875765bf4f7751e100124d0bc8c\",\"dweb:/ipfs/QmWcsmkVr24xmmjfnBQZoemFniXjj3vwT78Cz6uqZW1Hux\"]},\"/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/node_modules/hardhat/console.sol\":{\"keccak256\":\"0x72b6a1d297cd3b033d7c2e4a7e7864934bb767db6453623f1c3082c6534547f4\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://a8cb8681076e765c214e0d51cac989325f6b98e315eaae06ee0cbd5a9f084763\",\"dweb:/ipfs/QmNWGHi4zmjxQTYN3NMGnJd49jBT5dE4bxTdWEaDuJrC6N\"]}},\"version\":1}",
+    "bytecode": "",
+    "deployedBytecode": "",
+    "sourceMap": "",
+    "deployedSourceMap": "",
+    "sourcePath": "/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/BaseStrategy.sol",
+    "compiler": {
+        "name": "solc",
+        "version": "0.8.10+commit.fc410830"
+    },
+    "ast": {
+        "absolutePath": "/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/BaseStrategy.sol",
+        "exportedSymbols": {
+            "BaseStrategy": [
+                182
+            ],
+            "Context": [
+                2059
+            ],
+            "IERC20": [
+                2037
+            ],
+            "IUniFactory": [
+                876
+            ],
+            "IUniRouter01": [
+                730
+            ],
+            "IUniRouter02": [
+                815
+            ],
+            "LibMagnetite": [
+                1722
+            ],
+            "LibVaultConfig": [
+                1855
+            ],
+            "Magnetite": [
+                422
+            ],
+            "Ownable": [
+                1959
+            ],
+            "VaultFee": [
+                1764
+            ],
+            "VaultFees": [
+                1756
+            ],
+            "VaultSettings": [
+                1743
+            ],
+            "console": [
+                10123
+            ]
+        },
+        "id": 183,
+        "license": "GPL-3.0-or-later",
+        "nodeType": "SourceUnit",
+        "nodes": [
+            {
+                "id": 1,
+                "literals": [
+                    "solidity",
+                    "^",
+                    "0.8",
+                    ".4"
+                ],
+                "nodeType": "PragmaDirective",
+                "src": "45:23:0"
+            },
+            {
+                "absolutePath": "/Users/richardjamieson/Documents/GitHub/polycrystal-vaults/contracts/libs/LibVaultConfig.sol",
+                "file": "./libs/LibVaultConfig.sol",
+                "id": 2,
+                "nameLocation": "-1:-1:-1",
+                "nodeType": "ImportDirective",
+                "scope": 183,
+                "sourceUnit": 1856,
+                "src": "70:35:0",
+                "symbolAliases": [],
+                "unitAlias": ""
+            },
+            {
+                "abstract": true,
+                "baseContracts": [],
+                "canonicalName": "BaseStrategy",
+                "contractDependencies": [],
+                "contractKind": "contract",
+                "fullyImplemented": false,
+                "id": 182,
+                "linearizedBaseContracts": [
+                    182
+                ],
+                "name": "BaseStrategy",
+                "nameLocation": "124:12:0",
+                "nodeType": "ContractDefinition",
+                "nodes": [
+                    {
+                        "id": 6,
+                        "libraryName": {
+                            "id": 3,
+                            "name": "LibVaultConfig",
+                            "nodeType": "IdentifierPath",
+                            "referencedDeclaration": 1855,
+                            "src": "149:14:0"
+                        },
+                        "nodeType": "UsingForDirective",
+                        "src": "143:39:0",
+                        "typeName": {
+                            "id": 5,
+                            "nodeType": "UserDefinedTypeName",
+                            "pathNode": {
+                                "id": 4,
+                                "name": "VaultSettings",
+                                "nodeType": "IdentifierPath",
+                                "referencedDeclaration": 1743,
+                                "src": "168:13:0"
+                            },
+                            "referencedDeclaration": 1743,
+                            "src": "168:13:0",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_struct$_VaultSettings_$1743_storage_ptr",
+                                "typeString": "struct VaultSettings"
+                            }
+                        }
+                    },
+                    {
+                        "constant": false,
+                        "functionSelector": "e06174e4",
+                        "id": 9,
+                        "mutability": "mutable",
+                        "name": "settings",
+                        "nameLocation": "213:8:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 182,
+                        "src": "192:29:0",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_struct$_VaultSettings_$1743_storage",
+                            "typeString": "struct VaultSettings"
+                        },
+                        "typeName": {
+                            "id": 8,
+                            "nodeType": "UserDefinedTypeName",
+                            "pathNode": {
+                                "id": 7,
+                                "name": "VaultSettings",
+                                "nodeType": "IdentifierPath",
+                                "referencedDeclaration": 1743,
+                                "src": "192:13:0"
+                            },
+                            "referencedDeclaration": 1743,
+                            "src": "192:13:0",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_struct$_VaultSettings_$1743_storage_ptr",
+                                "typeString": "struct VaultSettings"
+                            }
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "constant": false,
+                        "functionSelector": "0fa4e01e",
+                        "id": 13,
+                        "mutability": "mutable",
+                        "name": "lastEarnBlock",
+                        "nameLocation": "305:13:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 182,
+                        "src": "290:43:0",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 10,
+                            "name": "uint256",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "290:7:0",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "value": {
+                            "expression": {
+                                "id": 11,
+                                "name": "block",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 4294967292,
+                                "src": "321:5:0",
+                                "typeDescriptions": {
+                                    "typeIdentifier": "t_magic_block",
+                                    "typeString": "block"
+                                }
+                            },
+                            "id": 12,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "lValueRequested": false,
+                            "memberName": "number",
+                            "nodeType": "MemberAccess",
+                            "src": "321:12:0",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "constant": true,
+                        "id": 16,
+                        "mutability": "constant",
+                        "name": "PANIC_LOCK_DURATION",
+                        "nameLocation": "358:19:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 182,
+                        "src": "344:43:0",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 14,
+                            "name": "uint",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "344:4:0",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "value": {
+                            "hexValue": "36",
+                            "id": 15,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "kind": "number",
+                            "lValueRequested": false,
+                            "nodeType": "Literal",
+                            "src": "380:7:0",
+                            "subdenomination": "hours",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_rational_21600_by_1",
+                                "typeString": "int_const 21600"
+                            },
+                            "value": "6"
+                        },
+                        "visibility": "internal"
+                    },
+                    {
+                        "constant": false,
+                        "functionSelector": "9845db2f",
+                        "id": 18,
+                        "mutability": "mutable",
+                        "name": "panicLockExpiry",
+                        "nameLocation": "405:15:0",
+                        "nodeType": "VariableDeclaration",
+                        "scope": 182,
+                        "src": "393:27:0",
+                        "stateVariable": true,
+                        "storageLocation": "default",
+                        "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                        },
+                        "typeName": {
+                            "id": 17,
+                            "name": "uint",
+                            "nodeType": "ElementaryTypeName",
+                            "src": "393:4:0",
+                            "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                            }
+                        },
+                        "visibility": "public"
+                    },
+                    {
+                        "anonymous": false,
+                        "id": 23,
+                        "name": "SetSettings",
+                        "nameLocation": "494:11:0",
+                        "nodeType": "EventDefinition",
+                        "parameters": {
+                            "id": 22,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 21,
+                                    "indexed": false,
+                                    "mutability": "mutable",
+                                    "name": "_settings",
+                                    "nameLocation": "520:9:0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 23,
+                                    "src": "506:23:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_VaultSettings_$1743_memory_ptr",
+                                        "typeString": "struct VaultSettings"
+                                    },
+                                    "typeName": {
+                                        "id": 20,
+                                        "nodeType": "UserDefinedTypeName",
+                                        "pathNode": {
+                                            "id": 19,
+                                            "name": "VaultSettings",
+                                            "nodeType": "IdentifierPath",
+                                            "referencedDeclaration": 1743,
+                                            "src": "506:13:0"
+                                        },
+                                        "referencedDeclaration": 1743,
+                                        "src": "506:13:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_VaultSettings_$1743_storage_ptr",
+                                            "typeString": "struct VaultSettings"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "505:25:0"
+                        },
+                        "src": "488:43:0"
+                    },
+                    {
+                        "body": {
+                            "id": 42,
+                            "nodeType": "Block",
+                            "src": "585:101:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "expression": {
+                                                "id": 29,
+                                                "name": "_settings",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 26,
+                                                "src": "595:9:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_VaultSettings_$1743_memory_ptr",
+                                                    "typeString": "struct VaultSettings memory"
+                                                }
+                                            },
+                                            "id": 31,
+                                            "isConstant": false,
+                                            "isLValue": true,
+                                            "isPure": false,
+                                            "lValueRequested": false,
+                                            "memberName": "check",
+                                            "nodeType": "MemberAccess",
+                                            "referencedDeclaration": 1854,
+                                            "src": "595:15:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_pure$_t_struct$_VaultSettings_$1743_memory_ptr_$returns$__$bound_to$_t_struct$_VaultSettings_$1743_memory_ptr_$",
+                                                "typeString": "function (struct VaultSettings memory) pure"
+                                            }
+                                        },
+                                        "id": 32,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "595:17:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 33,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "595:17:0"
+                                },
+                                {
+                                    "expression": {
+                                        "id": 36,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "id": 34,
+                                            "name": "settings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 9,
+                                            "src": "622:8:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_VaultSettings_$1743_storage",
+                                                "typeString": "struct VaultSettings storage ref"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "id": 35,
+                                            "name": "_settings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 26,
+                                            "src": "633:9:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_VaultSettings_$1743_memory_ptr",
+                                                "typeString": "struct VaultSettings memory"
+                                            }
+                                        },
+                                        "src": "622:20:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_VaultSettings_$1743_storage",
+                                            "typeString": "struct VaultSettings storage ref"
+                                        }
+                                    },
+                                    "id": 37,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "622:20:0"
+                                },
+                                {
+                                    "eventCall": {
+                                        "arguments": [
+                                            {
+                                                "id": 39,
+                                                "name": "_settings",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 26,
+                                                "src": "669:9:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_VaultSettings_$1743_memory_ptr",
+                                                    "typeString": "struct VaultSettings memory"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_struct$_VaultSettings_$1743_memory_ptr",
+                                                    "typeString": "struct VaultSettings memory"
+                                                }
+                                            ],
+                                            "id": 38,
+                                            "name": "SetSettings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23,
+                                            "src": "657:11:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_event_nonpayable$_t_struct$_VaultSettings_$1743_memory_ptr_$returns$__$",
+                                                "typeString": "function (struct VaultSettings memory)"
+                                            }
+                                        },
+                                        "id": 40,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "657:22:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 41,
+                                    "nodeType": "EmitStatement",
+                                    "src": "652:27:0"
+                                }
+                            ]
+                        },
+                        "id": 43,
+                        "implemented": true,
+                        "kind": "constructor",
+                        "modifiers": [],
+                        "name": "",
+                        "nameLocation": "-1:-1:-1",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 27,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 26,
+                                    "mutability": "mutable",
+                                    "name": "_settings",
+                                    "nameLocation": "574:9:0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 43,
+                                    "src": "553:30:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "memory",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_VaultSettings_$1743_memory_ptr",
+                                        "typeString": "struct VaultSettings"
+                                    },
+                                    "typeName": {
+                                        "id": 25,
+                                        "nodeType": "UserDefinedTypeName",
+                                        "pathNode": {
+                                            "id": 24,
+                                            "name": "VaultSettings",
+                                            "nodeType": "IdentifierPath",
+                                            "referencedDeclaration": 1743,
+                                            "src": "553:13:0"
+                                        },
+                                        "referencedDeclaration": 1743,
+                                        "src": "553:13:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_VaultSettings_$1743_storage_ptr",
+                                            "typeString": "struct VaultSettings"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "552:32:0"
+                        },
+                        "returnParameters": {
+                            "id": 28,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "585:0:0"
+                        },
+                        "scope": 182,
+                        "src": "541:145:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": false,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 45,
+                        "name": "onlyGov",
+                        "nameLocation": "701:7:0",
+                        "nodeType": "ModifierDefinition",
+                        "parameters": {
+                            "id": 44,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "709:0:0"
+                        },
+                        "src": "692:25:0",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "functionSelector": "04c9d490",
+                        "id": 50,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "vaultSharesTotal",
+                        "nameLocation": "740:16:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 46,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "756:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 49,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 48,
+                                    "mutability": "mutable",
+                                    "name": "",
+                                    "nameLocation": "-1:-1:-1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 50,
+                                    "src": "788:7:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 47,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "788:7:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "787:9:0"
+                        },
+                        "scope": 182,
+                        "src": "731:66:0",
+                        "stateMutability": "view",
+                        "virtual": true,
+                        "visibility": "public"
+                    },
+                    {
+                        "id": 55,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_vaultDeposit",
+                        "nameLocation": "811:13:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 53,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 52,
+                                    "mutability": "mutable",
+                                    "name": "_amount",
+                                    "nameLocation": "833:7:0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 55,
+                                    "src": "825:15:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 51,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "825:7:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "824:17:0"
+                        },
+                        "returnParameters": {
+                            "id": 54,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "858:0:0"
+                        },
+                        "scope": 182,
+                        "src": "802:57:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 60,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_vaultWithdraw",
+                        "nameLocation": "873:14:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 58,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 57,
+                                    "mutability": "mutable",
+                                    "name": "_amount",
+                                    "nameLocation": "896:7:0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 60,
+                                    "src": "888:15:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 56,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "888:7:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "887:17:0"
+                        },
+                        "returnParameters": {
+                            "id": 59,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "921:0:0"
+                        },
+                        "scope": 182,
+                        "src": "864:58:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 63,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_vaultHarvest",
+                        "nameLocation": "936:13:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 61,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "949:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 62,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "968:0:0"
+                        },
+                        "scope": 182,
+                        "src": "927:42:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 66,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_emergencyVaultWithdraw",
+                        "nameLocation": "983:23:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 64,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1006:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 65,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1025:0:0"
+                        },
+                        "scope": 182,
+                        "src": "974:52:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 69,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_farm",
+                        "nameLocation": "1040:5:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 67,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1045:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 68,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1064:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1031:34:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 74,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_wantBalance",
+                        "nameLocation": "1079:12:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 70,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1091:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 73,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 72,
+                                    "mutability": "mutable",
+                                    "name": "",
+                                    "nameLocation": "-1:-1:-1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 74,
+                                    "src": "1125:7:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 71,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1125:7:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1124:9:0"
+                        },
+                        "scope": 182,
+                        "src": "1070:64:0",
+                        "stateMutability": "view",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 77,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_pause",
+                        "nameLocation": "1210:6:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 75,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1216:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 76,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1235:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1201:35:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "id": 80,
+                        "implemented": false,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "_unpause",
+                        "nameLocation": "1250:8:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 78,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1258:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 79,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1277:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1241:37:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "internal"
+                    },
+                    {
+                        "body": {
+                            "id": 87,
+                            "nodeType": "Block",
+                            "src": "1331:29:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "hexValue": "66616c7365",
+                                        "id": 85,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": true,
+                                        "kind": "bool",
+                                        "lValueRequested": false,
+                                        "nodeType": "Literal",
+                                        "src": "1348:5:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_bool",
+                                            "typeString": "bool"
+                                        },
+                                        "value": "false"
+                                    },
+                                    "functionReturnParameters": 84,
+                                    "id": 86,
+                                    "nodeType": "Return",
+                                    "src": "1341:12:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "5c975abb",
+                        "id": 88,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "paused",
+                        "nameLocation": "1292:6:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 81,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1298:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 84,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 83,
+                                    "mutability": "mutable",
+                                    "name": "",
+                                    "nameLocation": "-1:-1:-1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 88,
+                                    "src": "1325:4:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_bool",
+                                        "typeString": "bool"
+                                    },
+                                    "typeName": {
+                                        "id": 82,
+                                        "name": "bool",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1325:4:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_bool",
+                                            "typeString": "bool"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1324:6:0"
+                        },
+                        "scope": 182,
+                        "src": "1283:77:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": true,
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 99,
+                            "nodeType": "Block",
+                            "src": "1427:59:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "commonType": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        },
+                                        "id": 97,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftExpression": {
+                                            "arguments": [],
+                                            "expression": {
+                                                "argumentTypes": [],
+                                                "id": 93,
+                                                "name": "_wantBalance",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 74,
+                                                "src": "1444:12:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_function_internal_view$__$returns$_t_uint256_$",
+                                                    "typeString": "function () view returns (uint256)"
+                                                }
+                                            },
+                                            "id": 94,
+                                            "isConstant": false,
+                                            "isLValue": false,
+                                            "isPure": false,
+                                            "kind": "functionCall",
+                                            "lValueRequested": false,
+                                            "names": [],
+                                            "nodeType": "FunctionCall",
+                                            "src": "1444:14:0",
+                                            "tryCall": false,
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "nodeType": "BinaryOperation",
+                                        "operator": "+",
+                                        "rightExpression": {
+                                            "arguments": [],
+                                            "expression": {
+                                                "argumentTypes": [],
+                                                "id": 95,
+                                                "name": "vaultSharesTotal",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 50,
+                                                "src": "1461:16:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_function_internal_view$__$returns$_t_uint256_$",
+                                                    "typeString": "function () view returns (uint256)"
+                                                }
+                                            },
+                                            "id": 96,
+                                            "isConstant": false,
+                                            "isLValue": false,
+                                            "isPure": false,
+                                            "kind": "functionCall",
+                                            "lValueRequested": false,
+                                            "names": [],
+                                            "nodeType": "FunctionCall",
+                                            "src": "1461:18:0",
+                                            "tryCall": false,
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_uint256",
+                                                "typeString": "uint256"
+                                            }
+                                        },
+                                        "src": "1444:35:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "functionReturnParameters": 92,
+                                    "id": 98,
+                                    "nodeType": "Return",
+                                    "src": "1437:42:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "42da4eb3",
+                        "id": 100,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "wantLockedTotal",
+                        "nameLocation": "1379:15:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 89,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1394:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 92,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 91,
+                                    "mutability": "mutable",
+                                    "name": "",
+                                    "nameLocation": "-1:-1:-1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 100,
+                                    "src": "1418:7:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 90,
+                                        "name": "uint256",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1418:7:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1417:9:0"
+                        },
+                        "scope": 182,
+                        "src": "1370:116:0",
+                        "stateMutability": "view",
+                        "virtual": false,
+                        "visibility": "public"
+                    },
+                    {
+                        "body": {
+                            "id": 108,
+                            "nodeType": "Block",
+                            "src": "1566:42:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "expression": {
+                                            "id": 105,
+                                            "name": "settings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 9,
+                                            "src": "1583:8:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_VaultSettings_$1743_storage",
+                                                "typeString": "struct VaultSettings storage ref"
+                                            }
+                                        },
+                                        "id": 106,
+                                        "isConstant": false,
+                                        "isLValue": true,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "memberName": "tolerance",
+                                        "nodeType": "MemberAccess",
+                                        "referencedDeclaration": 1733,
+                                        "src": "1583:18:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint16",
+                                            "typeString": "uint16"
+                                        }
+                                    },
+                                    "functionReturnParameters": 104,
+                                    "id": 107,
+                                    "nodeType": "Return",
+                                    "src": "1576:25:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "dce52dfa",
+                        "id": 109,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [],
+                        "name": "tolerance",
+                        "nameLocation": "1525:9:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 101,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1534:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 104,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 103,
+                                    "mutability": "mutable",
+                                    "name": "",
+                                    "nameLocation": "-1:-1:-1",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 109,
+                                    "src": "1560:4:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "default",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_uint256",
+                                        "typeString": "uint256"
+                                    },
+                                    "typeName": {
+                                        "id": 102,
+                                        "name": "uint",
+                                        "nodeType": "ElementaryTypeName",
+                                        "src": "1560:4:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_uint256",
+                                            "typeString": "uint256"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1559:6:0"
+                        },
+                        "scope": 182,
+                        "src": "1516:92:0",
+                        "stateMutability": "view",
+                        "virtual": false,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 130,
+                            "nodeType": "Block",
+                            "src": "1690:101:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "expression": {
+                                                "id": 117,
+                                                "name": "_settings",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 112,
+                                                "src": "1700:9:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_VaultSettings_$1743_calldata_ptr",
+                                                    "typeString": "struct VaultSettings calldata"
+                                                }
+                                            },
+                                            "id": 119,
+                                            "isConstant": false,
+                                            "isLValue": false,
+                                            "isPure": false,
+                                            "lValueRequested": false,
+                                            "memberName": "check",
+                                            "nodeType": "MemberAccess",
+                                            "referencedDeclaration": 1854,
+                                            "src": "1700:15:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_pure$_t_struct$_VaultSettings_$1743_memory_ptr_$returns$__$bound_to$_t_struct$_VaultSettings_$1743_memory_ptr_$",
+                                                "typeString": "function (struct VaultSettings memory) pure"
+                                            }
+                                        },
+                                        "id": 120,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "1700:17:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 121,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1700:17:0"
+                                },
+                                {
+                                    "expression": {
+                                        "id": 124,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "lValueRequested": false,
+                                        "leftHandSide": {
+                                            "id": 122,
+                                            "name": "settings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 9,
+                                            "src": "1727:8:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_VaultSettings_$1743_storage",
+                                                "typeString": "struct VaultSettings storage ref"
+                                            }
+                                        },
+                                        "nodeType": "Assignment",
+                                        "operator": "=",
+                                        "rightHandSide": {
+                                            "id": 123,
+                                            "name": "_settings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 112,
+                                            "src": "1738:9:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_struct$_VaultSettings_$1743_calldata_ptr",
+                                                "typeString": "struct VaultSettings calldata"
+                                            }
+                                        },
+                                        "src": "1727:20:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_VaultSettings_$1743_storage",
+                                            "typeString": "struct VaultSettings storage ref"
+                                        }
+                                    },
+                                    "id": 125,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1727:20:0"
+                                },
+                                {
+                                    "eventCall": {
+                                        "arguments": [
+                                            {
+                                                "id": 127,
+                                                "name": "_settings",
+                                                "nodeType": "Identifier",
+                                                "overloadedDeclarations": [],
+                                                "referencedDeclaration": 112,
+                                                "src": "1774:9:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_struct$_VaultSettings_$1743_calldata_ptr",
+                                                    "typeString": "struct VaultSettings calldata"
+                                                }
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_struct$_VaultSettings_$1743_calldata_ptr",
+                                                    "typeString": "struct VaultSettings calldata"
+                                                }
+                                            ],
+                                            "id": 126,
+                                            "name": "SetSettings",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 23,
+                                            "src": "1762:11:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_event_nonpayable$_t_struct$_VaultSettings_$1743_memory_ptr_$returns$__$",
+                                                "typeString": "function (struct VaultSettings memory)"
+                                            }
+                                        },
+                                        "id": 128,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "1762:22:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 129,
+                                    "nodeType": "EmitStatement",
+                                    "src": "1757:27:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "b9bafd93",
+                        "id": 131,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [
+                            {
+                                "id": 115,
+                                "kind": "modifierInvocation",
+                                "modifierName": {
+                                    "id": 114,
+                                    "name": "onlyGov",
+                                    "nodeType": "IdentifierPath",
+                                    "referencedDeclaration": 45,
+                                    "src": "1682:7:0"
+                                },
+                                "nodeType": "ModifierInvocation",
+                                "src": "1682:7:0"
+                            }
+                        ],
+                        "name": "setSettings",
+                        "nameLocation": "1627:11:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 113,
+                            "nodeType": "ParameterList",
+                            "parameters": [
+                                {
+                                    "constant": false,
+                                    "id": 112,
+                                    "mutability": "mutable",
+                                    "name": "_settings",
+                                    "nameLocation": "1662:9:0",
+                                    "nodeType": "VariableDeclaration",
+                                    "scope": 131,
+                                    "src": "1639:32:0",
+                                    "stateVariable": false,
+                                    "storageLocation": "calldata",
+                                    "typeDescriptions": {
+                                        "typeIdentifier": "t_struct$_VaultSettings_$1743_calldata_ptr",
+                                        "typeString": "struct VaultSettings"
+                                    },
+                                    "typeName": {
+                                        "id": 111,
+                                        "nodeType": "UserDefinedTypeName",
+                                        "pathNode": {
+                                            "id": 110,
+                                            "name": "VaultSettings",
+                                            "nodeType": "IdentifierPath",
+                                            "referencedDeclaration": 1743,
+                                            "src": "1639:13:0"
+                                        },
+                                        "referencedDeclaration": 1743,
+                                        "src": "1639:13:0",
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_struct$_VaultSettings_$1743_storage_ptr",
+                                            "typeString": "struct VaultSettings"
+                                        }
+                                    },
+                                    "visibility": "internal"
+                                }
+                            ],
+                            "src": "1638:34:0"
+                        },
+                        "returnParameters": {
+                            "id": 116,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1690:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1618:173:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": false,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 139,
+                            "nodeType": "Block",
+                            "src": "1835:25:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "id": 136,
+                                            "name": "_pause",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 77,
+                                            "src": "1845:6:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                                                "typeString": "function ()"
+                                            }
+                                        },
+                                        "id": 137,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "1845:8:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 138,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1845:8:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "8456cb59",
+                        "id": 140,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [
+                            {
+                                "id": 134,
+                                "kind": "modifierInvocation",
+                                "modifierName": {
+                                    "id": 133,
+                                    "name": "onlyGov",
+                                    "nodeType": "IdentifierPath",
+                                    "referencedDeclaration": 45,
+                                    "src": "1827:7:0"
+                                },
+                                "nodeType": "ModifierInvocation",
+                                "src": "1827:7:0"
+                            }
+                        ],
+                        "name": "pause",
+                        "nameLocation": "1810:5:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 132,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1815:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 135,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1835:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1801:59:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": false,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 148,
+                            "nodeType": "Block",
+                            "src": "1901:27:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "id": 145,
+                                            "name": "_unpause",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 80,
+                                            "src": "1911:8:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                                                "typeString": "function ()"
+                                            }
+                                        },
+                                        "id": 146,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "1911:10:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 147,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1911:10:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "3f4ba83a",
+                        "id": 149,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [
+                            {
+                                "id": 143,
+                                "kind": "modifierInvocation",
+                                "modifierName": {
+                                    "id": 142,
+                                    "name": "onlyGov",
+                                    "nodeType": "IdentifierPath",
+                                    "referencedDeclaration": 45,
+                                    "src": "1893:7:0"
+                                },
+                                "nodeType": "ModifierInvocation",
+                                "src": "1893:7:0"
+                            }
+                        ],
+                        "name": "unpause",
+                        "nameLocation": "1874:7:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 141,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1881:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 144,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1901:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1865:63:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": false,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 168,
+                            "nodeType": "Block",
+                            "src": "1967:139:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [
+                                            {
+                                                "commonType": {
+                                                    "typeIdentifier": "t_uint256",
+                                                    "typeString": "uint256"
+                                                },
+                                                "id": 158,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": false,
+                                                "lValueRequested": false,
+                                                "leftExpression": {
+                                                    "id": 155,
+                                                    "name": "panicLockExpiry",
+                                                    "nodeType": "Identifier",
+                                                    "overloadedDeclarations": [],
+                                                    "referencedDeclaration": 18,
+                                                    "src": "1986:15:0",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "nodeType": "BinaryOperation",
+                                                "operator": "<",
+                                                "rightExpression": {
+                                                    "expression": {
+                                                        "id": 156,
+                                                        "name": "block",
+                                                        "nodeType": "Identifier",
+                                                        "overloadedDeclarations": [],
+                                                        "referencedDeclaration": 4294967292,
+                                                        "src": "2004:5:0",
+                                                        "typeDescriptions": {
+                                                            "typeIdentifier": "t_magic_block",
+                                                            "typeString": "block"
+                                                        }
+                                                    },
+                                                    "id": 157,
+                                                    "isConstant": false,
+                                                    "isLValue": false,
+                                                    "isPure": false,
+                                                    "lValueRequested": false,
+                                                    "memberName": "timestamp",
+                                                    "nodeType": "MemberAccess",
+                                                    "src": "2004:15:0",
+                                                    "typeDescriptions": {
+                                                        "typeIdentifier": "t_uint256",
+                                                        "typeString": "uint256"
+                                                    }
+                                                },
+                                                "src": "1986:33:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                }
+                                            },
+                                            {
+                                                "hexValue": "70616e6963206f6e636520706572203620686f757273",
+                                                "id": 159,
+                                                "isConstant": false,
+                                                "isLValue": false,
+                                                "isPure": true,
+                                                "kind": "string",
+                                                "lValueRequested": false,
+                                                "nodeType": "Literal",
+                                                "src": "2021:24:0",
+                                                "typeDescriptions": {
+                                                    "typeIdentifier": "t_stringliteral_2ef9018be467257f82839c5e12d3f084d3888209c5b6ea96309ae059abbf7633",
+                                                    "typeString": "literal_string \"panic once per 6 hours\""
+                                                },
+                                                "value": "panic once per 6 hours"
+                                            }
+                                        ],
+                                        "expression": {
+                                            "argumentTypes": [
+                                                {
+                                                    "typeIdentifier": "t_bool",
+                                                    "typeString": "bool"
+                                                },
+                                                {
+                                                    "typeIdentifier": "t_stringliteral_2ef9018be467257f82839c5e12d3f084d3888209c5b6ea96309ae059abbf7633",
+                                                    "typeString": "literal_string \"panic once per 6 hours\""
+                                                }
+                                            ],
+                                            "id": 154,
+                                            "name": "require",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [
+                                                4294967278,
+                                                4294967278
+                                            ],
+                                            "referencedDeclaration": 4294967278,
+                                            "src": "1977:7:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                                                "typeString": "function (bool,string memory) pure"
+                                            }
+                                        },
+                                        "id": 160,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "1977:69:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 161,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "1977:69:0"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "id": 162,
+                                            "name": "_pause",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 77,
+                                            "src": "2056:6:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                                                "typeString": "function ()"
+                                            }
+                                        },
+                                        "id": 163,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2056:8:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 164,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2056:8:0"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "id": 165,
+                                            "name": "_emergencyVaultWithdraw",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 66,
+                                            "src": "2074:23:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                                                "typeString": "function ()"
+                                            }
+                                        },
+                                        "id": 166,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2074:25:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 167,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2074:25:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "4700d305",
+                        "id": 169,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [
+                            {
+                                "id": 152,
+                                "kind": "modifierInvocation",
+                                "modifierName": {
+                                    "id": 151,
+                                    "name": "onlyGov",
+                                    "nodeType": "IdentifierPath",
+                                    "referencedDeclaration": 45,
+                                    "src": "1959:7:0"
+                                },
+                                "nodeType": "ModifierInvocation",
+                                "src": "1959:7:0"
+                            }
+                        ],
+                        "name": "panic",
+                        "nameLocation": "1942:5:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 150,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1947:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 153,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "1967:0:0"
+                        },
+                        "scope": 182,
+                        "src": "1933:173:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": false,
+                        "visibility": "external"
+                    },
+                    {
+                        "body": {
+                            "id": 180,
+                            "nodeType": "Block",
+                            "src": "2147:44:0",
+                            "statements": [
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "id": 174,
+                                            "name": "_unpause",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 80,
+                                            "src": "2157:8:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                                                "typeString": "function ()"
+                                            }
+                                        },
+                                        "id": 175,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2157:10:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 176,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2157:10:0"
+                                },
+                                {
+                                    "expression": {
+                                        "arguments": [],
+                                        "expression": {
+                                            "argumentTypes": [],
+                                            "id": 177,
+                                            "name": "_farm",
+                                            "nodeType": "Identifier",
+                                            "overloadedDeclarations": [],
+                                            "referencedDeclaration": 69,
+                                            "src": "2177:5:0",
+                                            "typeDescriptions": {
+                                                "typeIdentifier": "t_function_internal_nonpayable$__$returns$__$",
+                                                "typeString": "function ()"
+                                            }
+                                        },
+                                        "id": 178,
+                                        "isConstant": false,
+                                        "isLValue": false,
+                                        "isPure": false,
+                                        "kind": "functionCall",
+                                        "lValueRequested": false,
+                                        "names": [],
+                                        "nodeType": "FunctionCall",
+                                        "src": "2177:7:0",
+                                        "tryCall": false,
+                                        "typeDescriptions": {
+                                            "typeIdentifier": "t_tuple$__$",
+                                            "typeString": "tuple()"
+                                        }
+                                    },
+                                    "id": 179,
+                                    "nodeType": "ExpressionStatement",
+                                    "src": "2177:7:0"
+                                }
+                            ]
+                        },
+                        "functionSelector": "65a5e30b",
+                        "id": 181,
+                        "implemented": true,
+                        "kind": "function",
+                        "modifiers": [
+                            {
+                                "id": 172,
+                                "kind": "modifierInvocation",
+                                "modifierName": {
+                                    "id": 171,
+                                    "name": "onlyGov",
+                                    "nodeType": "IdentifierPath",
+                                    "referencedDeclaration": 45,
+                                    "src": "2139:7:0"
+                                },
+                                "nodeType": "ModifierInvocation",
+                                "src": "2139:7:0"
+                            }
+                        ],
+                        "name": "unpanic",
+                        "nameLocation": "2120:7:0",
+                        "nodeType": "FunctionDefinition",
+                        "parameters": {
+                            "id": 170,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "2127:2:0"
+                        },
+                        "returnParameters": {
+                            "id": 173,
+                            "nodeType": "ParameterList",
+                            "parameters": [],
+                            "src": "2147:0:0"
+                        },
+                        "scope": 182,
+                        "src": "2111:80:0",
+                        "stateMutability": "nonpayable",
+                        "virtual": false,
+                        "visibility": "external"
+                    }
+                ],
+                "scope": 183,
+                "src": "106:2087:0",
+                "usedErrors": []
+            }
+        ],
+        "src": "45:2148:0"
+    },
+    "functionHashes": {
+        "lastEarnBlock()": "0fa4e01e",
+        "panic()": "4700d305",
+        "panicLockExpiry()": "9845db2f",
+        "pause()": "8456cb59",
+        "paused()": "5c975abb",
+        "setSettings((address,uint16,uint16,uint64,uint88,bool,address))": "b9bafd93",
+        "settings()": "e06174e4",
+        "tolerance()": "dce52dfa",
+        "unpanic()": "65a5e30b",
+        "unpause()": "3f4ba83a",
+        "vaultSharesTotal()": "04c9d490",
+        "wantLockedTotal()": "42da4eb3"
+    },
+    "gasEstimates": null
+}

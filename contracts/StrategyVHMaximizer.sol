@@ -76,7 +76,6 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
             crystlToken.safeApprove(address(vaultHealer), crystlBalance);
 
             vaultHealer.deposit(3, crystlBalance); //pid can be hardcoded here? let's say for now that it's 1?
-            // uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, crystlBalance, totalSupply(_pid)); //need to pass in from, to, sharesTotal - which sharesTotal? sharesTotal of strat A in strat B?
         }
         lastEarnBlock = block.number;
     }
