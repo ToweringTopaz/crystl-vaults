@@ -117,7 +117,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
 
             //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_to] * _wantAmt / balanceOf(address(pool.strat), 3); //can I include crystl that's in pending rewards in the staking pool here?
+            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_to] * _wantAmt / balanceOf(_to, 2); //tod
 
             //withdraw proportional amount of crystl from maximizerVault()
             if (crystlShare > 0) {
