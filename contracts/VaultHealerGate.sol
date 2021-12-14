@@ -58,7 +58,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 from: msg.sender,
                 amount: _wantAmt
             });
-            
+                    
+            uint256 wantLockedBefore = pool.strat.wantLockedTotal();
+            //put in earn here!! (and take out the earn in strat)
+            pool.strat.earn(_to); 
+
+            if (address(pool.maximizerVault) != address(0) && wantLockedBefore > 0) { //
+            UpdatePoolAndRewarddebtOnDeposit(_pid, _to, _wantAmt);
+            }
+
             uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt, totalSupply(_pid));
             //we mint tokens for the user via the 1155 contract
             _mint(
@@ -98,11 +106,28 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         require(userUnboostedWant + userBoostedWant > 0, "User has 0 shares");
         
-        //unstake here if need be
+        //unstake from boostPool here if need be
         if (_wantAmt > userUnboostedWant && userBoostedWant > 0) { //&&boostPool exists! check that it's not a zero address?
             boostPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
             }
 
+        pool.strat.earn(_to); //todo: should this go above boosted pool unstaking?
+
+        if (address(pool.maximizerVault) != address(0) && pool.strat.wantLockedTotal() > 0) { //should this be some form of wantLockedBefore??
+            pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
+
+            //calculate total crystl amount this user owns
+            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_to] * _wantAmt / balanceOf(address(pool.strat), 3); //can I include crystl that's in pending rewards in the staking pool here?
+
+            //withdraw proportional amount of crystl from maximizerVault()
+            if (crystlShare > 0) {
+                pool.maximizerVault.withdraw(address(pool.strat), address(pool.strat), crystlShare, balanceOf(address(pool.strat), 3), totalSupply(3)); //todo: remove the hardcoding of the PID!! this calls withdraw on the VH, right?
+                IERC20 rewardToken = pool.maximizerRewardToken; //pool.maximizerRewardToken
+                rewardToken.safeTransferFrom(address(pool.strat), _to, rewardToken.balanceOf(address(this))); //check that this address is correct
+                rewardDebt[_pid][_to] -= rewardDebt[_pid][_to] * _wantAmt / balanceOf(address(pool.strat), 3);
+                }
+            pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+            }
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
         //TELL THE STRAT HOW MUCH TO WITHDRAW!! - wantAmt, as long as wantAmt is allowed...
         (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _pid), totalSupply(_pid));
@@ -125,6 +150,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         
         //this call transfers wantTokens from the strat to the user
         pool.want.safeTransferFrom(address(pool.strat), _to, wantAmt);
+
 
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
@@ -173,4 +199,34 @@ function _beforeTokenTransfer(
             }
         }
     }
+
+    function UpdatePoolAndRewarddebtOnDeposit (uint256 _pid, address _from, uint256 _wantAmt) public {
+        PoolInfo storage pool = _poolInfo[_pid];
+
+        rewardDebt[_pid][_from] += _wantAmt * pool.accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+
+        pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
+
+        pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+
+    }
+
+    // function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt, uint256 _userWant) public {
+    //     PoolInfo storage pool = _poolInfo[_pid];
+
+    //     pool.accRewardTokensPerShare += (pool.maximizerVault().wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
+
+
+    //     //calculate total crystl amount this user owns (pending is not quite the right term)
+    //     uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_from] * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
+
+
+    //     //withdraw proportional amount of crystl from maximizerVault()
+    //     if (crystlShare > 0) {
+    //         withdraw(3, crystlShare); //todo: remove the hardcoding of the PID!!
+    //         pool.maximizerRewardToken.safeTransfer(_from, pool.maximizerRewardToken.balanceOf(address(this))); //check that this address is correct
+    //         rewardDebt[_pid][_from] -= rewardDebt[_pid][_from] * _wantAmt / _userWant;
+    //         }
+    //     pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault().wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+    // }
 }

@@ -13,7 +13,9 @@ interface IStrategy {
     function getRewardDebt(address _user) external view returns (uint256);
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _amount, uint256 _userWant) external;
     function UpdatePoolAndRewarddebtOnDeposit(address _to, uint256 _amount) external;
-    function CheckIsMaximizer() external returns (bool);
+    function CheckIsMaximizer() external view returns (bool);
+    function maximizerVault() external view returns (IStrategy);
+    function maximizerRewardToken() external view returns (IERC20);
     // function vaultFees() external view returns (VaultFees calldata);
     function earn(address _to) external; // Main want token compounding function
     function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);

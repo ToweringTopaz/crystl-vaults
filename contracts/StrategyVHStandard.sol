@@ -24,7 +24,7 @@ contract StrategyVHStandard is BaseStrategyVaultHealer {
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
-        BaseStrategyVaultHealer(_vaultHealerAddress, pid)
+        BaseStrategyVaultHealer(_vaultHealerAddress, _pid)
     {
         masterchef = _masterchefAddress;
         tactic = ITactic(_tacticAddress);

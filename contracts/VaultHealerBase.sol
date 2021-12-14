@@ -16,13 +16,13 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
     using LibVaultConfig for VaultFees;
 
     // Info of each user.
-    struct UserInfo {
-        uint256 rewardDebt;
+    // struct UserInfo {
+    //     uint256 rewardDebt;
     //     // uint256 totalDeposits;
     //     // uint256 totalWithdrawals;
     //     // mapping (address => uint256) allowances; //for ERC20 transfers
     //     // bytes data;
-    }
+    // }
 
     struct PoolInfo {
         IERC20 want; //  want token.
@@ -32,11 +32,13 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         VaultFees fees;
         uint256 accRewardTokensPerShare; //todo: do I need to initialize this?
         uint256 balanceCrystlCompounderLastUpdate;
+        IERC20 maximizerRewardToken;
+        IStrategy maximizerVault;
         // bytes data;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo; // Info of each user that stakes LP tokens.
+    mapping(uint256 => mapping(address => uint256)) public rewardDebt; // Info of each user that stakes LP tokens.
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
     
     //pid for any of our strategies
@@ -129,6 +131,8 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply {
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
         pool.want = IStrategy(_strat).wantToken();
         pool.strat = IStrategy(_strat);
+        pool.maximizerVault = IStrategy(_strat).maximizerVault();
+        pool.maximizerRewardToken = IStrategy(_strat).maximizerRewardToken();
         IStrategy(_strat).setFees(defaultFees);
         // pool.boostPoolAddress = IStrategy(_strat).boostPoolAddress();
         

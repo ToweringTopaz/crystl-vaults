@@ -113,5 +113,9 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
             tactic._emergencyVaultWithdraw.selector, masterchef, pid
         ), "emergencyvaultwithdraw failed");
     }
+
+    function getMaximizerRewardToken() external view returns(IERC20){
+        return maximizerRewardToken;
+    }
         
 }

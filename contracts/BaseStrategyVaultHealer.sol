@@ -13,13 +13,13 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultSwaps for VaultFees;    
     
     // Info of each user.
-    struct UserInfo {
-        uint256 rewardDebt;
-    //     // uint256 totalDeposits;
-    //     // uint256 totalWithdrawals;
-    //     // mapping (address => uint256) allowances; //for ERC20 transfers
-    //     // bytes data;
-    }
+    // struct UserInfo {
+    //     uint256 rewardDebt;
+    // //     // uint256 totalDeposits;
+    // //     // uint256 totalWithdrawals;
+    // //     // mapping (address => uint256) allowances; //for ERC20 transfers
+    // //     // bytes data;
+    // }
 
     VaultHealer immutable public vaultHealer; //why is this immutable?
     IStrategy public maximizerVault;
@@ -27,7 +27,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     uint public immutable pid;
     bool public isMaximizer;
 
-    IERC20 maximizerRewardToken;
+    IERC20 public maximizerRewardToken;
 
     constructor(address _vaultHealerAddress, uint256 _pid) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
@@ -55,16 +55,11 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
-        _earn(_from); //earn before deposit prevents abuse
-
+        // _earn(_from); //earn before deposit prevents abuse
+        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
 
         if (_wantAmt < settings.dust) return 0; //do nothing if nothing is requested
-        
-        uint256 wantLockedBefore = wantLockedTotal();
-
-        if (address(maximizerVault) != address(0) && wantLockedBefore > 0) { //
-            UpdatePoolAndRewarddebtOnDeposit(_from, _wantAmt);
-            }
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
@@ -79,30 +74,18 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }
 
-    function UpdatePoolAndRewarddebtOnDeposit (address _from, uint256 _wantAmt) public {
-        UserInfo storage user = vaultHealer.userInfo[pid][_from];
-        user.rewardDebt += _wantAmt * vaultHealer.pool.accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
 
-        vaultHealer.pool.accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - vaultHealer.pool.balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
-
-        vaultHealer.pool.balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-
-    }
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
-    function withdraw(address _from, address /*_to*/, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
+    function withdraw(address /*_from*/, address /*_to*/, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
         //User's balance, in want tokens
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
 
         //todo: should the earn go inside the conditional? i.e. do we need to earn if it's not a maximizer? I think so actually...
-        _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
+        // _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
 
-        // should call earn on CC too? again, to be fair to individual who is withdrawing? Or what? they should get the rewards anyway right when we withdraw from the CC? yes, because it's using this same withdraw function!
-        if (address(maximizerVault) != address(0) && wantLockedBefore > 0) {
-            UpdatePoolAndWithdrawCrystlOnWithdrawal(_from, _wantAmt, userWant);
-        }
 
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)
@@ -137,24 +120,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         return (sharesRemoved, _wantAmt);
     }
 
-    function UpdatePoolAndWithdrawCrystlOnWithdrawal(address _from, uint256 _wantAmt, uint256 _userWant) public {
-        UserInfo storage user = vaultHealer.userInfo[pid][_from];
-        vaultHealer.pool.accRewardTokensPerShare += (maximizerVault.wantLockedTotal() - vaultHealer.pool.balanceCrystlCompounderLastUpdate) * 1e30 / wantLockedTotal(); //multiply or divide by 1e30??
-
-
-        //calculate total crystl amount this user owns (pending is not quite the right term)
-        uint256 crystlShare = _wantAmt * vaultHealer.pool.accRewardTokensPerShare / 1e30 - user.rewardDebt * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
-
-
-        //withdraw proportional amount of crystl from maximizerVault
-        if (crystlShare > 0) {
-            vaultHealer.withdraw(3, crystlShare);
-            maximizerRewardToken.safeTransfer(_from, maximizerRewardToken.balanceOf(address(this))); //check that this address is correct
-            user.rewardDebt -= user.rewardDebt * _wantAmt / _userWant;
-            }
-        vaultHealer.pool.balanceCrystlCompounderLastUpdate = maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-    }
-
     function _pause() internal override {} //no-op, since vaulthealer manages paused status
     function _unpause() internal override {}
     function paused() public view override returns (bool) {
@@ -165,15 +130,13 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         boostPoolAddress = _boostPoolAddress;
     }
 
-    function getRewardDebt(address _user) external view returns (uint256) {
-        UserInfo storage user = vaultHealer.userInfo[pid][_user];
-        return user.rewardDebt;
-    }
+    // function getRewardDebt(address _user) external view returns (uint256) {
+    //     return vaultHealer.rewardDebt[pid][_user];
+    // }
 
-    function increaseRewardDebt(address _user, uint256 amount) public {
-        UserInfo storage user = vaultHealer.userInfo[pid][_user];
-        user.rewardDebt += amount;
-    }
+    // function increaseRewardDebt(address _user, uint256 amount) public {
+    //     vaultHealer.rewardDebt[pid][_user] += amount;
+    // }
 
 function CheckIsMaximizer() external view returns (bool) {
     return isMaximizer;
