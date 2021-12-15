@@ -25,7 +25,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         VaultSettings memory _settings,
         IERC20[] memory _earned,
         address _maximizerVault,
-        address _maximizerRewardToken
+        address _maximizerRewardToken //could prob get this from maximizer vault!
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
@@ -75,9 +75,9 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
             uint256 crystlBalance = crystlToken.balanceOf(address(this));
 
             //need to instantiate pool here?
-            crystlToken.safeApprove(address(vaultHealer), crystlBalance);
+            crystlToken.safeIncreaseAllowance(address(vaultHealer), crystlBalance);
 
-            vaultHealer.deposit(3, crystlBalance); //pid can be hardcoded here? let's say for now that it's 1?
+            vaultHealer.deposit(3, crystlBalance); //todo: remove hardcoded pid
         }
         lastEarnBlock = block.number;
     }
@@ -116,6 +116,12 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
 
     function getMaximizerRewardToken() external view returns(IERC20){
         return maximizerRewardToken;
+    }
+
+    function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external {
+        IERC20 crystlToken = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: change this from a hardcoding
+        crystlToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
+        vaultHealer.withdraw(_pid, _amount);
     }
         
 }

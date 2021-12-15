@@ -380,7 +380,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`The user got ${ethers.utils.formatEther((user1CrystlBalanceAfterWithdraw).sub(user1CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
 
             expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
-            expect(user1CrystlBalanceAfterWithdraw.sub(user1CrystlBalanceBeforeWithdraw)).to.eq(vaultSharesTotalInCrystalCompounderAfterWithdraw.mul(999).div(1000));
+            expect(user1CrystlBalanceAfterWithdraw.sub(user1CrystlBalanceBeforeWithdraw)).to.eq(vaultSharesTotalInCrystalCompounderAfterWithdraw.mul(999).div(1000)); //
 
         })
 
@@ -690,7 +690,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should transfer 1155 tokens from user 3 to user 1, updating shares and rewardDebt accurately', async () => {
             const User3StakedTokensBeforeTransfer = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user3.address);
             const User1StakedTokensBeforeTransfer = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
-            User1RewardDebtBeforeTransfer = await strategyVHMaximizer.rewardDebt(user1.address);
+            User1RewardDebtBeforeTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
 
             vaultHealer.connect(user3).setApprovalForAll(user1.address, true);
 
@@ -708,7 +708,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should increase rewardDebt when you receive transferred tokens', async () => {
-            const User1RewardDebtAfterTransfer = await strategyVHMaximizer.rewardDebt(user1.address);
+            const User1RewardDebtAfterTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
 
             expect(User1RewardDebtAfterTransfer).to.be.gt(User1RewardDebtBeforeTransfer);
         })

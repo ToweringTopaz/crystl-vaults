@@ -86,7 +86,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //todo: should the earn go inside the conditional? i.e. do we need to earn if it's not a maximizer? I think so actually...
         // _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
 
-
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)
             _wantAmt = userWant;

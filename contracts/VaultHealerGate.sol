@@ -118,13 +118,26 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
             //calculate total crystl amount this user owns
             uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_to] * _wantAmt / balanceOf(_to, 2); //tod
-
+            console.log(crystlShare);
             //withdraw proportional amount of crystl from maximizerVault()
             if (crystlShare > 0) {
-                pool.maximizerVault.withdraw(address(pool.strat), address(pool.strat), crystlShare, balanceOf(address(pool.strat), 3), totalSupply(3)); //todo: remove the hardcoding of the PID!! this calls withdraw on the VH, right?
-                IERC20 rewardToken = pool.maximizerRewardToken; //pool.maximizerRewardToken
-                rewardToken.safeTransferFrom(address(pool.strat), _to, rewardToken.balanceOf(address(this))); //check that this address is correct
-                rewardDebt[_pid][_to] -= rewardDebt[_pid][_to] * _wantAmt / balanceOf(address(pool.strat), 3);
+                pool.strat.withdrawMaximizerReward(3, crystlShare);
+                // pool.maximizerVault.earn(_to);
+                // (uint256 __sharesRemoved, uint256 __wantAmt) = pool.maximizerVault.withdraw( address(0), address(0) , crystlShare, balanceOf(address(pool.strat), 3), totalSupply(3)); //todo: remove the hardcoding of the PID!! this calls withdraw on the VH, right?
+                // //todo: do I need to check for paused here??
+                // //todo: do I need to put in a fee here??
+                //         // _burn(
+                //         //     _to,
+                //         //     3, //todo: remove hardcoding
+                //         //     __sharesRemoved
+                //         // );
+                // console.log(__sharesRemoved);
+                // console.log(__wantAmt);
+                // console.log(pool.maximizerRewardToken.balanceOf(address(pool.maximizerVault)));
+                //need to put in approval here!
+                console.log(pool.maximizerRewardToken.balanceOf(address(pool.strat)));
+                pool.maximizerRewardToken.safeTransferFrom(address(pool.strat), _to, pool.maximizerRewardToken.balanceOf(address(pool.strat))); //check that this address is correct
+                rewardDebt[_pid][_to] -= rewardDebt[_pid][_to] * _wantAmt / balanceOf(_to, 2);
                 }
             pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
             }
