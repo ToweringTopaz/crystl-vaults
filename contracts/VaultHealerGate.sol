@@ -114,32 +114,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         pool.strat.earn(_to); //todo: should this go above boosted pool unstaking?
 
         if (address(pool.maximizerVault) != address(0) && pool.strat.wantLockedTotal() > 0) { //should this be some form of wantLockedBefore??
-            pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
-
-            //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_to] * _wantAmt / balanceOf(_to, 2); //tod
-            console.log(crystlShare);
-            //withdraw proportional amount of crystl from maximizerVault()
-            if (crystlShare > 0) {
-                pool.strat.withdrawMaximizerReward(3, crystlShare);
-                // pool.maximizerVault.earn(_to);
-                // (uint256 __sharesRemoved, uint256 __wantAmt) = pool.maximizerVault.withdraw( address(0), address(0) , crystlShare, balanceOf(address(pool.strat), 3), totalSupply(3)); //todo: remove the hardcoding of the PID!! this calls withdraw on the VH, right?
-                // //todo: do I need to check for paused here??
-                // //todo: do I need to put in a fee here??
-                //         // _burn(
-                //         //     _to,
-                //         //     3, //todo: remove hardcoding
-                //         //     __sharesRemoved
-                //         // );
-                // console.log(__sharesRemoved);
-                // console.log(__wantAmt);
-                // console.log(pool.maximizerRewardToken.balanceOf(address(pool.maximizerVault)));
-                //need to put in approval here!
-                console.log(pool.maximizerRewardToken.balanceOf(address(pool.strat)));
-                pool.maximizerRewardToken.safeTransferFrom(address(pool.strat), _to, pool.maximizerRewardToken.balanceOf(address(pool.strat))); //check that this address is correct
-                rewardDebt[_pid][_to] -= rewardDebt[_pid][_to] * _wantAmt / balanceOf(_to, 2);
-                }
-            pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+            UpdatePoolAndWithdrawCrystlOnWithdrawal(_pid, _to, _wantAmt);
             }
         //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
         //TELL THE STRAT HOW MUCH TO WITHDRAW!! - wantAmt, as long as wantAmt is allowed...
@@ -204,9 +179,9 @@ function _beforeTokenTransfer(
                 if (_poolInfo[pid].strat.CheckIsMaximizer()) {
                     _poolInfo[pid].strat.earn(from); //does it matter who calls the earn?
 
-                    _poolInfo[pid].strat.UpdatePoolAndWithdrawCrystlOnWithdrawal(from, underlyingValue, balanceOf(from, pid));
+                    UpdatePoolAndWithdrawCrystlOnWithdrawal(pid, from, underlyingValue);
 
-                    _poolInfo[pid].strat.UpdatePoolAndRewarddebtOnDeposit(to, underlyingValue);
+                    UpdatePoolAndRewarddebtOnDeposit(pid, to, underlyingValue);
                     }
 
             }
@@ -224,22 +199,17 @@ function _beforeTokenTransfer(
 
     }
 
-    // function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt, uint256 _userWant) public {
-    //     PoolInfo storage pool = _poolInfo[_pid];
-
-    //     pool.accRewardTokensPerShare += (pool.maximizerVault().wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
-
-
-    //     //calculate total crystl amount this user owns (pending is not quite the right term)
-    //     uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_from] * _wantAmt / _userWant; //can I include crystl that's in pending rewards in the staking pool here?
-
-
-    //     //withdraw proportional amount of crystl from maximizerVault()
-    //     if (crystlShare > 0) {
-    //         withdraw(3, crystlShare); //todo: remove the hardcoding of the PID!!
-    //         pool.maximizerRewardToken.safeTransfer(_from, pool.maximizerRewardToken.balanceOf(address(this))); //check that this address is correct
-    //         rewardDebt[_pid][_from] -= rewardDebt[_pid][_from] * _wantAmt / _userWant;
-    //         }
-    //     pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault().wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-    // }
+    function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt) public { //, uint256 _userWant
+        PoolInfo storage pool = _poolInfo[_pid];
+            pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
+            //calculate total crystl amount this user owns
+            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, 2); //tod
+            //withdraw proportional amount of crystl from maximizerVault()
+            if (crystlShare > 0) {
+                pool.strat.withdrawMaximizerReward(3, crystlShare);
+                pool.maximizerRewardToken.safeTransferFrom(address(pool.strat), _from, pool.maximizerRewardToken.balanceOf(address(pool.strat))); //check that this address is correct
+                rewardDebt[_pid][_from] -= rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, 2);
+                }
+            pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+    }
 }
