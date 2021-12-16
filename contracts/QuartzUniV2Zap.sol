@@ -16,7 +16,7 @@
 pragma solidity ^0.8.0;
 
 import "./libs/LibQuartz.sol";
-import "./libs/IUniswapV2Factory.sol";
+import "./libs/IUniRouter.sol";
 
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;

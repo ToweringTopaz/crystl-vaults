@@ -20,10 +20,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./Babylonian.sol";
 import "./IStrategy.sol";
 import "./IVaultHealer.sol";
-import './IUniRouter02.sol';
+import './IUniRouter.sol';
 import "./IUniswapV2Pair.sol";
 import "./IWETH.sol";
-import "./IUniswapV2Factory.sol";
+// import "./IUniFactory.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
@@ -112,7 +112,7 @@ library LibQuartz {
 
     function hasSufficientLiquidity(address token0, address token1, IUniRouter02 router, uint256 min_amount) internal view returns (bool hasLiquidity) {
         address factory_address = router.factory();
-        IUniswapV2Factory factory = IUniswapV2Factory(factory_address);
+        IUniFactory factory = IUniFactory(factory_address);
         IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
