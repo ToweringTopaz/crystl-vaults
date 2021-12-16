@@ -33,7 +33,6 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
     {
         masterchef = _masterchefAddress;
         tactic = ITactic(_tacticAddress);
-        // pid = _pid;
         maximizerVault = IStrategy(_maximizerVault);
         maximizerRewardToken = IERC20(_maximizerRewardToken);
         // maximizerVault.setFees(
@@ -64,14 +63,14 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
                 success = true; //We have something worth compounding
                 earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap earned to crystl for maximizer
-                LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64), address(this)); //todo: change this from a hardcoding
+                LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, maximizerRewardToken, address(this)); //todo: change this from a hardcoding
             }
         }
 
         if (success) {
             // deposits the tokens into the crystl vault
             // _farm();
-            IERC20 crystlToken = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: change this from a hardcoding
+            IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
             uint256 crystlBalance = crystlToken.balanceOf(address(this));
 
             //need to instantiate pool here?
@@ -119,8 +118,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
     }
 
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external {
-        IERC20 crystlToken = IERC20(0x76bF0C28e604CC3fE9967c83b3C3F31c213cfE64); //todo: change this from a hardcoding
-        crystlToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
+        maximizerRewardToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
         vaultHealer.withdraw(_pid, _amount);
     }
         

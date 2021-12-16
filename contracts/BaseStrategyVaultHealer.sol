@@ -11,17 +11,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;    
-    
-    // Info of each user.
-    // struct UserInfo {
-    //     uint256 rewardDebt;
-    // //     // uint256 totalDeposits;
-    // //     // uint256 totalWithdrawals;
-    // //     // mapping (address => uint256) allowances; //for ERC20 transfers
-    // //     // bytes data;
-    // }
 
-    VaultHealer immutable public vaultHealer; //why is this immutable?
+    VaultHealer immutable public vaultHealer; 
     IStrategy public maximizerVault;
     address public boostPoolAddress;
     uint public immutable pid;
@@ -83,9 +74,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
 
-        //todo: should the earn go inside the conditional? i.e. do we need to earn if it's not a maximizer? I think so actually...
-        // _earn(_from); //earn before withdraw is only fair to withdrawing user - they get the crysl rewards they've earned
-
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)
             _wantAmt = userWant;
@@ -128,15 +116,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function setBoostPoolAddress(address _boostPoolAddress) external {
         boostPoolAddress = _boostPoolAddress;
     }
-
-    // function getRewardDebt(address _user) external view returns (uint256) {
-    //     return vaultHealer.rewardDebt[pid][_user];
-    // }
-
-    // function increaseRewardDebt(address _user, uint256 amount) public {
-    //     vaultHealer.rewardDebt[pid][_user] += amount;
-    // }
-
 function CheckIsMaximizer() external view returns (bool) {
     return isMaximizer;
 }

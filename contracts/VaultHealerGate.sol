@@ -3,8 +3,6 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./VaultHealerBase.sol";
-// import "hardhat/console.sol";
-
 
 //Handles "gate" functions like deposit/withdraw
 abstract contract VaultHealerGate is VaultHealerBase {
@@ -27,7 +25,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function transferData(uint pid, address user) internal view returns (TransferData storage) {
         return _transferData[keccak256(abi.encodePacked(pid, user))]; //what does this do?
     }
-
     function userTotals(uint256 pid, address user) external view 
         returns (TransferData memory stats, int256 earned) 
     {
@@ -76,7 +73,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 hex'' //leave this blank for now
             );
         //update the user's data for earn tracking purposes
-        transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount; //todo: should this go here or higher up? above the strat.deposit?
+        transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount;
         
         delete pendingDeposit;
         }
@@ -111,13 +108,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
             boostPool.withdraw((_wantAmt-userUnboostedWant)*totalSupply(_pid) / pool.strat.wantLockedTotal(), _to);
             }
 
-        pool.strat.earn(_to); //todo: should this go above boosted pool unstaking?
+        pool.strat.earn(_to);
 
-        if (address(pool.maximizerVault) != address(0) && pool.strat.wantLockedTotal() > 0) { //should this be some form of wantLockedBefore??
+        if (address(pool.maximizerVault) != address(0) && pool.strat.wantLockedTotal() > 0) {
             UpdatePoolAndWithdrawCrystlOnWithdrawal(_pid, _to, _wantAmt);
             }
-        //call withdraw on the strat itself - returns sharesRemoved and wantAmt (not _wantAmt) - withdraws wantTokens from the vault to the strat
-        //TELL THE STRAT HOW MUCH TO WITHDRAW!! - wantAmt, as long as wantAmt is allowed...
+
         (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _pid), totalSupply(_pid));
 
         //burn the tokens equal to sharesRemoved
@@ -138,7 +134,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         
         //this call transfers wantTokens from the strat to the user
         pool.want.safeTransferFrom(address(pool.strat), _to, wantAmt);
-
 
         emit Withdraw(msg.sender, _pid, _wantAmt);
     }
@@ -191,23 +186,23 @@ function _beforeTokenTransfer(
     function UpdatePoolAndRewarddebtOnDeposit (uint256 _pid, address _from, uint256 _wantAmt) public {
         PoolInfo storage pool = _poolInfo[_pid];
 
-        rewardDebt[_pid][_from] += _wantAmt * pool.accRewardTokensPerShare / 1e30; //todo: should this go here or higher up? above the strat.deposit?
+        rewardDebt[_pid][_from] += _wantAmt * pool.accRewardTokensPerShare / 1e30;
 
-        pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
+        pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); 
 
         pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
 
     }
 
-    function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt) public { //, uint256 _userWant
+    function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt) public {
         PoolInfo storage pool = _poolInfo[_pid];
-            pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); //multiply or divide by 1e30??
+            pool.accRewardTokensPerShare += (pool.maximizerVault.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal();
             //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, 2); //tod
+            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, 2); 
             //withdraw proportional amount of crystl from maximizerVault()
             if (crystlShare > 0) {
                 pool.strat.withdrawMaximizerReward(3, crystlShare);
-                pool.maximizerRewardToken.safeTransferFrom(address(pool.strat), _from, pool.maximizerRewardToken.balanceOf(address(pool.strat))); //check that this address is correct
+                pool.maximizerRewardToken.safeTransferFrom(address(pool.strat), _from, pool.maximizerRewardToken.balanceOf(address(pool.strat)));
                 rewardDebt[_pid][_from] -= rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, 2);
                 }
             pool.balanceCrystlCompounderLastUpdate = pool.maximizerVault.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?

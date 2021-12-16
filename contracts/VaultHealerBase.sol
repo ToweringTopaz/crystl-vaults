@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IBoostPool.sol";
-// import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
 
 abstract contract VaultHealerBase is Ownable, ReentrancyGuard, ERC1155Supply {
@@ -20,7 +19,7 @@ abstract contract VaultHealerBase is Ownable, ReentrancyGuard, ERC1155Supply {
         IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
-        uint256 accRewardTokensPerShare; //todo: do I need to initialize this?
+        uint256 accRewardTokensPerShare;
         uint256 balanceCrystlCompounderLastUpdate;
         IERC20 maximizerRewardToken;
         IStrategy maximizerVault;
@@ -28,7 +27,7 @@ abstract contract VaultHealerBase is Ownable, ReentrancyGuard, ERC1155Supply {
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
-    mapping(uint256 => mapping(address => uint256)) public rewardDebt; // Info of each user that stakes LP tokens.
+    mapping(uint256 => mapping(address => uint256)) public rewardDebt; // rewardDebt per user per maximizer
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
     
     //pid for any of our strategies
@@ -102,11 +101,6 @@ abstract contract VaultHealerBase is Ownable, ReentrancyGuard, ERC1155Supply {
         _strats[_strat] = _poolInfo.length - 1;
         emit AddPool(_strat);
     }
-    
-    //     function addBoostPool(uint256 _pid, address _boostPool) external onlyOwner nonReentrant {
-    //     require(!isStrat(_strat), "Existing strategy");
-    //     _poolInfo[_pid] = IStrategy(_strat).boostPoolAddress();
-    // }
     
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
