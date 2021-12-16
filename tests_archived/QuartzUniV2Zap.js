@@ -18,7 +18,15 @@ const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for no
 
 const STRATEGY_CONTRACT_TYPE = 'StrategyMiniApe'; //<-- change strategy type to the contract deployed for this strategy
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const DEPLOYMENT_VARS = [apeSwapVaults[4].addresses, ...apeSwapVaults[4].strategyConfig];
+const DEPLOYMENT_VARS = [
+    apeSwapVaults[1]['want'],
+    vaultHealer.address,
+    apeSwapVaults[1]['masterchef'],
+    apeSwapVaults[1]['tactic'],
+    apeSwapVaults[1]['PID'],
+    vaultSettings.standard,
+    apeSwapVaults[1]['earned'],
+    ];
 const [VAULT_HEALER, MASTERCHEF, ROUTER, LIQUIDITY_POOL, EARNED] = apeSwapVaults[4].addresses
 const [PID, TOLERANCE,,,,,,TOKEN0_TO_EARNED_PATH, TOKEN1_TO_EARNED_PATH] = apeSwapVaults[4].strategyConfig;
 
@@ -70,7 +78,6 @@ describe('StrategyMasterHealer contract', () => {
     });
 
     describe('Transactions', () => {
-        // Create LPs for the vault
         it('Should zap token0 into the vault (convert to underlying, add liquidity, and stake)', async () => {
             token0 = await ethers.getContractAt(token_abi, TOKEN0);
             var token0Balance = await token0.balanceOf(owner.address);
