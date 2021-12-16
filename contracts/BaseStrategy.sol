@@ -8,7 +8,8 @@ abstract contract BaseStrategy {
     VaultSettings public settings; //the major storage variables used to configure the vault
     
     uint256 public lastEarnBlock = block.number;
-    
+    address public uniRouterAddress;
+
     uint constant PANIC_LOCK_DURATION = 6 hours;
     uint public panicLockExpiry; //panic can only happen again after the time has elapsed
     

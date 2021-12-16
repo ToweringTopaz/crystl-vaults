@@ -25,5 +25,5 @@ interface IStrategy {
     function panic() external;
     function unpanic() external;
         // Univ2 router used by this strategy
-    function uniRouterAddress() external view returns (address);
+    function settings() external view returns (VaultSettings memory);
 }

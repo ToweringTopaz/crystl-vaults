@@ -32,7 +32,7 @@ library LibQuartz {
     
     function getRouter(IVaultHealer vaultHealer, uint pid) internal view returns (IUniRouter02) {
         (,IStrategy strat) = vaultHealer.poolInfo(pid);
-        return IUniRouter02(strat.uniRouterAddress());
+        return IUniRouter02(strat.settings().router);
     }
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _pid) internal view returns (IUniRouter02 router, IStrategy strat, IUniswapV2Pair pair) {
@@ -40,7 +40,7 @@ library LibQuartz {
         (want, strat) = vaultHealer.poolInfo(_pid);
         
         pair = IUniswapV2Pair(address(want));
-        router = IUniRouter02(strat.uniRouterAddress());
+        router = IUniRouter02(strat.settings().router);
         require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
     }
     function getSwapAmount(IUniRouter02 router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
