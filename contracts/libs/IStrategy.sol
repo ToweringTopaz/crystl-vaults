@@ -24,4 +24,6 @@ interface IStrategy {
     function setFees(VaultFees calldata _fees) external; //vaulthealer uses this to update configuration
     function panic() external;
     function unpanic() external;
+        // Univ2 router used by this strategy
+    function uniRouterAddress() external view returns (address);
 }
