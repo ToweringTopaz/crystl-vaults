@@ -47,10 +47,11 @@ contract QuartzUniV2Zap {
         _swapAndStake(pid, tokenAmountOutMin, IERC20(weth));
     }
 
-    function quartzIn (uint pid, uint256 tokenAmountOutMin, IERC20 tokenIn, uint256 tokenInAmount) external {
+    function quartzIn (uint pid, uint256 tokenAmountOutMin, address tokenInAddress, uint256 tokenInAmount) external {
         require(tokenInAmount >= MINIMUM_AMOUNT, 'Quartz: Insignificant input amount');
+        
+        IERC20 tokenIn = IERC20(tokenInAddress);
         require(tokenIn.allowance(msg.sender, address(this)) >= tokenInAmount, 'Quartz: Input token is not approved');
-
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenInAmount);
         require(tokenIn.balanceOf(address(this)) >= tokenInAmount, 'Quartz: Fee-on-transfer/reflect tokens not yet supported');
 

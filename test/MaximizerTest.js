@@ -276,7 +276,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should zap token0 into the vault (convert to underlying, add liquidity, and stake)', async () => {
             token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
             var token0Balance = await token0.balanceOf(user4.address);
-            await token0.approve(quartzUniV2Zap.address, token0Balance);
+            await token0.connect(user4).approve(quartzUniV2Zap.address, token0Balance);
             
             const vaultSharesTotalBeforeFirstZap = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             // poolLength = await vaultHealer.poolLength()
@@ -284,7 +284,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(token0.address);
             console.log(token0Balance);
 
-            await quartzUniV2Zap.quartzIn(maximizer_strat_pid, 0, token0.address, token0Balance); //To Do - change min in amount from 0
+            await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, token0.address, token0Balance); //To Do - change min in amount from 0
             
             const vaultSharesTotalAfterFirstZap = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
