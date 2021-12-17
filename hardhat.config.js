@@ -54,11 +54,11 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.4",
+    version: "0.8.9",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 10,
+        runs: 200,
       },
     },
   },
