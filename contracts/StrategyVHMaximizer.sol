@@ -24,8 +24,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         uint256 _pid, //masterchef PID--NOT VH PID!
         VaultSettings memory _settings,
         IERC20[] memory _earned,
-        address _maximizerVault,
-        address _maximizerRewardToken //could prob get this from maximizer vault!
+        uint _maximizerVaultPid
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
@@ -34,8 +33,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         masterchef = _masterchefAddress;
         pid = _pid;
         tactic = ITactic(_tacticAddress);
-        maximizerVault = IStrategy(_maximizerVault);
-        maximizerRewardToken = IERC20(_maximizerRewardToken);
+    
         // maximizerVault.setFees(
         //                 [
         //         [ ZERO_ADDRESS, FEE_ADDRESS, 0 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
@@ -44,6 +42,11 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         //         [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
         //     ]
         // );
+        maximizerVaultPid = _maximizerVaultPid;
+        (address _maximizerRewardToken, address _maximizerVault) = vaultHealer.poolInfo(_maximizerVaultPid);
+        maximizerRewardToken = IERC20(_maximizerRewardToken);
+        maximizerVault = IStrategy(_maximizerVault);
+        
     }
     
     function isMaximizer() public pure override returns (bool) {
@@ -80,7 +83,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
             //need to instantiate pool here?
             crystlToken.safeIncreaseAllowance(address(vaultHealer), crystlBalance);
 
-            vaultHealer.deposit(3, crystlBalance); //todo: remove hardcoded pid
+            vaultHealer.deposit(maximizerVaultPid, crystlBalance);
         }
         lastEarnBlock = uint64(block.number);
     }

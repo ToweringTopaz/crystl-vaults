@@ -13,6 +13,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultSwaps for VaultFees;    
 
     VaultHealer immutable public vaultHealer; 
+    uint public maximizerVaultPid;
     IStrategy public maximizerVault;
     IERC20 public maximizerRewardToken;
     function isMaximizer() public pure virtual returns (bool) {

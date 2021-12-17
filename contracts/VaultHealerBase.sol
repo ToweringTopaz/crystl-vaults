@@ -25,7 +25,9 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         mapping (address => uint256) rewardDebt; // rewardDebt per user per maximizer
         IBoostPool boostPool;
     }
-
+    function rewardDebt(uint pid, address user) external view returns (uint) {
+        return _poolInfo[pid].rewardDebt[user];
+    }
     PoolInfo[] internal _poolInfo; // Info of each pool.
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
     
@@ -100,11 +102,11 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         address maximizerVault = address(strat.maximizerVault());
         require(strat.isMaximizer() != (maximizerVault == address(0)), "bad maximizer");
         pool.maximizerVaultPid = _strats[maximizerVault];
-/*        require(
+        require(
             (maximizerVault == address(0)) == (pool.maximizerVaultPid == 0),
             "maximizer not set up"
         );
-*/
+
         _strats[_strat] = _poolInfo.length - 1;
         emit AddPool(_strat);
     }
