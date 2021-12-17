@@ -69,15 +69,25 @@ library LibQuartz {
     function estimateSwap(IVaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
         (IUniRouter02 router,,IUniswapV2Pair pair) = getRouterAndPair(vaultHealer, pid);
         
-        bool isInputA = pair.token0() == tokenIn;
-        require(isInputA || pair.token1() == tokenIn, 'Quartz: Input token not present in liquidity pair');
+        address token0 = pair.token0();
+        address token1 = pair.token1();
 
-        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
-        (reserveA, reserveB) = isInputA ? (reserveA, reserveB) : (reserveB, reserveA);
+        bool isInputA = token0 == tokenIn;
+        require(isInputA || token1 == tokenIn, 'Quartz: Input token not present in liquidity pair');
+
+        uint256 reserveA;
+        uint256 reserveB;
+
+        if (isInputA) {
+            (reserveA, reserveB,) = pair.getReserves();
+            swapTokenOut = token1;
+        } else {
+            (reserveB, reserveA,) = pair.getReserves();
+            swapTokenOut = token0;
+        }
 
         swapAmountIn = getSwapAmount(router, fullInvestmentIn, reserveA, reserveB);
         swapAmountOut = router.getAmountOut(swapAmountIn, reserveA, reserveB);
-        swapTokenOut = isInputA ? pair.token1() : pair.token0();
     }
     function removeLiquidity(address pair, address to) internal {
         IERC20(pair).safeTransfer(pair, IERC20(pair).balanceOf(address(this)));
@@ -111,8 +121,7 @@ library LibQuartz {
     }
 
     function hasSufficientLiquidity(address token0, address token1, IUniRouter02 router, uint256 min_amount) internal view returns (bool hasLiquidity) {
-        address factory_address = router.factory();
-        IUniFactory factory = IUniFactory(factory_address);
+        IUniFactory factory = IUniFactory(router.factory());
         IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
