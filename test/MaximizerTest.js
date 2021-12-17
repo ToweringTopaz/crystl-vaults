@@ -52,10 +52,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
-             libraries: {
-                 LibMagnetite: "0x1e3b93c2a437c8c16ff563231775fe7dbf9efdd4",
-            //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-               },
+            libraries: {
+                LibMagnetite: "0x1E3B93c2A437c8C16ff563231775fE7DbF9eFdd4",
+                // LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
+            },
         });
         const feeConfig = 
             [
@@ -153,7 +153,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             21771725 //also watch out that we don't go past this, but we shouldn't
         )
         
-        vaultHealer.setBoostPoolAddress(maximizer_strat_pid, boostPool.address);
+        vaultHealer.connect(vaultHealerOwnerSigner).setBoostPoolAddress(boostPool.address);
         
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
 
