@@ -99,11 +99,10 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         
         address maximizerVault = address(strat.maximizerVault());
         require(strat.isMaximizer() != (maximizerVault == address(0)), "bad maximizer");
-        require(
-            (maximizerVault == address(0))
-                == ((pool.maximizerVaultPid = _strats[maximizerVault]) == 0),
-            "maximizer not set up"
-        );
+        // require(
+        //     (maximizerVault == address(0)) == (pool.maximizerVaultPid == 0),
+        //     "maximizer not set up"
+        // );
 
         _strats[_strat] = _poolInfo.length - 1;
         emit AddPool(_strat);
