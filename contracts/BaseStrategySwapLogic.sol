@@ -27,7 +27,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     IERC20[LP_LEN] public lpToken;
     
     VaultFees public vaultFees;
-    LibVaultSwaps.VaultStats public vaultStats;
 
     event SetFees(VaultFees _fees);
 
@@ -65,9 +64,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     
     function buyBackRate() external view returns (uint) { 
         return vaultFees.burn.rate;
-    }
-    function burnedAmount() external view returns (uint) {
-        return vaultStats.totalBurned;
     }
     
     function setFees(VaultFees calldata _fees) external virtual onlyGov {
@@ -107,7 +103,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         if (success) {
             if (lpTokenLength > 1) {
                 // Get want tokens, ie. add liquidity
-                LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]);
+                LibQuartz.optimalMint(IUniswapV2Pair(address(wantToken)), lpToken[0], lpToken[1]);
             }
             _farm();
         }
@@ -128,6 +124,5 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
         require(sharesAfter + _wantBalance() + settings.dust >= (sharesBefore + wantAmt) * settings.slippageFactor / 10000,
             "High vault deposit slippage");
-        return;
     }
 }
