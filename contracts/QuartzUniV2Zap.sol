@@ -125,7 +125,7 @@ contract QuartzUniV2Zap {
         _approveTokenIfNeeded(address(pair));
         vaultHealer.deposit(pid, amountLiquidity, msg.sender);
 
-        assert(pair.balanceOf(address(this)) == 0);
+        require(pair.balanceOf(address(this)) == 0, "tokens left on contract after swap"); //good check but technically not a valid assert
 
         address[] memory tokens = new address[](3);
         tokens[0] = token0;
@@ -134,21 +134,30 @@ contract QuartzUniV2Zap {
         router.returnAssets(tokens);
     }
 
+    function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router, address to) private {
+            address[] memory path = new address[](2);
+            path[0] = tokenIn;
+            path[1] = tokenOut;
+            router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, to, type(uint256).max);
+        }
+
     function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router) private {
-        address[] memory path = new address[](2);
+        swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, tokenOut, router, address(this));
+    }
+
+    function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router, address to) private {
+        address _weth = router.WETH();
+        require(LibQuartz.hasSufficientLiquidity(tokenIn, _weth, router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from tokenIn to WNATIVE');
+        require(LibQuartz.hasSufficientLiquidity(tokenOut, _weth, router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from WNATIVE to tokenOut');
+        address[] memory path = new address[](3);
         path[0] = tokenIn;
-        path[1] = tokenOut;
-        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
+        path[1] = _weth;
+        path[2] = tokenOut;
+        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, to, type(uint256).max);
     }
 
     function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter02 router) private {
-        require(LibQuartz.hasSufficientLiquidity(tokenIn, router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from tokenIn to WNATIVE');
-        require(LibQuartz.hasSufficientLiquidity(tokenOut, router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from WNATIVE to tokenOut');
-        address[] memory path = new address[](3);
-        path[0] = tokenIn;
-        path[1] = router.WETH();
-        path[2] = tokenOut;
-        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
+        swapViaWETH(swapAmountIn, tokenAmountOutMin, tokenIn, tokenOut, router, address(this));
     }
 
     function _approveTokenIfNeeded(address token) private {
