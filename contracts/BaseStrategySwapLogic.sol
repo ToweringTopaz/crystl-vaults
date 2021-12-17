@@ -91,7 +91,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = vaultFees.distribute(settings, vaultStats, earnedToken, earnedAmt, _to); // handles all fees for this earned token
+                earnedAmt = vaultFees.distribute(settings, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
                 for (uint j; j < lpTokenLength; j++) {
