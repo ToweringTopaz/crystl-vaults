@@ -52,10 +52,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
-            // libraries: {
-            //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
+             libraries: {
+                 LibMagnetite: "0x1e3b93c2a437c8c16ff563231775fe7dbf9efdd4",
             //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-            //   },
+               },
         });
         const feeConfig = 
             [
