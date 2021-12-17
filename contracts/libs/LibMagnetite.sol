@@ -32,7 +32,7 @@ library LibMagnetite {
     enum AutoPath { MANUAL, SUBPATH, AUTO }
     event SetPath(AutoPath indexed _auto, address router, address[] path);
 
-    function _setPath(mapping(bytes32 => address[]) storage _paths, address router, address[] memory _path, AutoPath _auto) internal { 
+    function _setPath(mapping(bytes32 => address[]) storage _paths, address router, address[] memory _path, AutoPath _auto) public { 
         uint len = _path.length;
 
         bytes32 hashAB = keccak256(abi.encodePacked(router,_path[0], _path[len - 1]));
@@ -69,7 +69,7 @@ library LibMagnetite {
         }
     }
     
-    function generatePath(address router, address a, address b) internal view returns (address[] memory path) {
+    function generatePath(address router, address a, address b) public view returns (address[] memory path) {
     
         address[] memory _b = new address[](2);
         _b[0] = b;
@@ -86,32 +86,32 @@ library LibMagnetite {
         } else if (c == d) {
             path[1] = c;
             path[2] = b;
-            return path.setlength(3);
+            return setlength(path, 3);
         }
         _b[1] = c;
         address e0 = findPair(router, d, _b);
         if (e0 == a) {
             path[1] = d;
             path[2] = b;
-            return path.setlength(3);
+            return setlength(path, 3);
         }
         path[1] = c;
         if (e0 == c) {
             path[2] = d;
             path[3] = b;
-            return path.setlength(4);
+            return setlength(path, 4);
         }
         _b[0] = b;
         _b[1] = d;
         address e1 = findPair(router, c, _b);
         if (e1 == b) {
             path[2] = b;
-            return path.setlength(3);
+            return setlength(path, 3);
         }
         if (e1 == d) {
             path[2] = d;
             path[3] = b;
-            return path.setlength(4);
+            return setlength(path, 4);
         }
         require (e1 == e0, "no path found");
         path[2] = e0;
@@ -119,7 +119,7 @@ library LibMagnetite {
         path[4] = b;
         return path;
     }   
-    function findPair(address router, address a, address[] memory b) internal view returns (address) {
+    function findPair(address router, address a, address[] memory b) public view returns (address) {
         IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
@@ -179,7 +179,7 @@ library LibMagnetite {
     function getPathFromStorage(mapping(bytes32 => address[]) storage _paths, address router, address a, address b) private view returns (address[] storage path) {
         path = _paths[keccak256(abi.encodePacked(router, a, b))];
     }
-    function setlength(address[] memory array, uint n) internal pure returns (address[] memory) {
+    function setlength(address[] memory array, uint n) private pure returns (address[] memory) {
         assembly { mstore(array, n) }
         return array;
     }

@@ -14,16 +14,14 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
 
     VaultHealer immutable public vaultHealer; 
     IStrategy public maximizerVault;
-    address public boostPoolAddress;
-    uint public immutable pid;
-    bool public isMaximizer;
-
     IERC20 public maximizerRewardToken;
+    function isMaximizer() public pure virtual returns (bool) {
+        return false;
+    }
 
-    constructor(address _vaultHealerAddress, uint256 _pid) {
+    constructor(address _vaultHealerAddress) {
         vaultHealer = VaultHealer(_vaultHealerAddress);
         settings.magnetite = Magnetite(_vaultHealerAddress);
-        pid = _pid;
     }
     
     function sharesTotal() external view returns (uint) {
@@ -45,7 +43,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
+    function deposit(address /*_from*/, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
         // _earn(_from); //earn before deposit prevents abuse
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
@@ -70,8 +68,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(address /*_from*/, address /*_to*/, uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
         //User's balance, in want tokens
-        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
-        uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
+        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract? -- panic, problems at the underlying pool, improper transfers... it happens
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function???????????? --???
         uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
 
         // user requested all, very nearly all, or more than their balance, so withdraw all
@@ -107,17 +105,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         return (sharesRemoved, _wantAmt);
     }
 
-    function _pause() internal override {} //no-op, since vaulthealer manages paused status
-    function _unpause() internal override {}
-    function paused() public view override returns (bool) {
+    function paused() internal view override returns (bool) {
         return vaultHealer.paused(address(this));
     }
-
-    function setBoostPoolAddress(address _boostPoolAddress) external {
-        boostPoolAddress = _boostPoolAddress;
-    }
-function CheckIsMaximizer() external view returns (bool) {
-    return isMaximizer;
-}
 
 }

@@ -19,15 +19,14 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
         VaultFees fees;
+        uint256 maximizerVaultPid; // vh pid of maximizer, 0 if not a maximizer
         uint256 accRewardTokensPerShare;
         uint256 balanceCrystlCompounderLastUpdate;
-        IERC20 maximizerRewardToken;
-        IStrategy maximizerVault;
-        // bytes data;
+        mapping (address => uint256) rewardDebt; // rewardDebt per user per maximizer
+        IBoostPool boostPool;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
-    mapping(uint256 => mapping(address => uint256)) public rewardDebt; // rewardDebt per user per maximizer
     VaultFees public defaultFees; // Settings which are generally applied to all strategies
     
     //pid for any of our strategies
@@ -60,27 +59,27 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
 
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = _poolInfo[_pid];
-
         uint256 _sharesTotal = totalSupply(_pid); //balanceOf(_user, _pid);
+        if (_sharesTotal == 0) return 0;
+
+        PoolInfo storage pool = _poolInfo[_pid];
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
-        if (_sharesTotal == 0) {
-            return 0;
-        }
+        
         return balanceOf(_user, _pid) * wantLockedTotal / _sharesTotal;
     }
 
     // View function to see staked Want tokens on frontend.
     function boostedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = _poolInfo[_pid];
-        if (pool.strat.boostPoolAddress() == address(0)) return 0;
         
-        IBoostPool boostPool = IBoostPool(pool.strat.boostPoolAddress());
         uint256 _sharesTotal = totalSupply(_pid);
+        if (_sharesTotal == 0) return 0;
+        
+        IBoostPool boostPool = pool.boostPool;
+        if (address(boostPool) == address(0)) return 0;
+
         uint256 wantLockedTotal = pool.strat.wantLockedTotal();
-        if (_sharesTotal == 0) {
-            return 0;
-        }
+        
         return boostPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
     }
 
@@ -91,13 +90,21 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         require(!isStrat(_strat), "Existing strategy");
         _poolInfo.push();
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
-        pool.want = IStrategy(_strat).wantToken();
-        pool.strat = IStrategy(_strat);
-        pool.maximizerVault = IStrategy(_strat).maximizerVault();
-        pool.maximizerRewardToken = IStrategy(_strat).maximizerRewardToken();
-        IStrategy(_strat).setFees(defaultFees);
-        // pool.boostPoolAddress = IStrategy(_strat).boostPoolAddress();
+        IStrategy strat = IStrategy(_strat);
+
+        pool.want = strat.wantToken();
+        pool.strat = strat;
+        strat.setFees(defaultFees);
+        // pool.boostPoolAddress = strat.boostPoolAddress();
         
+        address maximizerVault = address(strat.maximizerVault());
+        require(strat.isMaximizer() != (maximizerVault == address(0)), "bad maximizer");
+        require(
+            (maximizerVault == address(0))
+                == ((pool.maximizerVaultPid = _strats[maximizerVault]) == 0),
+            "maximizer not set up"
+        );
+
         _strats[_strat] = _poolInfo.length - 1;
         emit AddPool(_strat);
     }
@@ -129,19 +136,22 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         emit SetDefaultFees(_fees);
         
         for (uint i; i < _poolInfo.length; i++) {
-            if (_poolInfo[i].overrideDefaultFees) continue;
-            try _poolInfo[i].strat.setFees(_fees) {}
+            PoolInfo storage pool = _poolInfo[i];
+            if (pool.overrideDefaultFees) continue;
+            try pool.strat.setFees(_fees) {}
             catch { emit SetDefaultFail(i); }
         }
     }   
     function setFees(uint _pid, VaultFees calldata _fees) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultFees = true;
-        _poolInfo[_pid].fees = _fees;
+        PoolInfo storage pool = _poolInfo[_pid];
+        pool.overrideDefaultFees = true;
+        pool.fees = _fees;
         emit SetFees(_pid, _fees);
     }
     function resetFees(uint _pid) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultFees = false;
-        delete _poolInfo[_pid].fees;
+        PoolInfo storage pool = _poolInfo[_pid];
+        pool.overrideDefaultFees = false;
+        delete pool.fees;
         emit ResetFees(_pid);
     }
     
@@ -166,7 +176,10 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         _poolInfo[pid].strat.earn(_msgSender());
     }
     
-    
+    function setBoostPoolAddress(uint pid, address _boostPoolAddress) external onlyOwner {
+        _poolInfo[pid].boostPool = IBoostPool(_boostPoolAddress);
+    }
+
     //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
     ///////////////////////
     function pause(uint pid) external onlyOwner {

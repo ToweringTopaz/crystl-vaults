@@ -14,14 +14,14 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
 
     address public immutable masterchef;
     ITactic public immutable tactic;
-    // uint public immutable pid;
+    uint public immutable pid; //masterchef PID--NOT VH PID!
 
     constructor(
         IERC20 _wantToken,
         address _vaultHealerAddress,
         address _masterchefAddress,
         address _tacticAddress,
-        uint256 _pid,
+        uint256 _pid, //masterchef PID--NOT VH PID!
         VaultSettings memory _settings,
         IERC20[] memory _earned,
         address _maximizerVault,
@@ -29,9 +29,10 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
     )
         BaseStrategy(_settings)
         BaseStrategySwapLogic(_wantToken, _earned)
-        BaseStrategyVaultHealer(_vaultHealerAddress, _pid)
+        BaseStrategyVaultHealer(_vaultHealerAddress)
     {
         masterchef = _masterchefAddress;
+        pid = _pid;
         tactic = ITactic(_tacticAddress);
         maximizerVault = IStrategy(_maximizerVault);
         maximizerRewardToken = IERC20(_maximizerRewardToken);
@@ -43,9 +44,12 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         //         [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
         //     ]
         // );
-        isMaximizer = true;
     }
     
+    function isMaximizer() public pure override returns (bool) {
+        return true;
+    }
+
     function _earn(address _to) internal override whenEarnIsReady {
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
@@ -78,7 +82,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
 
             vaultHealer.deposit(3, crystlBalance); //todo: remove hardcoded pid
         }
-        lastEarnBlock = block.number;
+        lastEarnBlock = uint64(block.number);
     }
     
     function vaultSharesTotal() public override view returns (uint256) {
@@ -113,11 +117,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
         ), "emergencyvaultwithdraw failed");
     }
 
-    function getMaximizerRewardToken() external view returns(IERC20){
-        return maximizerRewardToken;
-    }
-
-    function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external {
+    function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external { //todo: SECURITY?!?
         maximizerRewardToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
         vaultHealer.withdraw(_pid, _amount);
     }
