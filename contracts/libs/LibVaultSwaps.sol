@@ -13,17 +13,10 @@ library LibVaultSwaps {
     using SafeERC20 for IERC20;
     using Address for address;
     
-    //For tracking earned/burned
-    struct VaultStats {
-        uint128 totalEarned;
-        uint128 totalBurned;
-    }
-    
     IERC20 constant WNATIVE_DEFAULT = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
     uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
     
-    function distribute(VaultFees storage fees, VaultSettings storage settings, VaultStats storage stats, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
-        uint burnedBefore = IERC20(fees.burn.token).balanceOf(fees.burn.receiver);
+    function distribute(VaultFees storage fees, VaultSettings storage settings, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
@@ -46,11 +39,6 @@ library LibVaultSwaps {
             safeSwap(settings, fee, _earnedToken, fees.burn.token, fees.burn.receiver);
             earnedAmt -= fee;
             }
-
-        unchecked { //overflow ok albeit unlikely
-            stats.totalEarned += uint128(earnedAmt);
-            stats.totalBurned += uint128(IERC20(fees.burn.token).balanceOf(fees.burn.receiver) - burnedBefore);
-        }
     }
 
     function safeSwap(

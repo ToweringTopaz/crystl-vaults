@@ -116,8 +116,5 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function setBoostPoolAddress(address _boostPoolAddress) external {
         boostPoolAddress = _boostPoolAddress;
     }
-function CheckIsMaximizer() external view returns (bool) {
-    return isMaximizer;
-}
 
 }

@@ -171,7 +171,7 @@ function _beforeTokenTransfer(
                 transferData(pid, from).transfersOut += underlyingValue;
                 transferData(pid, to).transfersIn += underlyingValue;
 
-                if (_poolInfo[pid].strat.CheckIsMaximizer()) {
+                if (_poolInfo[pid].strat.isMaximizer()) {
                     _poolInfo[pid].strat.earn(from); //does it matter who calls the earn?
 
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(pid, from, underlyingValue);
