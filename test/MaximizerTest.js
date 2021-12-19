@@ -107,6 +107,20 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         strategyCrystlCompounder = await StrategyVHStandard.deploy(...CRYSTL_COMPOUNDER_VARS);
 
+        vaultHealerOwner = await vaultHealer.owner();
+
+        await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [vaultHealerOwner],
+          });
+        vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
+        
+        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyVHStandard.address);
+        strat1_pid = await vaultHealer.poolLength() -1;
+
+        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyCrystlCompounder.address);
+        crystl_compounder_strat_pid = await vaultHealer.poolLength() -1;
+
         StrategyVHMaximizer = await ethers.getContractFactory('StrategyVHMaximizer', {});
 
         const MAXIMIZER_VARS = [
@@ -123,22 +137,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         strategyVHMaximizer = await StrategyVHMaximizer.deploy(...MAXIMIZER_VARS);
 
-        vaultHealerOwner = await vaultHealer.owner();
-
-        await hre.network.provider.request({
-            method: "hardhat_impersonateAccount",
-            params: [vaultHealerOwner],
-          });
-        vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
-        
-        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyVHStandard.address);
-        strat1_pid = await vaultHealer.poolLength() -1;
-
         await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyVHMaximizer.address);
         maximizer_strat_pid = await vaultHealer.poolLength() -1;
-
-        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyCrystlCompounder.address);
-        crystl_compounder_strat_pid = await vaultHealer.poolLength() -1;
 
         //create the staking pool for the boosted vault
         BoostPool = await ethers.getContractFactory("BoostPool", {});
@@ -317,7 +317,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             LPtoken = await ethers.getContractAt(token_abi, WANT);
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user4.address);
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user4.address);
-
             await vaultHealer.connect(user4)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFinalWithdrawal); //owner (default signer) deposits 1 of LP tokens into pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user4.address);

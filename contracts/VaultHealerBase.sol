@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IBoostPool.sol";
 import "./libs/IStrategy.sol";
@@ -12,22 +12,22 @@ import "./libs/IStrategy.sol";
 abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
+    using BitMaps for BitMaps.BitMap;
 
     struct PoolInfo {
         IERC20 want; //  want token.
-        bool paused; //vault is paused?
         IStrategy strat; // Strategy contract that will auto compound want tokens
         bool overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
         bool overrideDefaultWithdrawFee;
         VaultFee withdrawFee;
         uint256 accRewardTokensPerShare;
         uint256 balanceCrystlCompounderLastUpdate;
-        IERC20 maximizerRewardToken;
-        IStrategy maximizerVault;
+        uint256 maximizerPid;
         // bytes data;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
+    BitMaps.BitMap private pauseMap; //Boolean pause status for each vault; true == unpaused
     mapping(uint256 => mapping(address => uint256)) public rewardDebt; // rewardDebt per user per maximizer
     VaultFees public defaultEarnFees; // Settings which are generally applied to all strategies
     VaultFee public defaultWithdrawFee; //withdrawal fee is set separately from earn fees
@@ -58,8 +58,8 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     function poolLength() external view returns (uint256) {
         return _poolInfo.length;
     }
-    function poolInfo(uint pid) external view returns (address want, address strat) {
-        return (address(_poolInfo[pid].want), address(_poolInfo[pid].strat));
+    function poolInfo(uint pid) external view returns (IERC20 want, IStrategy strat) {
+        return (_poolInfo[pid].want, _poolInfo[pid].strat);
     }
 
     // View function to see staked Want tokens on frontend.
@@ -93,18 +93,24 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
      */
     function addPool(address _strat) external onlyOwner nonReentrant {
         require(!isStrat(_strat), "Existing strategy");
+        IStrategy strat = IStrategy(_strat);
+        uint pid = _poolInfo.length;
         _poolInfo.push();
-        PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
-        pool.want = IStrategy(_strat).wantToken();
-        pool.strat = IStrategy(_strat);
-        pool.maximizerVault = IStrategy(_strat).maximizerVault();
-        pool.maximizerRewardToken = IStrategy(_strat).maximizerRewardToken();
-        console.log("about to set fees");
-        IStrategy(_strat).setEarnFees(defaultEarnFees);
+        PoolInfo storage pool = _poolInfo[pid];
+        pool.want = strat.wantToken();
+        pool.strat = strat;
+        pool.maximizerPid = _strats[address(strat.maximizerVault())];
+        console.log("pid:", pid);
+        console.log("want:", address(pool.want));
+        console.log("maximizer address:", address(strat.maximizerVault()));
+        console.log("maximizer pid:", pool.maximizerPid);
+        console.log("is maximizer:", strat.isMaximizer());
+        strat.setEarnFees(defaultEarnFees);
         pool.withdrawFee = defaultWithdrawFee; //I've added this line in to set fees in the VH based pool as well as in the strat's vaultFees struct
-        // pool.boostPoolAddress = IStrategy(_strat).boostPoolAddress();
+        // pool.boostPoolAddress = strat.boostPoolAddress();
         
-        _strats[_strat] = _poolInfo.length - 1;
+        _strats[_strat] = pid;
+        _unpause(pid);
         emit AddPool(_strat);
     }
     
@@ -160,29 +166,56 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         _poolInfo[_pid].withdrawFee = _withdrawFee;
         emit SetWithdrawFee(_pid, _withdrawFee);
     }
-
+    
     function earnAll() external nonReentrant {
-        for (uint256 i; i < _poolInfo.length; i++) {
-            if (!paused(i)) {
-                try _poolInfo[i].strat.earn(_msgSender()) {}
-                catch {}
+
+        uint bucketLength = (_poolInfo.length >> 8) + 1; // use one uint256 per 256 vaults
+
+        for (uint i; i < bucketLength; i++) {
+            uint earnMap = pauseMap._data[i]; //earn unpaused vaults
+
+            uint end = (i+1) << 8; // buckets end at multiples of 256
+            if (_poolInfo.length < end) end = _poolInfo.length; //or if less, the final pool
+            for (uint j = i << 8; j < end; j++) {
+                if (earnMap & 1 > 0) { //smallest bit is "true"
+                    try _poolInfo[j].strat.earn(_msgSender()) {}
+                    catch {}
+                }
+                earnMap >>= 1; //shift away the used bit
+                if (earnMap == 0) break;
             }
         }
     }
-
+    
     function earnSome(uint256[] memory pids) external nonReentrant {
-        for (uint256 i; i < pids.length; i++) {
-            if (_poolInfo.length >= pids[i] && !paused(pids[i])) {
-                try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
-                catch {}
+
+        uint bucketLength = (_poolInfo.length >> 8) + 1; // use one uint256 per 256 vaults
+        uint256[] memory selBuckets = new uint256[](bucketLength); //BitMap of selected pids
+
+        for (uint i; i < pids.length; i++) { //memory bitmap of all selected pids
+            uint pid = pids[i];
+            if (pid <= _poolInfo.length)
+                selBuckets[pid >> 8] |= 1 << (pid & 0xff); //set bit for selected pid
+        }
+
+        for (uint i; i < bucketLength; i++) {
+            uint earnMap = pauseMap._data[i] & selBuckets[i]; //earn selected, unpaused vaults
+
+            uint end = (i+1) << 8; // buckets end at multiples of 256
+            for (uint j = i << 8; j < end; j++) {//0-255, 256-511, ...
+                if (earnMap & 1 > 0) { //smallest bit is "true"
+                    try _poolInfo[j].strat.earn(_msgSender()) {}
+                    catch {}
+                }
+                earnMap >>= 1; //shift away the used bit
+                if (earnMap == 0) break; //if bucket is empty, done with bucket
             }
         }
     }
     function earn(uint256 pid) external whenNotPaused(pid) nonReentrant {
         _poolInfo[pid].strat.earn(_msgSender());
     }
-    
-    
+
     //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
     ///////////////////////
     function pause(uint pid) external onlyOwner {
@@ -204,7 +237,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         return paused(findPid(_strat));
     }
     function paused(uint pid) public view returns (bool) {
-        return _poolInfo[pid].paused;
+        return !pauseMap.get(pid);
     }
     modifier whenNotPaused(uint pid) {
         require(!paused(pid), "Pausable: paused");
@@ -215,11 +248,12 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         _;
     }
     function _pause(uint pid) internal virtual whenNotPaused(pid) {
-        _poolInfo[pid].paused = true;
+        pauseMap.unset(pid);
         emit Paused(pid);
     }
     function _unpause(uint pid) internal virtual whenPaused(pid) {
-        _poolInfo[pid].paused = false;
+        require(pid > 0 && pid < _poolInfo.length, "invalid pid");
+        pauseMap.set(pid);
         emit Unpaused(pid);
     }
 }

@@ -17,6 +17,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     address public boostPoolAddress;
     uint public immutable pid;
     bool public isMaximizer;
+    uint public maximizerPid;
 
     IERC20 public maximizerRewardToken;
 
@@ -45,7 +46,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(address _from, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
+    function deposit(address /*_from*/, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
         // _earn(_from); //earn before deposit prevents abuse
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
