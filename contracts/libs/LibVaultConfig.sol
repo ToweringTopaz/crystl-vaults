@@ -15,9 +15,8 @@ struct VaultSettings {
 }
 
 struct VaultFees {
-    VaultFee withdraw;
-    VaultFee earn; //rate paid to user who called earn()
-    VaultFee reward; //"reward" fees on earnings are sent here
+    VaultFee userReward; //rate paid to user who called earn()
+    VaultFee treasuryFee; //fees that get paid to the crystl.finance treasury
     VaultFee burn; //burn address for CRYSTL
 }
 struct VaultFee {
@@ -33,9 +32,9 @@ library LibVaultConfig {
     uint256 constant SLIPPAGE_FACTOR_UL = 9950; // Must allow for at least 0.5% slippage (rounding errors)
     
     function check(VaultFees memory _fees) internal pure {
-        require(_fees.reward.receiver != address(0), "Invalid reward address");
+        require(_fees.treasuryFee.receiver != address(0), "Invalid treasury address");
         require(_fees.burn.receiver != address(0), "Invalid buyback address");
-        require(_fees.earn.rate + _fees.reward.rate + _fees.burn.rate <= FEE_MAX_TOTAL, "Max fee of 100%");
+        require(_fees.userReward.rate + _fees.treasuryFee.rate + _fees.burn.rate <= FEE_MAX_TOTAL, "Max fee of 100%");
     }
 
     function check(VaultSettings memory _settings) internal pure {

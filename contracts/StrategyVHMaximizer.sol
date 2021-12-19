@@ -61,7 +61,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = vaultFees.distribute(settings, earnedToken, earnedAmt, _to); // handles all fees for this earned token
+                earnedAmt = earnFees.distribute(settings, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap earned to crystl for maximizer
                 LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, maximizerRewardToken, address(this)); //todo: change this from a hardcoding
             }

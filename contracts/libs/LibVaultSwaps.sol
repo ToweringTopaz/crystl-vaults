@@ -16,27 +16,27 @@ library LibVaultSwaps {
     IERC20 constant WNATIVE_DEFAULT = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
     uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
     
-    function distribute(VaultFees storage fees, VaultSettings storage settings, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
+    function distribute(VaultFees storage earnFees, VaultSettings storage settings, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
-        uint256 fee = _earnedAmt * fees.earn.rate / FEE_MAX;
+        uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(settings, fee, _earnedToken, fees.earn.token, _to);
+            safeSwap(settings, fee, _earnedToken, earnFees.userReward.token, _to);
             earnedAmt -= fee;
             }
 
         //distribute rewards
-        fee = _earnedAmt * fees.reward.rate / FEE_MAX;
+        fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(settings, fee, _earnedToken, _earnedToken == fees.burn.token ? fees.burn.token : fees.reward.token, fees.reward.receiver);
+            safeSwap(settings, fee, _earnedToken, _earnedToken == earnFees.burn.token ? earnFees.burn.token : earnFees.treasuryFee.token, earnFees.treasuryFee.receiver);
             earnedAmt -= fee;
             }
         
         //burn crystl
-        fee = _earnedAmt * fees.burn.rate / FEE_MAX;
+        fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(settings, fee, _earnedToken, fees.burn.token, fees.burn.receiver);
+            safeSwap(settings, fee, _earnedToken, earnFees.burn.token, earnFees.burn.receiver);
             earnedAmt -= fee;
             }
     }

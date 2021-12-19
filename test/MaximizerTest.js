@@ -59,13 +59,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         });
         const feeConfig = 
             [
-                [ ZERO_ADDRESS, FEE_ADDRESS, 10 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
                 [ WMATIC, FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
                 [ WMATIC, FEE_ADDRESS, 500 ], //reward fee: paid in DAI; standard fee address; 0% rate
                 [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(feeConfig);
+        vaultHealer = await VaultHealer.deploy(feeConfig, [ ZERO_ADDRESS, FEE_ADDRESS, 10 ]);
         // console.log(vaultHealer.address);
         
         QuartzUniV2Zap = await ethers.getContractFactory('QuartzUniV2Zap'); //<-- this needs to change for different tests!!

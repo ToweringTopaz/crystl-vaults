@@ -17,8 +17,9 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         IERC20 want; //  want token.
         bool paused; //vault is paused?
         IStrategy strat; // Strategy contract that will auto compound want tokens
-        bool overrideDefaultFees; // strategy's fee config doesn't change with the vaulthealer's default
-        VaultFees fees;
+        bool overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
+        bool overrideDefaultWithdrawFee;
+        VaultFee withdrawFee;
         uint256 accRewardTokensPerShare;
         uint256 balanceCrystlCompounderLastUpdate;
         IERC20 maximizerRewardToken;
@@ -28,25 +29,28 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
     mapping(uint256 => mapping(address => uint256)) public rewardDebt; // rewardDebt per user per maximizer
-    VaultFees public defaultFees; // Settings which are generally applied to all strategies
-    
+    VaultFees public defaultEarnFees; // Settings which are generally applied to all strategies
+    VaultFee public defaultWithdrawFee; //withdrawal fee is set separately from earn fees
+
     //pid for any of our strategies
     mapping(address => uint) private _strats;
     
     event AddPool(address indexed strat);
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event SetDefaultFees(VaultFees _fees);
+    event SetDefaultEarnFees(VaultFees _earnFees);
     event SetDefaultFail(uint pid);
-    event SetFees(uint pid, VaultFees _fees);
-    event ResetFees(uint pid);
+    event SetEarnFees(uint pid, VaultFees _earnFees);
+    event SetWithdrawFee(uint pid, VaultFee _withdrawFee);
+    event ResetEarnFees(uint pid);
     event Paused(uint pid);
     event Unpaused(uint pid);
     
-    constructor(VaultFees memory _fees) ERC1155("") {
-        _fees.check();
-        defaultFees = _fees;
-        emit SetDefaultFees(_fees);
+    constructor(VaultFees memory _earnFees, VaultFee memory _withdrawFee) ERC1155("") {
+        _earnFees.check();
+        defaultEarnFees = _earnFees;
+        defaultWithdrawFee = _withdrawFee;
+        emit SetDefaultEarnFees(_earnFees);
 
         _poolInfo.push(); //so uninitialized pid variables (pid 0) can be assumed as invalid
     }
@@ -95,7 +99,9 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         pool.strat = IStrategy(_strat);
         pool.maximizerVault = IStrategy(_strat).maximizerVault();
         pool.maximizerRewardToken = IStrategy(_strat).maximizerRewardToken();
-        IStrategy(_strat).setFees(defaultFees);
+        console.log("about to set fees");
+        IStrategy(_strat).setEarnFees(defaultEarnFees);
+        pool.withdrawFee = defaultWithdrawFee; //I've added this line in to set fees in the VH based pool as well as in the strat's vaultFees struct
         // pool.boostPoolAddress = IStrategy(_strat).boostPoolAddress();
         
         _strats[_strat] = _poolInfo.length - 1;
@@ -116,35 +122,45 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         return pid;
     }
     
-    // function getFees(uint pid) public view returns (VaultFees memory) {
-    //     PoolInfo storage pool = _poolInfo[pid];
-    //     if (pool.overrideDefaultFees) 
-    //         return pool.fees;
-    //     else
-    //         return defaultFees;
-    // }
+    function getEarnFees(uint _pid) public view returns (VaultFees memory) {
+        PoolInfo storage pool = _poolInfo[_pid];
+        if (pool.overrideDefaultEarnFees) 
+            return pool.strat.earnFees();
+        else
+            return defaultEarnFees;
+    }
     
-     function setDefaultFees(VaultFees calldata _fees) external onlyOwner {
-        defaultFees = _fees;
-        emit SetDefaultFees(_fees);
+     function setDefaultEarnFees(VaultFees calldata _earnFees) external onlyOwner {
+        defaultEarnFees = _earnFees;
+        emit SetDefaultEarnFees(_earnFees);
         
         for (uint i; i < _poolInfo.length; i++) {
-            if (_poolInfo[i].overrideDefaultFees) continue;
-            try _poolInfo[i].strat.setFees(_fees) {}
+            if (_poolInfo[i].overrideDefaultEarnFees) continue;
+            try _poolInfo[i].strat.setEarnFees(_earnFees) {}
             catch { emit SetDefaultFail(i); }
         }
     }   
-    function setFees(uint _pid, VaultFees calldata _fees) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultFees = true;
-        _poolInfo[_pid].fees = _fees;
-        emit SetFees(_pid, _fees);
+    function setEarnFees(uint _pid, VaultFees calldata _earnFees) external onlyOwner {
+        _poolInfo[_pid].overrideDefaultEarnFees = true;
+        _poolInfo[_pid].strat.setEarnFees(_earnFees);
+        emit SetEarnFees(_pid, _earnFees);
     }
-    function resetFees(uint _pid) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultFees = false;
-        delete _poolInfo[_pid].fees;
-        emit ResetFees(_pid);
+    function resetEarnFees(uint _pid) external onlyOwner {
+        _poolInfo[_pid].overrideDefaultEarnFees = false;
+        _poolInfo[_pid].strat.setEarnFees(defaultEarnFees);
+        emit ResetEarnFees(_pid);
     }
     
+    function getWithdrawFee(uint _pid) public view returns (VaultFee memory) {
+        return _poolInfo[_pid].withdrawFee;
+    }
+
+    function setWithdrawFee(uint _pid, VaultFee calldata _withdrawFee) external onlyOwner {
+        _poolInfo[_pid].overrideDefaultWithdrawFee = true;
+        _poolInfo[_pid].withdrawFee = _withdrawFee;
+        emit SetWithdrawFee(_pid, _withdrawFee);
+    }
+
     function earnAll() external  { //nonReentrant
         for (uint256 i; i < _poolInfo.length; i++) {
             if (!paused(i)) {

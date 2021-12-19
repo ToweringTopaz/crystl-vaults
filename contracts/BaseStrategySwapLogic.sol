@@ -26,9 +26,9 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     IERC20[EARNED_LEN] public earned;
     IERC20[LP_LEN] public lpToken;
     
-    VaultFees public vaultFees;
+    VaultFees public earnFees;
 
-    event SetFees(VaultFees _fees);
+    event SetEarnFees(VaultFees _fees);
 
     constructor(
         IERC20 _wantToken,
@@ -62,10 +62,10 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         }
     }
 
-    function setFees(VaultFees calldata _fees) external virtual onlyGov {
-        _fees.check();
-        vaultFees = _fees;
-        emit SetFees(_fees);
+    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyGov {
+        _earnFees.check();
+        earnFees = _earnFees;
+        emit SetEarnFees(_earnFees);
     }
 
     function _wantBalance() internal override view returns (uint256) {
@@ -87,7 +87,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = vaultFees.distribute(settings, earnedToken, earnedAmt, _to); // handles all fees for this earned token
+                earnedAmt = earnFees.distribute(settings, earnedToken, earnedAmt, _to); // handles all fees for this earned token
                 // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
                 // Same logic works if lpTokenLength == 1 ie single-staking pools
                 for (uint j; j < lpTokenLength; j++) {

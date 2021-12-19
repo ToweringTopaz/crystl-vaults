@@ -17,11 +17,11 @@ interface IStrategy {
     function maximizerVault() external view returns (IStrategy);
     function maximizerRewardToken() external view returns (IERC20);
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external;
-    // function vaultFees() external view returns (VaultFees calldata);
+    function earnFees() external view returns (VaultFees memory);
     function earn(address _to) external; // Main want token compounding function
     function deposit(address _from, address _to, uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
     function withdraw(address _from, address _to, uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
-    function setFees(VaultFees calldata _fees) external; //vaulthealer uses this to update configuration
+    function setEarnFees(VaultFees calldata _earnFees) external; //vaulthealer uses this to update configuration
     function panic() external;
     function unpanic() external;
         // Univ2 router used by this strategy

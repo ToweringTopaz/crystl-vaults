@@ -126,10 +126,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
         transferData(_pid, _msgSender()).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        if (!paused(_pid) && defaultFees.withdraw.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            uint feeAmt = wantAmt * defaultFees.withdraw.rate / 10000;
+        if (!paused(_pid) && pool.withdrawFee.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            console.log(pool.withdrawFee.rate);
+            uint feeAmt = wantAmt * pool.withdrawFee.rate / 10000;
             wantAmt -= feeAmt;
-            pool.want.safeTransferFrom(address(pool.strat), defaultFees.withdraw.receiver, feeAmt);
+            pool.want.safeTransferFrom(address(pool.strat), pool.withdrawFee.receiver, feeAmt);
         }
         
         //this call transfers wantTokens from the strat to the user
