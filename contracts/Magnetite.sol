@@ -24,18 +24,20 @@ contract Magnetite is Ownable {
     function _setPath(address router, address[] calldata _path, LibMagnetite.AutoPath _auto) internal { 
         LibMagnetite._setPath(_paths, router, _path, _auto);
     }
-    function findAndSavePath(address router, address a, address b) external returns (address[] memory path) {
-        path = getPathFromStorage(router, a, b); // [A C E D B]
+    function findAndSavePath(address _router, address a, address b) external returns (address[] memory path) {
+        IUniRouter router = IUniRouter(_router);
+        path = getPathFromStorage(_router, a, b); // [A C E D B]
         if (path.length == 0) {
             path = LibMagnetite.generatePath(router, a, b);
             if (pathAuth()) {
-                LibMagnetite._setPath(_paths, router, path, LibMagnetite.AutoPath.AUTO);
+                LibMagnetite._setPath(_paths, _router, path, LibMagnetite.AutoPath.AUTO);
 
             }
         }
     }
-    function viewPath(address router, address a, address b) external view returns (address[] memory path) {
-        path = getPathFromStorage(router, a, b); // [A C E D B]
+    function viewPath(address _router, address a, address b) external view returns (address[] memory path) {
+        IUniRouter router = IUniRouter(_router);
+        path = getPathFromStorage(_router, a, b); // [A C E D B]
         if (path.length == 0) {
             path = LibMagnetite.generatePath(router, a, b);
         }

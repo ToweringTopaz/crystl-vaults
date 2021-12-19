@@ -21,7 +21,7 @@ import "./Babylonian.sol";
 import "./IStrategy.sol";
 import "./IVaultHealer.sol";
 import './IUniRouter.sol';
-import "./IUniswapV2Pair.sol";
+import "./IUniPair.sol";
 import "./IWETH.sol";
 // import "./IUniFactory.sol";
 
@@ -30,26 +30,26 @@ library LibQuartz {
     
     uint256 constant MINIMUM_AMOUNT = 1000;
     
-    function getRouter(IVaultHealer vaultHealer, uint pid) internal view returns (IUniRouter02) {
+    function getRouter(IVaultHealer vaultHealer, uint pid) internal view returns (IUniRouter) {
         (,IStrategy strat) = vaultHealer.poolInfo(pid);
-        return IUniRouter02(strat.settings().router);
+        return IUniRouter(strat.settings().router);
     }
     
-    function getRouterAndPair(IVaultHealer vaultHealer, uint _pid) internal view returns (IUniRouter02 router, IStrategy strat, IUniswapV2Pair pair) {
+    function getRouterAndPair(IVaultHealer vaultHealer, uint _pid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
         IERC20 want;
         (want, strat) = vaultHealer.poolInfo(_pid);
         
-        pair = IUniswapV2Pair(address(want));
-        router = IUniRouter02(strat.settings().router);
+        pair = IUniPair(address(want));
+        router = IUniRouter(strat.settings().router);
         require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
     }
-    function getSwapAmount(IUniRouter02 router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
+    function getSwapAmount(IUniRouter router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
         uint256 numerator = router.getAmountOut(halfInvestment, reserveA, reserveB);
         uint256 denominator = router.quote(halfInvestment, reserveA + halfInvestment, reserveB - numerator);
         swapAmount = investmentA - Babylonian.sqrt(halfInvestment * halfInvestment * numerator / denominator);
     }
-    function returnAssets(IUniRouter02 router, address[] memory tokens) internal {
+    function returnAssets(IUniRouter router, address[] memory tokens) internal {
         address weth = router.WETH();
         uint256 balance;
         
@@ -67,7 +67,7 @@ library LibQuartz {
         }
     }
     function estimateSwap(IVaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
-        (IUniRouter02 router,,IUniswapV2Pair pair) = getRouterAndPair(vaultHealer, pid);
+        (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
         
         bool isInputA = pair.token0() == tokenIn;
         require(isInputA || pair.token1() == tokenIn, 'Quartz: Input token not present in liquidity pair');
@@ -81,16 +81,15 @@ library LibQuartz {
     }
     function removeLiquidity(address pair, address to) internal {
         IERC20(pair).safeTransfer(pair, IERC20(pair).balanceOf(address(this)));
-        (uint256 amount0, uint256 amount1) = IUniswapV2Pair(pair).burn(to);
+        (uint256 amount0, uint256 amount1) = IUniPair(pair).burn(to);
 
         require(amount0 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_A_AMOUNT');
         require(amount1 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_B_AMOUNT');
     }
-    function optimalMint(IUniswapV2Pair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
-        //already sorted here
-        //(IERC20 token0, IERC20 token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
+        (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
         
-        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(pair).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = IUniPair(pair).getReserves();
         uint totalSupply = pair.totalSupply();
         
         uint balance0 = token0.balanceOf(address(this));
@@ -110,10 +109,10 @@ library LibQuartz {
         liquidity = pair.mint(address(this));
     }
 
-    function hasSufficientLiquidity(address token0, address token1, IUniRouter02 router, uint256 min_amount) internal view returns (bool hasLiquidity) {
+    function hasSufficientLiquidity(address token0, address token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
         address factory_address = router.factory();
         IUniFactory factory = IUniFactory(factory_address);
-        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
+        IUniPair pair = IUniPair(factory.getPair(token0, token1));
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         if (reserveA > min_amount && reserveB > min_amount) {

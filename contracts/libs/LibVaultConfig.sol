@@ -5,7 +5,7 @@ import "./IUniRouter.sol";
 import "../Magnetite.sol";
 
 struct VaultSettings {
-    IUniRouter02 router; //UniswapV2 compatible router
+    IUniRouter router; //UniswapV2 compatible router
     uint16 slippageFactor; // sets a limit on losses due to deposit fee in pool, reflect fees, rounding errors, etc.
     uint16 tolerance; // "Hidden Gem", "Premiere Gem", etc. frontend indicator
     uint64 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
@@ -39,7 +39,7 @@ library LibVaultConfig {
     }
 
     function check(VaultSettings memory _settings) internal pure {
-        try IUniRouter02(_settings.router).factory() returns (address) {}
+        try IUniRouter(_settings.router).factory() returns (address) {}
         catch { revert("Invalid router"); }
         require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
     }

@@ -119,8 +119,8 @@ library LibVaultSwaps {
         liquidity = IUniPair(address(pair)).mint(address(this));
     }
     
-    function wnative(IUniRouter02 router) private pure returns (IERC20) {
-        try IUniRouter02(router).WETH() returns (address weth) { //use router's wnative
+    function wnative(IUniRouter router) private pure returns (IERC20) {
+        try router.WETH() returns (address weth) { //use router's wnative
             return IERC20(weth);
         } catch { return WNATIVE_DEFAULT; }
     }

@@ -1,21 +1,10 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity >=0.5.0;
 
-interface IUniswapV2Pair {
-  event Approval(address indexed owner, address indexed spender, uint value);
-  event Transfer(address indexed from, address indexed to, uint value);
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-  function name() external pure returns (string memory);
-  function symbol() external pure returns (string memory);
-  function decimals() external pure returns (uint8);
-  function totalSupply() external view returns (uint);
-  function balanceOf(address owner) external view returns (uint);
-  function allowance(address owner, address spender) external view returns (uint);
-
-  function approve(address spender, uint value) external returns (bool);
-  function transfer(address to, uint value) external returns (bool);
-  function transferFrom(address from, address to, uint value) external returns (bool);
-
+interface IUniPair is IERC20Metadata {
+  
   function DOMAIN_SEPARATOR() external view returns (bytes32);
   function PERMIT_TYPEHASH() external pure returns (bytes32);
   function nonces(address owner) external view returns (uint);

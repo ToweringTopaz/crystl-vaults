@@ -78,7 +78,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
 
             vaultHealer.deposit(3, crystlBalance); //todo: remove hardcoded pid
         }
-        lastEarnBlock = block.number;
+        lastEarnBlock = uint64(block.number);
     }
     
     function vaultSharesTotal() public override view returns (uint256) {

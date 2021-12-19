@@ -103,7 +103,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             }
             _farm();
         }
-        lastEarnBlock = block.number;
+        lastEarnBlock = uint64(block.number);
     }
     
     //Safely deposits want tokens in farm

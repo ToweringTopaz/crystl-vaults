@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IUniRouter.sol";
-
+import "./IUniFactory.sol";
 //The bulk of the magnetite code is here
 library LibMagnetite {
     using LibMagnetite for address[];
@@ -69,7 +69,7 @@ library LibMagnetite {
         }
     }
     
-    function generatePath(address router, address a, address b) internal view returns (address[] memory path) {
+    function generatePath(IUniRouter router, address a, address b) internal view returns (address[] memory path) {
     
         address[] memory _b = new address[](2);
         _b[0] = b;
@@ -119,8 +119,8 @@ library LibMagnetite {
         path[4] = b;
         return path;
     }   
-    function findPair(address router, address a, address[] memory b) internal view returns (address) {
-        IUniFactory factory = IUniFactory(IUniRouter02(router).factory());
+    function findPair(IUniRouter router, address a, address[] memory b) internal view returns (address) {
+        IUniFactory factory = IUniFactory(router.factory());
         
         PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
 
@@ -158,19 +158,19 @@ library LibMagnetite {
         return pairData[best].token;
     }
     
-    function compare(address router, PairData memory x, PairData memory y) private pure returns (bool yBetter) {
+    function compare(IUniRouter router, PairData memory x, PairData memory y) private pure returns (bool yBetter) {
         address wNative = wnative(router);
         uint xLiquidity = x.liquidity * (x.token == wNative ? WNATIVE_MULTIPLIER : 1);
         uint yLiquidity = y.liquidity * (y.token == wNative ? WNATIVE_MULTIPLIER : 1);
         return yLiquidity > xLiquidity;
     }
 
-    function allCommons(address router) private pure returns (address[NUM_COMMON] memory tokens) {
+    function allCommons(IUniRouter router) private pure returns (address[NUM_COMMON] memory tokens) {
         tokens = abi.decode(COMMON_TOKENS,(address[6]));
         tokens[0] = wnative(router);
     }
-    function wnative(address router) private pure returns (address) {
-        try IUniRouter02(router).WETH() returns (address weth) {
+    function wnative(IUniRouter router) private pure returns (address) {
+        try router.WETH() returns (address weth) {
             return weth;
         } catch {
             return WNATIVE_DEFAULT;

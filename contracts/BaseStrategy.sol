@@ -2,16 +2,17 @@
 pragma solidity ^0.8.4;
 
 import "./libs/LibVaultConfig.sol";
+import "./libs/IStrategy.sol";
+
 abstract contract BaseStrategy {
     using LibVaultConfig for VaultSettings;
     
     VaultSettings public settings; //the major storage variables used to configure the vault
     
-    uint256 public lastEarnBlock = block.number;
-
     uint constant PANIC_LOCK_DURATION = 6 hours;
-    uint public panicLockExpiry; //panic can only happen again after the time has elapsed
-    
+    uint64 public panicLockExpiry; //panic can only happen again after the time has elapsed
+    uint64 public lastEarnBlock = uint64(block.number);
+
     event SetSettings(VaultSettings _settings);
     
     constructor(VaultSettings memory _settings) {
@@ -33,7 +34,7 @@ abstract contract BaseStrategy {
     //support VH-based pause or standard openzeppelin method
     function _pause() internal virtual;
     function _unpause() internal virtual;
-    function paused() public virtual returns (bool) {
+    function paused() external virtual returns (bool) {
         return false;
     }
     
