@@ -35,12 +35,17 @@ abstract contract VaultHealerGate is VaultHealerBase {
         earned = int(stats.withdrawals + staked + stats.transfersOut) - int(stats.deposits + stats.transfersIn);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid)  { //nonReentrant
+    function deposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid) nonReentrant {
+        _deposit(_pid, _wantAmt, msg.sender);
+    }
+    // Want tokens moved from user -> this -> Strat (compounding)
+    function stratDeposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid)  {
+        require(isStrat(msg.sender), "!strategy");
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external whenNotPaused(_pid)  { //nonReentrant
+    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external whenNotPaused(_pid) nonReentrant {
         _deposit(_pid, _wantAmt, _to);
     }
 
@@ -81,12 +86,18 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _wantAmt) external  { //nonReentrant
+    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant {
+        _withdraw(_pid, _wantAmt, msg.sender);
+    }
+
+    // Withdraw LP tokens from MasterChef.
+    function stratWithdraw(uint256 _pid, uint256 _wantAmt) external {
+        require(isStrat(msg.sender), "!strategy");
         _withdraw(_pid, _wantAmt, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external  { //nonReentrant
+    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant {
         _withdraw(_pid, _wantAmt, _to);
     }
 
@@ -140,7 +151,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) external  { //nonReentrant
+    function withdrawAll(uint256 _pid) external nonReentrant {
         _withdraw(_pid, type(uint256).max, msg.sender);
     }
     

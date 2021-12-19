@@ -76,7 +76,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
             //need to instantiate pool here?
             crystlToken.safeIncreaseAllowance(address(vaultHealer), crystlBalance);
 
-            vaultHealer.deposit(3, crystlBalance); //todo: remove hardcoded pid
+            vaultHealer.stratDeposit(3, crystlBalance); //todo: remove hardcoded pid
         }
         lastEarnBlock = uint64(block.number);
     }
@@ -119,7 +119,7 @@ contract StrategyVHMaximizer is BaseStrategyVaultHealer, ERC1155Holder {
 
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external {
         maximizerRewardToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
-        vaultHealer.withdraw(_pid, _amount);
+        vaultHealer.stratWithdraw(_pid, _amount);
     }
         
 }

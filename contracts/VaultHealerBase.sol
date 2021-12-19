@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IBoostPool.sol";
 import "./libs/IStrategy.sol";
 
-abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard, 
+abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
 
@@ -91,7 +91,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
-    function addPool(address _strat) external onlyOwner  { //nonReentrant
+    function addPool(address _strat) external onlyOwner nonReentrant {
         require(!isStrat(_strat), "Existing strategy");
         _poolInfo.push();
         PoolInfo storage pool = _poolInfo[_poolInfo.length - 1];
@@ -161,7 +161,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         emit SetWithdrawFee(_pid, _withdrawFee);
     }
 
-    function earnAll() external  { //nonReentrant
+    function earnAll() external nonReentrant {
         for (uint256 i; i < _poolInfo.length; i++) {
             if (!paused(i)) {
                 try _poolInfo[i].strat.earn(_msgSender()) {}
@@ -170,7 +170,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
         }
     }
 
-    function earnSome(uint256[] memory pids) external  { //nonReentrant
+    function earnSome(uint256[] memory pids) external nonReentrant {
         for (uint256 i; i < pids.length; i++) {
             if (_poolInfo.length >= pids[i] && !paused(pids[i])) {
                 try _poolInfo[pids[i]].strat.earn(_msgSender()) {}
@@ -178,7 +178,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply { //ReentrancyGuard,
             }
         }
     }
-    function earn(uint256 pid) external whenNotPaused(pid)  { //nonReentrant
+    function earn(uint256 pid) external whenNotPaused(pid) nonReentrant {
         _poolInfo[pid].strat.earn(_msgSender());
     }
     
