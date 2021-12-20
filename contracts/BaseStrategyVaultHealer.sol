@@ -12,20 +12,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;    
 
-    VaultHealer immutable public vaultHealer; 
-    IStrategy public maximizerVault;
     address public boostPoolAddress;
-    uint public immutable pid;
-    bool public isMaximizer;
-    uint public maximizerPid;
-
-    IERC20 public maximizerRewardToken;
-
-    constructor(address _vaultHealerAddress, uint256 _pid) {
-        vaultHealer = VaultHealer(_vaultHealerAddress);
-        settings.magnetite = Magnetite(_vaultHealerAddress);
-        pid = _pid;
-    }
     
     function sharesTotal() external view returns (uint) {
         return vaultHealer.sharesTotal(address(this));

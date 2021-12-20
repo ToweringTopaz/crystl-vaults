@@ -84,6 +84,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             apeSwapVaults[1]['PID'],
             vaultSettings.standard,
             apeSwapVaults[1]['earned'],
+            ZERO_ADDRESS
             ];
 
         strategyVHStandard = await StrategyVHStandard.deploy(...DEPLOYMENT_VARS);
@@ -103,6 +104,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             crystlVault[0]['PID'], //what is the PID of this thing in our masterhealer?
             vaultSettings.standard,
             crystlVault[0]['earned'],
+            ZERO_ADDRESS
             ];
 
         strategyCrystlCompounder = await StrategyVHStandard.deploy(...CRYSTL_COMPOUNDER_VARS);
@@ -121,8 +123,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyCrystlCompounder.address);
         crystl_compounder_strat_pid = await vaultHealer.poolLength() -1;
 
-        StrategyVHMaximizer = await ethers.getContractFactory('StrategyVHMaximizer', {});
-
         const MAXIMIZER_VARS = [
             apeSwapVaults[1]['want'],
             vaultHealer.address,
@@ -131,11 +131,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             apeSwapVaults[1]['PID'],
             vaultSettings.standard,
             apeSwapVaults[1]['earned'],
-            strategyCrystlCompounder.address,
-            CRYSTL
+            strategyCrystlCompounder.address
             ];
 
-        strategyVHMaximizer = await StrategyVHMaximizer.deploy(...MAXIMIZER_VARS);
+        strategyVHMaximizer = await StrategyVHStandard.deploy(...MAXIMIZER_VARS);
 
         await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyVHMaximizer.address);
         maximizer_strat_pid = await vaultHealer.poolLength() -1;

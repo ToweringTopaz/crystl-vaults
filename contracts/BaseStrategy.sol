@@ -3,10 +3,12 @@ pragma solidity ^0.8.4;
 
 import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
+import "./VaultHealer.sol";
 
 abstract contract BaseStrategy {
     using LibVaultConfig for VaultSettings;
     
+    VaultHealer immutable public vaultHealer; 
     VaultSettings public settings; //the major storage variables used to configure the vault
     
     uint constant PANIC_LOCK_DURATION = 6 hours;
@@ -14,11 +16,14 @@ abstract contract BaseStrategy {
     uint64 public lastEarnBlock = uint64(block.number);
 
     event SetSettings(VaultSettings _settings);
-    
-    constructor(VaultSettings memory _settings) {
+        
+    constructor(VaultSettings memory _settings, address _vaultHealerAddress) {
         _settings.check();
         settings = _settings;
         emit SetSettings(_settings);
+
+        vaultHealer = VaultHealer(_vaultHealerAddress);
+        settings.magnetite = Magnetite(_vaultHealerAddress);
     }
 
     modifier onlyGov virtual; //"gov"

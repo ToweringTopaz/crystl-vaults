@@ -65,7 +65,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             //put in earn here!! (and take out the earn in strat)
             pool.strat.earn(_to); 
 
-            if (pool.maximizerPid != 0 && wantLockedBefore > 0) { //
+            if (pool.targetPid != 0 && wantLockedBefore > 0) { //
             UpdatePoolAndRewarddebtOnDeposit(_pid, _to, _wantAmt);
             }
 
@@ -121,7 +121,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         pool.strat.earn(_to);
 
-        if (pool.maximizerPid != 0 && pool.strat.wantLockedTotal() > 0) {
+        if (pool.targetPid != 0 && pool.strat.wantLockedTotal() > 0) {
             UpdatePoolAndWithdrawCrystlOnWithdrawal(_pid, _to, _wantAmt);
             }
 
@@ -183,7 +183,7 @@ function _beforeTokenTransfer(
                 transferData(pid, from).transfersOut += underlyingValue;
                 transferData(pid, to).transfersIn += underlyingValue;
 
-                if (_poolInfo[pid].maximizerPid != 0) {
+                if (_poolInfo[pid].targetPid != 0) {
                     _poolInfo[pid].strat.earn(from); //does it matter who calls the earn?
 
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(pid, from, underlyingValue);
@@ -197,28 +197,28 @@ function _beforeTokenTransfer(
 
     function UpdatePoolAndRewarddebtOnDeposit (uint256 _pid, address _from, uint256 _wantAmt) internal {
         PoolInfo storage pool = _poolInfo[_pid];
-        PoolInfo storage maximizer = _poolInfo[pool.maximizerPid];
-        rewardDebt[_pid][_from] += _wantAmt * pool.accRewardTokensPerShare / 1e30;
+        PoolInfo storage target = _poolInfo[pool.targetPid];
+        pool.rewardDebt[_from] += _wantAmt * pool.accRewardTokensPerShare / 1e30;
 
-        pool.accRewardTokensPerShare += (maximizer.strat.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); 
+        pool.accRewardTokensPerShare += (target.strat.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); 
 
-        pool.balanceCrystlCompounderLastUpdate = maximizer.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        pool.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
 
     }
 
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt) internal {
         PoolInfo storage pool = _poolInfo[_pid];
-        PoolInfo storage maximizer = _poolInfo[pool.maximizerPid];
+        PoolInfo storage target = _poolInfo[pool.targetPid];
 
-            pool.accRewardTokensPerShare += (maximizer.strat.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal();
+            pool.accRewardTokensPerShare += (target.strat.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal();
             //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, _pid); 
-            //withdraw proportional amount of crystl from maximizerVault()
+            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - pool.rewardDebt[_from] * _wantAmt / balanceOf(_from, _pid); 
+            //withdraw proportional amount of crystl from targetVault()
             if (crystlShare > 0) {
-                pool.strat.withdrawMaximizerReward(pool.maximizerPid, crystlShare);
-                maximizer.want.safeTransferFrom(address(pool.strat), _from, maximizer.want.balanceOf(address(pool.strat)));
-                rewardDebt[_pid][_from] -= rewardDebt[_pid][_from] * _wantAmt / balanceOf(_from, _pid);
+                pool.strat.withdrawMaximizerReward(pool.targetPid, crystlShare);
+                target.want.safeTransferFrom(address(pool.strat), _from, target.want.balanceOf(address(pool.strat)));
+                pool.rewardDebt[_from] -= pool.rewardDebt[_from] * _wantAmt / balanceOf(_from, _pid);
                 }
-            pool.balanceCrystlCompounderLastUpdate = maximizer.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+            pool.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 }

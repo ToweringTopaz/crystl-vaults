@@ -17,18 +17,18 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     struct PoolInfo {
         IERC20 want; //  want token.
         IStrategy strat; // Strategy contract that will auto compound want tokens
-        bool overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
-        bool overrideDefaultWithdrawFee;
         VaultFee withdrawFee;
         uint256 accRewardTokensPerShare;
         uint256 balanceCrystlCompounderLastUpdate;
-        uint256 maximizerPid;
+        uint256 targetPid; //maximizer target, which accumulates tokens
+        mapping(address => uint256) rewardDebt;
         // bytes data;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
     BitMaps.BitMap private pauseMap; //Boolean pause status for each vault; true == unpaused
-    mapping(uint256 => mapping(address => uint256)) public rewardDebt; // rewardDebt per user per maximizer
+    BitMaps.BitMap private _overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
+    BitMaps.BitMap private _overrideDefaultWithdrawFee;
     VaultFees public defaultEarnFees; // Settings which are generally applied to all strategies
     VaultFee public defaultWithdrawFee; //withdrawal fee is set separately from earn fees
 
@@ -60,6 +60,10 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     }
     function poolInfo(uint pid) external view returns (IERC20 want, IStrategy strat) {
         return (_poolInfo[pid].want, _poolInfo[pid].strat);
+    }
+
+    function rewardDebt(uint pid, address user) external view returns (uint) {
+        return _poolInfo[pid].rewardDebt[user];
     }
 
     // View function to see staked Want tokens on frontend.
@@ -99,12 +103,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         PoolInfo storage pool = _poolInfo[pid];
         pool.want = strat.wantToken();
         pool.strat = strat;
-        pool.maximizerPid = _strats[address(strat.maximizerVault())];
-        console.log("pid:", pid);
-        console.log("want:", address(pool.want));
-        console.log("maximizer address:", address(strat.maximizerVault()));
-        console.log("maximizer pid:", pool.maximizerPid);
-        console.log("is maximizer:", strat.isMaximizer());
+        pool.targetPid = _strats[address(strat.targetVault())];
         strat.setEarnFees(defaultEarnFees);
         pool.withdrawFee = defaultWithdrawFee; //I've added this line in to set fees in the VH based pool as well as in the strat's vaultFees struct
         // pool.boostPoolAddress = strat.boostPoolAddress();
@@ -130,29 +129,36 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     
     function getEarnFees(uint _pid) public view returns (VaultFees memory) {
         PoolInfo storage pool = _poolInfo[_pid];
-        if (pool.overrideDefaultEarnFees) 
+        if (overrideDefaultEarnFees(_pid)) 
             return pool.strat.earnFees();
         else
             return defaultEarnFees;
     }
     
+    function overrideDefaultEarnFees(uint pid) public view returns (bool) { // strategy's fee config doesn't change with the vaulthealer's default
+        return _overrideDefaultEarnFees.get(pid);
+    }
+    function overrideDefaultWithdrawFee(uint pid) public view returns (bool) {
+        return _overrideDefaultWithdrawFee.get(pid);
+    }
+
      function setDefaultEarnFees(VaultFees calldata _earnFees) external onlyOwner {
         defaultEarnFees = _earnFees;
         emit SetDefaultEarnFees(_earnFees);
         
-        for (uint i; i < _poolInfo.length; i++) {
-            if (_poolInfo[i].overrideDefaultEarnFees) continue;
+        for (uint i = 1; i < _poolInfo.length; i++) {
+            if (overrideDefaultEarnFees(i)) continue; //todo: optimize use of bitmap, like earn
             try _poolInfo[i].strat.setEarnFees(_earnFees) {}
             catch { emit SetDefaultFail(i); }
         }
     }   
     function setEarnFees(uint _pid, VaultFees calldata _earnFees) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultEarnFees = true;
+        _overrideDefaultEarnFees.set(_pid);
         _poolInfo[_pid].strat.setEarnFees(_earnFees);
         emit SetEarnFees(_pid, _earnFees);
     }
     function resetEarnFees(uint _pid) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultEarnFees = false;
+        _overrideDefaultEarnFees.unset(_pid);
         _poolInfo[_pid].strat.setEarnFees(defaultEarnFees);
         emit ResetEarnFees(_pid);
     }
@@ -162,7 +168,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     }
 
     function setWithdrawFee(uint _pid, VaultFee calldata _withdrawFee) external onlyOwner {
-        _poolInfo[_pid].overrideDefaultWithdrawFee = true;
+        _overrideDefaultWithdrawFee.set(_pid);
         _poolInfo[_pid].withdrawFee = _withdrawFee;
         emit SetWithdrawFee(_pid, _withdrawFee);
     }
