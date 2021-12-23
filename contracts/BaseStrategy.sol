@@ -8,6 +8,8 @@ import "./VaultHealer.sol";
 abstract contract BaseStrategy {
     using LibVaultConfig for VaultSettings;
     
+    bytes32 public SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
+
     VaultHealer immutable public vaultHealer; 
     VaultSettings public settings; //the major storage variables used to configure the vault
     
@@ -23,10 +25,18 @@ abstract contract BaseStrategy {
         emit SetSettings(_settings);
 
         vaultHealer = VaultHealer(_vaultHealerAddress);
-        settings.magnetite = Magnetite(_vaultHealerAddress);
+        settings.magnetite = VaultHealer(_vaultHealerAddress).magnetite();
     }
 
-    modifier onlyGov virtual; //"gov"
+    //The owner of the connected vaulthealer gets administrative power in the strategy, automatically.
+    modifier onlyVHRole(bytes32 role) {
+        require(vaultHealer.hasRole(role, msg.sender));
+        _;
+    }
+    modifier onlyVaultHealer {
+        require(msg.sender == address(vaultHealer), "!vaulthealer");
+        _;
+    }
 
     function vaultSharesTotal() public virtual view returns (uint256);
     function _vaultDeposit(uint256 _amount) internal virtual;
@@ -52,24 +62,24 @@ abstract contract BaseStrategy {
         return settings.tolerance;
     }
     
-    function setSettings(VaultSettings calldata _settings) external onlyGov {
+    function setSettings(VaultSettings calldata _settings) external onlyVHRole(SETTINGS_SETTER) {
         _settings.check();
         settings = _settings;
         emit SetSettings(_settings);
     }
     
-    function pause() external onlyGov {
+    function pause() external onlyVaultHealer {
         _pause();
     }
-    function unpause() external onlyGov {
+    function unpause() external onlyVaultHealer {
         _unpause();
     }
-    function panic() external onlyGov {
+    function panic() external onlyVaultHealer {
         require (panicLockExpiry < block.timestamp, "panic once per 6 hours");
         _pause();
         _emergencyVaultWithdraw();
     }
-    function unpanic() external onlyGov {
+    function unpanic() external onlyVaultHealer {
         _unpause();
         _farm();
     }

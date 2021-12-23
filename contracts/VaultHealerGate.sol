@@ -39,8 +39,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _deposit(_pid, _wantAmt, msg.sender);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function stratDeposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid)  {
-        require(isStrat(msg.sender), "!strategy");
+    function stratDeposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid) onlyRole(STRATEGY) {
         _deposit(_pid, _wantAmt, msg.sender);
     }
 
@@ -91,8 +90,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function stratWithdraw(uint256 _pid, uint256 _wantAmt) external {
-        require(isStrat(msg.sender), "!strategy");
+    function stratWithdraw(uint256 _pid, uint256 _wantAmt) external onlyRole(STRATEGY) {
         _withdraw(_pid, _wantAmt, msg.sender);
     }
 
@@ -156,8 +154,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
     
     //called by strategy, cannot be nonReentrant
-    function executePendingDeposit(address _to, uint _amount) external {
-        require(isStrat(msg.sender));
+    function executePendingDeposit(address _to, uint _amount) external onlyRole(STRATEGY) {
         pendingDeposit.amount -= _amount;
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,

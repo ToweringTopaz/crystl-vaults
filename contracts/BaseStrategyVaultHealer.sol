@@ -18,15 +18,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         return vaultHealer.sharesTotal(address(this));
     }
     
-    //The owner of the connected vaulthealer gets administrative power in the strategy, automatically.
-    modifier onlyGov() override {
-        require(msg.sender == vaultHealer.owner() || msg.sender == address(vaultHealer), "!gov");
-        _;
-    }
-    modifier onlyVaultHealer {
-        require(msg.sender == address(vaultHealer), "!vaulthealer");
-        _;
-    }
     //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
     function earn(address _to) external onlyVaultHealer {
         _earn(_to);    

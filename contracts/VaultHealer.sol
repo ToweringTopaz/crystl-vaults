@@ -4,17 +4,18 @@ pragma solidity ^0.8.4;
 import "./VaultHealerGate.sol";
 import "./Magnetite.sol";
 
-contract VaultHealer is VaultHealerGate, Magnetite {
+contract VaultHealer is VaultHealerGate {
     
+    Magnetite public magnetite;
+
     constructor(VaultFees memory _fees, VaultFee memory _withdrawFee)
-        VaultHealerBase(_fees, _withdrawFee) {}
-    
-    //allows strats to generate paths
-    function pathAuth() internal override view returns (bool) {
-        return super.pathAuth() || isStrat(msg.sender);
+        VaultHealerRoles(msg.sender)
+        VaultHealerBase(_fees, _withdrawFee) 
+    {
+        magnetite = new Magnetite();
     }
     
-    function setPath(address router, address[] calldata path) external onlyOwner {
-        _setPath(router, path, LibMagnetite.AutoPath.MANUAL);
+    function setPath(address router, address[] calldata path) external onlyRole(PATH_SETTER) {
+        magnetite.overridePath(router, path);
     }
 }
