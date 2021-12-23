@@ -11,8 +11,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;    
-
-    address public boostPoolAddress;
     
     function sharesTotal() external view returns (uint) {
         return vaultHealer.sharesTotal(address(this));
@@ -90,10 +88,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     function _unpause() internal override {}
     function paused() external view override returns (bool) {
         return vaultHealer.paused(address(this));
-    }
-
-    function setBoostPoolAddress(address _boostPoolAddress) external {
-        boostPoolAddress = _boostPoolAddress;
     }
 
 }

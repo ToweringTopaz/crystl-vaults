@@ -18,11 +18,22 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
         IERC20 want; //  want token.
         IStrategy strat; // Strategy contract that will auto compound want tokens
         VaultFee withdrawFee;
+        BoostInfo[] boosts;
+        mapping (address => UserInfo) user;
         uint256 accRewardTokensPerShare;
         uint256 balanceCrystlCompounderLastUpdate;
         uint256 targetPid; //maximizer target, which accumulates tokens
         mapping(address => uint256) rewardDebt;
         // bytes data;
+    }
+
+    struct BoostInfo {
+        IBoostPool boostPool;
+        bool isActive;
+    }
+
+    struct UserInfo {
+        BitMaps.BitMap boosts;
     }
 
     PoolInfo[] internal _poolInfo; // Info of each pool.
@@ -76,27 +87,13 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
         return balanceOf(_user, _pid) * wantLockedTotal / _sharesTotal;
     }
 
-    // View function to see staked Want tokens on frontend.
-    function boostedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = _poolInfo[_pid];
-        if (pool.strat.boostPoolAddress() == address(0)) return 0;
-        
-        IBoostPool boostPool = IBoostPool(pool.strat.boostPoolAddress());
-        uint256 _sharesTotal = totalSupply(_pid);
-        uint256 wantLockedTotal = pool.strat.wantLockedTotal();
-        if (_sharesTotal == 0) {
-            return 0;
-        }
-        return boostPool.userStakedAmount(_user) * wantLockedTotal / _sharesTotal;
-    }
-
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
     function addPool(address _strat) external nonReentrant {
         require(!hasRole(STRATEGY, _strat), "Existing strategy");
         grantRole(STRATEGY, _strat); //requires msg.sender is POOL_ADDER
-        
+
         IStrategy strat = IStrategy(_strat);
         uint pid = _poolInfo.length;
         _poolInfo.push();

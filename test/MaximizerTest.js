@@ -151,7 +151,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             21771725 //also watch out that we don't go past this, but we shouldn't
         )
         
-        strategyVHStandard.setBoostPoolAddress(boostPool.address);
+        vaultHealer.addBoost(boostPool.address);
         
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
 
