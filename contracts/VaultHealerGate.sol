@@ -22,122 +22,123 @@ abstract contract VaultHealerGate is VaultHealerBase {
     mapping(bytes32 => TransferData) private _transferData;
     PendingDeposit private pendingDeposit;
 
-    function transferData(uint pid, address user) internal view returns (TransferData storage) {
-        return _transferData[keccak256(abi.encodePacked(pid, user))]; //what does this do?
+    function transferData(uint vid, address user) internal view returns (TransferData storage) {
+        return _transferData[keccak256(abi.encodePacked(vid, user))]; //what does this do?
     }
-    function userTotals(uint256 pid, address user) external view 
+    function userTotals(uint256 vid, address user) external view 
         returns (TransferData memory stats, int256 earned) 
     {
-        stats = transferData(pid, user);
+        stats = transferData(vid, user);
         
-        uint _ts = totalSupply(pid);
-        uint staked = _ts == 0 ? 0 : balanceOf(user, pid) * _poolInfo[pid].strat.wantLockedTotal() / _ts;
+        uint _ts = totalSupply(vid);
+        uint staked = _ts == 0 ? 0 : balanceOf(user, vid) * _vaultInfo[vid].strat.wantLockedTotal() / _ts;
         earned = int(stats.withdrawals + staked + stats.transfersOut) - int(stats.deposits + stats.transfersIn);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid) nonReentrant {
-        _deposit(_pid, _wantAmt, msg.sender);
+    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
+        _deposit(_vid, _wantAmt, msg.sender);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function stratDeposit(uint256 _pid, uint256 _wantAmt) external whenNotPaused(_pid) onlyRole(STRATEGY) {
-        _deposit(_pid, _wantAmt, msg.sender);
+
+    function stratDeposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) onlyRole(STRATEGY) {
+        _deposit(_vid, _wantAmt, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _pid, uint256 _wantAmt, address _to) external whenNotPaused(_pid) nonReentrant {
-        _deposit(_pid, _wantAmt, _to);
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
+        _deposit(_vid, _wantAmt, _to);
     }
 
-    function _deposit(uint256 _pid, uint256 _wantAmt, address _to) private {
-        PoolInfo storage pool = _poolInfo[_pid];
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _to) private {
+        VaultInfo storage vault = _vaultInfo[_vid];
 
-        require(address(pool.strat) != address(0), "That strategy does not exist");
+        require(address(vault.strat) != address(0), "That strategy does not exist");
 
         if (_wantAmt > 0) {
             pendingDeposit = PendingDeposit({ //todo: understand better what this does
-                token: pool.want,
+                token: vault.want,
                 from: msg.sender,
                 amount: _wantAmt
             });
                     
-            uint256 wantLockedBefore = pool.strat.wantLockedTotal();
+            uint256 wantLockedBefore = vault.strat.wantLockedTotal();
             //put in earn here!! (and take out the earn in strat)
-            pool.strat.earn(_to); 
+            vault.strat.earn(_to); 
 
-            if (pool.targetPid != 0 && wantLockedBefore > 0) { //
-            UpdatePoolAndRewarddebtOnDeposit(_pid, _to, _wantAmt);
+            if (vault.targetVid != 0 && wantLockedBefore > 0) { //
+            UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
             }
 
-            uint256 sharesAdded = pool.strat.deposit(msg.sender, _to, _wantAmt, totalSupply(_pid));
+            uint256 sharesAdded = vault.strat.deposit(msg.sender, _to, _wantAmt, totalSupply(_vid));
             //we mint tokens for the user via the 1155 contract
             _mint(
                 _to,
-                _pid, //use the pid of the strategy 
+                _vid, //use the vid of the strategy 
                 sharesAdded,
                 hex'' //leave this blank for now
             );
         //update the user's data for earn tracking purposes
-        transferData(_pid, _to).deposits += _wantAmt - pendingDeposit.amount;
+        transferData(_vid, _to).deposits += _wantAmt - pendingDeposit.amount;
         
         delete pendingDeposit;
         }
-        emit Deposit(_to, _pid, _wantAmt);
+        emit Deposit(_to, _vid, _wantAmt);
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _wantAmt) external nonReentrant {
-        _withdraw(_pid, _wantAmt, msg.sender);
+    function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
+        _withdraw(_vid, _wantAmt, msg.sender);
     }
 
     // Withdraw LP tokens from MasterChef.
-    function stratWithdraw(uint256 _pid, uint256 _wantAmt) external onlyRole(STRATEGY) {
-        _withdraw(_pid, _wantAmt, msg.sender);
+
+    function stratWithdraw(uint256 _vid, uint256 _wantAmt) external onlyRole(STRATEGY) {
+        _withdraw(_vid, _wantAmt, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _pid, uint256 _wantAmt, address _to) external nonReentrant {
-        _withdraw(_pid, _wantAmt, _to);
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
+        _withdraw(_vid, _wantAmt, _to);
     }
 
-    function _withdraw(uint256 _pid, uint256 _wantAmt, address _to) private {
-        //create an instance of pool for the relevant pid, and an instance of user for this pool and the msg.sender
-        PoolInfo storage pool = _poolInfo[_pid];
-        require(balanceOf(_to, _pid) > 0, "User has 0 shares");
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _to) private {
+        VaultInfo storage vault = _vaultInfo[_vid];
+        require(balanceOf(_to, _vid) > 0, "User has 0 shares");
 
-        pool.strat.earn(_to);
+        vault.strat.earn(_to);
 
-        if (pool.targetPid != 0 && pool.strat.wantLockedTotal() > 0) {
-            UpdatePoolAndWithdrawCrystlOnWithdrawal(_pid, _to, _wantAmt);
+        if (vault.targetVid != 0 && vault.strat.wantLockedTotal() > 0) {
+            UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _to, _wantAmt);
         }
 
-        (uint256 sharesRemoved, uint256 wantAmt) = pool.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _pid), totalSupply(_pid));
+        (uint256 sharesRemoved, uint256 wantAmt) = vault.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _vid), totalSupply(_vid));
 
         //burn the tokens equal to sharesRemoved
         _burn(
             _to,
-            _pid,
+            _vid,
             sharesRemoved
         );
         //updates transferData for this user, so that we are accurately tracking their earn
-        transferData(_pid, _msgSender()).withdrawals += wantAmt;
+        transferData(_vid, _msgSender()).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        if (!paused(_pid) && pool.withdrawFee.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            console.log(pool.withdrawFee.rate);
-            uint feeAmt = wantAmt * pool.withdrawFee.rate / 10000;
+        if (!paused(_vid) && vault.withdrawFee.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            console.log(vault.withdrawFee.rate);
+            uint feeAmt = wantAmt * vault.withdrawFee.rate / 10000;
             wantAmt -= feeAmt;
-            pool.want.safeTransferFrom(address(pool.strat), pool.withdrawFee.receiver, feeAmt);
+            vault.want.safeTransferFrom(address(vault.strat), vault.withdrawFee.receiver, feeAmt);
         }
         
         //this call transfers wantTokens from the strat to the user
-        pool.want.safeTransferFrom(address(pool.strat), _to, wantAmt);
+        vault.want.safeTransferFrom(address(vault.strat), _to, wantAmt);
 
-        emit Withdraw(msg.sender, _pid, _wantAmt);
+        emit Withdraw(msg.sender, _vid, _wantAmt);
     }
 
-    // Withdraw everything from pool for yourself
-    function withdrawAll(uint256 _pid) external nonReentrant {
-        _withdraw(_pid, type(uint256).max, msg.sender);
+    // Withdraw everything from vault for yourself
+    function withdrawAll(uint256 _vid) external nonReentrant {
+        _withdraw(_vid, type(uint256).max, msg.sender);
     }
     
     //called by strategy, cannot be nonReentrant
@@ -162,47 +163,47 @@ function _beforeTokenTransfer(
 
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
-                uint pid = ids[i];
-                uint underlyingValue = amounts[i] * _poolInfo[pid].strat.wantLockedTotal() / totalSupply(pid);
-                transferData(pid, from).transfersOut += underlyingValue;
-                transferData(pid, to).transfersIn += underlyingValue;
+                uint vid = ids[i];
+                uint underlyingValue = amounts[i] * _vaultInfo[vid].strat.wantLockedTotal() / totalSupply(vid);
+                transferData(vid, from).transfersOut += underlyingValue;
+                transferData(vid, to).transfersIn += underlyingValue;
 
-                if (_poolInfo[pid].targetPid != 0) {
-                    _poolInfo[pid].strat.earn(from); //does it matter who calls the earn?
+                if (_vaultInfo[vid].targetVid != 0) {
+                    _vaultInfo[vid].strat.earn(from); //does it matter who calls the earn?
 
-                    UpdatePoolAndWithdrawCrystlOnWithdrawal(pid, from, underlyingValue);
+                    UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 
-                    UpdatePoolAndRewarddebtOnDeposit(pid, to, underlyingValue);
+                    UpdatePoolAndRewarddebtOnDeposit(vid, to, underlyingValue);
                     }
 
             }
         }
     }
 
-    function UpdatePoolAndRewarddebtOnDeposit (uint256 _pid, address _from, uint256 _wantAmt) internal {
-        PoolInfo storage pool = _poolInfo[_pid];
-        PoolInfo storage target = _poolInfo[pool.targetPid];
-        pool.rewardDebt[_from] += _wantAmt * pool.accRewardTokensPerShare / 1e30;
+    function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
+        VaultInfo storage vault = _vaultInfo[_vid];
+        VaultInfo storage target = _vaultInfo[vault.targetVid];
+        vault.rewardDebt[_from] += _wantAmt * vault.accRewardTokensPerShare / 1e30;
 
-        pool.accRewardTokensPerShare += (target.strat.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal(); 
+        vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal(); 
 
-        pool.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vault.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
 
     }
 
-    function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _pid, address _from, uint256 _wantAmt) internal {
-        PoolInfo storage pool = _poolInfo[_pid];
-        PoolInfo storage target = _poolInfo[pool.targetPid];
+    function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
+        VaultInfo storage vault = _vaultInfo[_vid];
+        VaultInfo storage target = _vaultInfo[vault.targetVid];
 
-            pool.accRewardTokensPerShare += (target.strat.wantLockedTotal() - pool.balanceCrystlCompounderLastUpdate) * 1e30 / pool.strat.wantLockedTotal();
+            vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal();
             //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * pool.accRewardTokensPerShare / 1e30 - pool.rewardDebt[_from] * _wantAmt / balanceOf(_from, _pid); 
+            uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.rewardDebt[_from] * _wantAmt / balanceOf(_from, _vid); 
             //withdraw proportional amount of crystl from targetVault()
             if (crystlShare > 0) {
-                pool.strat.withdrawMaximizerReward(pool.targetPid, crystlShare);
-                target.want.safeTransferFrom(address(pool.strat), _from, target.want.balanceOf(address(pool.strat)));
-                pool.rewardDebt[_from] -= pool.rewardDebt[_from] * _wantAmt / balanceOf(_from, _pid);
+                vault.strat.withdrawMaximizerReward(vault.targetVid, crystlShare);
+                target.want.safeTransferFrom(address(vault.strat), _from, target.want.balanceOf(address(vault.strat)));
+                vault.rewardDebt[_from] -= vault.rewardDebt[_from] * _wantAmt / balanceOf(_from, _vid);
                 }
-            pool.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+            vault.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 }
