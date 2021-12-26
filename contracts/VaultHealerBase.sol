@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libs/IBoostPool.sol";
 import "./libs/IStrategy.sol";
+import "./VaultHealerRoles.sol";
 
-abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
+abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using LibVaultConfig for VaultFees;
     using BitMaps for BitMaps.BitMap;
@@ -68,13 +68,11 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
 
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _pid, address _user) external view returns (uint256) {
-        PoolInfo storage pool = _poolInfo[_pid];
-
-        uint256 _sharesTotal = totalSupply(_pid); //balanceOf(_user, _pid);
-        uint256 wantLockedTotal = pool.strat.wantLockedTotal();
-        if (_sharesTotal == 0) {
-            return 0;
-        }
+        uint256 _sharesTotal = totalSupply(_pid);
+        if (_sharesTotal == 0) return 0;
+        
+        uint256 wantLockedTotal = _poolInfo[_pid].strat.wantLockedTotal();
+        
         return balanceOf(_user, _pid) * wantLockedTotal / _sharesTotal;
     }
 
@@ -95,8 +93,10 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
     /**
      * @dev Add a new want to the pool. Can only be called by the owner.
      */
-    function addPool(address _strat) external onlyOwner nonReentrant {
-        require(!isStrat(_strat), "Existing strategy");
+    function addPool(address _strat) external nonReentrant {
+        require(!hasRole(STRATEGY, _strat), "Existing strategy");
+        grantRole(STRATEGY, _strat); //requires msg.sender is POOL_ADDER
+        
         IStrategy strat = IStrategy(_strat);
         uint pid = _poolInfo.length;
         _poolInfo.push();
@@ -142,7 +142,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         return _overrideDefaultWithdrawFee.get(pid);
     }
 
-     function setDefaultEarnFees(VaultFees calldata _earnFees) external onlyOwner {
+     function setDefaultEarnFees(VaultFees calldata _earnFees) external onlyRole("FEE_SETTER") {
         defaultEarnFees = _earnFees;
         emit SetDefaultEarnFees(_earnFees);
         
@@ -152,12 +152,12 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
             catch { emit SetDefaultFail(i); }
         }
     }   
-    function setEarnFees(uint _pid, VaultFees calldata _earnFees) external onlyOwner {
+    function setEarnFees(uint _pid, VaultFees calldata _earnFees) external onlyRole("FEE_SETTER") {
         _overrideDefaultEarnFees.set(_pid);
         _poolInfo[_pid].strat.setEarnFees(_earnFees);
         emit SetEarnFees(_pid, _earnFees);
     }
-    function resetEarnFees(uint _pid) external onlyOwner {
+    function resetEarnFees(uint _pid) external onlyRole("FEE_SETTER") {
         _overrideDefaultEarnFees.unset(_pid);
         _poolInfo[_pid].strat.setEarnFees(defaultEarnFees);
         emit ResetEarnFees(_pid);
@@ -167,7 +167,7 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         return _poolInfo[_pid].withdrawFee;
     }
 
-    function setWithdrawFee(uint _pid, VaultFee calldata _withdrawFee) external onlyOwner {
+    function setWithdrawFee(uint _pid, VaultFee calldata _withdrawFee) external onlyRole("FEE_SETTER") {
         _overrideDefaultWithdrawFee.set(_pid);
         _poolInfo[_pid].withdrawFee = _withdrawFee;
         emit SetWithdrawFee(_pid, _withdrawFee);
@@ -224,17 +224,17 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
 
     //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
     ///////////////////////
-    function pause(uint pid) external onlyOwner {
+    function pause(uint pid) external onlyRole("PAUSER") {
         _pause(pid);
     }
-    function unpause(uint pid) external onlyOwner {
+    function unpause(uint pid) external onlyRole("PAUSER") {
         _unpause(pid);
     }
-    function panic(uint pid) external onlyOwner {
+    function panic(uint pid) external onlyRole("PAUSER") {
         _pause(pid);
         _poolInfo[pid].strat.panic();
     }
-    function unpanic(uint pid) external onlyOwner {
+    function unpanic(uint pid) external onlyRole("PAUSER") {
         _unpause(pid);
         _poolInfo[pid].strat.unpanic();
     }
@@ -262,4 +262,9 @@ abstract contract VaultHealerBase is Ownable, ERC1155Supply, ReentrancyGuard {
         pauseMap.set(pid);
         emit Unpaused(pid);
     }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
+        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId);
+    }
+
 }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./libs/IUniRouter.sol";
 import "./libs/LibMagnetite.sol";
@@ -51,6 +52,6 @@ contract Magnetite is Ownable {
         path = _paths[keccak256(abi.encodePacked(router, a, b))];
     }
     function pathAuth() internal virtual view returns (bool) {
-        return msg.sender == tx.origin || msg.sender == owner();
+        return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
     }
 }

@@ -81,7 +81,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         }
     }
 
-    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyGov {
+    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyVaultHealer {
         _earnFees.check();
         earnFees = _earnFees;
         emit SetEarnFees(_earnFees);
