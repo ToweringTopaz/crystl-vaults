@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./libs/FullMath.sol";
+import "./libs/HardMath.sol";
 import "./libs/LibVaultSwaps.sol";
 
 import "./BaseStrategy.sol";
@@ -17,15 +17,13 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     
     //max number of supported lp/earned tokens
     uint256 constant LP_LEN = 2;
-    uint256 constant EARNED_LEN = 8;
+    uint256 constant EARNED_LEN = 4;
 
     IERC20 immutable public wantToken; //The token which is deposited and earns a yield 
-    uint256 immutable earnedLength; //number of earned tokens;
-    uint256 immutable lpTokenLength; //number of underlying tokens (for a LP strategy, usually 2);
     
     //maximizer stuff
     IStrategy public immutable targetVault;
-    uint public immutable targetPid;
+    uint public immutable targetVid;
     IERC20 public maximizerRewardToken;
 
     IERC20[EARNED_LEN] public earned;
@@ -41,34 +39,29 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         address _targetVault
     ) {
         wantToken = _wantToken;
-        
-        uint i;
-        //The number of earned tokens should not be expected to change
-        for (i = 0; i < _earned.length && address(_earned[i]) != address(0); i++) {
-            earned[i] = _earned[i];
-        }
-        earnedLength = i;
-        
-        //Look for LP tokens. If not, want must be a single-stake
-        uint _lpTokenLength;
-        try IUniPair(address(_wantToken)).token0() returns (address _token0) {
-            lpToken[0] = IERC20(_token0);
-            lpToken[1] = IERC20(IUniPair(address(_wantToken)).token1());
-            _lpTokenLength = 2;
-        } catch { //if not LP, then single stake
-            lpToken[0] = _wantToken;
-            _lpTokenLength = 1;
-        }
-        lpTokenLength = _lpTokenLength;
 
         //maximizer config
         targetVault = IStrategy(_targetVault);
-        uint _targetPid;
+        uint _targetVid;
         if (_targetVault != address(0)) {
             maximizerRewardToken = IStrategy(_targetVault).wantToken();
-            _targetPid = vaultHealer.findPid(_targetVault);
+            _targetVid = vaultHealer.findVid(_targetVault);
         }
-        targetPid = _targetPid;
+        targetVid = _targetVid;
+
+        for (uint i; i < _earned.length && address(_earned[i]) != address(0); i++) {
+            earned[i] = _earned[i];
+        }
+        
+        //Look for LP tokens. If not, want must be a single-stake
+        IERC20 swapToToken = _targetVault == address(0) ? _wantToken : maximizerRewardToken; //swap earned to want, or swap earned to maximizer target's want
+        try IUniPair(address(swapToToken)).token0() returns (address _token0) {
+            lpToken[0] = IERC20(_token0);
+            lpToken[1] = IERC20(IUniPair(address(swapToToken)).token1());
+        } catch { //if not LP, then single stake
+            lpToken[0] = swapToToken;
+        }
+
     }
     
     function isMaximizer() public view returns (bool) {
@@ -97,8 +90,15 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         bool success;
+
+        LibVaultSwaps.SwapConfig memory swap = LibVaultSwaps.SwapConfig({
+            magnetite: settings.magnetite,
+            router: settings.router,
+            slippageFactor: settings.slippageFactor,
+            feeOnTransfer: settings.feeOnTransfer
+        });
         
-        for (uint i; i < earnedLength; i++) { //Process each earned token, whether it's 1, 2, or 8. 
+        for (uint i; address(earned[i]) != address(0); i++) { //Process each earned token, whether it's 1, 2, or 8. 
             IERC20 earnedToken = earned[i];
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == wantToken)
@@ -106,15 +106,13 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = earnFees.distribute(settings, earnedToken, earnedAmt, _to); // handles all fees for this earned token
-                // Swap half earned to token0, half to token1 (or split evenly however we must, for balancer etc)
-                // Same logic works if lpTokenLength == 1 ie single-staking pools
-                if (isMaximizer()) {
-                        LibVaultSwaps.safeSwap(settings, earnedAmt, earnedToken, maximizerRewardToken, address(this)); //todo: change this from a hardcoding
+                earnedAmt = earnFees.distribute(swap, earnedToken, earnedAmt, _to); // handles all fees for this earned token
+
+                if (address(lpToken[1]) == address(0)) { //single stake
+                    LibVaultSwaps.safeSwap(swap, earnedAmt, earnedToken, lpToken[0], address(this));
                 } else {
-                    for (uint j; j < lpTokenLength; j++) {
-                        LibVaultSwaps.safeSwap(settings, earnedAmt / lpTokenLength, earnedToken, lpToken[j], address(this));
-                    }
+                    LibVaultSwaps.safeSwap(swap, earnedAmt / 2, earnedToken, lpToken[0], address(this));
+                    LibVaultSwaps.safeSwap(swap, earnedAmt / 2, earnedToken, lpToken[1], address(this));
                 }
             }
         }
@@ -128,9 +126,9 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 //need to instantiate pool here?
                 crystlToken.safeIncreaseAllowance(address(vaultHealer), crystlBalance);
 
-                vaultHealer.stratDeposit(targetPid, crystlBalance);
+                vaultHealer.stratDeposit(targetVid, crystlBalance);
             } else {
-                if (lpTokenLength > 1) {
+                if (address(lpToken[1]) != address(0)) {
                     // Get want tokens, ie. add liquidity
                     LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]);
                 }

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "./libs/IBoostPool.sol";
+import "./BoostPool.sol";
 import "./libs/IStrategy.sol";
 import "./VaultHealerRoles.sol";
 
@@ -28,7 +28,7 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
     }
 
     struct BoostInfo {
-        IBoostPool boostPool;
+        BoostPool boostPool;
         bool isActive;
     }
 
@@ -81,7 +81,7 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
     // View function to see staked Want tokens on frontend.
 
     function stakedWantTokens(uint256 _vid, address _user) external view returns (uint256) {
-        uint256 _sharesTotal = totalSupply(_pid);
+        uint256 _sharesTotal = totalSupply(_vid);
         if (_sharesTotal == 0) return 0;
         
         uint256 wantLockedTotal = _vaultInfo[_vid].strat.wantLockedTotal();
@@ -115,13 +115,13 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
     
     //enables sharesTotal function on strategy
     function sharesTotal(address _strat) external view returns (uint) {
-        uint vid = findvid(_strat);
+        uint vid = findVid(_strat);
         return totalSupply(vid);
     }
     function isStrat(address _strat) public view returns (bool) {
         return _strats[_strat] > 0;
     }
-    function findvid(address _strat) public view returns (uint) {
+    function findVid(address _strat) public view returns (uint) {
         uint vid = _strats[_strat];
         require(vid > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
         return vid;
@@ -160,7 +160,7 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
     }
     function resetEarnFees(uint _vid) external onlyRole("FEE_SETTER") {
         _overrideDefaultEarnFees.unset(_vid);
-        _poolInfo[_vid].strat.setEarnFees(defaultEarnFees);
+        _vaultInfo[_vid].strat.setEarnFees(defaultEarnFees);
         emit ResetEarnFees(_vid);
 
     }
@@ -236,15 +236,15 @@ abstract contract VaultHealerBase is VaultHealerRoles, ERC1155Supply, Reentrancy
     }
     function panic(uint vid) external onlyRole("PAUSER") {
         _pause(vid);
-        _poolInfo[vid].strat.panic();
+        _vaultInfo[vid].strat.panic();
     }
     function unpanic(uint vid) external onlyRole("PAUSER") {
         _unpause(vid);
-        _poolInfo[vid].strat.unpanic();
+        _vaultInfo[vid].strat.unpanic();
     }
     
     function paused(address _strat) external view returns (bool) {
-        return paused(findvid(_strat));
+        return paused(findVid(_strat));
     }
     function paused(uint vid) public view returns (bool) {
         return !pauseMap.get(vid);

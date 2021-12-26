@@ -37,7 +37,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         sharesAdded = wantLockedTotal() - wantLockedBefore;
         if (_sharesTotal > 0) { //mulDiv prevents overflow for certain tokens/amounts
-            sharesAdded = FullMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
+            sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
         }
         require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }
@@ -49,7 +49,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //User's balance, in want tokens
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
-        uint256 userWant = FullMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
+        uint256 userWant = HardMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
 
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + settings.dust > userWant)
@@ -67,7 +67,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
         
         //Calculate shares to remove
-        sharesRemoved = FullMath.mulDivRoundingUp(
+        sharesRemoved = HardMath.mulDivRoundingUp(
             _wantAmt + withdrawSlippage,
             _sharesTotal,
             wantLockedBefore
@@ -75,7 +75,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         
         //Get final withdrawal amount
         if (sharesRemoved > _userShares) sharesRemoved = _userShares;
-        _wantAmt = FullMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
+        _wantAmt = HardMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
         
         if (_wantAmt > wantBal) _wantAmt = wantBal;
         require(_wantAmt > 0, "nothing to withdraw after slippage");

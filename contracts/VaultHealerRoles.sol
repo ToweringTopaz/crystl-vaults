@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "hardhat/console.sol";
 
 contract VaultHealerRoles is AccessControlEnumerable {
 

@@ -9,11 +9,9 @@ Join us at PolyCrystal.Finance!
 █▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
 */
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./libs/IVaultHealer.sol";
-import "hardhat/console.sol";
+import "./VaultHealer.sol";
 
 contract BoostPool is Ownable {
     using SafeERC20 for IERC20;
@@ -24,34 +22,31 @@ contract BoostPool is Ownable {
         int256 rewardDebt; // Reward debt. See explanation below.
     }
 
-    // Info of each pool.
-    struct PoolInfo {
-        uint256 lastRewardBlock;  // Last block number that Rewards distribution occurs.
-        uint256 accRewardTokenPerShare; // Accumulated Rewards per share, times 1e30. See below.
-    }
-
+    // The vaultHealer where the staking / want tokens all reside
+    VaultHealer public immutable VAULTHEALER;
     // The stake token
-    uint256 public STAKE_TOKEN_PID;
+    uint256 public immutable STAKE_TOKEN_VID;
     // The reward token
-    IERC20 public REWARD_TOKEN;
+    IERC20 public immutable REWARD_TOKEN;
 
     // Reward tokens created per block.
     uint256 public rewardPerBlock;
     // Keep track of number of tokens staked
     uint256 public totalStaked;
 
-    // Info of each pool.
-    PoolInfo public poolInfo;
     // Info of each user that stakes LP tokens.
     mapping (address => UserInfo) public userInfo;
     // The block number when Reward mining starts.
     uint256 public startBlock;
 	// The block number when mining ends.
     uint256 public bonusEndBlock;
-    // The vaultHealer where the staking / want tokens all reside
-    IVaultHealer public vaultHealer;
     //The ID number used by the VaultHealer to identify this boost, among those with the same staked token
     uint256 public boostID;
+    // Last block number that Rewards distribution occurs.
+    uint256 lastRewardBlock;
+     // Accumulated Rewards per share, times 1e30
+    uint256 accRewardTokenPerShare;
+
 
     event Deposit(address indexed user, uint256 amount);
     event DepositRewards(uint256 amount);
@@ -64,31 +59,28 @@ contract BoostPool is Ownable {
 
   constructor (
         address _vaultHealer,
-        uint256 _stakeTokenPid,
+        uint256 _stakeTokenVid,
         address _rewardToken,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     )
     {
-        STAKE_TOKEN_PID = _stakeTokenPid;
+        VAULTHEALER = VaultHealer(_vaultHealer);
+        STAKE_TOKEN_VID = _stakeTokenVid;
         REWARD_TOKEN = IERC20(_rewardToken);
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
-        vaultHealer = IVaultHealer(_vaultHealer);
+        
 
-        // staking pool
-        poolInfo = PoolInfo({
-            lastRewardBlock: startBlock,
-            accRewardTokenPerShare: 0
-        });
+        lastRewardBlock = _startBlock;
 
         boostID = type(uint).max; //will be set by VH
     }
 
     modifier onlyVaultHealer {
-        require(msg.sender == address(vaultHealer), "only callable by vaulthealer");
+        require(msg.sender == address(VAULTHEALER), "only callable by vaulthealer");
         _;
     }
 
@@ -119,28 +111,28 @@ contract BoostPool is Ownable {
     // View function to see pending Reward on frontend.
     function pendingReward(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
-        uint256 accRewardTokenPerShare = poolInfo.accRewardTokenPerShare;
-        if (block.number > poolInfo.lastRewardBlock && totalStaked != 0) {
-            uint256 multiplier = getMultiplier(poolInfo.lastRewardBlock, block.number);
+        uint256 _accRewardTokenPerShare = accRewardTokenPerShare;
+        if (block.number > lastRewardBlock && totalStaked != 0) {
+            uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
             uint256 tokenReward = multiplier * rewardPerBlock;
-            accRewardTokenPerShare = accRewardTokenPerShare + (tokenReward * 1e30 / totalStaked);
+            _accRewardTokenPerShare = _accRewardTokenPerShare + (tokenReward * 1e30 / totalStaked);
         }
         return calcPending(user, accRewardTokenPerShare);
     }
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
-        if (block.number <= poolInfo.lastRewardBlock) {
+        if (block.number <= lastRewardBlock) {
             return;
         }
         if (totalStaked == 0) {
-            poolInfo.lastRewardBlock = block.number;
+            lastRewardBlock = block.number;
             return;
         }
-        uint256 multiplier = getMultiplier(poolInfo.lastRewardBlock, block.number);
+        uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
         uint256 tokenReward = multiplier * rewardPerBlock;
-        poolInfo.accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
-        poolInfo.lastRewardBlock = block.number;
+        accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
+        lastRewardBlock = block.number;
     }
 
     function _harvest(address _user) internal returns (uint pending) {
@@ -167,7 +159,7 @@ contract BoostPool is Ownable {
         updatePool();
         UserInfo storage user = userInfo[_user];
         //Require statement should only fail due to a bug or an attempted exploit
-        require(user.amount == vaultHealer.boostShares(_user, STAKE_TOKEN_PID, boostID), "Invalid user balance!");
+        require(user.amount == VAULTHEALER.boostShares(_user, STAKE_TOKEN_VID, boostID), "Invalid user balance!");
         uint pending = _harvest(_user);
         updateRewardDebt(user, pending);
     }
@@ -262,26 +254,25 @@ contract BoostPool is Ownable {
     ///   Tokens are sent to owner
     /// @param token The address of the BEP20 token to sweep
     function sweepToken(IERC20 token) external onlyOwner {
-        // require(address(token) != address(vaultHealer), "can not sweep stake token"); //vaultHealer won't be an issue here
         uint256 balance = token.balanceOf(address(this));
         token.transfer(msg.sender, balance);
         emit EmergencySweepWithdraw(msg.sender, token, balance);
     }
 
     function updateRewardDebt(UserInfo storage user, uint pending) private {
-        uint debt = user.amount * poolInfo.accRewardTokenPerShare / 1e30;
+        uint debt = user.amount * accRewardTokenPerShare / 1e30;
         unchecked {
             user.rewardDebt = int(debt - pending);
         }
     }
     function calcPending(UserInfo storage user) private view returns (uint pending) {
-        return calcPending(user, poolInfo.accRewardTokenPerShare);
+        return calcPending(user, accRewardTokenPerShare);
     }
-    function calcPending(UserInfo storage user, uint accRewardTokenPerShare) private view returns (uint pending) {
+    function calcPending(UserInfo storage user, uint _accRewardTokenPerShare) private view returns (uint pending) {
         if (user.rewardDebt >= 0) {
-            return user.amount * accRewardTokenPerShare / 1e30 - uint(user.rewardDebt);
+            return user.amount * _accRewardTokenPerShare / 1e30 - uint(user.rewardDebt);
         } else {
-            return user.amount * accRewardTokenPerShare / 1e30 + uint(-user.rewardDebt);
+            return user.amount * _accRewardTokenPerShare / 1e30 + uint(-user.rewardDebt);
         }
     }
 }

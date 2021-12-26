@@ -20,16 +20,16 @@ import "./libs/IUniRouter.sol";
 
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;
-    using LibQuartz for IVaultHealer;
+    using LibQuartz for VaultHealer;
     using LibQuartz for IUniRouter;
     using LibQuartz for IUniPair;
     
     uint256 public constant MINIMUM_AMOUNT = 1000;
-    IVaultHealer public immutable vaultHealer;
+    VaultHealer public immutable vaultHealer;
 
     mapping(bytes32 => bool) private approvals;
 
-    constructor(IVaultHealer _vaultHealer) {
+    constructor(VaultHealer _vaultHealer) {
         vaultHealer = _vaultHealer;
     }
 
