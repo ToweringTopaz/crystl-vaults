@@ -12,14 +12,9 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;    
     
-    function sharesTotal() external view returns (uint) {
-        return vaultHealer.sharesTotal(address(this));
-    }
-    
-    //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
-    function earn(address _to) external onlyVaultHealer {
-        _earn(_to);    
-    }
+//    function sharesTotal() external view returns (uint) {
+//        return vaultHealer.sharesTotal(address(this));
+//    }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(address /*_from*/, address /*_to*/, uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {

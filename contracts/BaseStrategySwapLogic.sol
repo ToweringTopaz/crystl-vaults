@@ -29,7 +29,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     IERC20[EARNED_LEN] public earned;
     IERC20[LP_LEN] public lpToken;
     
-    VaultFees public earnFees;
+//    VaultFees public earnFees;
 
     event SetEarnFees(VaultFees _fees);
 
@@ -68,28 +68,22 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return address(targetVault) != address(0);
     }
 
-    modifier whenEarnIsReady { //returns without action if earn is not ready
-        if (block.number >= lastEarnBlock + settings.minBlocksBetweenEarns) {
-            _;
-        }
-    }
-
-    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyVaultHealer {
-        _earnFees.check();
-        earnFees = _earnFees;
-        emit SetEarnFees(_earnFees);
-    }
+//    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyVaultHealer {
+//        _earnFees.check();
+//        earnFees = _earnFees;
+//        emit SetEarnFees(_earnFees);
+//    }
 
     function _wantBalance() internal override view returns (uint256) {
         return wantToken.balanceOf(address(this));
     }
 
-    function _earn(address _to) internal virtual whenEarnIsReady {
+    function earn(address _to, VaultFees calldata earnFees) external onlyVaultHealer returns (bool success) {
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
-        bool success;
+        success;
 
         LibVaultSwaps.SwapConfig memory swap = LibVaultSwaps.SwapConfig({
             magnetite: settings.magnetite,
@@ -135,7 +129,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 _farm();
             }
         }
-        lastEarnBlock = uint64(block.number);
     }
     
     //Safely deposits want tokens in farm

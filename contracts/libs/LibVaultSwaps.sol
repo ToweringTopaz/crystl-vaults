@@ -23,7 +23,7 @@ library LibVaultSwaps {
         bool feeOnTransfer;
     }
 
-    function distribute(VaultFees storage earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
+    function distribute(VaultFees calldata earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
         // To pay for earn function

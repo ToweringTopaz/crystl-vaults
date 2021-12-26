@@ -12,10 +12,6 @@ abstract contract BaseStrategy {
 
     VaultHealer immutable public vaultHealer; 
     VaultSettings public settings; //the major storage variables used to configure the vault
-    
-    uint constant PANIC_LOCK_DURATION = 6 hours;
-    uint64 public panicLockExpiry; //panic can only happen again after the time has elapsed
-    uint64 public lastEarnBlock = uint64(block.number);
 
     event SetSettings(VaultSettings _settings);
         
@@ -75,7 +71,6 @@ abstract contract BaseStrategy {
         _unpause();
     }
     function panic() external onlyVaultHealer {
-        require (panicLockExpiry < block.timestamp, "panic once per 6 hours");
         _pause();
         _emergencyVaultWithdraw();
     }

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./VaultHealerBase.sol";
+import "./VaultHealerEarn.sol";
 
 //Handles "gate" functions like deposit/withdraw
-abstract contract VaultHealerGate is VaultHealerBase {
+abstract contract VaultHealerGate is VaultHealerEarn {
     using SafeERC20 for IERC20;
     
     struct TransferData { //All stats in underlying want tokens
@@ -62,8 +62,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
             });
                     
             uint256 wantLockedBefore = vault.strat.wantLockedTotal();
-            //put in earn here!! (and take out the earn in strat)
-            vault.strat.earn(_to); 
+
+            _doEarn(_vid); 
 
             if (vault.targetVid != 0 && wantLockedBefore > 0) { //
             UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
@@ -105,7 +105,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         VaultInfo storage vault = _vaultInfo[_vid];
         require(balanceOf(_to, _vid) > 0, "User has 0 shares");
 
-        vault.strat.earn(_to);
+        _doEarn(_vid);
 
         if (vault.targetVid != 0 && vault.strat.wantLockedTotal() > 0) {
             UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _to, _wantAmt);
@@ -123,11 +123,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
         transferData(_vid, _msgSender()).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        if (!paused(_vid) && vault.withdrawFee.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            console.log(vault.withdrawFee.rate);
-            uint feeAmt = wantAmt * vault.withdrawFee.rate / 10000;
+        VaultFee storage withdrawFee = overrideDefaultWithdrawFee(_vid) ? vault.withdrawFee : defaultWithdrawFee;
+        if (withdrawFee.rate > 0 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            uint feeAmt = wantAmt * withdrawFee.rate / 10000;
             wantAmt -= feeAmt;
-            vault.want.safeTransferFrom(address(vault.strat), vault.withdrawFee.receiver, feeAmt);
+            vault.want.safeTransferFrom(address(vault.strat), vault.withdrawFee.receiver, feeAmt); //todo: zap to correct fee token
         }
         
         //this call transfers wantTokens from the strat to the user
@@ -164,12 +164,12 @@ function _beforeTokenTransfer(
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
                 uint vid = ids[i];
-                uint underlyingValue = amounts[i] * _vaultInfo[vid].strat.wantLockedTotal() / totalSupply(vid);
+                uint underlyingValue = _vaultInfo[vid].strat.underlyingWantTokens(amounts[i], totalSupply(vid));
                 transferData(vid, from).transfersOut += underlyingValue;
                 transferData(vid, to).transfersIn += underlyingValue;
 
                 if (_vaultInfo[vid].targetVid != 0) {
-                    _vaultInfo[vid].strat.earn(from); //does it matter who calls the earn?
+                    _doEarn(vid); //does it matter who calls the earn? -- this one credits msg.sender, the account responsible for paying the gas
 
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 
@@ -183,7 +183,7 @@ function _beforeTokenTransfer(
     function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
         VaultInfo storage vault = _vaultInfo[_vid];
         VaultInfo storage target = _vaultInfo[vault.targetVid];
-        vault.rewardDebt[_from] += _wantAmt * vault.accRewardTokensPerShare / 1e30;
+        vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
 
         vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal(); 
 
@@ -197,12 +197,12 @@ function _beforeTokenTransfer(
 
             vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal();
             //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.rewardDebt[_from] * _wantAmt / balanceOf(_from, _vid); 
+            uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
             //withdraw proportional amount of crystl from targetVault()
             if (crystlShare > 0) {
                 vault.strat.withdrawMaximizerReward(vault.targetVid, crystlShare);
                 target.want.safeTransferFrom(address(vault.strat), _from, target.want.balanceOf(address(vault.strat)));
-                vault.rewardDebt[_from] -= vault.rewardDebt[_from] * _wantAmt / balanceOf(_from, _vid);
+                vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid);
                 }
             vault.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }

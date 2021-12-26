@@ -3,15 +3,20 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./VaultHealerGate.sol";
-import "./BoostPool.sol";
 
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
 
+    bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
+    bytes32 public constant BOOST_ADMIN = keccak256("BOOST_ADMIN");
+
     event AddBoost(address boost, uint vid, uint boostid);
     event BoostEmergencyWithdraw(address user, uint _vid, uint _boostID);
     
-
+    constructor(address _owner) {
+        _setupRole(BOOST_ADMIN, _owner);
+        _setRoleAdmin(BOOSTPOOL, BOOST_ADMIN);
+    }
 
     function addBoost(address _boost) external {
         require(!hasRole(BOOSTPOOL, _boost), "boost pool already added");
@@ -55,7 +60,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     function boostShares(address _user, uint _vid, uint _boostID) external view returns (uint) {
         VaultInfo storage vault = _vaultInfo[_vid];
         UserInfo storage user = vault.user[_user];
-        if (!user.boosts.get(_boostID)) return 0;
+        if (user.boosts.get(_boostID)) return 0;
         return balanceOf(_user, _vid);
     }
 
