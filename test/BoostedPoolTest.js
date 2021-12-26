@@ -24,13 +24,13 @@ const { vaultSettings } = require('../configs/vaultSettings');
 const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
 const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = apeSwapVaults[0].masterchef;
-const TACTIC = apeSwapVaults[0].tactic;
+const MASTERCHEF = apeSwapVaults[1].masterchef;
+const TACTIC = apeSwapVaults[1].tactic;
 const VAULT_HEALER = apeSwapVaults[0].vaulthealer;
-const WANT = apeSwapVaults[0].want;
-const EARNED = apeSwapVaults[0].earned;
-const PATHS = apeSwapVaults[0].paths;
-const PID = apeSwapVaults[0].PID;
+const WANT = apeSwapVaults[1].want;
+const EARNED = apeSwapVaults[1].earned;
+const PATHS = apeSwapVaults[1].paths;
+const PID = apeSwapVaults[1].PID;
 const ROUTER = vaultSettings.standard[0];
 
 const TOLERANCE = vaultSettings.standard[2];
@@ -190,10 +190,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
             user1InitialDeposit = ethers.utils.parseEther("5000");
 
-            await LPtoken.approve(vaultHealer.address, user1InitialDeposit);
+            await LPtoken.connect(user1).approve(vaultHealer.address, user1InitialDeposit);
             LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
-            await vaultHealer["deposit(uint256,uint256)"](strat1_pid, user1InitialDeposit);
-            const vaultSharesTotalAfterFirstDeposit = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            await vaultHealer.connect(user1)["deposit(uint256,uint256)"](strat1_pid, user1InitialDeposit);
+            const vaultSharesTotalAfterFirstDeposit = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`User1 deposits ${ethers.utils.formatEther(user1InitialDeposit)} LP tokens`)
             console.log(`Vault Shares Total went up by ${ethers.utils.formatEther(vaultSharesTotalAfterFirstDeposit)} LP tokens`)
 
@@ -207,15 +207,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(userBalanceOfStrategyTokens).to.eq(user1InitialDeposit); 
         })
 
-        it('Should allow user to boost by staking their receipt tokens in the boostPool, showing a balanceOf in the pool afterwards', async () => {
+        it('Should allow user to boost via enableBoost, showing a balanceOf in the pool afterwards', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, strat1_pid);
-            //need to do approval first?
-            await vaultHealer.connect(user1).setApprovalForAll(boostPool.address, true); //dangerous to approve all forever?
+            await vaultHealer.connect(user1)["enableBoost(uint256,uint256)"](strat1_pid, 0);
 
-            await boostPool.connect(user1).deposit(userBalanceOfStrategyTokensBeforeStaking);
             user = await boostPool.userInfo(user1.address);
             userBalanceOfBoostPool = user.amount;
-            expect(userBalanceOfBoostPool).to.equal(userBalanceOfStrategyTokensBeforeStaking); //will only be true on first deposit?
+            expect(userBalanceOfBoostPool).to.equal(userBalanceOfStrategyTokensBeforeStaking);
         })
 
         it('Should accumulate rewards for the staked user over time', async () => {
@@ -229,7 +227,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(userRewardDebtAfterTime).to.be.gt(userRewardDebtAtStart); //will only be true on first deposit?
         })
 
-        it('Should should allow the user to unstake their receipt tokens, and get correct amount back, and get reward out', async () => {
+        it('Should allow the user to harvest their boost pool rewards', async () => {
             user = await boostPool.userInfo(user1.address);
             userBalanceOfBoostPoolBeforeWithdrawal = user.amount;
             // console.log(userBalanceOfBoostPoolBeforeWithdrawal)
@@ -239,7 +237,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             userRewardTokenBalanceBeforeWithdrawal = await crystlToken.balanceOf(user1.address);
 
-            await boostPool.connect(user1)["withdraw(uint256)"](userBalanceOfBoostPool);
+            await boostPool.connect(user1)["harvest()"]();
 
             user = await boostPool.userInfo(user1.address);
             userBalanceOfBoostPoolAfterWithdrawal = user.amount;

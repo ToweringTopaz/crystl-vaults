@@ -12,7 +12,7 @@ Join us at PolyCrystal.Finance!
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./VaultHealer.sol";
-
+import "hardhat/console.sol";
 contract BoostPool is Ownable {
     using SafeERC20 for IERC20;
 
@@ -115,9 +115,9 @@ contract BoostPool is Ownable {
         if (block.number > lastRewardBlock && totalStaked != 0) {
             uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
             uint256 tokenReward = multiplier * rewardPerBlock;
-            _accRewardTokenPerShare = _accRewardTokenPerShare + (tokenReward * 1e30 / totalStaked);
+            _accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
         }
-        return calcPending(user, accRewardTokenPerShare);
+        return calcPending(user, _accRewardTokenPerShare);
     }
 
     // Update reward variables of the given pool to be up-to-date.
@@ -155,11 +155,18 @@ contract BoostPool is Ownable {
     }
 
     //Collect rewards without touching vault balances
-    function harvest(address _user) external {
+    function harvest() external {
+        harvest(_msgSender());
+    }
+    function harvest(address _user) public {
         updatePool();
         UserInfo storage user = userInfo[_user];
+        
         //Require statement should only fail due to a bug or an attempted exploit
+        console.log("user.amount", user.amount);
+        console.log("VAULTHEALER.boostShares(...)", VAULTHEALER.boostShares(_user, STAKE_TOKEN_VID, boostID));
         require(user.amount == VAULTHEALER.boostShares(_user, STAKE_TOKEN_VID, boostID), "Invalid user balance!");
+
         uint pending = _harvest(_user);
         updateRewardDebt(user, pending);
     }

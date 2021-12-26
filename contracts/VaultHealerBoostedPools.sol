@@ -36,7 +36,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         VaultInfo storage vault = _vaultInfo[_vid];
         UserInfo storage user = vault.user[_user];
         require(vault.boosts[_boostID].isActive, "not an active boost");
-        require(user.boosts.get(_boostID), "boost is already active for user");
+        require(!user.boosts.get(_boostID), "boost is already active for user");
 
         user.boosts.set(_boostID);
 
@@ -55,7 +55,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     function boostShares(address _user, uint _vid, uint _boostID) external view returns (uint) {
         VaultInfo storage vault = _vaultInfo[_vid];
         UserInfo storage user = vault.user[_user];
-        if (user.boosts.get(_boostID)) return 0;
+        if (!user.boosts.get(_boostID)) return 0;
         return balanceOf(_user, _vid);
     }
 
