@@ -28,10 +28,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
 
     IERC20[EARNED_LEN] public earned;
     IERC20[LP_LEN] public lpToken;
-    
-//    VaultFees public earnFees;
-
-    event SetEarnFees(VaultFees _fees);
 
     constructor(
         IERC20 _wantToken,
@@ -67,12 +63,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     function isMaximizer() public view returns (bool) {
         return address(targetVault) != address(0);
     }
-
-//    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyVaultHealer {
-//        _earnFees.check();
-//        earnFees = _earnFees;
-//        emit SetEarnFees(_earnFees);
-//    }
 
     function _wantBalance() internal override view returns (uint256) {
         return wantToken.balanceOf(address(this));
