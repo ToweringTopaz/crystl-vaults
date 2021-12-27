@@ -67,14 +67,23 @@ contract BoostPool is Ownable {
     )
     {
         VAULTHEALER = VaultHealer(_vaultHealer);
+        require(VaultHealer.supportsInterface(IERC1155.interfaceID), "invalid vaulthealer");
+        
         STAKE_TOKEN_VID = _stakeTokenVid;
+        (IERC20 vaultWant, IStrategy vaultStrat) = VAULTHEALER.vaultInfo(_stakeTokenVid);
+        require(address(vaultWant) != address(0) && address(vaultStrat) != address(0), "bad want/strat for stake_token_vid");
+        
         REWARD_TOKEN = IERC20(_rewardToken);
+        uint rewardTotalSupply = REWARD_TOKEN.totalSupply();
+
         rewardPerBlock = _rewardPerBlock;
+        
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
-        
-
         lastRewardBlock = _startBlock;
+
+        require (block.number <= startBlock, "rewards cannot have already started");
+        require(rewardTotalSupply > _rewardPerBlock * (_bonusEndBlock - _startBlock), "pool would reward more than total supply of rewardtoken!");
 
         boostID = type(uint).max; //will be set by VH
     }
