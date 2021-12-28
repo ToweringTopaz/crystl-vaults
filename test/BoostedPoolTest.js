@@ -112,7 +112,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             strat1_pid, //I'm hardcoding this for now - how can we do it in future??
             "0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64", //reward token = crystl
             1000000, //is this in WEI? assume so...
-            22051918, //this is the block we're currently forking from - WATCH OUT if we change forking block
+            22051958, //this is the block we're currently forking from - WATCH OUT if we change forking block
             23051948 //also watch out that we don't go past this, but we shouldn't
         )
         
@@ -345,7 +345,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             await vaultHealer.connect(user1).setApprovalForAll(boostPool.address, true); //dangerous to approve all forever?
 
-            await boostPool.connect(user1).deposit(userBalanceOfStrategyTokensBeforeStaking);
+            await vaultHealer.connect(user1)["enableBoost(uint256,uint256)"](strat1_pid, 0);
             user = await boostPool.userInfo(user1.address);
             userBalanceOfBoostPool = user.amount;
 
