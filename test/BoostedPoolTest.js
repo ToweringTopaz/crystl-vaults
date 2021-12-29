@@ -343,9 +343,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, strat1_pid);
 
-            await vaultHealer.connect(user1).setApprovalForAll(boostPool.address, true); //dangerous to approve all forever?
+            //Should not use approval at all ever unless enabling boost for other users
+            //await vaultHealer.connect(user1).setApprovalForAll(boostPool.address, true); //dangerous to approve all forever?
 
-            await vaultHealer.connect(user1)["enableBoost(uint256,uint256)"](strat1_pid, 0);
+            //await vaultHealer.connect(user1)["enableBoost(uint256,uint256)"](strat1_pid, 0);
             user = await boostPool.userInfo(user1.address);
             userBalanceOfBoostPool = user.amount;
 
@@ -359,7 +360,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
             // console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
-            userBoostedWantTokensBeforeWithdrawal = await vaultHealer.boostedWantTokens(strat1_pid, user1.address);
+            userBoostedWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
             // console.log("userBoostedWantTokensBeforeWithdrawal");
             // console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
@@ -373,7 +374,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
             
-            userBoostedWantTokensAfterWithdrawal = await vaultHealer.boostedWantTokens(strat1_pid, user1.address);
+            userBoostedWantTokensAfterWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
