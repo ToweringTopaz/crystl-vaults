@@ -218,12 +218,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should accumulate rewards for the staked user over time', async () => {
             userRewardDebtAtStart = await boostPool.pendingReward(user1.address);
-
+            console.log(userRewardDebtAtStart);
             for (i=0; i<1000;i++) { //minBlocksBetweenSwaps
                 await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
                 }
             
             userRewardDebtAfterTime = await boostPool.pendingReward(user1.address);;
+            console.log(userRewardDebtAfterTime);
             expect(userRewardDebtAfterTime).to.be.gt(userRewardDebtAtStart); //will only be true on first deposit?
         })
 
@@ -343,7 +344,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, strat1_pid);
 
-            //Should not use approval at all ever unless enabling boost for other users
+            //Should not use approval in this manner ever
             //await vaultHealer.connect(user1).setApprovalForAll(boostPool.address, true); //dangerous to approve all forever?
 
             //await vaultHealer.connect(user1)["enableBoost(uint256,uint256)"](strat1_pid, 0);
