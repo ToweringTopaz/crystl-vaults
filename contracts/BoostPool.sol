@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./VaultHealer.sol";
 import "./libs/IStrategy.sol";
-import "hardhat/console.sol";
+
 contract BoostPool is Ownable {
     using SafeERC20 for IERC20;
 
@@ -102,7 +102,7 @@ contract BoostPool is Ownable {
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256) {
         if (_to <= bonusEndBlock) {
             return _to - _from;
         } else if (_from >= bonusEndBlock) {
@@ -133,25 +133,23 @@ contract BoostPool is Ownable {
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
-        if (block.number <= lastRewardBlock) {
-            return;
-        }
-        if (totalStaked == 0) {
+        if (block.number > lastRewardBlock) {
+            if (totalStaked > 0) {
+                uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
+                uint256 tokenReward = multiplier * rewardPerBlock;
+                accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
+            }
             lastRewardBlock = block.number;
-            return;
         }
-        uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
-        uint256 tokenReward = multiplier * rewardPerBlock;
-        accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
-        lastRewardBlock = block.number;
     }
 
+    //Internal function to harvest rewards
     function _harvest(address _user) internal returns (uint pending) {
         UserInfo storage user = userInfo[_user];
         if (user.amount > 0) {
-            pending = calcPending(user);
+            pending = calcPending(user, accRewardTokenPerShare);
             if(pending > 0) {
-                uint256 currentRewardBalance = rewardBalance();
+                uint256 currentRewardBalance = REWARD_TOKEN.balanceOf(address(this));
                 if(currentRewardBalance > 0) {
                     if(pending > currentRewardBalance) {
                         safeTransferReward(_user, currentRewardBalance);
@@ -174,8 +172,6 @@ contract BoostPool is Ownable {
         UserInfo storage user = userInfo[_user];
         
         //Require statement should only fail due to a bug or an attempted exploit
-        console.log("user.amount", user.amount);
-        console.log("VAULTHEALER.boostShares(...)", VAULTHEALER.boostShares(_user, STAKE_TOKEN_VID, boostID));
         require(user.amount == VAULTHEALER.boostShares(_user, STAKE_TOKEN_VID, boostID), "Invalid user balance!");
 
         uint pending = _harvest(_user);
@@ -185,9 +181,10 @@ contract BoostPool is Ownable {
     function joinPool(address _user, uint _amount) external onlyVaultHealer {
         updatePool();
         UserInfo storage user = userInfo[_user];
-        require (user.amount == 0 && user.rewardDebt == 0, "user already is in pool");
+        require (user.amount == 0, "user already is in pool");
         require (block.number < bonusEndBlock, "pool has ended");
         user.amount = _amount;
+        totalStaked += _amount;
         updateRewardDebt(user, 0);
     }
     //Used in place of deposit/withdraw because nothing is actually stored here
@@ -220,12 +217,6 @@ contract BoostPool is Ownable {
         }
     }
 
-    /// Obtain the reward balance of this contract
-    /// @return wei balace of conract
-    function rewardBalance() public view returns (uint256) {
-        return REWARD_TOKEN.balanceOf(address(this));
-    }
-
     // Deposit Rewards into contract
     function depositRewards(uint256 _amount) external {
         require(_amount > 0, 'Deposit value must be greater than 0.');
@@ -243,6 +234,7 @@ contract BoostPool is Ownable {
 
     /// @param _rewardPerBlock The amount of reward tokens to be given per block
     function setRewardPerBlock(uint256 _rewardPerBlock) external onlyOwner {
+        updatePool();
         rewardPerBlock = _rewardPerBlock;
         emit LogUpdatePool(bonusEndBlock, rewardPerBlock);
     }
@@ -262,7 +254,7 @@ contract BoostPool is Ownable {
 
     // Withdraw reward. EMERGENCY ONLY.
     function emergencyRewardWithdraw(uint256 _amount) external onlyOwner {
-        require(_amount <= rewardBalance(), 'not enough rewards');
+        require(_amount <= REWARD_TOKEN.balanceOf(address(this)), 'not enough rewards');
         // Withdraw rewards
         safeTransferReward(msg.sender, _amount);
         emit EmergencyRewardWithdraw(msg.sender, _amount);
@@ -277,20 +269,16 @@ contract BoostPool is Ownable {
         emit EmergencySweepWithdraw(msg.sender, token, balance);
     }
 
+    //Standard reward debt calculation, but subtracting any delinquent pending rewards
     function updateRewardDebt(UserInfo storage user, uint pending) private {
-        uint debt = user.amount * accRewardTokenPerShare / 1e30;
-        unchecked {
-            user.rewardDebt = int(debt - pending);
-        }
+        user.rewardDebt = int(user.amount * accRewardTokenPerShare / 1e30) - int(pending);
     }
-    function calcPending(UserInfo storage user) private view returns (uint pending) {
-        return calcPending(user, accRewardTokenPerShare);
-    }
+
     function calcPending(UserInfo storage user, uint _accRewardTokenPerShare) private view returns (uint pending) {
-        if (user.rewardDebt >= 0) {
-            return user.amount * _accRewardTokenPerShare / 1e30 - uint(user.rewardDebt);
-        } else {
-            return user.amount * _accRewardTokenPerShare / 1e30 + uint(-user.rewardDebt);
+        pending = user.amount * _accRewardTokenPerShare / 1e30;
+        
+        unchecked { //If rewardDebt is negative, underflow is desired here. This adds delinquent pending rewards back into the current total
+            pending -= uint(user.rewardDebt);
         }
     }
 }
