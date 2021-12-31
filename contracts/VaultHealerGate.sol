@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./VaultHealerBase.sol";
+import "./VaultHealerEarn.sol";
 
 //Handles "gate" functions like deposit/withdraw
-abstract contract VaultHealerGate is VaultHealerBase {
+abstract contract VaultHealerGate is VaultHealerEarn {
     using SafeERC20 for IERC20;
     
     struct TransferData { //All stats in underlying want tokens
@@ -20,7 +19,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint256 amount;
     }
     mapping(bytes32 => TransferData) private _transferData;
-    PendingDeposit private pendingDeposit;
+    PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
+
+    event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
+    event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
     function transferData(uint vid, address user) internal view returns (TransferData storage) {
         return _transferData[keccak256(abi.encodePacked(vid, user))]; //what does this do?
@@ -36,40 +38,40 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
     // Want tokens moved from user -> this -> Strat (compounding)
     function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, msg.sender);
+        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
 
     function stratDeposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) onlyRole(STRATEGY) {
-        _deposit(_vid, _wantAmt, msg.sender);
+        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For depositing for other users
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, _to);
+        _deposit(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _to) private {
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         VaultInfo storage vault = _vaultInfo[_vid];
-
-        require(address(vault.strat) != address(0), "That strategy does not exist");
+        //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
+        //require(address(vault.strat) != address(0), "That strategy does not exist");
 
         if (_wantAmt > 0) {
-            pendingDeposit = PendingDeposit({ //todo: understand better what this does
+            pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
                 token: vault.want,
-                from: msg.sender,
+                from: _from,
                 amount: _wantAmt
             });
                     
             uint256 wantLockedBefore = vault.strat.wantLockedTotal();
-            //put in earn here!! (and take out the earn in strat)
-            vault.strat.earn(_to); 
+
+            _doEarn(_vid); 
 
             if (vault.targetVid != 0 && wantLockedBefore > 0) { //
-            UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
+                UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
             }
 
-            uint256 sharesAdded = vault.strat.deposit(msg.sender, _to, _wantAmt, totalSupply(_vid));
+            uint256 sharesAdded = vault.strat.deposit(_wantAmt, totalSupply(_vid));
             //we mint tokens for the user via the 1155 contract
             _mint(
                 _to,
@@ -77,72 +79,75 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 sharesAdded,
                 hex'' //leave this blank for now
             );
-        //update the user's data for earn tracking purposes
-        transferData(_vid, _to).deposits += _wantAmt - pendingDeposit.amount;
-        
-        delete pendingDeposit;
+            //update the user's data for earn tracking purposes
+            transferData(_vid, _to).deposits += _wantAmt - pendingDeposits[pendingDeposits.length - 1].amount;
+            
+            pendingDeposits.pop();
         }
-        emit Deposit(_to, _vid, _wantAmt);
+        emit Deposit(_from, _to, _vid, _wantAmt);
     }
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
-        _withdraw(_vid, _wantAmt, msg.sender);
+        _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // Withdraw LP tokens from MasterChef.
 
     function stratWithdraw(uint256 _vid, uint256 _wantAmt) external onlyRole(STRATEGY) {
-        _withdraw(_vid, _wantAmt, msg.sender);
+        _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For withdrawing to other address
     function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
-        _withdraw(_vid, _wantAmt, _to);
+        _withdraw(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _to) private {
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         VaultInfo storage vault = _vaultInfo[_vid];
-        require(balanceOf(_to, _vid) > 0, "User has 0 shares");
+        require(balanceOf(_from, _vid) > 0, "User has 0 shares");
 
-        vault.strat.earn(_to);
+        _doEarn(_vid);
 
         if (vault.targetVid != 0 && vault.strat.wantLockedTotal() > 0) {
-            UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _to, _wantAmt);
+            UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _from, _wantAmt);
         }
 
-        (uint256 sharesRemoved, uint256 wantAmt) = vault.strat.withdraw(msg.sender, _to, _wantAmt, balanceOf(_to, _vid), totalSupply(_vid));
+        (uint256 sharesRemoved, uint256 wantAmt) = vault.strat.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
 
         //burn the tokens equal to sharesRemoved
         _burn(
-            _to,
+            _from,
             _vid,
             sharesRemoved
         );
         //updates transferData for this user, so that we are accurately tracking their earn
-        transferData(_vid, _msgSender()).withdrawals += wantAmt;
+        transferData(_vid, _from).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        if (!paused(_vid) && vault.withdrawFee.rate > 0) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            console.log(vault.withdrawFee.rate);
-            uint feeAmt = wantAmt * vault.withdrawFee.rate / 10000;
+        VaultFee storage withdrawFee = getWithdrawFee(_vid);
+        address feeReceiver = withdrawFee.receiver;
+        uint16 feeRate = withdrawFee.rate;
+        if (feeReceiver != address(0) && feeRate > 0 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            uint feeAmt = wantAmt * feeRate / 10000;
             wantAmt -= feeAmt;
-            vault.want.safeTransferFrom(address(vault.strat), vault.withdrawFee.receiver, feeAmt);
+            vault.want.safeTransferFrom(address(vault.strat), feeReceiver, feeAmt); //todo: zap to correct fee token
         }
         
         //this call transfers wantTokens from the strat to the user
         vault.want.safeTransferFrom(address(vault.strat), _to, wantAmt);
 
-        emit Withdraw(msg.sender, _vid, _wantAmt);
+        emit Withdraw(_from, _to, _vid, _wantAmt);
     }
 
     // Withdraw everything from vault for yourself
     function withdrawAll(uint256 _vid) external nonReentrant {
-        _withdraw(_vid, type(uint256).max, msg.sender);
+        _withdraw(_vid, type(uint256).max, msg.sender, msg.sender);
     }
     
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint _amount) external onlyRole(STRATEGY) {
+        PendingDeposit storage pendingDeposit = pendingDeposits[pendingDeposits.length - 1];
         pendingDeposit.amount -= _amount;
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,
@@ -169,7 +174,7 @@ function _beforeTokenTransfer(
                 transferData(vid, to).transfersIn += underlyingValue;
 
                 if (_vaultInfo[vid].targetVid != 0) {
-                    _vaultInfo[vid].strat.earn(from); //does it matter who calls the earn?
+                    _doEarn(vid); //does it matter who calls the earn? -- this one credits msg.sender, the account responsible for paying the gas
 
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 
@@ -183,7 +188,7 @@ function _beforeTokenTransfer(
     function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
         VaultInfo storage vault = _vaultInfo[_vid];
         VaultInfo storage target = _vaultInfo[vault.targetVid];
-        vault.rewardDebt[_from] += _wantAmt * vault.accRewardTokensPerShare / 1e30;
+        vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
 
         vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal(); 
 
@@ -197,12 +202,12 @@ function _beforeTokenTransfer(
 
             vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal();
             //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.rewardDebt[_from] * _wantAmt / balanceOf(_from, _vid); 
+            uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
             //withdraw proportional amount of crystl from targetVault()
             if (crystlShare > 0) {
                 vault.strat.withdrawMaximizerReward(vault.targetVid, crystlShare);
                 target.want.safeTransferFrom(address(vault.strat), _from, target.want.balanceOf(address(vault.strat)));
-                vault.rewardDebt[_from] -= vault.rewardDebt[_from] * _wantAmt / balanceOf(_from, _vid);
+                vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid);
                 }
             vault.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }

@@ -125,8 +125,6 @@ contract QuartzUniV2Zap {
         _approveTokenIfNeeded(address(pair));
         vaultHealer.deposit(pid, amountLiquidity, msg.sender);
 
-        assert(pair.balanceOf(address(this)) == 0);
-
         address[] memory tokens = new address[](3);
         tokens[0] = token0;
         tokens[1] = token1;

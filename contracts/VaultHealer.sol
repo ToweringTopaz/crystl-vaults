@@ -1,21 +1,60 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 import "./VaultHealerBoostedPools.sol";
 import "./Magnetite.sol";
+import "./QuartzUniV2Zap.sol";
 
 contract VaultHealer is VaultHealerBoostedPools {
     
+    bytes32 public constant PATH_SETTER = keccak256("PATH_SETTER");
+
     Magnetite public magnetite;
+    QuartzUniV2Zap public zap;
 
     constructor(VaultFees memory _fees, VaultFee memory _withdrawFee)
-        VaultHealerRoles(msg.sender)
-        VaultHealerBase(_fees, _withdrawFee) 
+        VaultHealerBase(msg.sender) 
+        VaultHealerBoostedPools(msg.sender)
+        VaultHealerFees(msg.sender, _fees, _withdrawFee)
+        VaultHealerPause(msg.sender)
     {
         magnetite = new Magnetite();
+        zap = new QuartzUniV2Zap(this);
+        _setupRole(PATH_SETTER, msg.sender);
     }
     
     function setPath(address router, address[] calldata path) external onlyRole(PATH_SETTER) {
         magnetite.overridePath(router, path);
+    }
+
+    function vaultLength() external view returns (uint256) {
+        return _vaultInfo.length;
+    }
+
+    function owner() external view returns (address) {
+        return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
+    }
+    
+    function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy strat) {
+        return (_vaultInfo[vid].want, _vaultInfo[vid].strat);
+    }
+    function rewardDebt(uint vid, address _user) external view returns (uint) {
+        return _vaultInfo[vid].user[_user].rewardDebt;
+    }
+
+    // View function to see staked Want tokens on frontend.
+
+    function stakedWantTokens(uint256 _vid, address _user) external view returns (uint256) {
+        uint256 _sharesTotal = totalSupply(_vid);
+        if (_sharesTotal == 0) return 0;
+        
+        uint256 wantLockedTotal = _vaultInfo[_vid].strat.wantLockedTotal();
+        
+        return balanceOf(_user, _vid) * wantLockedTotal / _sharesTotal;
+    }
+    //enables sharesTotal function on strategy
+    function sharesTotal(address _strat) external view returns (uint) {
+        uint vid = findVid(_strat);
+        return totalSupply(vid);
     }
 }

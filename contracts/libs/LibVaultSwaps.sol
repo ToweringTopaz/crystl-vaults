@@ -23,27 +23,27 @@ library LibVaultSwaps {
         bool feeOnTransfer;
     }
 
-    function distribute(VaultFees storage earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt, address _to) internal returns (uint earnedAmt) {
+    function distribute(VaultFees calldata earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
         uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, earnFees.userReward.token, _to);
+            safeSwap(swap, fee, _earnedToken, wnative(swap.router), tx.origin);
             earnedAmt -= fee;
             }
 
         //distribute rewards
         fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, _earnedToken == earnFees.burn.token ? earnFees.burn.token : earnFees.treasuryFee.token, earnFees.treasuryFee.receiver);
+            safeSwap(swap, fee, _earnedToken, wnative(swap.router), earnFees.treasuryFee.receiver);
             earnedAmt -= fee;
             }
         
         //burn crystl
         fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, earnFees.burn.token, earnFees.burn.receiver);
+            safeSwap(swap, fee, _earnedToken, wnative(swap.router), earnFees.burn.receiver);
             earnedAmt -= fee;
             }
     }

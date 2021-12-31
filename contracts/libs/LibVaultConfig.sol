@@ -20,7 +20,6 @@ struct VaultFees {
     VaultFee burn; //burn address for CRYSTL
 }
 struct VaultFee {
-    IERC20 token;
     address receiver;
     uint16 rate;
 }
@@ -32,9 +31,16 @@ library LibVaultConfig {
     uint256 constant SLIPPAGE_FACTOR_UL = 9950; // Must allow for at least 0.5% slippage (rounding errors)
     
     function check(VaultFees memory _fees) internal pure {
-        require(_fees.treasuryFee.receiver != address(0), "Invalid treasury address");
-        require(_fees.burn.receiver != address(0), "Invalid buyback address");
+        require(_fees.treasuryFee.receiver != address(0) || _fees.treasuryFee.rate == 0, "Invalid treasury address");
+        require(_fees.burn.receiver != address(0) || _fees.treasuryFee.rate == 0, "Invalid buyback address");
         require(_fees.userReward.rate + _fees.treasuryFee.rate + _fees.burn.rate <= FEE_MAX_TOTAL, "Max fee of 100%");
+    }
+
+    function check(VaultFee memory _fee) internal pure {
+        if (_fee.rate > 0) {
+            require(_fee.receiver != address(0), "Invalid treasury address");
+            require(_fee.rate <= FEE_MAX_TOTAL, "Max fee of 100%");
+        }
     }
 
     function check(VaultSettings memory _settings) internal pure {

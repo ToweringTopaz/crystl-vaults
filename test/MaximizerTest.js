@@ -59,16 +59,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         });
         const feeConfig = 
             [
-                [ WMATIC, FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
-                [ WMATIC, FEE_ADDRESS, 500 ], //reward fee: paid in DAI; standard fee address; 0% rate
-                [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
+                [ FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
+                [ FEE_ADDRESS, 500 ], //reward fee: paid in DAI; standard fee address; 0% rate
+                [ BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(feeConfig, [ ZERO_ADDRESS, FEE_ADDRESS, 10 ]);
+        vaultHealer = await VaultHealer.deploy(feeConfig, [ FEE_ADDRESS, 10 ]);
         // console.log(vaultHealer.address);
         
-        QuartzUniV2Zap = await ethers.getContractFactory('QuartzUniV2Zap'); //<-- this needs to change for different tests!!
-        quartzUniV2Zap = await QuartzUniV2Zap.deploy(vaultHealer.address);
+        quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', vaultHealer.zap());
 
         StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
             // libraries: {
@@ -117,10 +116,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
         
-        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHStandard.address);
+        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHStandard.address, 10);
         strat1_pid = await vaultHealer.vaultLength() -1;
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyCrystlCompounder.address);
+        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyCrystlCompounder.address, 10);
         crystl_compounder_strat_pid = await vaultHealer.vaultLength() -1;
 
         const MAXIMIZER_VARS = [
@@ -136,7 +135,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         strategyVHMaximizer = await StrategyVHStandard.deploy(...MAXIMIZER_VARS);
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHMaximizer.address);
+        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHMaximizer.address, 10);
         maximizer_strat_pid = await vaultHealer.vaultLength() -1;
 
         //create the staking pool for the boosted vault
@@ -147,8 +146,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             strat1_pid, //I'm hardcoding this for now - how can we do it in future??
             "0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64", //reward token = crystl
             1000000, //is this in WEI? assume so...
-            22051948, //this is the block we're currently forking from - WATCH OUT if we change forking block
-            22051948+640515 //also watch out that we don't go past this, but we shouldn't
+            22051958, //this is the block we're currently forking from - WATCH OUT if we change forking block
+            22051958+640515 //also watch out that we don't go past this, but we shouldn't
         )
         
         vaultHealer.addBoost(boostPool.address);
@@ -386,7 +385,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer.earnSome([maximizer_strat_pid]);
+            await vaultHealer.earn(maximizer_strat_pid);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -419,7 +418,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer.earnSome([crystl_compounder_strat_pid]);
+            await vaultHealer.earn(crystl_compounder_strat_pid);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
