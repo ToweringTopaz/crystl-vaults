@@ -28,10 +28,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
 
     IERC20[EARNED_LEN] public earned;
     IERC20[LP_LEN] public lpToken;
-    
-    VaultFees public earnFees;
-
-    event SetEarnFees(VaultFees _fees);
 
     constructor(
         IERC20 _wantToken,
@@ -68,28 +64,15 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return address(targetVault) != address(0);
     }
 
-    modifier whenEarnIsReady { //returns without action if earn is not ready
-        if (block.number >= lastEarnBlock + settings.minBlocksBetweenEarns) {
-            _;
-        }
-    }
-
-    function setEarnFees(VaultFees calldata _earnFees) external virtual onlyVaultHealer {
-        _earnFees.check();
-        earnFees = _earnFees;
-        emit SetEarnFees(_earnFees);
-    }
-
     function _wantBalance() internal override view returns (uint256) {
         return wantToken.balanceOf(address(this));
     }
 
-    function _earn(address _to) internal virtual whenEarnIsReady {
+    function _earn(VaultFees calldata earnFees) internal virtual returns (bool success) {
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
-        bool success;
 
         LibVaultSwaps.SwapConfig memory swap = LibVaultSwaps.SwapConfig({
             magnetite: settings.magnetite,
@@ -106,7 +89,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = earnFees.distribute(swap, earnedToken, earnedAmt, _to); // handles all fees for this earned token
+                earnedAmt = earnFees.distribute(swap, earnedToken, earnedAmt); // handles all fees for this earned token
 
                 if (address(lpToken[1]) == address(0)) { //single stake
                     LibVaultSwaps.safeSwap(swap, earnedAmt, earnedToken, lpToken[0], address(this));
@@ -135,7 +118,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 _farm();
             }
         }
-        lastEarnBlock = uint64(block.number);
     }
     
     //Safely deposits want tokens in farm

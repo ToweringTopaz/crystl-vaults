@@ -163,19 +163,10 @@ contract BoostPool is Ownable {
         }
     }
 
-    //Collect rewards without touching vault balances
-    function harvest() external {
-        harvest(_msgSender());
-    }
-    function harvest(address _user) public {
+    function harvest(address _user) external onlyVaultHealer {
         updatePool();
-        UserInfo storage user = userInfo[_user];
-        
-        //Require statement should only fail due to a bug or an attempted exploit
-        require(user.amount == VAULTHEALER.boostShares(_user, STAKE_TOKEN_VID, boostID), "Invalid user balance!");
-
         uint pending = _harvest(_user);
-        updateRewardDebt(user, pending);
+        updateRewardDebt(userInfo[_user], pending);
     }
 
     function joinPool(address _user, uint _amount) external onlyVaultHealer {
