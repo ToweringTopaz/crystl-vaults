@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 /// @title Contains 512-bit math functions
 /// @notice Facilitates multiplication and division that can have overflow of an intermediate value without any loss of precision
 /// @dev Handles "phantom overflow" i.e., allows multiplication and division where an intermediate value overflows 256 bits
-library FullMath {
+library HardMath {
     /// @notice Calculates floor(a×b÷denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
     /// @param a The multiplicand
     /// @param b The multiplier
@@ -119,6 +119,53 @@ library FullMath {
         if (mulmod(a, b, denominator) > 0) {
             require(result < type(uint256).max);
             result++;
+        }
+    }
+    // credit for this implementation goes to
+    // https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol#L687
+    function sqrt(uint256 x) internal pure returns (uint256) {
+        unchecked { //impossible for any of this to overflow
+            if (x == 0) return 0;
+            // this block is equivalent to r = uint256(1) << (BitMath.mostSignificantBit(x) / 2);
+            // however that code costs significantly more gas
+            uint256 xx = x;
+            uint256 r = 1;
+            if (xx >= 0x100000000000000000000000000000000) {
+                xx >>= 128;
+                r <<= 64;
+            }
+            if (xx >= 0x10000000000000000) {
+                xx >>= 64;
+                r <<= 32;
+            }
+            if (xx >= 0x100000000) {
+                xx >>= 32;
+                r <<= 16;
+            }
+            if (xx >= 0x10000) {
+                xx >>= 16;
+                r <<= 8;
+            }
+            if (xx >= 0x100) {
+                xx >>= 8;
+                r <<= 4;
+            }
+            if (xx >= 0x10) {
+                xx >>= 4;
+                r <<= 2;
+            }
+            if (xx >= 0x8) {
+                r <<= 1;
+            }
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1; // Seven iterations should be enough
+            uint256 r1 = x / r;
+            return (r < r1 ? r : r1);
         }
     }
 }

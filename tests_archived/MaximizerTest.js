@@ -117,11 +117,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
         
-        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyVHStandard.address);
-        strat1_pid = await vaultHealer.poolLength() -1;
+        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHStandard.address);
+        strat1_pid = await vaultHealer.vaultLength() -1;
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyCrystlCompounder.address);
-        crystl_compounder_strat_pid = await vaultHealer.poolLength() -1;
+        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyCrystlCompounder.address);
+        crystl_compounder_strat_pid = await vaultHealer.vaultLength() -1;
 
         const MAXIMIZER_VARS = [
             apeSwapVaults[1]['want'],
@@ -136,8 +136,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         strategyVHMaximizer = await StrategyVHStandard.deploy(...MAXIMIZER_VARS);
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).addPool(strategyVHMaximizer.address);
-        maximizer_strat_pid = await vaultHealer.poolLength() -1;
+        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHMaximizer.address);
+        maximizer_strat_pid = await vaultHealer.vaultLength() -1;
 
         //create the staking pool for the boosted vault
         BoostPool = await ethers.getContractFactory("BoostPool", {});
@@ -147,11 +147,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             strat1_pid, //I'm hardcoding this for now - how can we do it in future??
             "0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64", //reward token = crystl
             1000000, //is this in WEI? assume so...
-            21131210, //this is the block we're currently forking from - WATCH OUT if we change forking block
-            21771725 //also watch out that we don't go past this, but we shouldn't
+            22051948, //this is the block we're currently forking from - WATCH OUT if we change forking block
+            22051948+640515 //also watch out that we don't go past this, but we shouldn't
         )
         
-        strategyVHStandard.setBoostPoolAddress(boostPool.address);
+        vaultHealer.addBoost(boostPool.address);
         
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
 

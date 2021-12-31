@@ -17,27 +17,27 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./Babylonian.sol";
+import "./HardMath.sol";
 import "./IStrategy.sol";
-import "./IVaultHealer.sol";
+import "../VaultHealer.sol";
 import './IUniRouter.sol';
 import "./IUniPair.sol";
 import "./IWETH.sol";
-// import "./IUniFactory.sol";
+import "./IUniFactory.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
     
     uint256 constant MINIMUM_AMOUNT = 1000;
     
-    function getRouter(IVaultHealer vaultHealer, uint pid) internal view returns (IUniRouter) {
-        (,IStrategy strat) = vaultHealer.poolInfo(pid);
+    function getRouter(VaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
+        (,IStrategy strat) = vaultHealer.vaultInfo(vid);
         return IUniRouter(strat.settings().router);
     }
     
-    function getRouterAndPair(IVaultHealer vaultHealer, uint _pid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
+    function getRouterAndPair(VaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
         IERC20 want;
-        (want, strat) = vaultHealer.poolInfo(_pid);
+        (want, strat) = vaultHealer.vaultInfo(_vid);
         
         pair = IUniPair(address(want));
         router = IUniRouter(strat.settings().router);
@@ -47,7 +47,7 @@ library LibQuartz {
         uint256 halfInvestment = investmentA / 2;
         uint256 numerator = router.getAmountOut(halfInvestment, reserveA, reserveB);
         uint256 denominator = router.quote(halfInvestment, reserveA + halfInvestment, reserveB - numerator);
-        swapAmount = investmentA - Babylonian.sqrt(halfInvestment * halfInvestment * numerator / denominator);
+        swapAmount = investmentA - HardMath.sqrt(halfInvestment * halfInvestment * numerator / denominator);
     }
     function returnAssets(IUniRouter router, address[] memory tokens) internal {
         address weth = router.WETH();
@@ -66,7 +66,7 @@ library LibQuartz {
             }
         }
     }
-    function estimateSwap(IVaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
+    function estimateSwap(VaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
         (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
         
         bool isInputA = pair.token0() == tokenIn;
