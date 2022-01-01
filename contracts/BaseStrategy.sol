@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "./libs/LibVaultConfig.sol";
-import "./libs/IStrategy.sol";
 import "./VaultHealer.sol";
 
 abstract contract BaseStrategy {
@@ -15,7 +14,7 @@ abstract contract BaseStrategy {
 
     event SetSettings(VaultSettings _settings);
         
-    constructor(VaultSettings memory _settings, address _vaultHealerAddress) {
+    constructor(VaultSettings memory _settings, address payable _vaultHealerAddress) {
         _settings.check();
         settings = _settings;
         emit SetSettings(_settings);

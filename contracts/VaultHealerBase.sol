@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "./BoostPool.sol";
-import "./libs/IStrategy.sol";
+import {StrategyVHStandard as IStrategy} from "./StrategyVHStandard.sol";
 import "hardhat/console.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ReentrancyGuard {
@@ -21,28 +21,27 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
     struct VaultInfo {
         IERC20 want; //  want token.
         IStrategy strat; // Strategy contract that will auto compound want tokens
-        //IUniRouter router;
         VaultFee withdrawFee;
         VaultFees earnFees;
         BoostInfo[] boosts;
         mapping (address => UserInfo) user;
         uint256 accRewardTokensPerShare;
-        uint256 balanceCrystlCompounderLastUpdate;
-        uint256 targetVid; //maximizer target, which accumulates tokens
         uint256 panicLockExpiry; //panic can only happen again after the time has elapsed
         uint256 lastEarnBlock;
         uint256 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
+        uint256 exportSharesTotal; //maximizer tokens whose earnings are exported
+        uint256 pendingImportTotal; //
+        uint256 pendingExportAmount; //
         // bytes data;
     }
 
     struct BoostInfo {
-    BoostPool boostPool;
+        BoostPool boostPool;
         bool isActive;
     }
 
     struct UserInfo {
         BitMaps.BitMap boosts;
-        uint256 rewardDebt;
     }
 
     VaultInfo[] internal _vaultInfo; // Info of each vault.
@@ -77,7 +76,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         //vault.router = strat.router();
         vault.lastEarnBlock = block.number;
         vault.minBlocksBetweenEarns = minBlocksBetweenEarns;
-        vault.targetVid = _strats[address(strat.targetVault())];
         
         _strats[_strat] = vid;
         emit AddVault(_strat);

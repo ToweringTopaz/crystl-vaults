@@ -18,7 +18,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./HardMath.sol";
-import "./IStrategy.sol";
+import {StrategyVHStandard as IStrategy} from "../StrategyVHStandard.sol";
 import "../VaultHealer.sol";
 import './IUniRouter.sol';
 import "./IUniPair.sol";

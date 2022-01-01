@@ -7,6 +7,8 @@ import "./VaultHealerFees.sol";
 //For calling the earn function
 abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
+    uint256 constant public WNATIVE_1155 = 0;
+
     function earnAll() external nonReentrant {
 
         VaultFees memory _defaultEarnFees = defaultEarnFees;
@@ -19,7 +21,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
             if (_vaultInfo.length < end) end = _vaultInfo.length; //or if less, the final pool
             for (uint j = i << 8; j < end; j++) {
                 if (earnMap & 1 > 0) { //smallest bit is "true"
-                    _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees);
+                    _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees, false);
                 }
                 earnMap >>= 1; //shift away the used bit
                 feeMap >>= 1;
@@ -49,7 +51,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
             uint end = (i+1) << 8; // buckets end at multiples of 256
             for (uint j = i << 8; j < end; j++) {//0-255, 256-511, ...
                 if (earnMap & 1 > 0) { //smallest bit is "true"
-                    _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees);
+                    _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees, false);
                 }
                 earnMap >>= 1; //shift away the used bit
                 feeMap >>= 1;
@@ -59,20 +61,42 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         }
     }
     function earn(uint256 vid) external whenNotPaused(vid) nonReentrant {
-        _doEarn(vid);
+        _tryEarn(vid, getEarnFees(vid), true);
     }
 
-    function _tryEarn(uint256 vid, VaultFees memory _earnFees) private {
+    function _tryEarn(uint256 vid, VaultFees memory _earnFees, bool forced) private {
         VaultInfo storage vault = _vaultInfo[vid];
         uint interval = vault.minBlocksBetweenEarns;
+        uint nativeBalanceBefore = address(this).balance;
 
-        if (block.number > vault.lastEarnBlock + interval) {
-            console.log("Earning vid: ", vid);
-            console.log("Earning strat: ", address(vault.strat));
+        if (forced || block.number > vault.lastEarnBlock + interval) {
             try vault.strat.earn(_earnFees) returns (bool success) {
                 if (success) {
                     vault.lastEarnBlock = block.number;
                     if (interval > 1) vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
+
+                    uint earnedAmt = address(this).balance - nativeBalanceBefore;
+
+                    //Collect fees by minting erc1155 wnative tokens to the fee receivers, reducing earnedAmt accordingly
+                    uint feeAmt = _earnFees.userReward.rate * earnedAmt;
+                    _mint(tx.origin, WNATIVE_1155, feeAmt, hex'');
+                    uint _earnedAmt = earnedAmt - feeAmt;
+                    feeAmt = _earnFees.treasuryFee.rate * earnedAmt;
+                    _mint(_earnFees.treasuryFee.receiver, WNATIVE_1155, feeAmt, hex'');
+                    _earnedAmt -= feeAmt;
+                    feeAmt = _earnFees.burn.rate * earnedAmt;
+                    _mint(_earnFees.burn.receiver, WNATIVE_1155, feeAmt, hex'');
+                    earnedAmt = _earnedAmt - feeAmt;
+                    
+                    uint exportAmt = vault.exportSharesTotal * earnedAmt / vault.strat.wantLockedTotal(); //Portion to be exported rather than autocompounded
+                    uint compoundAmt = earnedAmt - exportAmt; //Portion to be autocompounded
+                    uint depositAmt = vault.pendingImportTotal; // Imports to be deposited;
+                    uint amountIn = compoundAmt + depositAmt;
+                    uint sharesAdded = vault.strat.compound{value: amountIn}(depositAmt, vault.exportSharesTotal, totalSupply(vid));
+
+                    //todo: distribute added shares
+
+
                 } else {
                     vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
                 }
@@ -80,23 +104,11 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         }
     }
 
-    //performs earn even if it's not been long enough
-    function _doEarn(uint256 vid) internal {
-        VaultInfo storage vault = _vaultInfo[vid];
-        uint interval = vault.minBlocksBetweenEarns;   
-
-        try vault.strat.earn(getEarnFees(vid)) returns (bool success) {
-            if (success) {
-                vault.lastEarnBlock = block.number;
-                if (interval > 1 && block.number > vault.lastEarnBlock + interval)
-                    vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
-            } else if (block.number > vault.lastEarnBlock + interval) {
-                vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
-            }
-        } catch {}     
-    }
-
     function addVault(address _strat, uint minBlocksBetweenEarns) public override(VaultHealerBase, VaultHealerPause) returns (uint vid) {
         return VaultHealerPause.addVault(_strat, minBlocksBetweenEarns);
+    }
+
+    receive() payable external {
+
     }
 }

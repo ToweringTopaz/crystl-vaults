@@ -20,11 +20,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     uint256 constant EARNED_LEN = 4;
 
     IERC20 immutable public wantToken; //The token which is deposited and earns a yield 
-    
-    //maximizer stuff
-    IStrategy public immutable targetVault;
-    uint public immutable targetVid;
-    IERC20 public maximizerRewardToken;
 
     IERC20[EARNED_LEN] public earned;
     IERC20[LP_LEN] public lpToken;
@@ -36,40 +31,27 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     ) {
         wantToken = _wantToken;
 
-        //maximizer config
-        targetVault = IStrategy(_targetVault);
-        uint _targetVid;
-        if (_targetVault != address(0)) {
-            maximizerRewardToken = IStrategy(_targetVault).wantToken();
-            _targetVid = vaultHealer.findVid(_targetVault);
-        }
-        targetVid = _targetVid;
-
         for (uint i; i < _earned.length && address(_earned[i]) != address(0); i++) {
             earned[i] = _earned[i];
         }
         
         //Look for LP tokens. If not, want must be a single-stake
-        IERC20 swapToToken = _targetVault == address(0) ? _wantToken : maximizerRewardToken; //swap earned to want, or swap earned to maximizer target's want
-        try IUniPair(address(swapToToken)).token0() returns (address _token0) {
+        try IUniPair(address(_wantToken)).token0() returns (address _token0) {
             lpToken[0] = IERC20(_token0);
-            lpToken[1] = IERC20(IUniPair(address(swapToToken)).token1());
+            lpToken[1] = IERC20(IUniPair(address(_wantToken)).token1());
         } catch { //if not LP, then single stake
-            lpToken[0] = swapToToken;
+            lpToken[0] = _wantToken;
         }
 
-    }
-    
-    function isMaximizer() public view returns (bool) {
-        return address(targetVault) != address(0);
     }
 
     function _wantBalance() internal override view returns (uint256) {
         return wantToken.balanceOf(address(this));
     }
 
-    function _earn(VaultFees calldata earnFees) internal virtual returns (bool success) {
+    function _earn() internal virtual returns (bool success) {
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
+        uint wantLockedBefore = wantBalanceBefore + vaultSharesTotal();
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
@@ -89,35 +71,42 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = earnFees.distribute(swap, earnedToken, earnedAmt); // handles all fees for this earned token
 
-                if (address(lpToken[1]) == address(0)) { //single stake
-                    LibVaultSwaps.safeSwap(swap, earnedAmt, earnedToken, lpToken[0], address(this));
-                } else {
-                    LibVaultSwaps.safeSwap(swap, earnedAmt / 2, earnedToken, lpToken[0], address(this));
-                    LibVaultSwaps.safeSwap(swap, earnedAmt / 2, earnedToken, lpToken[1], address(this));
-                }
+                LibVaultSwaps.safeSwap(swap, earnedAmt, earnedToken, IERC20(swap.router.WETH()), address(vaultHealer));
+
             }
         }
-        //lpTokenLength == 1 means single-stake, not LP
-        if (success) {
+    }
 
-            if (isMaximizer()) {
-                IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
-                uint256 crystlBalance = crystlToken.balanceOf(address(this));
+    //The proceeds from depositAmt are treated much the same as direct want token deposits. The remainder represents autocompounded earnings 
+    //which don't generate new shares of any kind
+    function compound(uint256 depositAmt, uint256 exportSharesTotal, uint256 _sharesTotal) external payable onlyVaultHealer returns (uint256 sharesAdded) {
+        assert(msg.value >= depositAmt);
+        uint wantLockedBefore = wantLockedTotal();
 
-                //need to instantiate pool here?
-                crystlToken.safeIncreaseAllowance(address(vaultHealer), crystlBalance);
+        LibVaultSwaps.SwapConfig memory swap = LibVaultSwaps.SwapConfig({
+            magnetite: settings.magnetite,
+            router: settings.router,
+            slippageFactor: settings.slippageFactor,
+            feeOnTransfer: settings.feeOnTransfer
+        });
 
-                vaultHealer.stratDeposit(targetVid, crystlBalance);
-            } else {
-                if (address(lpToken[1]) != address(0)) {
-                    // Get want tokens, ie. add liquidity
-                    LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]);
-                }
-                _farm();
-            }
+        if (address(lpToken[1]) == address(0)) { //single stake
+            LibVaultSwaps.safeSwapFromETH(swap, msg.value, lpToken[0], address(this));
+        } else {
+            LibVaultSwaps.safeSwapFromETH(swap, msg.value / 2, lpToken[0], address(this));
+            LibVaultSwaps.safeSwapFromETH(swap, msg.value / 2, lpToken[1], address(this));
+            LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]); // Get want tokens, ie. add liquidity
         }
+        _farm();
+
+        uint wantAdded = wantLockedTotal() - wantLockedBefore;
+
+        sharesAdded = wantAdded * depositAmt / msg.value; //portion to be counted as a deposit, minting shares
+        if (_sharesTotal > 0) {
+            sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, (wantLockedBefore - exportSharesTotal));
+        }
+
     }
     
     //Safely deposits want tokens in farm
@@ -135,5 +124,9 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         require(sharesAfter + _wantBalance() + settings.dust >= (sharesBefore + wantAmt) * settings.slippageFactor / 10000,
             "High vault deposit slippage");
         return;
+    }
+
+   receive() external payable {
+        assert(msg.sender == address(settings.router)); // only accept ETH via fallback if it's a router refund
     }
 }

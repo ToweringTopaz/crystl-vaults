@@ -6,14 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./PrismLibrary.sol";
 import "./LibVaultConfig.sol";
 import "hardhat/console.sol";
+import "./IWETH.sol";
 
 //Functions specific to the strategy code
 library LibVaultSwaps {
     using SafeERC20 for IERC20;
     using Address for address;
     
-    IERC20 constant WNATIVE_DEFAULT = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
-    uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
+    uint16 constant FEE_MAX = 10000; // 100 = 1% : basis points
     
     struct SwapConfig {
 
@@ -23,29 +23,8 @@ library LibVaultSwaps {
         bool feeOnTransfer;
     }
 
-    function distribute(VaultFees calldata earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
-
-        earnedAmt = _earnedAmt;
-        // To pay for earn function
-        uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
-        if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, wnative(swap.router), tx.origin);
-            earnedAmt -= fee;
-            }
-
-        //distribute rewards
-        fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
-        if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, wnative(swap.router), earnFees.treasuryFee.receiver);
-            earnedAmt -= fee;
-            }
-        
-        //burn crystl
-        fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
-        if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, wnative(swap.router), earnFees.burn.receiver);
-            earnedAmt -= fee;
-            }
+    function total(VaultFees calldata earnFees, uint256 _earnedAmt) internal pure returns (uint feeTotal) {
+            return _earnedAmt * (earnFees.userReward.rate + earnFees.treasuryFee.rate + earnFees.burn.rate) / FEE_MAX;
     }
 
     function safeSwap(
@@ -82,7 +61,15 @@ library LibVaultSwaps {
         //allow swap.router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(swap.router), _amountIn);
         
-        if (_tokenB != wnative(swap.router) || _to.isContract() ) {
+        if (address(_tokenB) == swap.router.WETH()) {
+            if (swap.feeOnTransfer) { //reflect mode on
+                swap.router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
+            } else { //reflect mode off
+                swap.router.swapExactTokensForETH(
+                    _amountIn ,amountOut, cleanedUpPath, _to, block.timestamp);
+            } 
+        } else {
             if (swap.feeOnTransfer) { //reflect mode on
                 swap.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
@@ -90,16 +77,48 @@ library LibVaultSwaps {
                 swap.router.swapExactTokensForTokens(
                     _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
             }
-        } else { //Non-contract address (extcodesize zero) receives native ETH
-            if (swap.feeOnTransfer) { //reflect mode on
-                swap.router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
-            } else { //reflect mode off
-                swap.router.swapExactTokensForETH(
-                    _amountIn ,amountOut, cleanedUpPath, _to, block.timestamp);
-            }            
         }
+    }
 
+    function safeSwapFromETH(
+        SwapConfig memory swap,
+        uint256 _amountIn,
+        IERC20 _tokenB,
+        address _to
+    ) internal {
+        
+        IWETH _tokenA = IWETH(swap.router.WETH());
+
+        //Handle one-token paths by simply making ERC20 wnative
+        if (_tokenA == _tokenB) {
+            IWETH(_tokenA).deposit{value: _amountIn}();
+            if (_to != address(this)) //skip transfers to self
+                IERC20(_tokenA).safeTransfer(_to, _amountIn);
+            return;
+        }
+        address[] memory path = swap.magnetite.findAndSavePath(address(swap.router), address(_tokenA), address(_tokenB));
+        
+        /////////////////////////////////////////////////////////////////////////////////////////////
+        //this code snippet below could be removed if findAndSavePath returned a right-sized array //
+        uint256 counter=0;
+        for (counter; counter<path.length; counter++){
+            if (path[counter]==address(0)) break;
+        }
+        address[] memory cleanedUpPath = new address[](counter);
+        for (uint256 i=0; i<counter; i++) {
+            cleanedUpPath[i] =path[i];
+        }
+        //this code snippet above could be removed if findAndSavePath returned a right-sized array
+
+        uint256[] memory amounts = swap.router.getAmountsOut(_amountIn, cleanedUpPath);
+        uint256 amountOut = amounts[amounts.length - 1] * swap.slippageFactor / 10000;
+        
+        if (swap.feeOnTransfer) { //reflect mode on
+            swap.router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);
+        } else { //reflect mode off
+            swap.router.swapExactETHForTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);
+        } 
+        
     }
     
     //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
@@ -124,12 +143,6 @@ library LibVaultSwaps {
         IERC20(token0).safeTransfer(address(pair), balance0);
         IERC20(token1).safeTransfer(address(pair), balance1);
         liquidity = IUniPair(address(pair)).mint(address(this));
-    }
-    
-    function wnative(IUniRouter router) private pure returns (IERC20) {
-        try router.WETH() returns (address weth) { //use router's wnative
-            return IERC20(weth);
-        } catch { return WNATIVE_DEFAULT; }
     }
     
 }

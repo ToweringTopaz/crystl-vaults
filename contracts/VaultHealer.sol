@@ -38,9 +38,6 @@ contract VaultHealer is VaultHealerBoostedPools {
     function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy strat) {
         return (_vaultInfo[vid].want, _vaultInfo[vid].strat);
     }
-    function rewardDebt(uint vid, address _user) external view returns (uint) {
-        return _vaultInfo[vid].user[_user].rewardDebt;
-    }
 
     // View function to see staked Want tokens on frontend.
 

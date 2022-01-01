@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import "./VaultHealer.sol";
 
 import "./BaseStrategySwapLogic.sol";
-import "./libs/IStrategy.sol";
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
@@ -22,9 +21,9 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 exportSharesTotal, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
         // _earn(_from); //earn before deposit prevents abuse
-        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
+        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract? - because nothing stops users from transferring in tokens, often flashloaned!
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
 
         if (_wantAmt < settings.dust) return 0; //do nothing if nothing is requested
@@ -37,7 +36,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         sharesAdded = wantLockedTotal() - wantLockedBefore;
         if (_sharesTotal > 0) { //mulDiv prevents overflow for certain tokens/amounts
-            sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
+            sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, (wantLockedBefore - exportSharesTotal));
         }
         require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }

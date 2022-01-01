@@ -62,14 +62,8 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                 from: _from,
                 amount: _wantAmt
             });
-                    
-            uint256 wantLockedBefore = vault.strat.wantLockedTotal();
 
             _doEarn(_vid); 
-
-            if (vault.targetVid != 0 && wantLockedBefore > 0) { //
-                UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
-            }
 
             uint256 sharesAdded = vault.strat.deposit(_wantAmt, totalSupply(_vid));
             //we mint tokens for the user via the 1155 contract
@@ -108,10 +102,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
 
         _doEarn(_vid);
-
-        if (vault.targetVid != 0 && vault.strat.wantLockedTotal() > 0) {
-            UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _from, _wantAmt);
-        }
 
         (uint256 sharesRemoved, uint256 wantAmt) = vault.strat.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
 
@@ -172,43 +162,8 @@ function _beforeTokenTransfer(
                 uint underlyingValue = amounts[i] * _vaultInfo[vid].strat.wantLockedTotal() / totalSupply(vid);
                 transferData(vid, from).transfersOut += underlyingValue;
                 transferData(vid, to).transfersIn += underlyingValue;
-
-                if (_vaultInfo[vid].targetVid != 0) {
-                    _doEarn(vid); //does it matter who calls the earn? -- this one credits msg.sender, the account responsible for paying the gas
-
-                    UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
-
-                    UpdatePoolAndRewarddebtOnDeposit(vid, to, underlyingValue);
-                    }
-
             }
         }
     }
 
-    function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
-        VaultInfo storage vault = _vaultInfo[_vid];
-        VaultInfo storage target = _vaultInfo[vault.targetVid];
-        vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
-
-        vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal(); 
-
-        vault.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-
-    }
-
-    function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
-        VaultInfo storage vault = _vaultInfo[_vid];
-        VaultInfo storage target = _vaultInfo[vault.targetVid];
-
-            vault.accRewardTokensPerShare += (target.strat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vault.strat.wantLockedTotal();
-            //calculate total crystl amount this user owns
-            uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
-            //withdraw proportional amount of crystl from targetVault()
-            if (crystlShare > 0) {
-                vault.strat.withdrawMaximizerReward(vault.targetVid, crystlShare);
-                target.want.safeTransferFrom(address(vault.strat), _from, target.want.balanceOf(address(vault.strat)));
-                vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid);
-                }
-            vault.balanceCrystlCompounderLastUpdate = target.strat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-    }
 }
