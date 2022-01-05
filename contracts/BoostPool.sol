@@ -9,13 +9,13 @@ Join us at PolyCrystal.Finance!
 █▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
 */
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./VaultHealer.sol";
-import {StrategyVHStandard as IStrategy} from "./StrategyVHStandard.sol";
+import "./libs/IVaultHealer.sol";
+import "./libs/IStrategy.sol";
+import "./libs/IBoostPool.sol";
 
-contract BoostPool is Ownable {
+contract BoostPool is Ownable, IBoostPool {
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -25,7 +25,7 @@ contract BoostPool is Ownable {
     }
 
     // The vaultHealer where the staking / want tokens all reside
-    VaultHealer public immutable VAULTHEALER;
+    IVaultHealer public immutable VAULTHEALER;
     // The stake token
     uint256 public immutable STAKE_TOKEN_VID;
     // The reward token
@@ -68,11 +68,11 @@ contract BoostPool is Ownable {
         uint256 _bonusEndBlock
     )
     {
-        VAULTHEALER = VaultHealer(_vaultHealer);
-        require(VaultHealer(_vaultHealer).supportsInterface(type(IERC1155).interfaceId), "invalid vaulthealer");
+        VAULTHEALER = IVaultHealer(_vaultHealer);
+        require(IVaultHealer(_vaultHealer).supportsInterface(type(IERC1155).interfaceId), "invalid vaulthealer");
         
         STAKE_TOKEN_VID = _stakeTokenVid;
-        (IERC20 vaultWant, IStrategy vaultStrat) = VaultHealer(_vaultHealer).vaultInfo(_stakeTokenVid);
+        (IERC20 vaultWant, IStrategy vaultStrat) = IVaultHealer(_vaultHealer).vaultInfo(_stakeTokenVid);
         require(address(vaultWant) != address(0) && address(vaultStrat) != address(0), "bad want/strat for stake_token_vid");
         
         REWARD_TOKEN = IERC20(_rewardToken);
@@ -132,7 +132,7 @@ contract BoostPool is Ownable {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function updatePool() public {
+    function updatePool() internal {
         if (block.number > lastRewardBlock) {
             if (totalStaked > 0) {
                 uint256 multiplier = getMultiplier(lastRewardBlock, block.number);

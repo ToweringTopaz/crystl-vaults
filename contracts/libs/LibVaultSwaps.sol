@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./PrismLibrary.sol";
-import "./LibVaultConfig.sol";
+import "./VaultSettings.sol";
 import "hardhat/console.sol";
 import "./IWETH.sol";
 
@@ -14,21 +14,9 @@ library LibVaultSwaps {
     using Address for address;
     
     uint16 constant FEE_MAX = 10000; // 100 = 1% : basis points
-    
-    struct SwapConfig {
-
-        Magnetite magnetite;
-        IUniRouter router;
-        uint16 slippageFactor;
-        bool feeOnTransfer;
-    }
-
-    function total(VaultFees calldata earnFees, uint256 _earnedAmt) internal pure returns (uint feeTotal) {
-            return _earnedAmt * (earnFees.userReward.rate + earnFees.treasuryFee.rate + earnFees.burn.rate) / FEE_MAX;
-    }
 
     function safeSwap(
-        SwapConfig memory swap,
+        VaultSettings calldata settings,
         uint256 _amountIn,
         IERC20 _tokenA,
         IERC20 _tokenB,
@@ -41,7 +29,7 @@ library LibVaultSwaps {
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = swap.magnetite.findAndSavePath(address(swap.router), address(_tokenA), address(_tokenB));
+        address[] memory path = settings.magnetite.findAndSavePath(settings.router, address(_tokenA), address(_tokenB));
         
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
@@ -55,39 +43,48 @@ library LibVaultSwaps {
         }
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
-        uint256[] memory amounts = swap.router.getAmountsOut(_amountIn, cleanedUpPath);
-        uint256 amountOut = amounts[amounts.length - 1] * swap.slippageFactor / 10000;
+        uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, cleanedUpPath);
+        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
         
-        //allow swap.router to pull the correct amount in
-        IERC20(_tokenA).safeIncreaseAllowance(address(swap.router), _amountIn);
+        //allow settings.router to pull the correct amount in
+        IERC20(_tokenA).safeIncreaseAllowance(address(settings.router), _amountIn);
         
-        if (address(_tokenB) == swap.router.WETH()) {
-            if (swap.feeOnTransfer) { //reflect mode on
-                swap.router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+        if (_tokenB == settings.router.WETH()) {
+            if (settings.feeOnTransfer) { //reflect mode on
+                settings.router.swapExactTokensForETHSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             } else { //reflect mode off
-                swap.router.swapExactTokensForETH(
+                settings.router.swapExactTokensForETH(
                     _amountIn ,amountOut, cleanedUpPath, _to, block.timestamp);
             } 
         } else {
-            if (swap.feeOnTransfer) { //reflect mode on
-                swap.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            if (settings.feeOnTransfer) { //reflect mode on
+                settings.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             } else { //reflect mode off
-                swap.router.swapExactTokensForTokens(
+                settings.router.swapExactTokensForTokens(
                     _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
             }
         }
     }
 
+    function safeSwapToETH(
+        VaultSettings calldata settings,
+        uint256 _amountIn,
+        IERC20 _tokenA,
+        address _to
+    ) internal {
+        safeSwap(settings, _amountIn, _tokenA, settings.router.WETH(), _to);
+    }
+
     function safeSwapFromETH(
-        SwapConfig memory swap,
+        VaultSettings calldata settings,
         uint256 _amountIn,
         IERC20 _tokenB,
         address _to
     ) internal {
         
-        IWETH _tokenA = IWETH(swap.router.WETH());
+        IWETH _tokenA = settings.router.WETH();
 
         //Handle one-token paths by simply making ERC20 wnative
         if (_tokenA == _tokenB) {
@@ -96,7 +93,7 @@ library LibVaultSwaps {
                 IERC20(_tokenA).safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = swap.magnetite.findAndSavePath(address(swap.router), address(_tokenA), address(_tokenB));
+        address[] memory path = settings.magnetite.findAndSavePath(settings.router, address(_tokenA), address(_tokenB));
         
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
@@ -110,22 +107,24 @@ library LibVaultSwaps {
         }
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
-        uint256[] memory amounts = swap.router.getAmountsOut(_amountIn, cleanedUpPath);
-        uint256 amountOut = amounts[amounts.length - 1] * swap.slippageFactor / 10000;
+        uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, cleanedUpPath);
+        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
         
-        if (swap.feeOnTransfer) { //reflect mode on
-            swap.router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);
+        if (settings.feeOnTransfer) { //reflect mode on
+            settings.router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);
         } else { //reflect mode off
-            swap.router.swapExactETHForTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);
+            settings.router.swapExactETHForTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);
         } 
         
     }
     
     //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
-    function optimalMint(IERC20 pair, IERC20 tokenA, IERC20 tokenB) internal returns (uint liquidity) {
+    function optimalMint(IUniPair pair, IERC20 tokenA, IERC20 tokenB) internal returns (uint liquidity) {
         (address token0, address token1) = PrismLibrary.sortTokens(address(tokenA), address(tokenB));
 
-        (uint112 reserve0, uint112 reserve1,) = IUniPair(address(pair)).getReserves();
+        (uint reserve0, uint reserve1,) = IUniPair(address(pair)).getReserves();
+        if (reserve0 == 0 || reserve1 == 0) return 0; 
+
         uint totalSupply = pair.totalSupply();
         
         uint balance0 = IERC20(token0).balanceOf(address(this));

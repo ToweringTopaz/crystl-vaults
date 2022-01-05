@@ -12,10 +12,10 @@ contract VaultHealer is VaultHealerBoostedPools {
     Magnetite public magnetite;
     QuartzUniV2Zap public zap;
 
-    constructor(VaultFees memory _fees, VaultFee memory _withdrawFee)
+    constructor(VaultFee[] memory _earnFees, VaultFee memory _withdrawFee)
         VaultHealerBase(msg.sender) 
         VaultHealerBoostedPools(msg.sender)
-        VaultHealerFees(msg.sender, _fees, _withdrawFee)
+        VaultHealerFees(msg.sender, _earnFees, _withdrawFee)
         VaultHealerPause(msg.sender)
     {
         magnetite = new Magnetite();
@@ -49,9 +49,13 @@ contract VaultHealer is VaultHealerBoostedPools {
         
         return balanceOf(_user, _vid) * wantLockedTotal / _sharesTotal;
     }
-    //enables sharesTotal function on strategy
-    function sharesTotal(address _strat) external view returns (uint) {
-        uint vid = findVid(_strat);
-        return totalSupply(vid);
+    function settings() external view returns (VaultSettings memory) {
+        uint vid = findVid(msg.sender);
+        return _vaultInfo[vid].settings;
     }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, IERC165, ERC1155) returns (bool) {
+        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId);
+    }
+    
 }

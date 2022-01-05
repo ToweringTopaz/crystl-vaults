@@ -2,12 +2,22 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./LibVaultConfig.sol";
+import "./VaultSettings.sol";
 
 interface IStrategy {
+    
+
+
     function wantToken() external view returns (IERC20); // Want address
-    function boostPoolAddress() external view returns (address);
+    function panic() external;
+    function unpanic() external;
+    function settings() external view returns (VaultSettings memory);
+    function earn(VaultSettings calldata settings) external returns (bool success, uint wantLocked);
+    function compound(VaultSettings calldata settings, uint256 depositAmt, uint256 _exportSharesTotal, uint256 _sharesTotal) external payable returns (uint256 sharesAdded);
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
+    /*
+    function boostPoolAddress() external view returns (address);
+
     function accRewardTokensPerShare() external view returns (uint256);
     function increaseRewardDebt(address _user, uint256 _amount) external;
     function getRewardDebt(address _user) external view returns (uint256);
@@ -20,8 +30,9 @@ interface IStrategy {
     function earn(VaultFees calldata _fees) external returns (bool success); // Main want token compounding function
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
     function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
-    function panic() external;
-    function unpanic() external;
+
+    
         // Univ2 router used by this strategy
-    function settings() external view returns (VaultSettings memory);
+    
+    */
 }

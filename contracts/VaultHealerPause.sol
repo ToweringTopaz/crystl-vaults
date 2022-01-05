@@ -7,7 +7,7 @@ import "./VaultHealerBase.sol";
 abstract contract VaultHealerPause is VaultHealerBase {
     using BitMaps for BitMaps.BitMap;
     
-    uint constant PANIC_LOCK_DURATION = 6 hours;
+    uint48 constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 public constant PAUSER = keccak256("PAUSER");
 
     BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
@@ -19,8 +19,8 @@ abstract contract VaultHealerPause is VaultHealerBase {
         _setupRole(PAUSER, _owner);
     }
 
-    function addVault(address _strat, uint minBlocksBetweenEarns) public virtual override returns (uint vid) {
-        vid = super.addVault(_strat, minBlocksBetweenEarns);
+    function addVault(address _strat, VaultSettings calldata _settings) public virtual override returns (uint vid) {
+        vid = super.addVault(_strat, _settings);
         pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
     }    
 
@@ -32,16 +32,14 @@ abstract contract VaultHealerPause is VaultHealerBase {
     }
     function panic(uint vid) external onlyRole("PAUSER") {
         require (_vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");
-        _vaultInfo[vid].panicLockExpiry = block.timestamp + PANIC_LOCK_DURATION;
+        _vaultInfo[vid].panicLockExpiry = uint48(block.timestamp + PANIC_LOCK_DURATION);
         _pause(vid);
         _vaultInfo[vid].strat.panic();
     }
     function unpanic(uint vid) external onlyRole("PAUSER") {
+        VaultInfo storage vault = _vaultInfo[vid];
         _unpause(vid);
-        _vaultInfo[vid].strat.unpanic();
-    }
-    function paused() external view returns (bool) {
-        return paused(findVid(msg.sender));
+        vault.strat.unpanic(vault.settings.dust, vault.settings.slippageFactor);
     }
     
     function paused(address _strat) external view returns (bool) {

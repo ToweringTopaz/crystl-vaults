@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-interface IUniRouter {
-    function factory() external pure returns (address);
+import "./IUniFactory.sol";
+import "./IWETH.sol";
 
-    function WETH() external pure returns (address);
+interface IUniRouter {
+    function factory() external pure returns (IUniFactory);
+
+    function WETH() external pure returns (IWETH);
 
     function addLiquidity(
         address tokenA,

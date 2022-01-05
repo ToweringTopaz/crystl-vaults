@@ -4,20 +4,18 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./libs/IUniRouter.sol";
-import "./libs/IUniFactory.sol";
+import "./libs/IMagnetite.sol";
 import "hardhat/console.sol";
 
 //Automatically generates and stores paths
-contract Magnetite is Ownable {
+contract Magnetite is Ownable, IMagnetite {
 
     struct PairData {
-        address token;
-        address lp;
+        IERC20 token;
+        IUniPair lp;
         uint liquidity;
     }
     
-    address constant private WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     bytes constant private COMMON_TOKENS = abi.encode([
         address(0), //slot for wnative
         0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
@@ -45,8 +43,8 @@ contract Magnetite is Ownable {
         require(msg.sender == address(this));
         _setPath(router, _path, AutoPath.AUTO);
     }
-    function findAndSavePath(address _router, address a, address b) external returns (address[] memory path) {
-        IUniRouter router = IUniRouter(_router);
+    function findAndSavePath(IUniRouter router, address a, address b) external returns (address[] memory path) {
+        address _router = address(router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
         if (path.length == 0) {
             path = generatePath(router, a, b);
@@ -171,17 +169,17 @@ contract Magnetite is Ownable {
         
         //populate pair tokens
         for (uint i; i < b.length; i++) {
-            pairData[i].token = b[i];   
+            pairData[i].token = IERC20(b[i]);   
         }
         for (uint i; i < NUM_COMMON; i++) {
-            pairData[i+b.length].token = allCom[i];
+            pairData[i+b.length].token = IERC20(allCom[i]);
         }
         
         //calculate liquidity
         for (uint i; i < pairData.length; i++) {
-            address pair = factory.getPair(a, pairData[i].token);
-            if (pair != address(0)) {
-                uint liq = IERC20(a).balanceOf(pair);
+            IUniPair pair = factory.getPair(IERC20(a), pairData[i].token);
+            if (address(pair) != address(0)) {
+                uint liq = IERC20(a).balanceOf(address(pair));
                 if (liq > 0) {
                     pairData[i].lp = pair;
                     pairData[i].liquidity = liq;
@@ -198,27 +196,21 @@ contract Magnetite is Ownable {
         }
         require(pairData[best].liquidity > 0, "no liquidity");
         
-        return pairData[best].token;
+        return address(pairData[best].token);
     }
     
     function compare(IUniRouter router, PairData memory x, PairData memory y) private pure returns (bool yBetter) {
-        address wNative = wnative(router);
-        uint xLiquidity = x.liquidity * (x.token == wNative ? WNATIVE_MULTIPLIER : 1);
-        uint yLiquidity = y.liquidity * (y.token == wNative ? WNATIVE_MULTIPLIER : 1);
+        address wNative = address(router.WETH());
+        uint xLiquidity = x.liquidity * (address(x.token) == wNative ? WNATIVE_MULTIPLIER : 1);
+        uint yLiquidity = y.liquidity * (address(y.token) == wNative ? WNATIVE_MULTIPLIER : 1);
         return yLiquidity > xLiquidity;
     }
 
     function allCommons(IUniRouter router) private pure returns (address[NUM_COMMON] memory tokens) {
         tokens = abi.decode(COMMON_TOKENS,(address[6]));
-        tokens[0] = wnative(router);
+        tokens[0] = address(router.WETH());
     }
-    function wnative(IUniRouter router) private pure returns (address) {
-        try router.WETH() returns (address weth) {
-            return weth;
-        } catch {
-            return WNATIVE_DEFAULT;
-        }
-    }
+
     function setlength(address[] memory array, uint n) internal pure returns (address[] memory) {
         assembly { mstore(array, n) }
         return array;

@@ -18,11 +18,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./HardMath.sol";
-import {StrategyVHStandard as IStrategy} from "../StrategyVHStandard.sol";
-import "../VaultHealer.sol";
+import "./IStrategy.sol";
+import "./IVaultHealer.sol";
 import './IUniRouter.sol';
 import "./IUniPair.sol";
-import "./IWETH.sol";
 import "./IUniFactory.sol";
 
 library LibQuartz {
@@ -30,12 +29,12 @@ library LibQuartz {
     
     uint256 constant MINIMUM_AMOUNT = 1000;
     
-    function getRouter(VaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
+    function getRouter(IVaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
         (,IStrategy strat) = vaultHealer.vaultInfo(vid);
         return IUniRouter(strat.settings().router);
     }
     
-    function getRouterAndPair(VaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
+    function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
         IERC20 want;
         (want, strat) = vaultHealer.vaultInfo(_vid);
         
@@ -50,14 +49,14 @@ library LibQuartz {
         swapAmount = investmentA - HardMath.sqrt(halfInvestment * halfInvestment * numerator / denominator);
     }
     function returnAssets(IUniRouter router, address[] memory tokens) internal {
-        address weth = router.WETH();
+        IWETH weth = router.WETH();
         uint256 balance;
         
         for (uint256 i; i < tokens.length; i++) {
             balance = IERC20(tokens[i]).balanceOf(address(this));
             if (balance > 0) {
-                if (tokens[i] == weth) {
-                    IWETH(weth).withdraw(balance);
+                if (tokens[i] == address(weth)) {
+                    weth.withdraw(balance);
                     (bool success,) = msg.sender.call{value: balance}(new bytes(0));
                     require(success, 'Quartz: ETH transfer failed');
                 } else {
@@ -66,7 +65,7 @@ library LibQuartz {
             }
         }
     }
-    function estimateSwap(VaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
+    function estimateSwap(IVaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
         (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
         
         bool isInputA = pair.token0() == tokenIn;
@@ -109,10 +108,9 @@ library LibQuartz {
         liquidity = pair.mint(address(this));
     }
 
-    function hasSufficientLiquidity(address token0, address token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
-        address factory_address = router.factory();
-        IUniFactory factory = IUniFactory(factory_address);
-        IUniPair pair = IUniPair(factory.getPair(token0, token1));
+    function hasSufficientLiquidity(IERC20 token0, IERC20 token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
+        IUniFactory factory = router.factory();
+        IUniPair pair = factory.getPair(token0, token1);
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         if (reserveA > min_amount && reserveB > min_amount) {

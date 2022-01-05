@@ -1,0 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.4;
+import "./IUniRouter.sol";
+interface IMagnetite {
+    function findAndSavePath(IUniRouter _router, address a, address b) external returns (address[] memory path);
+}

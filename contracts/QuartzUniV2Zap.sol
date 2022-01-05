@@ -20,16 +20,16 @@ import "./libs/IUniRouter.sol";
 
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;
-    using LibQuartz for VaultHealer;
+    using LibQuartz for IVaultHealer;
     using LibQuartz for IUniRouter;
     using LibQuartz for IUniPair;
     
     uint256 public constant MINIMUM_AMOUNT = 1000;
-    VaultHealer public immutable vaultHealer;
+    IVaultHealer public immutable vaultHealer;
 
     mapping(bytes32 => bool) private approvals;
 
-    constructor(VaultHealer _vaultHealer) {
+    constructor(IVaultHealer _vaultHealer) {
         vaultHealer = _vaultHealer;
     }
 
@@ -40,9 +40,9 @@ contract QuartzUniV2Zap {
     function quartzInETH (uint pid, uint256 tokenAmountOutMin) external payable {
         require(msg.value >= MINIMUM_AMOUNT, 'Quartz: Insignificant input amount');
         
-        address weth = vaultHealer.getRouter(pid).WETH();
+        IWETH weth = vaultHealer.getRouter(pid).WETH();
         
-        IWETH(weth).deposit{value: msg.value}();
+        weth.deposit{value: msg.value}();
 
         _swapAndStake(pid, tokenAmountOutMin, IERC20(weth));
     }
@@ -61,11 +61,11 @@ contract QuartzUniV2Zap {
     function quartzOut (uint pid, uint256 withdrawAmount) external {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(pid);
 
-        address weth = router.WETH();
+        IWETH weth = router.WETH();
 
         IERC20(address(pair)).safeTransferFrom(msg.sender, address(this), withdrawAmount);
 
-        if (pair.token0() != weth && pair.token1() != weth) {
+        if (pair.token0() != address(weth) && pair.token1() != address(weth)) {
             return LibQuartz.removeLiquidity(address(pair), msg.sender);
         }
 

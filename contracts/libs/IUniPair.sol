@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity >=0.5.0;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./IUniFactory.sol";
 
-interface IUniPair is IERC20Metadata {
+interface IUniPair is IERC20 {
   
   function DOMAIN_SEPARATOR() external view returns (bytes32);
   function PERMIT_TYPEHASH() external pure returns (bytes32);
@@ -24,7 +25,7 @@ interface IUniPair is IERC20Metadata {
   event Sync(uint112 reserve0, uint112 reserve1);
 
   function MINIMUM_LIQUIDITY() external pure returns (uint);
-  function factory() external view returns (address);
+  function factory() external view returns (IUniFactory);
   function token0() external view returns (address);
   function token1() external view returns (address);
   function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);

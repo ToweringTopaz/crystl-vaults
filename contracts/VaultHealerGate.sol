@@ -38,17 +38,17 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
     // Want tokens moved from user -> this -> Strat (compounding)
     function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
+        _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
     }
     // Want tokens moved from user -> this -> Strat (compounding)
 
     function stratDeposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) onlyRole(STRATEGY) {
-        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
+        _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For depositing for other users
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, msg.sender, _to);
+        _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
@@ -63,7 +63,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                 amount: _wantAmt
             });
 
-            _doEarn(_vid); 
+            _earnBeforeTx(_vid); 
 
             uint256 sharesAdded = vault.strat.deposit(_wantAmt, totalSupply(_vid));
             //we mint tokens for the user via the 1155 contract
@@ -83,42 +83,44 @@ abstract contract VaultHealerGate is VaultHealerEarn {
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
-        _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
+        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // Withdraw LP tokens from MasterChef.
 
     function stratWithdraw(uint256 _vid, uint256 _wantAmt) external onlyRole(STRATEGY) {
-        _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
+        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For withdrawing to other address
     function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
-        _withdraw(_vid, _wantAmt, msg.sender, _to);
+        _withdraw(_vid, _wantAmt, _msgSender(), _to);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
-        VaultInfo storage vault = _vaultInfo[_vid];
-        require(balanceOf(_from, _vid) > 0, "User has 0 shares");
+    function _withdraw(uint256 _id, uint256 _wantAmt, address _from, address _to) private {
+        assert (_from == _to || _msgSender() == _from); //security check
+        uint32 vid = uint32(_id);
+        VaultInfo storage vault = _vaultInfo[vid];
+        require(balanceOf(_from, _id) > 0, "User has 0 shares");
 
-        _doEarn(_vid);
+        if (!paused(vid)) _earnBeforeTx(vid);
 
-        (uint256 sharesRemoved, uint256 wantAmt) = vault.strat.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
+        (uint256 sharesRemoved, uint256 wantAmt) = vault.strat.withdraw(_wantAmt, balanceOf(_from, vid), totalSupply(vid));
 
         //burn the tokens equal to sharesRemoved
         _burn(
             _from,
-            _vid,
+            _id,
             sharesRemoved
         );
         //updates transferData for this user, so that we are accurately tracking their earn
-        transferData(_vid, _from).withdrawals += wantAmt;
+        transferData(_id, _from).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        VaultFee storage withdrawFee = getWithdrawFee(_vid);
+        VaultFee storage withdrawFee = getWithdrawFee(vid);
         address feeReceiver = withdrawFee.receiver;
         uint16 feeRate = withdrawFee.rate;
-        if (feeReceiver != address(0) && feeRate > 0 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+        if (feeReceiver != address(0) && feeRate > 0 && !paused(vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
             uint feeAmt = wantAmt * feeRate / 10000;
             wantAmt -= feeAmt;
             vault.want.safeTransferFrom(address(vault.strat), feeReceiver, feeAmt); //todo: zap to correct fee token
@@ -127,12 +129,12 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         //this call transfers wantTokens from the strat to the user
         vault.want.safeTransferFrom(address(vault.strat), _to, wantAmt);
 
-        emit Withdraw(_from, _to, _vid, _wantAmt);
+        emit Withdraw(_from, _to, vid, _wantAmt);
     }
 
     // Withdraw everything from vault for yourself
     function withdrawAll(uint256 _vid) external nonReentrant {
-        _withdraw(_vid, type(uint256).max, msg.sender, msg.sender);
+        _withdraw(_vid, type(uint256).max, _msgSender(), _msgSender());
     }
     
     //called by strategy, cannot be nonReentrant
