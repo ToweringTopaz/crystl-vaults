@@ -37,11 +37,11 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     //Users can enableBoost to opt-in to a boosted vault
     function _enableBoost(address _user, uint _vid, uint _boostID) internal {
         VaultInfo storage vault = _vaultInfo[_vid];
-        UserInfo storage user = vault.user[_user];
+        BitMaps.BitMap storage userBoosts = vault.userBoosts[_user];
         require(vault.activeBoosts.get(_boostID), "not an active boost");
-        require(!user.boosts.get(_boostID), "boost is already active for user");
+        require(!vault.userBoosts.get(_boostID), "boost is already active for user");
 
-        user.boosts.set(_boostID);
+        userBoosts.set(_boostID);
 
         vault.boosts[_boostID].boostPool.joinPool(_user, balanceOf(_user, _vid));
     }
@@ -62,16 +62,16 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
     function emergencyBoostWithdraw(uint _vid, uint _boostID) external nonReentrant {
         VaultInfo storage vault = _vaultInfo[_vid];
-        UserInfo storage user = vault.user[msg.sender];
+        BitMaps.BitMap storage userBoosts = vault.userBoosts[msg.sender];
         IBoostPool boost = vault.boosts[_boostID];
 
-        require(user.boosts.get(_boostID), "boost is not active for user");
+        require(userBoosts.get(_boostID), "boost is not active for user");
         try boost.emergencyWithdraw{gas: 500000}(_msgSender()) returns (bool success) {
             if (!success) vault.activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         } catch {
-            if (!success) vault.activeBoosts.unset(_boostID); //Disable boost if the pool is broken
+            vault.activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         }
-        user.boosts.unset(_boostID);
+        userBoosts.unset(_boostID);
         emit BoostEmergencyWithdraw(msg.sender, _vid, _boostID);
     }
     function _beforeTokenTransfer(

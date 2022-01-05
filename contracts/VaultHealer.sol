@@ -54,8 +54,5 @@ contract VaultHealer is VaultHealerBoostedPools {
         return _vaultInfo[vid].settings;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, IERC165, ERC1155) returns (bool) {
-        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId);
-    }
-    
+
 }

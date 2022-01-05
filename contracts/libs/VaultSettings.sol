@@ -14,6 +14,7 @@ struct VaultSettings {
     uint16 slippageFactorWithdraw;
     bool feeOnTransfer;
 }
+
 struct VaultConfig {
     IERC20 wantToken;
     IERC20[2] lpToken;
@@ -30,11 +31,7 @@ struct VaultWithdrawData {
     uint96 dust; //min token amount to swap/deposit. Prevents token waste, exploits and unnecessary reverts
     uint16 slippageFactorWithdraw;
     VaultStatus status; // will be one of NORMAL, PAUSED, PANIC here
-    uint wantAmt;
-    uint wantAmtExport;
-    uint userShares;
-    uint userExports;
-    uint sharesTotal;
+    uint112 wantAmt;
 }
 
 function check(VaultSettings memory _settings) pure {

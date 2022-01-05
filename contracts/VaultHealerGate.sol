@@ -37,21 +37,16 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         earned = int(stats.withdrawals + staked + stats.transfersOut) - int(stats.deposits + stats.transfersIn);
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
-    }
-    // Want tokens moved from user -> this -> Strat (compounding)
-
-    function stratDeposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) onlyRole(STRATEGY) {
-        _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
+    function deposit(uint256 _tokenID, uint256 _wantAmt) external nonReentrant {
+        _deposit(_tokenID, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, _msgSender(), _to);
+    function deposit(uint256 _tokenID, uint256 _wantAmt, address _to) external nonReentrant {
+        _deposit(_tokenID, _wantAmt, _msgSender(), _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
+    function _deposit(uint256 _tokenID, uint256 _wantAmt, address _from, address _to) whenNotPaused(vaultOf(_tokenID)) private {
         VaultInfo storage vault = _vaultInfo[_vid];
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
@@ -82,22 +77,16 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
-        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
-    }
-
-    // Withdraw LP tokens from MasterChef.
-
-    function stratWithdraw(uint256 _vid, uint256 _wantAmt) external onlyRole(STRATEGY) {
-        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
+    function withdraw(uint256 _tokenID, uint256 _wantAmt) external nonReentrant {
+        _withdraw(_tokenID, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
+    function withdrawTo(uint256 _tokenID, uint256 _wantAmt, address _to) external nonReentrant {
         _withdraw(_vid, _wantAmt, _msgSender(), _to);
     }
 
-    function _withdraw(uint256 _id, uint256 _wantAmt, address _from, address _to) private {
+    function _withdraw(uint256 _tokenID, uint256 _wantAmt, address _from, address _to) private {
         assert (_from == _to || _msgSender() == _from); //security check
         uint32 vid = uint32(_id);
         VaultInfo storage vault = _vaultInfo[vid];

@@ -6,13 +6,20 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./VaultHealerBase.sol";
 
-abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
+abstract contract VaultHealerERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI, VaultHealerBase {
     using Address for address;
     using M1155 for uint256;
     using M1155 for uint48;
+    using M1155 for M1155.UserAmounts;
+    using EnumerableSet for EnumerableSet.UintSet;
 
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, IERC165, ERC165) returns (bool) {
+        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC165.supportsInterface(interfaceId);
+    }
+    
 
-
+  // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
+    string private _uri;
 
     // Mapping from token ID to general token info
     mapping(uint256 => M1155.TokenInfo) _tokenInfo;
@@ -21,7 +28,7 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
     function totalSupply(uint256 id) public view returns (uint256 amount) {
-    
+        _tokenInfo[id].totalSupply;
     }
 
     function balanceOf(address account, uint256 id) public view virtual override returns (uint256 amount) {
@@ -36,25 +43,25 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
         if (id.isMaximizer()) {
             
         } else if (id.isAutocompounder()) {
+            uint vid = M1155.vaultOf(id);
             
         }
 
         uint mLen = user.maximizersIn.length();
         for (uint i; i < mLen; i++) {
-            uint mID = M1155.TokenID(user.maximizersIn.at(i)).wrap(); //maximizer token ID which holds some pooled amount of this token
+            uint mID = user.maximizersIn.at(i); //maximizer token ID which holds some pooled amount of this token
             M1155.TokenInfo storage mToken = _tokenInfo[mID]; //token data for maximizer
             M1155.AccountInfo storage mAccount = token.maximizer[mID]; //maximizer account holding pooled amount of this token
             M1155.AccountInfo storage mUser = mToken.user[account]; //user's account, representing shares of the maximizer
 
             (uint userMaximizerBalance, uint rewardDebt,) = mUser.amounts.decode();
-            (uint maximizerRewardBalance, uint virtualSupply) = mAccount.amounts.decode();
+            (uint maximizerRewardBalance, uint virtualSupply,) = mAccount.amounts.decode();
 
             unchecked {
-                amount = amount + userMaximizerBalance * virtualSupply / totalSupply(mID) - rewardDebt;
+                amount += userMaximizerBalance * virtualSupply / totalSupply(mID) - rewardDebt;
             }
-
-            
         }
+        require(amount < 2**112, "VHERC1155: balance overflow");
     }
 
     /**
@@ -155,12 +162,12 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
 
         _beforeTokenTransfer(operator, from, to, _asSingletonArray(id), _asSingletonArray(amount), data);
 
-        uint256 fromBalance = _balances[id][from];
+        uint256 fromBalance = balanceOf(from, id);
         require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
         unchecked {
-            _balances[id][from] = fromBalance - amount;
+            decreaseBalance(id, from, amount);
         }
-        _balances[id][to] += amount;
+        increaseBalance(id, to, amount);
 
         emit TransferSingle(operator, from, to, id, amount);
 
@@ -195,18 +202,23 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
-            uint256 fromBalance = _balances[id][from];
+            uint256 fromBalance = balanceOf(from, id);
             require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
             unchecked {
-                _balances[id][from] = fromBalance - amount;
+                decreaseBalance(id, from, amount);
             }
-            _balances[id][to] += amount;
+            increaseBalance(id, to, amount);
         }
 
         emit TransferBatch(operator, from, to, ids, amounts);
 
         _doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, amounts, data);
     }
+
+    function increaseBalance(uint id, address account, uint amount) internal {} //todo
+    function decreaseBalance(uint id, address account, uint amount) internal {} //todo
+    function increaseBalance(uint id, uint account, uint amount) internal {} //todo
+    function decreaseBalance(uint id, uint account, uint amount) internal {} //todo
 
     /**
      * @dev Sets a new URI for all token types, by relying on the token type ID
@@ -254,7 +266,7 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
 
         _beforeTokenTransfer(operator, address(0), to, _asSingletonArray(id), _asSingletonArray(amount), data);
 
-        _balances[id][to] += amount;
+        increaseBalance(id, to, amount);
         emit TransferSingle(operator, address(0), to, id, amount);
 
         _doSafeTransferAcceptanceCheck(operator, address(0), to, id, amount, data);
@@ -283,7 +295,7 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
         _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
 
         for (uint256 i = 0; i < ids.length; i++) {
-            _balances[ids[i]][to] += amounts[i];
+            increaseBalance(ids[i], to, amounts[i]);
         }
 
         emit TransferBatch(operator, address(0), to, ids, amounts);
@@ -310,10 +322,10 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
 
         _beforeTokenTransfer(operator, from, address(0), _asSingletonArray(id), _asSingletonArray(amount), "");
 
-        uint256 fromBalance = _balances[id][from];
+        uint256 fromBalance = balanceOf(from, id);
         require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
         unchecked {
-            _balances[id][from] = fromBalance - amount;
+            decreaseBalance(id, from, amount);
         }
 
         emit TransferSingle(operator, from, address(0), id, amount);
@@ -342,10 +354,10 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
-            uint256 fromBalance = _balances[id][from];
+            uint256 fromBalance = balanceOf(from, id);
             require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
             unchecked {
-                _balances[id][from] = fromBalance - amount;
+                decreaseBalance(id, from, amount);
             }
         }
 
@@ -445,94 +457,6 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
         array[0] = element;
 
         return array;
-    }
-
-    function totalSupply(uint256 id) public view virtual returns (uint256) {
-        return _totalSupply[id];
-    }
-
-
-
-
-
-    //Total autocompounding shares for a vault; the old "sharesTotal"
-    function totalCompounding(uint32 vid) public view virtual returns (uint256) { // 0x00...0000000000000001 autocompounding, not maximizers
-        return _totalCompounding[vid];
-    }
-    //These are want tokens (1:1 value) excluded from autocompounding, maximizing other vaults
-    function totalExports(uint32 vid) public view virtual returns (uint256) { // maximizer from a to b: 0x00...0000000b0000000a (tokens in a, earnings buy shares in b)
-        return _totalExports[vid];
-    }
-    function exists(uint256 id) public view virtual returns (bool) {
-        return _totalSupply[id] > 0;
-    }
-    
-    //These are the tokens which entitle the account to value in vid
-    function allImportingTokensLength(address account, uint32 vid) public view virtual returns (uint length) {
-        uint192 key = uint192(uint160(account)) << 32 | vid;
-        return EnumerableSet.length(_allImportingTokens[key]);
-    }
-    function allImportingTokensAt(address account, uint32 vid, uint256 index) public view virtual returns (uint id) {
-        uint192 key = uint192(uint160(account)) << 32 | vid;
-        return EnumerableSet.at(_allImportingTokens[key], index);
-    }
-    function allImportingTokensAdd(address account, uint32 vid, uint256 value) public virtual returns (bool success) {
-        uint192 key = uint192(uint160(account)) << 32 | vid;
-        return EnumerableSet.add(_allImportingTokens[key], value);
-    }
-    function allImportingTokensRemove(address account, uint32 vid, uint256 value) public virtual returns (bool success) {
-        uint192 key = uint192(uint160(account)) << 32 | vid;
-        return EnumerableSet.remove(_allImportingTokens[key], value);
-    }
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
-        if (from == address(0)) {
-            for (uint256 i; i < ids.length; ++i) {
-                uint256 id = ids[i];
-                _totalSupply[id] += amounts[i];
-                if (id > 0) {
-                    if (id < 2**32) {
-                        _totalCompounding[uint32(id)] += amounts[i];
-                    } else {
-                        _totalExports[uint32(id)] += amounts[i];
-                    }
-                }
-            }
-        } else {
-            for (uint256 i; i < ids.length; ++i) {
-                uint256 id = ids[i];
-                if (id > 0) {
-                    if (id < 2**32) {
-                        _totalCompounding[uint32(id)] += amounts[i];
-                    } else {
-                        _totalExports[uint32(id)] += amounts[i];
-                    }
-                }
-            }
-        }
-        
-        if (to == address(0)) {
-            for (uint256 i = 0; i < ids.length; ++i) {
-                uint256 id = ids[i];
-                _totalSupply[id] -= amounts[i];
-            
-                if (id > 0) {
-                    if (id < 2**32) {
-                        _totalCompounding[uint32(id)] -= amounts[i];
-                    } else {
-                        _totalExports[uint32(id)] -= amounts[i];
-                    }
-                }
-            }
-        }
     }
 
 }

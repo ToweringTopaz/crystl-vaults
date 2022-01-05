@@ -16,7 +16,7 @@ library LibVaultSwaps {
     uint16 constant FEE_MAX = 10000; // 100 = 1% : basis points
 
     function safeSwap(
-        VaultSettings calldata settings,
+        VaultSettings storage settings,
         uint256 _amountIn,
         IERC20 _tokenA,
         IERC20 _tokenB,
@@ -44,7 +44,7 @@ library LibVaultSwaps {
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, cleanedUpPath);
-        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
+        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactorSwap / 10000;
         
         //allow settings.router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(settings.router), _amountIn);
@@ -69,7 +69,7 @@ library LibVaultSwaps {
     }
 
     function safeSwapToETH(
-        VaultSettings calldata settings,
+        VaultSettings storage settings,
         uint256 _amountIn,
         IERC20 _tokenA,
         address _to
@@ -78,7 +78,7 @@ library LibVaultSwaps {
     }
 
     function safeSwapFromETH(
-        VaultSettings calldata settings,
+        VaultSettings storage settings,
         uint256 _amountIn,
         IERC20 _tokenB,
         address _to
@@ -108,7 +108,7 @@ library LibVaultSwaps {
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
         uint256[] memory amounts = settings.router.getAmountsOut(_amountIn, cleanedUpPath);
-        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
+        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactorSwap / 10000;
         
         if (settings.feeOnTransfer) { //reflect mode on
             settings.router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: _amountIn}(amountOut, cleanedUpPath, _to, block.timestamp);

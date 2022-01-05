@@ -8,6 +8,9 @@ import "./libs/ITactic.sol";
 abstract contract BaseStrategy is IStrategy {
 
     IVaultHealer immutable public vaultHealer;
+    VaultConfig config; //configuration data which is immutable
+    VaultSettings settings; //
+    VaultStatus status;
 
     constructor(address payable _vaultHealerAddress) {
         vaultHealer = IVaultHealer(_vaultHealerAddress);
@@ -23,20 +26,22 @@ abstract contract BaseStrategy is IStrategy {
     function _vaultWithdraw(uint256 _amount) internal virtual;
     function _vaultHarvest() internal virtual;
     function _emergencyVaultWithdraw() internal virtual;
-    function _farm(uint96 dust, uint16 slippageFactor) internal virtual returns (uint);
+    function _farm() internal virtual returns (uint);
     
     function wantLockedTotal() public view returns (uint256) {
         return config.wantToken.balanceOf(address(this)) + vaultSharesTotal();
     }
 
-    function settings() external view returns (VaultSettings memory) {
-        return vaultHealer.settings();
+    function setSettings(VaultSettings calldata _settings) external onlyVaultHealer {
+        settings = _settings;
     }
 
     function panic() external onlyVaultHealer {
+        status = VaultStatus.PANIC;
         _emergencyVaultWithdraw();
     }
-    function unpanic(uint96 dust, uint16 slippageFactor) external onlyVaultHealer {
-        _farm(dust, slippageFactor);
+    function unpanic() external onlyVaultHealer {
+        status = VaultStatus.NORMAL;
+        _farm();
     }
 }

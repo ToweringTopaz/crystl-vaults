@@ -6,12 +6,11 @@ import "./VaultSettings.sol";
 
 interface IStrategy {
     
-
-
+    function setSettings(VaultSettings calldata _settings) external;
     function wantToken() external view returns (IERC20); // Want address
     function panic() external;
     function unpanic() external;
-    function settings() external view returns (VaultSettings memory);
+    //function settings() external view returns (VaultSettings memory);
     function earn(VaultSettings calldata settings) external returns (bool success, uint wantLocked);
     function compound(VaultSettings calldata settings, uint256 depositAmt, uint256 _exportSharesTotal, uint256 _sharesTotal) external payable returns (uint256 sharesAdded);
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy

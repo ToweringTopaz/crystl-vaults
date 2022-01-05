@@ -59,16 +59,17 @@ library M1155 {
 /*
  *  TokenID and VaultID numeric functons
  */
-    function _isAutocompounder(uint _id) internal pure returns (bool) {
+
+    function isAutocompounder(uint _id) internal pure returns (bool) {
         return _id == (_id & 0xffffff) && _id > 0;
     }
-    function _isMaximizer(uint _id) internal pure returns (bool) {
+    function isMaximizer(uint _id) internal pure returns (bool) {
         return (_id & 0xffffff) > 0 && (_id >> 224) == 0;
     }
-    function _isVaultToken(uint _id) internal pure returns (bool) {
+    function isVaultToken(uint _id) internal pure returns (bool) {
         return (_id > 0 && _id < type(uint232).max);
     }
-    function _targetOf(uint _id) internal pure returns (uint targetID) {
+    function targetOf(uint _id) internal pure returns (uint targetID) {
         targetID = _id >> 24;
         assert(targetID != _id);
     }
@@ -79,13 +80,13 @@ library M1155 {
  *  EarnRatio functions
  */
 
-    function toRatio(uint newAmount, uint oldAmount, uint refs) internal pure returns (EarnRatio) {
+    function toRatio(uint newAmount, uint oldAmount) internal view returns (EarnRatio) {
         require(newAmount >= oldAmount, "M1155: Bad ratio"); //tx would reduce earnings total
-        if (oldAmount == 0) return EarnRatio.wrap(encode112x112x32(1, 1, refs));
-        return EarnRatio.wrap(encode112x112x32(newAmount, oldAmount, refs));
+        if (oldAmount == 0) return EarnRatio.wrap(encode112x112x32(1, 1, block.number));
+        return EarnRatio.wrap(encode112x112x32(1, 1, block.number));
     }
-    function decode(EarnRatio ratio) internal pure returns (uint numerator, uint denominator, uint refs) {
-        (numerator, denominator, refs) = decode112x112x32(EarnRatio.unwrap(ratio));
+    function decode(EarnRatio ratio) internal pure returns (uint numerator, uint denominator, uint updateBlock) {
+        (numerator, denominator, updateBlock) = decode112x112x32(EarnRatio.unwrap(ratio));
         assert(denominator > 0);
 
     }

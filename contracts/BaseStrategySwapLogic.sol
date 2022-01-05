@@ -12,14 +12,18 @@ import "hardhat/console.sol";
 abstract contract BaseStrategySwapLogic is BaseStrategy {
     using SafeERC20 for IERC20;
 
-    function earn(VaultSettings calldata settings) external onlyVaultHealer virtual returns (bool success, uint wantLocked) {
+    function earn() external onlyVaultHealer virtual returns (bool success, uint wantLocked) {
+        IERC20 wantToken = config.wantToken;
         uint wantBalanceBefore = wantToken.balanceOf(address(this)); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         
-        for (uint i; i < earned.length && address(earned[i]) != address(0); i++) { //Process each earned token
-            IERC20 earnedToken = earned[i];
+        uint len = config.earned.length;
+        for (uint i; i < len; i++) { //Process each earned token
+            IERC20 earnedToken = config.earned[i];
+            if (address(earnedToken) == address(0)) break;
+
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == wantToken)
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
@@ -32,53 +36,48 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return (success, wantLockedTotal());
     }
 
-    //The proceeds from depositAmt are treated much the same as direct want token deposits. The remainder represents autocompounded earnings 
-    //which don't generate new shares of any kind
-    function compound(VaultSettings calldata settings, uint256 depositAmt, uint256 _exportSharesTotal, uint256 _sharesTotal) external payable onlyVaultHealer returns (uint256 sharesAdded) {
-        assert(msg.value >= depositAmt);
+    //Converts native eth to want tokens
+    function compound() external payable onlyVaultHealer returns (uint256 wantAdded) {
+        IERC20 wantToken = config.wantToken;
         uint wantBalanceBefore = wantToken.balanceOf(address(this));
         uint vaultSharesBefore = vaultSharesTotal();
         uint wantLockedBefore = wantBalanceBefore + vaultSharesBefore;
-        assert(_sharesTotal == 0 || wantLockedBefore > _exportSharesTotal); //If there are compounding shares, exportSharesTotal can't be the entirety of the token amount
 
-        if (address(lpToken[1]) == address(0)) { //single stake
-            LibVaultSwaps.safeSwapFromETH(settings, msg.value, lpToken[0], address(this));
+        IERC20 token0 = config.lpToken[0];
+        IERC20 token1 = config.lpToken[1];
+        uint nativeAmount = address(this).balance;
+        if (address(token0) == address(0)) { //single stake
+            LibVaultSwaps.safeSwapFromETH(settings, nativeAmount, token0, address(this));
         } else {
-            LibVaultSwaps.safeSwapFromETH(settings, msg.value / 2, lpToken[0], address(this));
-            LibVaultSwaps.safeSwapFromETH(settings, msg.value / 2, lpToken[1], address(this));
-            LibVaultSwaps.optimalMint(IUniPair(address(wantToken)), lpToken[0], lpToken[1]); // Get want tokens, ie. add liquidity
+            LibVaultSwaps.safeSwapFromETH(settings, nativeAmount / 2, token0, address(this));
+            LibVaultSwaps.safeSwapFromETH(settings, nativeAmount / 2, token1, address(this));
+            LibVaultSwaps.optimalMint(IUniPair(address(wantToken)), token0, token1); // Get want tokens, ie. add liquidity
         }
-        uint wantLockedAfter = _farm(wantToken.balanceOf(address(this)), vaultSharesBefore, settings.dust, settings.slippageFactor);
+        uint wantLockedAfter = _farm(wantToken.balanceOf(address(this)), vaultSharesBefore);
 
-        uint wantAdded = wantLockedAfter - wantLockedBefore;
-        sharesAdded = wantAdded * depositAmt / msg.value; //portion to be counted as a deposit, minting shares
-
-        if (_sharesTotal > 0) {
-            uint compoundingWantBefore = wantLockedBefore - _exportSharesTotal; //auocompounding want tokens only, no maximizer portion
-            sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, compoundingWantBefore);
-        }
+        return wantLockedAfter - wantLockedBefore;
     }
     
     //Safely deposits want tokens in farm
-    function _farm(uint96 dust, uint16 slippageFactor) internal returns (uint wantLockedAfter) {
-            return _farm(wantToken.balanceOf(address(this)), vaultSharesTotal(), dust, slippageFactor);
+    function _farm() internal override returns (uint wantLockedAfter) {
+            return _farm(config.wantToken.balanceOf(address(this)), vaultSharesTotal());
     }
 
     //Safely deposits want tokens in farm
-    function _farm(uint _wantBalance, uint _vaultSharesBefore, uint96 dust, uint16 slippageFactor) internal returns (uint wantLockedAfter) {
+    function _farm(uint _wantBalance, uint _vaultSharesBefore) internal returns (uint wantLockedAfter) {
         if (_wantBalance == 0) return _vaultSharesBefore;
         
         _vaultDeposit(_wantBalance); //approves the transfer then calls the pool contract to deposit
 
-        wantLockedAfter = wantToken.balanceOf(address(this)) + vaultSharesTotal();
+        wantLockedAfter = wantLockedTotal();
 
         //including settings.dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        require((wantLockedAfter + dust) * 10000 / (_vaultSharesBefore + _wantBalance) >= slippageFactor,
+        require((wantLockedAfter + settings.dust) * 10000 >= settings.slippageFactorFarm * (_vaultSharesBefore + _wantBalance),
             "High vault deposit slippage");
     }
 
    receive() external payable {
-        //assert(msg.sender == address(settings.router)); // only accept ETH via fallback if it's a router refund
+        require(Address.isContract(msg.sender));
     }
 }

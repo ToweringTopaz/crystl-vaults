@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./VaultHealerBase.sol";
+import "./VaultHealerERC1155.sol";
 
 //For calling the earn function
-abstract contract VaultHealerFees is VaultHealerBase {
+abstract contract VaultHealerFees is VaultHealerERC1155 {
     using BitMaps for BitMaps.BitMap;
 
     bytes32 public constant FEE_SETTER = keccak256("FEE_SETTER");
     uint16 constant WITHDRAW_FEE_MAX = 500; // hard-coded maximum 5% withdraw fee
     uint16 constant EARN_FEE_MAX = 10000; //hard-coded maximum fee (100%)
     address constant FEE_TX_ORIGIN = address(0x6a5ca11e4); // if this address is used, substitute tx.origin to pay the account providing the gas
-    uint256 constant public WNATIVE_1155 = 0xeeeeeeeeeeeeeeeeeeee; //ERC1155 token implementing wnative
+    uint256 constant public WNATIVE_1155 = 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee; //ERC1155 token implementing wnative
 
 
     BitMaps.BitMap internal _overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
@@ -42,8 +42,8 @@ abstract contract VaultHealerFees is VaultHealerBase {
         return _overrideDefaultEarnFees.get(_vid) ? _vaultInfo[_vid].earnFees : defaultEarnFees;
     }
 
-    function getWithdrawFee(uint _vid) internal view returns (VaultFee storage) {
-        return _overrideDefaultWithdrawFee.get(_vid) ? _vaultInfo[_vid].withdrawFee : defaultWithdrawFee;
+    function getWithdrawFee(uint _vid) internal view returns (uint rate, uint receiver) {
+        VaultFee storage fee = _overrideDefaultWithdrawFee.get(_vid) ? _vaultInfo[_vid].withdrawFee : defaultWithdrawFee;
     }
 
      function setDefaultWithdrawFee(VaultFee calldata _withdrawFee) external onlyRole(FEE_SETTER) {

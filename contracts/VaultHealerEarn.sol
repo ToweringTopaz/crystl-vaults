@@ -71,21 +71,23 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         uint16 interval = vault.settings.minBlocksBetweenEarns;
         uint nativeBalanceBefore = address(this).balance;
 
-        if (forced || block.number > vault.lastEarnBlock + interval) {
+        uint lastEarnBlock = vault.lastEarnBlock;
+        if (block.number > lastEarnBlock && (forced || block.number > lastEarnBlock + interval)) {
             try vault.strat.earn(vault.settings) returns (bool success, uint wantLocked) {
                 if (success) {
                     assert(wantLocked > 0);
-                    vault.lastEarnBlock = uint48(block.number);
+                    uint nativeGain = address(this).balance - nativeBalanceBefore;
+                    vault.lastEarnBlock = uint32(block.number);
                     if (interval > 1) vault.settings.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
 
-                    uint earnedAmt = distributeFees(_earnFees, address(this).balance - nativeBalanceBefore); //Pay fees and get amount earned after fees
+                    uint earnedAmt = distributeFees(_earnFees, nativeGain); //Pay fees and get amount earned after fees
                     
-                    uint exportAmt = vault.exportSharesTotal * earnedAmt / wantLocked; //Portion to be exported rather than autocompounded
+                    uint exportAmt = vault.grandTotalSupply - totalSupply(vid);
                     uint compoundAmt = earnedAmt - exportAmt; //Portion to be autocompounded
                     uint depositAmt = vault.pendingImportTotal; // Imports to be deposited;
-                    uint sharesAdded = vault.strat.compound{value: compoundAmt + depositAmt}(depositAmt, vault.exportSharesTotal, totalSupply(vid));
+                    uint tokensAdded = vault.strat.compound{value: compoundAmt + depositAmt}(depositAmt, exportSharesTotal, totalSupply(vid));
 
-                    //todo: distribute added shares
+                    //todo: distribute added tokens
 
 
                 } else {
