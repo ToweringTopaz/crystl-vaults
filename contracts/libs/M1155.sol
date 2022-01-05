@@ -59,18 +59,18 @@ library M1155 {
 /*
  *  TokenID and VaultID numeric functons
  */
-    function _isAutocompounder(uint24 _id) internal pure returns (bool) {
-        return _id == (_id & 0xffffff) && id > 0;
+    function _isAutocompounder(uint _id) internal pure returns (bool) {
+        return _id == (_id & 0xffffff) && _id > 0;
     }
-    function _isMaximizer(uint24 _id) internal pure returns (bool) {
+    function _isMaximizer(uint _id) internal pure returns (bool) {
         return (_id & 0xffffff) > 0 && (_id >> 224) == 0;
     }
-    function _isVaultToken(uint24 _id) internal pure returns (bool) {
-        return (id > 0 && id < type(uint232).max);
+    function _isVaultToken(uint _id) internal pure returns (bool) {
+        return (_id > 0 && _id < type(uint232).max);
     }
-    function _targetOf(uint24 _id) internal pure returns (uint targetID) {
-        targetID = tid >> 24;
-        assert(targetID != tid);
+    function _targetOf(uint _id) internal pure returns (uint targetID) {
+        targetID = _id >> 24;
+        assert(targetID != _id);
     }
     function vaultOf(uint24 _tid) internal pure returns (uint24 vid) {
         return _tid & type(uint24).max;

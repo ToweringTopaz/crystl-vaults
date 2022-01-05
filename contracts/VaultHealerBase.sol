@@ -20,9 +20,11 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
     bytes32 public constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
 
     struct VaultInfo {
-        IERC20 want; //  want token.
         IStrategy strat; // Strategy contract that will auto compound want tokens
-        VaultSettings settings;
+
+        VaultConfig config; //configuration data which is immutable
+        VaultSettings settings; //
+        
         VaultFee withdrawFee;
         VaultFee[] earnFees;
 
@@ -32,8 +34,8 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
         mapping(uint256 => M1155.EarnRatio) ratioByBlock;
 
         uint112 grandTotalSupply; //sum of totalSupply of all token IDs for this vault
-        uint48 panicLockExpiry; //panic can only happen again after the time has elapsed
-        uint48 lastEarnBlock;
+        uint32 panicLockExpiry; //panic can only happen again after the time has elapsed
+        uint32 lastEarnBlock;
     }
 
     struct VaultFee {
@@ -42,7 +44,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
     }
 
     VaultInfo[] internal _vaultInfo; // Info of each vault.
-
 
     //vid for any of our strategies
     mapping(address => uint) private _strats;
@@ -73,7 +74,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
 
         _vaultInfo.push();
         VaultInfo storage vault = _vaultInfo[vid];
-        vault.want = strat.wantToken();
+        //todo: config in factory process //vault.want = strat.wantToken();
         vault.strat = strat;
 
         check(_settings);
@@ -101,5 +102,4 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
         require(vid > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
         return vid;
     }
-
 }

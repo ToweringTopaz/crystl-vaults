@@ -20,8 +20,11 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
     // Mapping from account to operator approvals
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
+    function totalSupply(uint256 id) public view returns (uint256 amount) {
+    
+    }
 
-    function balanceOf(address account, M1155.TokenID id) public view virtual override returns (uint256 amount) {
+    function balanceOf(address account, uint256 id) public view virtual override returns (uint256 amount) {
         require(account != address(0), "ERC1155: balance query for the zero address");
 
         M1155.TokenInfo storage token = _tokenInfo[id];
@@ -30,15 +33,15 @@ abstract contract VaultHealerERC1155 is ERC1155, VaultHealerBase {
         uint lastUpdateBlock;
         (amount,, lastUpdateBlock) = user.amounts.decode(); //ignore this rewardDebt; we only care about rewardDebt from maximizersIn
         
-        if id.isMaximizer() {
+        if (id.isMaximizer()) {
             
-        } else if id.isAutocompounder() {
+        } else if (id.isAutocompounder()) {
             
         }
 
         uint mLen = user.maximizersIn.length();
         for (uint i; i < mLen; i++) {
-            M1155.TokenID mID = M1155.TokenID(user.maximizersIn.at(i)).wrap(); //maximizer token ID which holds some pooled amount of this token
+            uint mID = M1155.TokenID(user.maximizersIn.at(i)).wrap(); //maximizer token ID which holds some pooled amount of this token
             M1155.TokenInfo storage mToken = _tokenInfo[mID]; //token data for maximizer
             M1155.AccountInfo storage mAccount = token.maximizer[mID]; //maximizer account holding pooled amount of this token
             M1155.AccountInfo storage mUser = mToken.user[account]; //user's account, representing shares of the maximizer

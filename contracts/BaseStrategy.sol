@@ -8,7 +8,6 @@ import "./libs/ITactic.sol";
 abstract contract BaseStrategy is IStrategy {
 
     IVaultHealer immutable public vaultHealer;
-    VaultConfig public config;
 
     constructor(address payable _vaultHealerAddress) {
         vaultHealer = IVaultHealer(_vaultHealerAddress);
