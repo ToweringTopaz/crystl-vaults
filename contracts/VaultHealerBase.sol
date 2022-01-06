@@ -45,7 +45,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
 
         uint40 creationTime;
 
-        EnumerableSet maximizersIn;
+        EnumerableSet.UintSet maximizersIn;
         EnumerableSet.UintSet targetsOut;
     }
 
@@ -59,7 +59,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
     //vid for any of our strategies
     mapping(address => uint) private _strats;
     
-    event AddVault(address indexed strat);
+    event AddVault(IStrategy indexed strat);
     event SetSettings(uint indexed vid, VaultSettings _settings);
     
     constructor(address _owner) {
@@ -77,15 +77,16 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
      * @dev Add a new want to the vault. Can only be called by the owner.
      */
 
-    function addVault(address _strat, VaultSettings calldata _settings) public virtual nonReentrant returns (uint vid) {
-        require(!hasRole(STRATEGY, _strat), "Existing strategy");
-        grantRole(STRATEGY, _strat); //requires msg.sender is VAULT_ADDER
+    function addVault(IStrategy _strat, VaultSettings calldata _settings) public virtual nonReentrant returns (uint vid) {
+        require(!hasRole(STRATEGY, address(_strat)), "Existing strategy");
+        grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
 
-        IStrategy strat = IStrategy(_strat);
         vid = _vaultInfo.length;
         assert(vid < MAX_VAULTS);
 
+        IStrategy strat = IStrategy(_strat);
         _vaultInfo.push();
+
         VaultInfo storage vault = _vaultInfo[vid];
         //todo: config in factory process //vault.want = strat.wantToken();
         vault.strat = strat;
@@ -99,6 +100,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ReentrancyGuard, I
         emit AddVault(_strat);
         emit SetSettings(vid, _settings);
     }
+
     /*  todo: implement test vaults and deletion
     function deleteVault(uint _vid) external onlyRole(VAULT_ADDER) nonReentrant {
         VaultInfo storage vault = _vaultInfo[_vid];

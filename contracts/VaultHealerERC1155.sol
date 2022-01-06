@@ -44,7 +44,7 @@ abstract contract VaultHealerERC1155 is Context, ERC165, IERC1155, IERC1155Metad
             
         } else if (id.isAutocompounder()) {
             uint vid = M1155.vaultOf(id);
-            
+
         }
 
         uint mLen = user.maximizersIn.length();

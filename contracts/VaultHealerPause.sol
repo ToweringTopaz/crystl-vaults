@@ -39,7 +39,7 @@ abstract contract VaultHealerPause is VaultHealerBase {
     function unpanic(uint vid) external onlyRole("PAUSER") {
         VaultInfo storage vault = _vaultInfo[vid];
         _unpause(vid);
-        vault.strat.unpanic(vault.settings.dust, vault.settings.slippageFactorFarm);
+        vault.strat.unpanic();
     }
     
     function paused(address _strat) external view returns (bool) {

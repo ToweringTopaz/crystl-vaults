@@ -85,10 +85,10 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
                     uint exportAmt = vault.grandTotalSupply - totalSupply(vid);
                     uint compoundAmt = earnedAmt - exportAmt; //Portion to be autocompounded
                     uint depositAmt = vault.pendingImportTotal; // Imports to be deposited;
-                    uint tokensAdded = vault.strat.compound{value: compoundAmt + depositAmt}(depositAmt, exportSharesTotal, totalSupply(vid));
+                    uint tokensAdded = vault.strat.compound{value: compoundAmt + depositAmt}();
 
                     //todo: distribute added tokens
-
+                    M1155.TokenInfo storage compoundToken = _tokenInfo[vid];
 
                 } else {
                     vault.settings.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
