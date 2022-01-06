@@ -312,7 +312,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap); //will this work for 2nd Zap? on normal masterchef?
         })
 
-        it('Zap out should convert LP tokens back to underlying tokens, leaving a zero balance of LP tokens', async () => {
+        it('Zap out should withdraw LP tokens from vault, convert back to underlying tokens, and send back to user', async () => {
             const vaultSharesTotalBeforeZapOut = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             
             // const LPtokenBalanceBeforeZapOut = await LPtoken.balanceOf(user4.address); //this won't work right now...
