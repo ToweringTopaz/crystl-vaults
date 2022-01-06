@@ -60,22 +60,21 @@ contract QuartzUniV2Zap {
 
     function quartzOut (uint pid, uint256 withdrawAmount) external {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(pid);
+        vaultHealer.withdrawFrom(pid, withdrawAmount, msg.sender, address(this)); //todo should this rather be vid, not pid? AND I need to add a from address to the function
 
         address weth = router.WETH();
-
-        IERC20(address(pair)).safeTransferFrom(msg.sender, address(this), withdrawAmount);
 
         if (pair.token0() != weth && pair.token1() != weth) {
             return LibQuartz.removeLiquidity(address(pair), msg.sender);
         }
 
-        LibQuartz.removeLiquidity(address(pair), address(this));
+        LibQuartz.removeLiquidity(address(pair), msg.sender);
 
         address[] memory tokens = new address[](2);
         tokens[0] = pair.token0();
         tokens[1] = pair.token1();
-        
-        router.returnAssets(tokens);
+
+        router.returnAssets(tokens); //returns any leftover tokens to user
     }
     
     function estimateSwap(uint pid, address tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {

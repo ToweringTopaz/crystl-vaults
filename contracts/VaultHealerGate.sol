@@ -103,8 +103,14 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         _withdraw(_vid, _wantAmt, msg.sender, _to);
     }
 
+    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
+        _withdraw(_vid, _wantAmt, _from, _to);
+    }
+
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         VaultInfo storage vault = _vaultInfo[_vid];
+        console.log(_from);
+        console.log(_vid);
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
 
         _doEarn(_vid);

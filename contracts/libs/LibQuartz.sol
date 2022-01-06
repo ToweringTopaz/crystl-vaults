@@ -79,6 +79,7 @@ library LibQuartz {
         swapAmountOut = router.getAmountOut(swapAmountIn, reserveA, reserveB);
         swapTokenOut = isInputA ? pair.token1() : pair.token0();
     }
+
     function removeLiquidity(address pair, address to) internal {
         IERC20(pair).safeTransfer(pair, IERC20(pair).balanceOf(address(this)));
         (uint256 amount0, uint256 amount1) = IUniPair(pair).burn(to);
@@ -86,6 +87,7 @@ library LibQuartz {
         require(amount0 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_A_AMOUNT');
         require(amount1 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_B_AMOUNT');
     }
+
     function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
         
