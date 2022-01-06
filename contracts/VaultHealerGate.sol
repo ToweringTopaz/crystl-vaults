@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 import "./VaultHealerEarn.sol";
 
@@ -104,6 +104,10 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
+        require(
+            _from == _msgSender() || isApprovedForAll(_from, _msgSender()),
+            "ERC1155: caller is not owner nor approved"
+        );
         _withdraw(_vid, _wantAmt, _from, _to);
     }
 
