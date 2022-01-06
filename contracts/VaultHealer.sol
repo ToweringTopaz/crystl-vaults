@@ -57,4 +57,8 @@ contract VaultHealer is VaultHealerBoostedPools {
         uint vid = findVid(_strat);
         return totalSupply(vid);
     }
+   function isApprovedForAll(address account, address operator) public view override returns (bool) {
+        return super.isApprovedForAll(account, operator) || operator == zap;
+   }
+    
 }
