@@ -68,7 +68,7 @@ contract QuartzUniV2Zap {
             return LibQuartz.removeLiquidity(address(pair), msg.sender);
         }
 
-        LibQuartz.removeLiquidity(address(pair), msg.sender);
+        LibQuartz.removeLiquidity(address(pair), address(this));
 
         address[] memory tokens = new address[](2);
         tokens[0] = pair.token0();
