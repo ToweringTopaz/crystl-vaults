@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "./VaultHealerBase.sol";
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
 //For calling the earn function
 abstract contract VaultHealerFees is VaultHealerBase {

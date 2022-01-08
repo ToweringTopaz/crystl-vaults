@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "hardhat/console.sol";
 import "./libs/Vault.sol";
+import "./libs/LibVaultConfig.sol";
+import "./libs/IStrategy.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;

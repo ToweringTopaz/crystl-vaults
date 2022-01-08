@@ -29,8 +29,8 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
-        VaultSettings calldata _settings,
-        IERC20[] calldata _earned,
+        VaultSettings memory _settings,
+        IERC20[] memory _earned,
         address _targetVault //maximizer target
         ) = abi.decode(data,(IERC20,address,address,uint256,VaultSettings,IERC20[],address));
 
@@ -59,11 +59,11 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
             lpToken[0] = swapToToken;
         }
 
-        _settings.check();
+        LibVaultConfig.check(_settings);
         settings = _settings;
         emit SetSettings(_settings);
 
-        vaultHealer = msg.sender;
+        vaultHealer = VaultHealer(msg.sender);
         settings.magnetite = VaultHealer(msg.sender).magnetite();
 
         // maximizerVault.setFees(
