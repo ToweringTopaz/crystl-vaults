@@ -21,14 +21,14 @@ abstract contract VaultHealerFactory is VaultHealerBoostedPools {
     function createVault(
         address _implementation,
         bytes calldata data
-    ) external onlyRole("VAULT_ADDER") {
+    ) external {
         proxyImplementation = _implementation;
         address newStrat = Create2.deploy(0, bytes32(_vaultInfo.length), type(VHStrategyProxy).creationCode);
         IStrategy(newStrat).initialize(data);
         addVault(newStrat, 10);
     }
     
-    function strat(uint _vid) internal override view returns (IStrategy) {
+    function strat(uint _vid) public override view returns (IStrategy) {
         bytes32 _data = keccak256(abi.encodePacked(bytes1(0xff), address(this), bytes32(_vid), PROXY_CODE_HASH));
         return IStrategy(address(uint160(uint256(_data))));
     }

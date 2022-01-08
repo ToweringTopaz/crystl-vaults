@@ -75,18 +75,22 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
             //   },
         });        
-        const DEPLOYMENT_VARS = [
-            apeSwapVaults[1]['want'],
-            vaultHealer.address,
-            apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['tactic'],
-            apeSwapVaults[1]['PID'],
-            vaultSettings.standard,
-            apeSwapVaults[1]['earned'],
-            ZERO_ADDRESS
-            ];
+		strategyImplementation = await StrategyVHStandard.deploy();
+		const abiCoder = new ethers.utils.AbiCoder;
+        const DEPLOYMENT_DATA = abiCoder.encode(
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[
+				apeSwapVaults[1]['want'],
+				apeSwapVaults[1]['masterchef'],
+				apeSwapVaults[1]['tactic'],
+				apeSwapVaults[1]['PID'],
+				vaultSettings.standard,
+				apeSwapVaults[1]['earned'],
+				ZERO_ADDRESS
+            ]
+		);
 
-        strategyVHStandard = await StrategyVHStandard.deploy(...DEPLOYMENT_VARS);
+		
         // TOKEN0ADDRESS = await strategyVHStandard.lpToken[0];
         // TOKEN1ADDRESS = await strategyVHStandard.lpToken[1];
         // console.log(await strategyVHStandard.lpToken)
@@ -95,18 +99,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN1ADDRESS = await LPtoken.token1()
         TOKEN_OTHER = CRYSTL;
 
-        const CRYSTL_COMPOUNDER_VARS = [
-            crystlVault[0]['want'], //wantAddress
-            vaultHealer.address,
-            crystlVault[0]['masterchef'], 
-            crystlVault[0]['tactic'],
-            crystlVault[0]['PID'], //what is the PID of this thing in our masterhealer?
-            vaultSettings.standard,
-            crystlVault[0]['earned'],
-            ZERO_ADDRESS
-            ];
-
-        strategyCrystlCompounder = await StrategyVHStandard.deploy(...CRYSTL_COMPOUNDER_VARS);
+		const CRYSTL_COMPOUNDER_DATA = abiCoder.encode(
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[
+				crystlVault[0]['want'], //wantAddress
+				crystlVault[0]['masterchef'], 
+				crystlVault[0]['tactic'],
+				crystlVault[0]['PID'], //what is the PID of this thing in our masterhealer?
+				vaultSettings.standard,
+				crystlVault[0]['earned'],
+				ZERO_ADDRESS
+            ]
+		);
 
         vaultHealerOwner = await vaultHealer.owner();
 
@@ -116,27 +120,30 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
         
-        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHStandard.address, 10);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
         strat1_pid = await vaultHealer.vaultLength() -1;
+		strategyVHStandard = await vaultHealer.strat(strat1_pid);
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyCrystlCompounder.address, 10);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
         crystl_compounder_strat_pid = await vaultHealer.vaultLength() -1;
+		strategyCrystlCompounder = await vaultHealer.strat(crystl_compounder_strat_pid);
 
-        const MAXIMIZER_VARS = [
-            apeSwapVaults[1]['want'],
-            vaultHealer.address,
-            apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['tactic'],
-            apeSwapVaults[1]['PID'],
-            vaultSettings.standard,
-            apeSwapVaults[1]['earned'],
-            strategyCrystlCompounder.address
-            ];
+        const MAXIMIZER_DATA = abiCoder.encode(
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[
+				apeSwapVaults[1]['want'],
+				apeSwapVaults[1]['masterchef'],
+				apeSwapVaults[1]['tactic'],
+				apeSwapVaults[1]['PID'],
+				vaultSettings.standard,
+				apeSwapVaults[1]['earned'],
+				strategyCrystlCompounder.address
+			]
+		);
 
-        strategyVHMaximizer = await StrategyVHStandard.deploy(...MAXIMIZER_VARS);
-
-        await vaultHealer.connect(vaultHealerOwnerSigner).addVault(strategyVHMaximizer.address, 10);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
         maximizer_strat_pid = await vaultHealer.vaultLength() -1;
+		strategyVHMaximizer = await vaultHealer.strat(maximizer_strat_pid);
 
         //create the staking pool for the boosted vault
         BoostPool = await ethers.getContractFactory("BoostPool", {});

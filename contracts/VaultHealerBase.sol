@@ -39,7 +39,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
 
     function addVault(address _strat, uint minBlocksBetweenEarns) internal virtual nonReentrant returns (uint vid) {
         require(!hasRole(STRATEGY, _strat), "Existing strategy");
-        grantRole(STRATEGY, _strat); //requires msg.sender is POOL_ADDER
+        grantRole(STRATEGY, _strat); //requires msg.sender is VAULT_ADDER
 
         IStrategy strat_ = IStrategy(_strat);
         vid = _vaultInfo.length;
@@ -72,5 +72,5 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId);
     }
 
-    function strat(uint _vid) internal virtual view returns (IStrategy);
+    function strat(uint _vid) public virtual view returns (IStrategy);
 }
