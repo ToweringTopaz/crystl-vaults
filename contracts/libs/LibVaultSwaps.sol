@@ -17,7 +17,7 @@ library LibVaultSwaps {
     
     struct SwapConfig {
 
-        Magnetite magnetite;
+        IMagnetite magnetite;
         IUniRouter router;
         uint16 slippageFactor;
         bool feeOnTransfer;

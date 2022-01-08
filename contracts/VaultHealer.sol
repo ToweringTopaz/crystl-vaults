@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "./VaultHealerBoostedPools.sol";
+import "./VaultHealerFactory.sol";
 import "./Magnetite.sol";
 import "./QuartzUniV2Zap.sol";
 
-contract VaultHealer is VaultHealerBoostedPools {
+contract VaultHealer is VaultHealerFactory {
     
     bytes32 public constant PATH_SETTER = keccak256("PATH_SETTER");
 
-    Magnetite public magnetite;
+    IMagnetite public magnetite;
     QuartzUniV2Zap public zap;
 
     constructor(VaultFees memory _fees, VaultFee memory _withdrawFee)

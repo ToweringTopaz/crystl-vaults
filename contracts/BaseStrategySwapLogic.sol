@@ -15,51 +15,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;
     
-    //max number of supported lp/earned tokens
-    uint256 constant LP_LEN = 2;
-    uint256 constant EARNED_LEN = 4;
-
-    IERC20 immutable public wantToken; //The token which is deposited and earns a yield 
-    
-    //maximizer stuff
-    IStrategy public immutable targetVault;
-    uint public immutable targetVid;
-    IERC20 public maximizerRewardToken;
-
-    IERC20[EARNED_LEN] public earned;
-    IERC20[LP_LEN] public lpToken;
-
-    constructor(
-        IERC20 _wantToken,
-        IERC20[] memory _earned,
-        address _targetVault
-    ) {
-        wantToken = _wantToken;
-
-        //maximizer config
-        targetVault = IStrategy(_targetVault);
-        uint _targetVid;
-        if (_targetVault != address(0)) {
-            maximizerRewardToken = IStrategy(_targetVault).wantToken();
-            _targetVid = vaultHealer.findVid(_targetVault);
-        }
-        targetVid = _targetVid;
-
-        for (uint i; i < _earned.length && address(_earned[i]) != address(0); i++) {
-            earned[i] = _earned[i];
-        }
-        
-        //Look for LP tokens. If not, want must be a single-stake
-        IERC20 swapToToken = _targetVault == address(0) ? _wantToken : maximizerRewardToken; //swap earned to want, or swap earned to maximizer target's want
-        try IUniPair(address(swapToToken)).token0() returns (address _token0) {
-            lpToken[0] = IERC20(_token0);
-            lpToken[1] = IERC20(IUniPair(address(swapToToken)).token1());
-        } catch { //if not LP, then single stake
-            lpToken[0] = swapToToken;
-        }
-
-    }
-    
     function isMaximizer() public view returns (bool) {
         return address(targetVault) != address(0);
     }

@@ -7,9 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./libs/IUniRouter.sol";
 import "./libs/IUniFactory.sol";
 import "hardhat/console.sol";
+import "./libs/IMagnetite.sol";
 
 //Automatically generates and stores paths
-contract Magnetite is Ownable {
+contract Magnetite is IMagnetite, Ownable {
 
     struct PairData {
         address token;

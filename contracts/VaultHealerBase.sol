@@ -36,7 +36,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
     }
 
     struct BoostInfo {
-    BoostPool boostPool;
+        BoostPool boostPool;
         bool isActive;
     }
 
@@ -91,6 +91,9 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         uint vid = _strats[_strat];
         require(vid > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
         return vid;
+    }
+    function setSettings(uint vid, VaultSettings calldata _settings) external onlyRole(SETTINGS_SETTER) {
+        _vaultInfo[vid].strat.setSettings(_settings);
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {

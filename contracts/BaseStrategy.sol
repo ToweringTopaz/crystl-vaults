@@ -4,35 +4,27 @@ pragma solidity ^0.8.4;
 import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
 import "./VaultHealer.sol";
+import "./libs/ITactic.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-abstract contract BaseStrategy {
+abstract contract BaseStrategy is Initializable {
     using LibVaultConfig for VaultSettings;
     
     bytes32 public SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
 
-    VaultHealer immutable public vaultHealer; 
+    VaultHealer public vaultHealer; 
     VaultSettings public settings; //the major storage variables used to configure the vault
+    IERC20 public wantToken; //The token which is deposited and earns a yield 
+    IStrategy public targetVault;
+    uint public targetVid;
+    IERC20 public maximizerRewardToken;
+    IERC20[4] public earned;
+    IERC20[2] public lpToken;
+    address public masterchef;
+    ITactic public tactic;
+    uint public pid;
 
     event SetSettings(VaultSettings _settings);
-        
-    constructor(VaultSettings memory _settings, address _vaultHealerAddress) {
-        _settings.check();
-        settings = _settings;
-        emit SetSettings(_settings);
-
-        vaultHealer = VaultHealer(_vaultHealerAddress);
-        settings.magnetite = VaultHealer(_vaultHealerAddress).magnetite();
-    }
-
-    //The owner of the connected vaulthealer gets administrative power in the strategy, automatically.
-    modifier onlyVHRole(bytes32 role) {
-        require(vaultHealer.hasRole(role, msg.sender));
-        _;
-    }
-    modifier onlyVaultHealer {
-        require(msg.sender == address(vaultHealer), "!vaulthealer");
-        _;
-    }
 
     function vaultSharesTotal() public virtual view returns (uint256);
     function _vaultDeposit(uint256 _amount) internal virtual;
@@ -41,41 +33,21 @@ abstract contract BaseStrategy {
     function _emergencyVaultWithdraw() internal virtual;
     function _farm() internal virtual;
     function _wantBalance() internal virtual view returns (uint256);
-
-    //support VH-based pause or standard openzeppelin method
-    function _pause() internal virtual;
-    function _unpause() internal virtual;
-    function paused() external virtual returns (bool) {
-        return false;
-    }
     
     function wantLockedTotal() public view returns (uint256) {
         return _wantBalance() + vaultSharesTotal();
     }
     
-    //for front-end
-    function tolerance() external view returns (uint) {
-        return settings.tolerance;
-    }
-    
-    function setSettings(VaultSettings calldata _settings) external onlyVHRole(SETTINGS_SETTER) {
+    function setSettings(VaultSettings calldata _settings) external {
         _settings.check();
         settings = _settings;
         emit SetSettings(_settings);
     }
-    
-    function pause() external onlyVaultHealer {
-        _pause();
-    }
-    function unpause() external onlyVaultHealer {
-        _unpause();
-    }
-    function panic() external onlyVaultHealer {
-        _pause();
+
+    function panic() external {
         _emergencyVaultWithdraw();
     }
-    function unpanic() external onlyVaultHealer {
-        _unpause();
+    function unpanic() external {
         _farm();
     }
 }

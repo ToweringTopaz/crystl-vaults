@@ -2,7 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "./IUniRouter.sol";
-import "../Magnetite.sol";
+import "./IMagnetite.sol";
 
 struct VaultSettings {
     IUniRouter router; //UniswapV2 compatible router
@@ -11,7 +11,7 @@ struct VaultSettings {
     uint64 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
     uint88 dust; //min token amount to swap/deposit. Prevents token waste, exploits and unnecessary reverts
     bool feeOnTransfer;
-    Magnetite magnetite;
+    IMagnetite magnetite;
 }
 
 struct VaultFees {

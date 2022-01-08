@@ -13,12 +13,12 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     using LibVaultSwaps for VaultFees;    
     
     //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
-    function earn(VaultFees calldata earnFees) external onlyVaultHealer returns (bool success) {
+    function earn(VaultFees calldata earnFees) external returns (bool success) {
         return _earn(earnFees);    
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external onlyVaultHealer returns (uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 sharesAdded) {
         // _earn(_from); //earn before deposit prevents abuse
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
@@ -38,10 +38,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         require(sharesAdded > settings.dust, "deposit: no/dust shares added");
     }
 
-
-
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
-    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
+    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external returns (uint sharesRemoved, uint wantAmt) {
         //User's balance, in want tokens
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
@@ -78,12 +76,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         
         wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
         return (sharesRemoved, _wantAmt);
-    }
-
-    function _pause() internal override {} //no-op, since vaulthealer manages paused status
-    function _unpause() internal override {}
-    function paused() external view override returns (bool) {
-        return vaultHealer.paused(address(this));
     }
 
 }

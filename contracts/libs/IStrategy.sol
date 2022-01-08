@@ -5,6 +5,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./LibVaultConfig.sol";
 
 interface IStrategy {
+    function initialize (
+        IERC20 _wantToken,
+        address _masterchefAddress,
+        address _tacticAddress,
+        uint256 _pid,
+        VaultSettings memory _settings,
+        IERC20[] memory _earned,
+        address _targetVault //maximizer target
+    ) external;
+    function setSettings(VaultSettings calldata _settings) external;
     function wantToken() external view returns (IERC20); // Want address
     function boostPoolAddress() external view returns (address);
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy

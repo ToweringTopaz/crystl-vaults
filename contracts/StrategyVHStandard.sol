@@ -12,26 +12,46 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;
 
-    address public immutable masterchef;
-    ITactic public immutable tactic;
-    uint public immutable pid;
-
-    constructor(
+    function initialize (
         IERC20 _wantToken,
-        address _vaultHealerAddress,
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
         VaultSettings memory _settings,
         IERC20[] memory _earned,
         address _targetVault //maximizer target
-    )
-        BaseStrategy(_settings, _vaultHealerAddress)
-        BaseStrategySwapLogic(_wantToken, _earned, _targetVault)
-    {
+    ) external initializer {
+        wantToken = _wantToken;
         masterchef = _masterchefAddress;
         pid = _pid;
         tactic = ITactic(_tacticAddress);
+
+        //maximizer config
+        targetVault = IStrategy(_targetVault);
+        if (_targetVault != address(0)) {
+            maximizerRewardToken = IStrategy(_targetVault).wantToken();
+            targetVid = vaultHealer.findVid(_targetVault);
+        }
+
+        for (uint i; i < _earned.length && address(_earned[i]) != address(0); i++) {
+            earned[i] = _earned[i];
+        }
+        
+        //Look for LP tokens. If not, want must be a single-stake
+        IERC20 swapToToken = _targetVault == address(0) ? _wantToken : maximizerRewardToken; //swap earned to want, or swap earned to maximizer target's want
+        try IUniPair(address(swapToToken)).token0() returns (address _token0) {
+            lpToken[0] = IERC20(_token0);
+            lpToken[1] = IERC20(IUniPair(address(swapToToken)).token1());
+        } catch { //if not LP, then single stake
+            lpToken[0] = swapToToken;
+        }
+
+        _settings.check();
+        settings = _settings;
+        emit SetSettings(_settings);
+
+        vaultHealer = msg.sender;
+        settings.magnetite = VaultHealer(msg.sender).magnetite();
 
         // maximizerVault.setFees(
         //                 [
@@ -43,7 +63,6 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         // );
         
     }
-    
     function vaultSharesTotal() public override view returns (uint256) {
         return tactic.vaultSharesTotal(masterchef, pid);
     }
@@ -80,7 +99,7 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         return maximizerRewardToken;
     }
 
-    function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external onlyVaultHealer {
+    function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external {
         maximizerRewardToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
         vaultHealer.stratWithdraw(_pid, _amount);
     }
