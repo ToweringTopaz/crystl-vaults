@@ -3,21 +3,21 @@ pragma solidity ^0.8.4;
 
 import "./BaseStrategyVaultHealer.sol";
 import "./libs/ITactic.sol";
-import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "./libs/IVaultHealer.sol";
+import {ERC1155Holder} from "./libs/OpenZeppelin.sol";
 
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
-    using Address for address;
     using SafeERC20 for IERC20;
-    using LibVaultConfig for VaultFees;
-    using LibVaultSwaps for VaultFees;
+    using Vault for Vault.Fees;
+    using LibVaultSwaps for Vault.Fees;
 
     function initEncode(
         IERC20 _wantToken,
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
-        VaultSettings calldata _settings,
+        Vault.Settings calldata _settings,
         IERC20[] calldata _earned,
         address _targetVault //maximizer target
     ) external pure returns (bytes memory data) {
@@ -29,12 +29,13 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
-        VaultSettings memory _settings,
+        Vault.Settings memory _settings,
         IERC20[] memory _earned,
         address _targetVault //maximizer target
-        ) = abi.decode(data,(IERC20,address,address,uint256,VaultSettings,IERC20[],address));
+        ) = abi.decode(data,(IERC20,address,address,uint256,Vault.Settings,IERC20[],address));
 
         wantToken = _wantToken;
+        _wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
         masterchef = _masterchefAddress;
         pid = _pid;
         tactic = ITactic(_tacticAddress);
@@ -43,7 +44,8 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         targetVault = IStrategy(_targetVault);
         if (_targetVault != address(0)) {
             maximizerRewardToken = IStrategy(_targetVault).wantToken();
-            targetVid = vaultHealer.findVid(_targetVault);
+            targetVid = IVaultHealer(msg.sender).findVid(_targetVault);
+            maximizerRewardToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
         }
 
         for (uint i; i < _earned.length && address(_earned[i]) != address(0); i++) {
@@ -59,12 +61,11 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
             lpToken[0] = swapToToken;
         }
 
-        LibVaultConfig.check(_settings);
+        Vault.check(_settings);
         settings = _settings;
         emit SetSettings(_settings);
 
-        vaultHealer = VaultHealer(msg.sender);
-        settings.magnetite = VaultHealer(msg.sender).magnetite();
+        settings.magnetite = IVaultHealer(msg.sender).magnetite();
 
         // maximizerVault.setFees(
         //                 [
@@ -85,27 +86,24 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         //token allowance for the pool to pull the correct amount of funds only
         wantToken.safeIncreaseAllowance(masterchef, _amount);
         
-        address(tactic).functionDelegateCall(abi.encodeWithSelector(
-            tactic._vaultDeposit.selector, masterchef, pid, _amount
-        ), "vaultdeposit failed");
+        delegateToTactic(abi.encodeWithSelector(
+            tactic._vaultDeposit.selector, masterchef, pid, _amount));
     }
     
     function _vaultWithdraw(uint256 _amount) internal override {
-        address(tactic).functionDelegateCall(abi.encodeWithSelector(
-            tactic._vaultWithdraw.selector, masterchef, pid, _amount
-        ), "vaultwithdraw failed");
+        delegateToTactic(abi.encodeWithSelector(
+            tactic._vaultWithdraw.selector, masterchef, pid, _amount));
     }
     
     function _vaultHarvest() internal override {
-        address(tactic).functionDelegateCall(abi.encodeWithSelector(
-            tactic._vaultHarvest.selector, masterchef, pid
-        ), "vaultharvest failed");
+        delegateToTactic(abi.encodeWithSelector(
+            tactic._vaultHarvest.selector, masterchef, pid));
     }
     
     function _emergencyVaultWithdraw() internal override {
-        address(tactic).functionDelegateCall(abi.encodeWithSelector(
+        delegateToTactic(abi.encodeWithSelector(
             tactic._emergencyVaultWithdraw.selector, masterchef, pid
-        ), "emergencyvaultwithdraw failed");
+        ));
     }
 
     function getMaximizerRewardToken() external view returns(IERC20){
@@ -113,8 +111,11 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
     }
 
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external {
-        maximizerRewardToken.safeIncreaseAllowance(address(vaultHealer), _amount); //the approval for the subsequent transfer
-        vaultHealer.stratWithdraw(_pid, _amount);
+        IVaultHealer(msg.sender).stratWithdraw(_pid, _amount);
+    }
+    function delegateToTactic(bytes memory _calldata) private {
+        (bool success, ) = address(tactic).delegatecall(_calldata);
+        require(success, "Tactic function failed");
     }
 
 }

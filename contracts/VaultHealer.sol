@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./VaultHealerFactory.sol";
-import "./Magnetite.sol";
+import {Magnetite} from "./Magnetite.sol";
 import "./QuartzUniV2Zap.sol";
 
 contract VaultHealer is VaultHealerFactory {
@@ -12,7 +12,7 @@ contract VaultHealer is VaultHealerFactory {
     IMagnetite public magnetite;
     QuartzUniV2Zap public zap;
 
-    constructor(VaultFees memory _fees, VaultFee memory _withdrawFee)
+    constructor(Vault.Fees memory _fees, Vault.Fee memory _withdrawFee)
         VaultHealerBase(msg.sender) 
         VaultHealerBoostedPools(msg.sender)
         VaultHealerFees(msg.sender, _fees, _withdrawFee)

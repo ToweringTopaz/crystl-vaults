@@ -16,20 +16,21 @@
 pragma solidity ^0.8.0;
 
 import "./libs/LibQuartz.sol";
-import "./libs/IUniRouter.sol";
+import {IUniRouter} from "./libs/Interfaces.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;
-    using LibQuartz for VaultHealer;
+    using LibQuartz for IVaultHealer;
     using LibQuartz for IUniRouter;
     using LibQuartz for IUniPair;
     
     uint256 public constant MINIMUM_AMOUNT = 1000;
-    VaultHealer public immutable vaultHealer;
+    IVaultHealer public immutable vaultHealer;
 
     mapping(bytes32 => bool) private approvals;
 
-    constructor(VaultHealer _vaultHealer) {
+    constructor(IVaultHealer _vaultHealer) {
         vaultHealer = _vaultHealer;
     }
 
@@ -37,17 +38,17 @@ contract QuartzUniV2Zap {
         require(Address.isContract(msg.sender));
     }
 
-    function quartzInETH (uint pid, uint256 tokenAmountOutMin) external payable {
+    function quartzInETH (uint vid, uint256 tokenAmountOutMin) external payable {
         require(msg.value >= MINIMUM_AMOUNT, 'Quartz: Insignificant input amount');
         
-        address weth = vaultHealer.getRouter(pid).WETH();
+        IWETH weth = vaultHealer.getRouter(vid).WETH();
         
-        IWETH(weth).deposit{value: msg.value}();
+        weth.deposit{value: msg.value}();
 
-        _swapAndStake(pid, tokenAmountOutMin, IERC20(weth));
+        _swapAndStake(vid, tokenAmountOutMin, IERC20(weth));
     }
 
-    function quartzIn (uint pid, uint256 tokenAmountOutMin, address tokenInAddress, uint256 tokenInAmount) external {
+    function quartzIn (uint vid, uint256 tokenAmountOutMin, address tokenInAddress, uint256 tokenInAmount) external {
         require(tokenInAmount >= MINIMUM_AMOUNT, 'Quartz: Insignificant input amount');
         
         IERC20 tokenIn = IERC20(tokenInAddress);
@@ -55,14 +56,14 @@ contract QuartzUniV2Zap {
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenInAmount);
         require(tokenIn.balanceOf(address(this)) >= tokenInAmount, 'Quartz: Fee-on-transfer/reflect tokens not yet supported');
 
-        _swapAndStake(pid, tokenAmountOutMin, tokenIn);
+        _swapAndStake(vid, tokenAmountOutMin, tokenIn);
     }
 
-    function quartzOut (uint pid, uint256 withdrawAmount) external {
-        (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(pid);
-        vaultHealer.withdrawFrom(pid, withdrawAmount, msg.sender, address(this)); //todo should this rather be vid, not pid? AND I need to add a from address to the function
+    function quartzOut (uint vid, uint256 withdrawAmount) external {
+        (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
+        vaultHealer.withdrawFrom(vid, withdrawAmount, msg.sender, address(this));
 
-        address weth = router.WETH();
+        address weth = address(router.WETH());
 
         if (pair.token0() != weth && pair.token1() != weth) {
             return LibQuartz.removeLiquidity(address(pair), msg.sender);
@@ -77,12 +78,12 @@ contract QuartzUniV2Zap {
         router.returnAssets(tokens); //returns any leftover tokens to user
     }
     
-    function estimateSwap(uint pid, address tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
-        return vaultHealer.estimateSwap(pid, tokenIn, fullInvestmentIn);
+    function estimateSwap(uint vid, address tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
+        return vaultHealer.estimateSwap(vid, tokenIn, fullInvestmentIn);
     }
 
-    function _swapAndStake(uint pid, uint256 tokenAmountOutMin, IERC20 tokenIn) private {
-        (IUniRouter router,,IUniPair pair) = vaultHealer.getRouterAndPair(pid);        
+    function _swapAndStake(uint vid, uint256 tokenAmountOutMin, IERC20 tokenIn) private {
+        (IUniRouter router,,IUniPair pair) = vaultHealer.getRouterAndPair(vid);        
         
         address token0 = pair.token0();
         address token1 = pair.token1();
@@ -122,7 +123,7 @@ contract QuartzUniV2Zap {
         uint256 amountLiquidity = pair.balanceOf(address(this));
 
         _approveTokenIfNeeded(address(pair));
-        vaultHealer.deposit(pid, amountLiquidity, msg.sender);
+        vaultHealer.deposit(vid, amountLiquidity, msg.sender);
 
         address[] memory tokens = new address[](3);
         tokens[0] = token0;

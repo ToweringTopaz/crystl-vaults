@@ -18,7 +18,6 @@ contract Magnetite is IMagnetite, Ownable {
         uint liquidity;
     }
     
-    address constant private WNATIVE_DEFAULT = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
     bytes constant private COMMON_TOKENS = abi.encode([
         address(0), //slot for wnative
         0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
@@ -203,7 +202,7 @@ contract Magnetite is IMagnetite, Ownable {
     }
     
     function compare(IUniRouter router, PairData memory x, PairData memory y) private pure returns (bool yBetter) {
-        address wNative = wnative(router);
+        address wNative = address(router.WETH());
         uint xLiquidity = x.liquidity * (x.token == wNative ? WNATIVE_MULTIPLIER : 1);
         uint yLiquidity = y.liquidity * (y.token == wNative ? WNATIVE_MULTIPLIER : 1);
         return yLiquidity > xLiquidity;
@@ -211,15 +210,9 @@ contract Magnetite is IMagnetite, Ownable {
 
     function allCommons(IUniRouter router) private pure returns (address[NUM_COMMON] memory tokens) {
         tokens = abi.decode(COMMON_TOKENS,(address[6]));
-        tokens[0] = wnative(router);
+        tokens[0] = address(router.WETH());
     }
-    function wnative(IUniRouter router) private pure returns (address) {
-        try router.WETH() returns (address weth) {
-            return weth;
-        } catch {
-            return WNATIVE_DEFAULT;
-        }
-    }
+
     function setlength(address[] memory array, uint n) internal pure returns (address[] memory) {
         assembly { mstore(array, n) }
         return array;

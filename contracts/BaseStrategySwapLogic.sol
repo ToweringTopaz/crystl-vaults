@@ -1,19 +1,18 @@
  // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "./libs/HardMath.sol";
 import "./libs/LibVaultSwaps.sol";
-
+import "./libs/LibQuartz.sol";
 import "./BaseStrategy.sol";
 import "hardhat/console.sol";
 
+import "./libs/IVaultHealer.sol";
+
 //Contains the strategy's functions related to swapping, earning, etc.
 abstract contract BaseStrategySwapLogic is BaseStrategy {
-    using SafeERC20 for IERC20;
-    using LibVaultConfig for VaultFees;
-    using LibVaultSwaps for VaultFees;
+    using Vault for Vault.Fees;
+    using LibVaultSwaps for Vault.Fees;
     
     function isMaximizer() public view returns (bool) {
         return address(targetVault) != address(0);
@@ -23,7 +22,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return wantToken.balanceOf(address(this));
     }
 
-    function _earn(VaultFees calldata earnFees) internal virtual returns (bool success) {
+    function _earn(Vault.Fees calldata earnFees) internal virtual returns (bool success) {
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
@@ -61,14 +60,11 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
                 uint256 crystlBalance = crystlToken.balanceOf(address(this));
 
-                //need to instantiate pool here?
-                crystlToken.safeIncreaseAllowance(address(vaultHealer), crystlBalance);
-
-                vaultHealer.stratDeposit(targetVid, crystlBalance);
+                IVaultHealer(msg.sender).stratDeposit(targetVid, crystlBalance);
             } else {
                 if (address(lpToken[1]) != address(0)) {
                     // Get want tokens, ie. add liquidity
-                    LibVaultSwaps.optimalMint(wantToken, lpToken[0], lpToken[1]);
+                    LibQuartz.optimalMint(IUniPair(address(wantToken)), lpToken[0], lpToken[1]);
                 }
                 _farm();
             }

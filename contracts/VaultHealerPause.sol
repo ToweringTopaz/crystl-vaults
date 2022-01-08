@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "./VaultHealerBase.sol";
-import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 abstract contract VaultHealerPause is VaultHealerBase {

@@ -52,7 +52,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
-        VaultInfo storage vault = _vaultInfo[_vid];
+        Vault.Info storage vault = _vaultInfo[_vid];
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
 
@@ -112,7 +112,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
-        VaultInfo storage vault = _vaultInfo[_vid];
+        Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
 
         _doEarn(_vid);
@@ -134,7 +134,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         transferData(_vid, _from).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        VaultFee storage withdrawFee = getWithdrawFee(_vid);
+        Vault.Fee storage withdrawFee = getWithdrawFee(_vid);
         address feeReceiver = withdrawFee.receiver;
         uint16 feeRate = withdrawFee.rate;
         if (feeReceiver != address(0) && feeRate > 0 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
@@ -195,7 +195,7 @@ function _beforeTokenTransfer(
     }
 
     function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
-        VaultInfo storage vault = _vaultInfo[_vid];
+        Vault.Info storage vault = _vaultInfo[_vid];
         uint targetVid = vault.targetVid;
         IStrategy targetStrat = strat(targetVid);
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
@@ -207,10 +207,10 @@ function _beforeTokenTransfer(
     }
 
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
-        VaultInfo storage vault = _vaultInfo[_vid];
+        Vault.Info storage vault = _vaultInfo[_vid];
         uint targetVid = vault.targetVid;
         IStrategy vaultStrat = strat(_vid);
-        VaultInfo storage target = _vaultInfo[vault.targetVid];
+        Vault.Info storage target = _vaultInfo[vault.targetVid];
         IStrategy targetStrat = strat(targetVid);
 
         vault.accRewardTokensPerShare += (targetStrat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal();

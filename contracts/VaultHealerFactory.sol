@@ -3,7 +3,6 @@ pragma solidity ^0.8.9;
 
 import "./VaultHealerBoostedPools.sol";
 import "./VHStrategyProxy.sol";
-import "@openzeppelin/contracts/utils/Create2.sol";
 
 abstract contract VaultHealerFactory is VaultHealerBoostedPools {
 

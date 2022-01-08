@@ -9,7 +9,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
     function earnAll() external nonReentrant {
 
-        VaultFees memory _defaultEarnFees = defaultEarnFees;
+        Vault.Fees memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
 
         for (uint i; i < bucketLength; i++) {
@@ -31,7 +31,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
     
     function earnSome(uint256[] calldata vids) external nonReentrant {
 
-        VaultFees memory _defaultEarnFees = defaultEarnFees;
+        Vault.Fees memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
         uint256[] memory selBuckets = new uint256[](bucketLength); //BitMap of selected vids
 
@@ -62,8 +62,8 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         _doEarn(vid);
     }
 
-    function _tryEarn(uint256 vid, VaultFees memory _earnFees) private {
-        VaultInfo storage vault = _vaultInfo[vid];
+    function _tryEarn(uint256 vid, Vault.Fees memory _earnFees) private {
+        Vault.Info storage vault = _vaultInfo[vid];
         uint interval = vault.minBlocksBetweenEarns;
 
         if (block.number > vault.lastEarnBlock + interval) {
@@ -82,7 +82,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
     //performs earn even if it's not been long enough
     function _doEarn(uint256 vid) internal {
-        VaultInfo storage vault = _vaultInfo[vid];
+        Vault.Info storage vault = _vaultInfo[vid];
         uint interval = vault.minBlocksBetweenEarns;   
 
         try strat(vid).earn(getEarnFees(vid)) returns (bool success) {

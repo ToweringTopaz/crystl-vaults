@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import "./VaultHealerFactory.sol";
+import {IVaultHealer} from "./libs/IVaultHealer.sol";
 
 contract VHStrategyProxy {
 
@@ -11,7 +11,7 @@ contract VHStrategyProxy {
     constructor() {
         VAULTHEALER = msg.sender;
         bytes memory metadata;
-        (IMPLEMENTATION, metadata) = VaultHealerFactory(msg.sender).getProxyData();
+        (IMPLEMENTATION, metadata) = IVaultHealer(msg.sender).getProxyData();
     }
 
     function _delegate() internal {

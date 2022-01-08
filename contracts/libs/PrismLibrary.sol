@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./IUniPair.sol";
+import {IUniPair} from "./Interfaces.sol";
 
 //Generic UniswapV2 library modified to have variable initcodehash and swap fees, so it'll work with any unirouter
 

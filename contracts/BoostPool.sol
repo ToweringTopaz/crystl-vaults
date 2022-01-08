@@ -9,13 +9,10 @@ Join us at PolyCrystal.Finance!
 █▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
 */
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./VaultHealer.sol";
-import "./libs/IStrategy.sol";
+import {Ownable, SafeERC20} from "./libs/OpenZeppelin.sol";
+import {IERC20, IStrategy, IVaultHealer, IBoostPool} from "./libs/Interfaces.sol";
 
-contract BoostPool is Ownable {
+contract BoostPool is IBoostPool, Ownable {
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -25,7 +22,7 @@ contract BoostPool is Ownable {
     }
 
     // The vaultHealer where the staking / want tokens all reside
-    VaultHealer public immutable VAULTHEALER;
+    IVaultHealer public immutable VAULTHEALER;
     // The stake token
     uint256 public immutable STAKE_TOKEN_VID;
     // The reward token
@@ -68,11 +65,10 @@ contract BoostPool is Ownable {
         uint256 _bonusEndBlock
     )
     {
-        VAULTHEALER = VaultHealer(_vaultHealer);
-        require(VaultHealer(_vaultHealer).supportsInterface(type(IERC1155).interfaceId), "invalid vaulthealer");
+        VAULTHEALER = IVaultHealer(_vaultHealer);
         
         STAKE_TOKEN_VID = _stakeTokenVid;
-        (IERC20 vaultWant, IStrategy vaultStrat) = VaultHealer(_vaultHealer).vaultInfo(_stakeTokenVid);
+        (IERC20 vaultWant, IStrategy vaultStrat) = IVaultHealer(_vaultHealer).vaultInfo(_stakeTokenVid);
         require(address(vaultWant) != address(0) && address(vaultStrat) != address(0), "bad want/strat for stake_token_vid");
         
         REWARD_TOKEN = IERC20(_rewardToken);

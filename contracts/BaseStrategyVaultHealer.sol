@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./VaultHealer.sol";
-
+import {IStrategy, IVaultHealer} from "./libs/Interfaces.sol";
 import "./BaseStrategySwapLogic.sol";
-import "./libs/IStrategy.sol";
+
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
-    using SafeERC20 for IERC20;
-    using LibVaultConfig for VaultFees;
-    using LibVaultSwaps for VaultFees;    
     
     //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
-    function earn(VaultFees calldata earnFees) external returns (bool success) {
+    function earn(Vault.Fees calldata earnFees) external returns (bool success) {
         return _earn(earnFees);    
     }
 
@@ -28,7 +24,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
-        vaultHealer.executePendingDeposit(address(this), _wantAmt);
+        IVaultHealer(msg.sender).executePendingDeposit(address(this), _wantAmt);
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         sharesAdded = wantLockedTotal() - wantLockedBefore;
@@ -74,7 +70,6 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (_wantAmt > wantBal) _wantAmt = wantBal;
         require(_wantAmt > 0, "nothing to withdraw after slippage");
         
-        wantToken.safeIncreaseAllowance(address(vaultHealer), _wantAmt);
         return (sharesRemoved, _wantAmt);
     }
 

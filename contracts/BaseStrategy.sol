@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
-import "./VaultHealer.sol";
 import "./libs/ITactic.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "./libs/Vault.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-abstract contract BaseStrategy is Initializable {
-    using LibVaultConfig for VaultSettings;
-    
-    bytes32 public SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
+abstract contract BaseStrategy is Initializable, IStrategy {
 
-    VaultHealer public vaultHealer; 
-    VaultSettings public settings; //the major storage variables used to configure the vault
+    Vault.Settings internal settings; //the major storage variables used to configure the vault
     IERC20 public wantToken; //The token which is deposited and earns a yield 
     IStrategy public targetVault;
     uint public targetVid;
@@ -24,7 +19,7 @@ abstract contract BaseStrategy is Initializable {
     ITactic public tactic;
     uint public pid;
 
-    event SetSettings(VaultSettings _settings);
+    event SetSettings(Vault.Settings _settings);
 
     function vaultSharesTotal() public virtual view returns (uint256);
     function _vaultDeposit(uint256 _amount) internal virtual;
@@ -38,8 +33,8 @@ abstract contract BaseStrategy is Initializable {
         return _wantBalance() + vaultSharesTotal();
     }
     
-    function setSettings(VaultSettings calldata _settings) external {
-        _settings.check();
+    function setSettings(Vault.Settings calldata _settings) external {
+        Vault.check(_settings);
         settings = _settings;
         emit SetSettings(_settings);
     }
@@ -49,5 +44,11 @@ abstract contract BaseStrategy is Initializable {
     }
     function unpanic() external {
         _farm();
+    }
+    function _destroy_() external pure {
+        revert();
+    }
+    function router() external view returns (IUniRouter) {
+        return settings.router;
     }
 }

@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "./PrismLibrary.sol";
-import "./LibVaultConfig.sol";
+import "./Vault.sol";
 import "hardhat/console.sol";
+import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {AddressUpgradeable as Address} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 //Functions specific to the strategy code
 library LibVaultSwaps {
     using SafeERC20 for IERC20;
     using Address for address;
     
-    IERC20 constant WNATIVE_DEFAULT = IERC20(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
     uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
     
     struct SwapConfig {
@@ -23,27 +22,27 @@ library LibVaultSwaps {
         bool feeOnTransfer;
     }
 
-    function distribute(VaultFees calldata earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
+    function distribute(Vault.Fees calldata earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
         // To pay for earn function
         uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, wnative(swap.router), tx.origin);
+            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), tx.origin);
             earnedAmt -= fee;
             }
 
         //distribute rewards
         fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, wnative(swap.router), earnFees.treasuryFee.receiver);
+            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), earnFees.treasuryFee.receiver);
             earnedAmt -= fee;
             }
         
         //burn crystl
         fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
         if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, wnative(swap.router), earnFees.burn.receiver);
+            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), earnFees.burn.receiver);
             earnedAmt -= fee;
             }
     }
@@ -82,7 +81,7 @@ library LibVaultSwaps {
         //allow swap.router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(swap.router), _amountIn);
         
-        if (_tokenB != wnative(swap.router) || _to.isContract() ) {
+        if (_tokenB != swap.router.WETH() || _to.isContract() ) {
             if (swap.feeOnTransfer) { //reflect mode on
                 swap.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
@@ -100,36 +99,6 @@ library LibVaultSwaps {
             }            
         }
 
-    }
-    
-    //based on liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);    
-    function optimalMint(IERC20 pair, IERC20 tokenA, IERC20 tokenB) internal returns (uint liquidity) {
-        (address token0, address token1) = PrismLibrary.sortTokens(address(tokenA), address(tokenB));
-
-        (uint112 reserve0, uint112 reserve1,) = IUniPair(address(pair)).getReserves();
-        uint totalSupply = pair.totalSupply();
-        
-        uint balance0 = IERC20(token0).balanceOf(address(this));
-        uint balance1 = IERC20(token1).balanceOf(address(this));
-
-        uint liquidity0 = balance0 * totalSupply / reserve0;
-        uint liquidity1 = balance1 * totalSupply / reserve1;
-
-        if (liquidity0 < liquidity1) {
-            balance1 = reserve1 * balance0 / reserve0;
-        } else if (liquidity1 < liquidity0) {
-            balance0 = reserve0 * balance1 / reserve1;
-        }
-
-        IERC20(token0).safeTransfer(address(pair), balance0);
-        IERC20(token1).safeTransfer(address(pair), balance1);
-        liquidity = IUniPair(address(pair)).mint(address(this));
-    }
-    
-    function wnative(IUniRouter router) private pure returns (IERC20) {
-        try router.WETH() returns (address weth) { //use router's wnative
-            return IERC20(weth);
-        } catch { return WNATIVE_DEFAULT; }
     }
     
 }

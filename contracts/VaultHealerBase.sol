@@ -1,31 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import {SafeERC20, ReentrancyGuard, ERC1155Supply, AccessControlEnumerable} from "./libs/OpenZeppelin.sol";
+
 import "hardhat/console.sol";
 import "./libs/Vault.sol";
-import "./libs/LibVaultConfig.sol";
 import "./libs/IStrategy.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    using LibVaultConfig for VaultFees;
 
     bytes32 public constant STRATEGY = keccak256("STRATEGY");
     bytes32 public constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 public constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
 
-    VaultInfo[] internal _vaultInfo; // Info of each vault.
+    Vault.Info[] internal _vaultInfo; // Info of each vault.
 
     //vid for any of our strategies
     mapping(address => uint) private _strats;
     
     event AddVault(address indexed strat);
     
-    constructor(address _owner) ERC1155("") {
+    constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(VAULT_ADDER, _owner);
         _setRoleAdmin(STRATEGY, VAULT_ADDER);
@@ -44,7 +40,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         IStrategy strat_ = IStrategy(_strat);
         vid = _vaultInfo.length;
         _vaultInfo.push();
-        VaultInfo storage vault = _vaultInfo[vid];
+        Vault.Info storage vault = _vaultInfo[vid];
         vault.want = strat_.wantToken();
         //vault.router = strat.router();
         vault.lastEarnBlock = block.number;
@@ -64,7 +60,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         require(vid > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
         return vid;
     }
-    function setSettings(uint vid, VaultSettings calldata _settings) external onlyRole(SETTINGS_SETTER) {
+    function setSettings(uint vid, Vault.Settings calldata _settings) external onlyRole(SETTINGS_SETTER) {
         strat(vid).setSettings(_settings);
     }
 
