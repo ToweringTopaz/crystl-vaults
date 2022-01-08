@@ -3,17 +3,18 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./LibVaultConfig.sol";
-
+import "./Vault.sol";
 interface IStrategy {
-    function initialize (
+    function initEncode(
         IERC20 _wantToken,
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
-        VaultSettings memory _settings,
-        IERC20[] memory _earned,
+        VaultSettings calldata _settings,
+        IERC20[] calldata _earned,
         address _targetVault //maximizer target
-    ) external;
+    ) external pure returns (bytes memory data);
+    function initialize (bytes calldata data) external;
     function setSettings(VaultSettings calldata _settings) external;
     function wantToken() external view returns (IERC20); // Want address
     function boostPoolAddress() external view returns (address);

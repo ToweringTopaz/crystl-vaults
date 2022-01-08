@@ -3,12 +3,10 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "./BoostPool.sol";
-import "./libs/IStrategy.sol";
 import "hardhat/console.sol";
+import "./libs/Vault.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -17,33 +15,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
     bytes32 public constant STRATEGY = keccak256("STRATEGY");
     bytes32 public constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 public constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
-
-    struct VaultInfo {
-        IERC20 want; //  want token.
-        IStrategy strat; // Strategy contract that will auto compound want tokens
-        //IUniRouter router;
-        VaultFee withdrawFee;
-        VaultFees earnFees;
-        BoostInfo[] boosts;
-        mapping (address => UserInfo) user;
-        uint256 accRewardTokensPerShare;
-        uint256 balanceCrystlCompounderLastUpdate;
-        uint256 targetVid; //maximizer target, which accumulates tokens
-        uint256 panicLockExpiry; //panic can only happen again after the time has elapsed
-        uint256 lastEarnBlock;
-        uint256 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
-        // bytes data;
-    }
-
-    struct BoostInfo {
-        BoostPool boostPool;
-        bool isActive;
-    }
-
-    struct UserInfo {
-        BitMaps.BitMap boosts;
-        uint256 rewardDebt;
-    }
 
     VaultInfo[] internal _vaultInfo; // Info of each vault.
 
@@ -64,20 +35,19 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
      * @dev Add a new want to the vault. Can only be called by the owner.
      */
 
-    function addVault(address _strat, uint minBlocksBetweenEarns) public virtual nonReentrant returns (uint vid) {
+    function addVault(address _strat, uint minBlocksBetweenEarns) internal virtual nonReentrant returns (uint vid) {
         require(!hasRole(STRATEGY, _strat), "Existing strategy");
         grantRole(STRATEGY, _strat); //requires msg.sender is POOL_ADDER
 
-        IStrategy strat = IStrategy(_strat);
+        IStrategy strat_ = IStrategy(_strat);
         vid = _vaultInfo.length;
         _vaultInfo.push();
         VaultInfo storage vault = _vaultInfo[vid];
-        vault.want = strat.wantToken();
-        vault.strat = strat;
+        vault.want = strat_.wantToken();
         //vault.router = strat.router();
         vault.lastEarnBlock = block.number;
         vault.minBlocksBetweenEarns = minBlocksBetweenEarns;
-        vault.targetVid = _strats[address(strat.targetVault())];
+        vault.targetVid = _strats[address(strat_.targetVault())];
         
         _strats[_strat] = vid;
         emit AddVault(_strat);
@@ -93,11 +63,12 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         return vid;
     }
     function setSettings(uint vid, VaultSettings calldata _settings) external onlyRole(SETTINGS_SETTER) {
-        _vaultInfo[vid].strat.setSettings(_settings);
+        strat(vid).setSettings(_settings);
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId);
     }
 
+    function strat(uint _vid) internal virtual view returns (IStrategy);
 }

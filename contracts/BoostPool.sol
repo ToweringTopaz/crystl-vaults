@@ -19,7 +19,7 @@ contract BoostPool is Ownable {
     using SafeERC20 for IERC20;
 
     // Info of each user.
-    struct UserInfo {
+    struct User {
         uint256 amount;     // How many LP tokens the user has provided.
         int256 rewardDebt; // Reward debt. See explanation below.
     }
@@ -37,7 +37,7 @@ contract BoostPool is Ownable {
     uint256 public totalStaked;
 
     // Info of each user that stakes LP tokens.
-    mapping (address => UserInfo) public userInfo;
+    mapping (address => User) public userInfo;
     // The block number when Reward mining starts.
     uint256 public startBlock;
 	// The block number when mining ends.
@@ -121,7 +121,7 @@ contract BoostPool is Ownable {
 
     // View function to see pending Reward on frontend.
     function pendingReward(address _user) external view returns (uint256) {
-        UserInfo storage user = userInfo[_user];
+        User storage user = userInfo[_user];
         uint256 _accRewardTokenPerShare = accRewardTokenPerShare;
         if (block.number > lastRewardBlock && totalStaked != 0) {
             uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
@@ -145,7 +145,7 @@ contract BoostPool is Ownable {
 
     //Internal function to harvest rewards
     function _harvest(address _user) internal returns (uint pending) {
-        UserInfo storage user = userInfo[_user];
+        User storage user = userInfo[_user];
         if (user.amount > 0) {
             pending = calcPending(user, accRewardTokenPerShare);
             if(pending > 0) {
@@ -171,7 +171,7 @@ contract BoostPool is Ownable {
 
     function joinPool(address _user, uint _amount) external onlyVaultHealer {
         updatePool();
-        UserInfo storage user = userInfo[_user];
+        User storage user = userInfo[_user];
         require (user.amount == 0, "user already is in pool");
         require (block.number < bonusEndBlock, "pool has ended");
         user.amount = _amount;
@@ -187,7 +187,7 @@ contract BoostPool is Ownable {
         status = block.number >= bonusEndBlock ? 4 : 0; //if rewards have ended, mark pool done
 
         if (_to != address(0)) {
-            UserInfo storage user = userInfo[_to];
+            User storage user = userInfo[_to];
             uint pending = _harvest(_to);
             if (pending == 0 && status >= 4)
                 status |= 2;
@@ -197,7 +197,7 @@ contract BoostPool is Ownable {
             emit Deposit(_to, _amount);
         }
         if (_from != address(0)) {
-            UserInfo storage user = userInfo[_from];
+            User storage user = userInfo[_from];
             uint pending = _harvest(_from);
             if (pending == 0 && status >= 4)
                 status |= 1;
@@ -234,7 +234,7 @@ contract BoostPool is Ownable {
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.  
     function emergencyWithdraw(address _user) external onlyVaultHealer returns (bool success) {
-        UserInfo storage user = userInfo[_user];
+        User storage user = userInfo[_user];
         totalStaked -= user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
@@ -261,11 +261,11 @@ contract BoostPool is Ownable {
     }
 
     //Standard reward debt calculation, but subtracting any delinquent pending rewards
-    function updateRewardDebt(UserInfo storage user, uint pending) private {
+    function updateRewardDebt(User storage user, uint pending) private {
         user.rewardDebt = int(user.amount * accRewardTokenPerShare / 1e30) - int(pending);
     }
 
-    function calcPending(UserInfo storage user, uint _accRewardTokenPerShare) private view returns (uint pending) {
+    function calcPending(User storage user, uint _accRewardTokenPerShare) private view returns (uint pending) {
         pending = user.amount * _accRewardTokenPerShare / 1e30;
         
         unchecked { //If rewardDebt is negative, underflow is desired here. This adds delinquent pending rewards back into the current total

@@ -35,8 +35,8 @@ contract VaultHealer is VaultHealerFactory {
         return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
     }
     
-    function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy strat) {
-        return (_vaultInfo[vid].want, _vaultInfo[vid].strat);
+    function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat) {
+        return (_vaultInfo[vid].want, strat(vid));
     }
     function rewardDebt(uint vid, address _user) external view returns (uint) {
         return _vaultInfo[vid].user[_user].rewardDebt;
@@ -48,7 +48,7 @@ contract VaultHealer is VaultHealerFactory {
         uint256 _sharesTotal = totalSupply(_vid);
         if (_sharesTotal == 0) return 0;
         
-        uint256 wantLockedTotal = _vaultInfo[_vid].strat.wantLockedTotal();
+        uint256 wantLockedTotal = strat(_vid).wantLockedTotal();
         
         return balanceOf(_user, _vid) * wantLockedTotal / _sharesTotal;
     }

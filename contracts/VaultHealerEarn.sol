@@ -68,8 +68,8 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
         if (block.number > vault.lastEarnBlock + interval) {
             console.log("Earning vid: ", vid);
-            console.log("Earning strat: ", address(vault.strat));
-            try vault.strat.earn(_earnFees) returns (bool success) {
+            console.log("Earning strat: ", address(strat(vid)));
+            try strat(vid).earn(_earnFees) returns (bool success) {
                 if (success) {
                     vault.lastEarnBlock = block.number;
                     if (interval > 1) vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
@@ -85,7 +85,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         VaultInfo storage vault = _vaultInfo[vid];
         uint interval = vault.minBlocksBetweenEarns;   
 
-        try vault.strat.earn(getEarnFees(vid)) returns (bool success) {
+        try strat(vid).earn(getEarnFees(vid)) returns (bool success) {
             if (success) {
                 vault.lastEarnBlock = block.number;
                 if (interval > 1 && block.number > vault.lastEarnBlock + interval)
@@ -96,7 +96,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         } catch {}     
     }
 
-    function addVault(address _strat, uint minBlocksBetweenEarns) public override(VaultHealerBase, VaultHealerPause) returns (uint vid) {
+    function addVault(address _strat, uint minBlocksBetweenEarns) internal override(VaultHealerBase, VaultHealerPause) returns (uint vid) {
         return VaultHealerPause.addVault(_strat, minBlocksBetweenEarns);
     }
 }

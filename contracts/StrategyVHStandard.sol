@@ -12,15 +12,28 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
     using LibVaultConfig for VaultFees;
     using LibVaultSwaps for VaultFees;
 
-    function initialize (
+    function initEncode(
         IERC20 _wantToken,
         address _masterchefAddress,
         address _tacticAddress,
         uint256 _pid,
-        VaultSettings memory _settings,
-        IERC20[] memory _earned,
+        VaultSettings calldata _settings,
+        IERC20[] calldata _earned,
         address _targetVault //maximizer target
-    ) external initializer {
+    ) external pure returns (bytes memory data) {
+        return abi.encode(_wantToken, _masterchefAddress, _tacticAddress, _pid, _settings, _earned, _targetVault);
+    }
+
+    function initialize (bytes calldata data) external initializer {
+        (IERC20 _wantToken,
+        address _masterchefAddress,
+        address _tacticAddress,
+        uint256 _pid,
+        VaultSettings calldata _settings,
+        IERC20[] calldata _earned,
+        address _targetVault //maximizer target
+        ) = abi.decode(data,(IERC20,address,address,uint256,VaultSettings,IERC20[],address));
+
         wantToken = _wantToken;
         masterchef = _masterchefAddress;
         pid = _pid;

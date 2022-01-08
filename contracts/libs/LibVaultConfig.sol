@@ -3,26 +3,7 @@ pragma solidity ^0.8.4;
 
 import "./IUniRouter.sol";
 import "./IMagnetite.sol";
-
-struct VaultSettings {
-    IUniRouter router; //UniswapV2 compatible router
-    uint16 slippageFactor; // sets a limit on losses due to deposit fee in pool, reflect fees, rounding errors, etc.
-    uint16 tolerance; // "Hidden Gem", "Premiere Gem", etc. frontend indicator
-    uint64 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
-    uint88 dust; //min token amount to swap/deposit. Prevents token waste, exploits and unnecessary reverts
-    bool feeOnTransfer;
-    IMagnetite magnetite;
-}
-
-struct VaultFees {
-    VaultFee userReward; //rate paid to user who called earn()
-    VaultFee treasuryFee; //fees that get paid to the crystl.finance treasury
-    VaultFee burn; //burn address for CRYSTL
-}
-struct VaultFee {
-    address receiver;
-    uint16 rate;
-}
+import "./Vault.sol";
 
 library LibVaultConfig {
     

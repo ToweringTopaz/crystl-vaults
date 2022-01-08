@@ -19,7 +19,7 @@ abstract contract VaultHealerPause is VaultHealerBase {
         _setupRole(PAUSER, _owner);
     }
 
-    function addVault(address _strat, uint minBlocksBetweenEarns) public virtual override returns (uint vid) {
+    function addVault(address _strat, uint minBlocksBetweenEarns) internal virtual override returns (uint vid) {
         vid = super.addVault(_strat, minBlocksBetweenEarns);
         pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
     }    
@@ -34,11 +34,11 @@ abstract contract VaultHealerPause is VaultHealerBase {
         require (_vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");
         _vaultInfo[vid].panicLockExpiry = block.timestamp + PANIC_LOCK_DURATION;
         _pause(vid);
-        _vaultInfo[vid].strat.panic();
+        strat(vid).panic();
     }
     function unpanic(uint vid) external onlyRole("PAUSER") {
         _unpause(vid);
-        _vaultInfo[vid].strat.unpanic();
+        strat(vid).unpanic();
     }
     function paused() external view returns (bool) {
         return paused(findVid(msg.sender));
