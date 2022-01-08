@@ -9,7 +9,7 @@ contract VaultHealer is VaultHealerFactory {
     
     bytes32 public constant PATH_SETTER = keccak256("PATH_SETTER");
 
-    IMagnetite public magnetite;
+    Magnetite public magnetite;
     QuartzUniV2Zap public zap;
 
     constructor(Vault.Fees memory _fees, Vault.Fee memory _withdrawFee)
@@ -19,11 +19,11 @@ contract VaultHealer is VaultHealerFactory {
         VaultHealerPause(msg.sender)
     {
         magnetite = new Magnetite();
-        zap = new QuartzUniV2Zap(this);
+        zap = new QuartzUniV2Zap(IVaultHealer(address(this)));
         _setupRole(PATH_SETTER, msg.sender);
     }
     
-    function setPath(address router, address[] calldata path) external onlyRole(PATH_SETTER) {
+    function setPath(address router, IERC20[] calldata path) external onlyRole(PATH_SETTER) {
         magnetite.overridePath(router, path);
     }
 

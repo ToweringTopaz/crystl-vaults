@@ -61,15 +61,15 @@ library LibVaultSwaps {
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
-        address[] memory path = swap.magnetite.findAndSavePath(address(swap.router), address(_tokenA), address(_tokenB));
+        IERC20[] memory path = swap.magnetite.findAndSavePath(address(swap.router), _tokenA, _tokenB);
         
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
         uint256 counter=0;
         for (counter; counter<path.length; counter++){
-            if (path[counter]==address(0)) break;
+            if (address(path[counter]) == address(0)) break;
         }
-        address[] memory cleanedUpPath = new address[](counter);
+        IERC20[] memory cleanedUpPath = new IERC20[](counter);
         for (uint256 i=0; i<counter; i++) {
             cleanedUpPath[i] =path[i];
         }

@@ -26,6 +26,7 @@ import "./IUniFactory.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IUniPair;
     
     uint256 constant MINIMUM_AMOUNT = 1000;
     
@@ -48,24 +49,24 @@ library LibQuartz {
         uint256 denominator = router.quote(halfInvestment, reserveA + halfInvestment, reserveB - numerator);
         swapAmount = investmentA - HardMath.sqrt(halfInvestment * halfInvestment * numerator / denominator);
     }
-    function returnAssets(IUniRouter router, address[] memory tokens) internal {
+    function returnAssets(IUniRouter router, IERC20[] memory tokens) internal {
         IWETH weth = router.WETH();
         uint256 balance;
         
         for (uint256 i; i < tokens.length; i++) {
-            balance = IERC20(tokens[i]).balanceOf(address(this));
+            balance = tokens[i].balanceOf(address(this));
             if (balance > 0) {
-                if (tokens[i] == address(weth)) {
+                if (tokens[i] == weth) {
                     weth.withdraw(balance);
                     (bool success,) = msg.sender.call{value: balance}(new bytes(0));
                     require(success, 'Quartz: ETH transfer failed');
                 } else {
-                    IERC20(tokens[i]).safeTransfer(msg.sender, balance);
+                    tokens[i].safeTransfer(msg.sender, balance);
                 }
             }
         }
     }
-    function estimateSwap(IVaultHealer vaultHealer, uint pid, address tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
+    function estimateSwap(IVaultHealer vaultHealer, uint pid, IERC20 tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
         (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
         
         bool isInputA = pair.token0() == tokenIn;
@@ -79,9 +80,9 @@ library LibQuartz {
         swapTokenOut = isInputA ? pair.token1() : pair.token0();
     }
 
-    function removeLiquidity(address pair, address to) internal {
-        IERC20(pair).safeTransfer(pair, IERC20(pair).balanceOf(address(this)));
-        (uint256 amount0, uint256 amount1) = IUniPair(pair).burn(to);
+    function removeLiquidity(IUniPair pair, address to) internal {
+        pair.safeTransfer(address(pair), pair.balanceOf(address(this)));
+        (uint256 amount0, uint256 amount1) = pair.burn(to);
 
         require(amount0 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_A_AMOUNT');
         require(amount1 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_B_AMOUNT');
@@ -90,7 +91,7 @@ library LibQuartz {
     function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
         
-        (uint112 reserve0, uint112 reserve1,) = IUniPair(pair).getReserves();
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         uint totalSupply = pair.totalSupply();
         
         uint balance0 = token0.balanceOf(address(this));
@@ -110,7 +111,7 @@ library LibQuartz {
         liquidity = pair.mint(address(this));
     }
 
-    function hasSufficientLiquidity(address token0, address token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
+    function hasSufficientLiquidity(IERC20 token0, IERC20 token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
         IUniFactory factory = router.factory();
         IUniPair pair = IUniPair(factory.getPair(token0, token1));
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();

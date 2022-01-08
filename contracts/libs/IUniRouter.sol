@@ -2,7 +2,7 @@
 pragma solidity ^0.8.4;
 
 import {IUniFactory} from "./IUniFactory.sol";
-import {IWETH} from "./IWETH.sol";
+import "./IWETH.sol";
 
 interface IUniRouter {
     function factory() external pure returns (IUniFactory);
@@ -10,8 +10,8 @@ interface IUniRouter {
     function WETH() external pure returns (IWETH);
 
     function addLiquidity(
-        address tokenA,
-        address tokenB,
+        IERC20 tokenA,
+        IERC20 tokenB,
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMin,
@@ -27,7 +27,7 @@ interface IUniRouter {
         );
 
     function addLiquidityETH(
-        address token,
+        IERC20 token,
         uint256 amountTokenDesired,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -43,8 +43,8 @@ interface IUniRouter {
         );
 
     function removeLiquidity(
-        address tokenA,
-        address tokenB,
+        IERC20 tokenA,
+        IERC20 tokenB,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
@@ -53,7 +53,7 @@ interface IUniRouter {
     ) external returns (uint256 amountA, uint256 amountB);
 
     function removeLiquidityETH(
-        address token,
+        IERC20 token,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -62,8 +62,8 @@ interface IUniRouter {
     ) external returns (uint256 amountToken, uint256 amountETH);
 
     function removeLiquidityWithPermit(
-        address tokenA,
-        address tokenB,
+        IERC20 tokenA,
+        IERC20 tokenB,
         uint256 liquidity,
         uint256 amountAMin,
         uint256 amountBMin,
@@ -76,7 +76,7 @@ interface IUniRouter {
     ) external returns (uint256 amountA, uint256 amountB);
 
     function removeLiquidityETHWithPermit(
-        address token,
+        IERC20 token,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -91,7 +91,7 @@ interface IUniRouter {
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
@@ -99,14 +99,14 @@ interface IUniRouter {
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
     function swapExactETHForTokens(
         uint256 amountOutMin,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external payable returns (uint256[] memory amounts);
@@ -114,7 +114,7 @@ interface IUniRouter {
     function swapTokensForExactETH(
         uint256 amountOut,
         uint256 amountInMax,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
@@ -122,14 +122,14 @@ interface IUniRouter {
     function swapExactTokensForETH(
         uint256 amountIn,
         uint256 amountOutMin,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
     function swapETHForExactTokens(
         uint256 amountOut,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external payable returns (uint256[] memory amounts);
@@ -152,18 +152,18 @@ interface IUniRouter {
         uint256 reserveOut
     ) external pure returns (uint256 amountIn);
 
-    function getAmountsOut(uint256 amountIn, address[] calldata path)
+    function getAmountsOut(uint256 amountIn, IERC20[] calldata path)
         external
         view
         returns (uint256[] memory amounts);
 
-    function getAmountsIn(uint256 amountOut, address[] calldata path)
+    function getAmountsIn(uint256 amountOut, IERC20[] calldata path)
         external
         view
         returns (uint256[] memory amounts);
 
     function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
+        IERC20 token,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -172,7 +172,7 @@ interface IUniRouter {
     ) external returns (uint256 amountETH);
 
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
-        address token,
+        IERC20 token,
         uint256 liquidity,
         uint256 amountTokenMin,
         uint256 amountETHMin,
@@ -187,14 +187,14 @@ interface IUniRouter {
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external;
 
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint256 amountOutMin,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external payable;
@@ -202,7 +202,7 @@ interface IUniRouter {
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
-        address[] calldata path,
+        IERC20[] calldata path,
         address to,
         uint256 deadline
     ) external;

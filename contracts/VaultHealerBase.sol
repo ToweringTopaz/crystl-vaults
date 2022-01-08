@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import {SafeERC20, ReentrancyGuard, ERC1155Supply, AccessControlEnumerable} from "./libs/OpenZeppelin.sol";
+import "./libs/OpenZeppelin.sol";
 
 import "hardhat/console.sol";
 import "./libs/Vault.sol";
 import "./libs/IStrategy.sol";
 
-abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ReentrancyGuard {
+abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgradeable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant STRATEGY = keccak256("STRATEGY");
@@ -64,8 +64,8 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, Ree
         strat(vid).setSettings(_settings);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
-        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Upgradeable) returns (bool) {
+        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId);
     }
 
     function strat(uint _vid) public virtual view returns (IStrategy);

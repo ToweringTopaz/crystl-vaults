@@ -54,9 +54,9 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         
         //Look for LP tokens. If not, want must be a single-stake
         IERC20 swapToToken = _targetVault == address(0) ? _wantToken : maximizerRewardToken; //swap earned to want, or swap earned to maximizer target's want
-        try IUniPair(address(swapToToken)).token0() returns (address _token0) {
-            lpToken[0] = IERC20(_token0);
-            lpToken[1] = IERC20(IUniPair(address(swapToToken)).token1());
+        try IUniPair(address(swapToToken)).token0() returns (IERC20 _token0) {
+            lpToken[0] = _token0;
+            lpToken[1] = IUniPair(address(swapToToken)).token1();
         } catch { //if not LP, then single stake
             lpToken[0] = swapToToken;
         }

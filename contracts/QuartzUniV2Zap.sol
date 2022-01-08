@@ -63,101 +63,101 @@ contract QuartzUniV2Zap {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
         vaultHealer.withdrawFrom(vid, withdrawAmount, msg.sender, address(this));
 
-        address weth = address(router.WETH());
+        IWETH weth = router.WETH();
 
         if (pair.token0() != weth && pair.token1() != weth) {
-            return LibQuartz.removeLiquidity(address(pair), msg.sender);
+            return LibQuartz.removeLiquidity(pair, msg.sender);
         }
 
-        LibQuartz.removeLiquidity(address(pair), address(this));
+        LibQuartz.removeLiquidity(pair, address(this));
 
-        address[] memory tokens = new address[](2);
+        IERC20[] memory tokens = new IERC20[](2);
         tokens[0] = pair.token0();
         tokens[1] = pair.token1();
 
         router.returnAssets(tokens); //returns any leftover tokens to user
     }
     
-    function estimateSwap(uint vid, address tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, address swapTokenOut) {
+    function estimateSwap(uint vid, IERC20 tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
         return vaultHealer.estimateSwap(vid, tokenIn, fullInvestmentIn);
     }
 
     function _swapAndStake(uint vid, uint256 tokenAmountOutMin, IERC20 tokenIn) private {
         (IUniRouter router,,IUniPair pair) = vaultHealer.getRouterAndPair(vid);        
         
-        address token0 = pair.token0();
-        address token1 = pair.token1();
+        IERC20 token0 = pair.token0();
+        IERC20 token1 = pair.token1();
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         uint256 swapAmountIn;
-        uint256 fullInvestment = IERC20(tokenIn).balanceOf(address(this));
-        _approveTokenIfNeeded(address(tokenIn), router);
+        uint256 fullInvestment = tokenIn.balanceOf(address(this));
+        _approveTokenIfNeeded(tokenIn, router);
 
-        if (token0 == address(tokenIn)) {
+        if (token0 == tokenIn) {
             require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
             swapAmountIn = router.getSwapAmount(fullInvestment, reserveA, reserveB);
-            swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+            swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
 
-        } else if (token1 == address(tokenIn)) {
+        } else if (token1 == tokenIn) {
             require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
             swapAmountIn = router.getSwapAmount(fullInvestment, reserveB, reserveA);
-            swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+            swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
             
         } else {
             swapAmountIn = fullInvestment/2;
             
-            if(LibQuartz.hasSufficientLiquidity(token0, address(tokenIn), router, MINIMUM_AMOUNT)) {
-                swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+            if(LibQuartz.hasSufficientLiquidity(token0, tokenIn, router, MINIMUM_AMOUNT)) {
+                swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
             } else {
-                swapViaWETH(swapAmountIn, tokenAmountOutMin, address(tokenIn), token0, router);
+                swapViaWETH(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
             }
             
-            if(LibQuartz.hasSufficientLiquidity(token1, address(tokenIn), router, MINIMUM_AMOUNT)) {
-                swapDirect(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+            if(LibQuartz.hasSufficientLiquidity(token1, tokenIn, router, MINIMUM_AMOUNT)) {
+                swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
             } else {
-                swapViaWETH(swapAmountIn, tokenAmountOutMin, address(tokenIn), token1, router);
+                swapViaWETH(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
             }
         }
         
         pair.optimalMint(IERC20(token0), IERC20(token1));
         uint256 amountLiquidity = pair.balanceOf(address(this));
 
-        _approveTokenIfNeeded(address(pair));
+        _approveTokenIfNeeded(pair);
         vaultHealer.deposit(vid, amountLiquidity, msg.sender);
 
-        address[] memory tokens = new address[](3);
+        IERC20[] memory tokens = new IERC20[](3);
         tokens[0] = token0;
         tokens[1] = token1;
-        tokens[2] = address(tokenIn);
+        tokens[2] = tokenIn;
         router.returnAssets(tokens);
     }
 
-    function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter router) private {
-        address[] memory path = new address[](2);
+    function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, IERC20 tokenIn, IERC20 tokenOut, IUniRouter router) private {
+        IERC20[] memory path = new IERC20[](2);
         path[0] = tokenIn;
         path[1] = tokenOut;
         router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
     }
 
-    function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, address tokenIn, address tokenOut, IUniRouter router) private {
-        require(LibQuartz.hasSufficientLiquidity(tokenIn, router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from tokenIn to WNATIVE');
-        require(LibQuartz.hasSufficientLiquidity(tokenOut, router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from WNATIVE to tokenOut');
-        address[] memory path = new address[](3);
+    function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, IERC20 tokenIn, IERC20 tokenOut, IUniRouter router) private {
+        require(LibQuartz.hasSufficientLiquidity(IERC20(tokenIn), router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from tokenIn to WNATIVE');
+        require(LibQuartz.hasSufficientLiquidity(IERC20(tokenOut), router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from WNATIVE to tokenOut');
+        IERC20[] memory path = new IERC20[](3);
         path[0] = tokenIn;
         path[1] = router.WETH();
         path[2] = tokenOut;
         router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
     }
 
-    function _approveTokenIfNeeded(address token) private {
+    function _approveTokenIfNeeded(IERC20 token) private {
         if (!approvals[keccak256(abi.encodePacked(token,vaultHealer))]) {
-            IERC20(token).safeApprove(address(vaultHealer), type(uint256).max);
+            token.safeApprove(address(vaultHealer), type(uint256).max);
             approvals[keccak256(abi.encodePacked(token,vaultHealer))] = true;
         }
     }
-    function _approveTokenIfNeeded(address token, IUniRouter router) private {
+    function _approveTokenIfNeeded(IERC20 token, IUniRouter router) private {
         if (!approvals[keccak256(abi.encodePacked(token,router))]) {
-            IERC20(token).safeApprove(address(router), type(uint256).max);
+            token.safeApprove(address(router), type(uint256).max);
             approvals[keccak256(abi.encodePacked(token,router))] = true;
         }
     }
