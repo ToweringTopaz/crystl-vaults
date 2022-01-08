@@ -52,11 +52,6 @@ contract VaultHealer is VaultHealerBoostedPools {
         
         return balanceOf(_user, _vid) * wantLockedTotal / _sharesTotal;
     }
-    //enables sharesTotal function on strategy
-    function sharesTotal(address _strat) external view returns (uint) {
-        uint vid = findVid(_strat);
-        return totalSupply(vid);
-    }
    function isApprovedForAll(address account, address operator) public view override returns (bool) {
         return super.isApprovedForAll(account, operator) || operator == address(zap);
    }
