@@ -24,7 +24,7 @@ abstract contract VaultHealerFactory is VaultHealerBoostedPools {
         proxyImplementation = _implementation;
         address newStrat = Create2.deploy(0, bytes32(_vaultInfo.length), type(VHStrategyProxy).creationCode);
         IStrategy(newStrat).initialize(data);
-        addVault(newStrat, 10);
+        addVault(newStrat, 10); //qq - what's the 10 here?
     }
     
     function strat(uint _vid) public override view returns (IStrategy) {
