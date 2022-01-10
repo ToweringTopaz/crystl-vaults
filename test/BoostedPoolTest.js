@@ -293,14 +293,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user1.address);
 
-            console.log(`User 1 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal.div(2))} LP tokens from the maximizer vault`)
+            console.log(`User 1 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal.div(2))} LP tokens from the vault`)
 
             await vaultHealer["withdraw(uint256,uint256)"](strat1_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
             
             const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(user1.address);
             console.log(ethers.utils.formatEther(LPtokenBalanceAfterFirstWithdrawal));
 
-            vaultSharesTotalAfterFirstWithdrawal = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() 
+            // vaultSharesTotalAfterFirstWithdrawal = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() 
             const UsersStakedTokensAfterFirstWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
 
             // console.log(ethers.utils.formatEther(vaultSharesTotalInMaximizerBeforeWithdraw));
@@ -310,10 +310,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             expect(LPtokenBalanceAfterFirstWithdrawal.sub(LPtokenBalanceBeforeFirstWithdrawal))
             .to.equal(
-                (UsersStakedTokensBeforeFirstWithdrawal.sub(UsersStakedTokensAfterFirstWithdrawal))
-                // .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                // .mul(vaultSharesTotalInMaximizerBeforeWithdraw.sub(vaultSharesTotalAfterFirstWithdrawal))
-                // .div(WITHDRAW_FEE_FACTOR_MAX))
+                (UsersStakedTokensBeforeFirstWithdrawal.div(2))
+                    .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                    .mul(UsersStakedTokensBeforeFirstWithdrawal.div(2))
+                    .div(WITHDRAW_FEE_FACTOR_MAX))
                 )
                 ;
         })
@@ -330,6 +330,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await vaultHealer.connect(user2)["deposit(uint256,uint256)"](strat1_pid, user2InitialDeposit);
             const vaultSharesTotalAfterUser2FirstDeposit = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             const User2sStakedTokensAfterFirstDeposit = await vaultHealer.stakedWantTokens(strat1_pid, user2.address);
+            console.log(`User2 has ${ethers.utils.formatEther(User2sStakedTokensAfterFirstDeposit)} after making their first deposit`)
 
             console.log(`User 2 deposits ${ethers.utils.formatEther(user2InitialDeposit)} LP tokens`)
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser2FirstDeposit)} LP tokens after user 2 deposits`)
@@ -367,6 +368,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             userWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
+            console.log("userWantTokensBeforeWithdrawal");
             console.log(userWantTokensBeforeWithdrawal);
 
             console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
@@ -375,11 +377,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
             console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
-            userBoostedWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
-            console.log("userBoostedWantTokensBeforeWithdrawal");
-            console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
+            // userBoostedWantTokensBeforeWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
+            // console.log("userBoostedWantTokensBeforeWithdrawal");
+            // console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
-            await vaultHealer["withdraw(uint256,uint256)"](strat1_pid, UsersStakedTokensBeforeFinalWithdrawal+userBoostedWantTokensBeforeWithdrawal); //user1 (default signer) deposits 1 of LP tokens into strat1_pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](strat1_pid, UsersStakedTokensBeforeFinalWithdrawal); //+userBoostedWantTokensBeforeWithdrawal user1 (default signer) deposits 1 of LP tokens into strat1_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
             console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
@@ -389,14 +391,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
             
-            userBoostedWantTokensAfterWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
+            userBoostedWantTokensAfterWithdrawal = await vaultHealer.stakedWantTokens(strat1_pid, user1.address); //todo change to boosted tokens??
+            console.log(withdrawFeeFactor);
+            console.log(WITHDRAW_FEE_FACTOR_MAX);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.equal(
-                (UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
+                (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                 .sub(
                     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                    .mul(UsersStakedTokensBeforeFinalWithdrawal.add(userBoostedWantTokensBeforeWithdrawal).sub(UsersStakedTokensAfterFinalWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
+                    .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                     .div(WITHDRAW_FEE_FACTOR_MAX)
                 )
                 );
