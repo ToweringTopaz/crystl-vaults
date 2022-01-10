@@ -396,7 +396,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(vaultSharesTotalAfterZapOut.toNumber()).to.equal(0);
         })
 
-        it('Should deposit user1\'s 100 LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
+        it('Should deposit user1\'s 5000 LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
             user1InitialDeposit = ethers.utils.parseEther("5000");
 
@@ -468,7 +468,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer.earn(crystl_compounder_strat_pid);
+            await vaultHealer.earnSome([crystl_compounder_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -517,13 +517,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return CRYSTL harvest to user 1 when they withdraw (above test)', async () => {
             user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
-            vaultSharesTotalInCrystalCompounderAfterWithdraw = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal()
-
             console.log(`The user got ${ethers.utils.formatEther((user1CrystlBalanceAfterWithdraw).sub(user1CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
 
             expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
-            expect(user1CrystlBalanceAfterWithdraw.sub(user1CrystlBalanceBeforeWithdraw)).to.eq(vaultSharesTotalInCrystalCompounderAfterWithdraw.mul(999).div(1000)); //
-
         })
 
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!

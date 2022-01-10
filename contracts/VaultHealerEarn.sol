@@ -87,7 +87,6 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
         try strat(vid).earn(getEarnFees(vid)) returns (bool success) {
             if (success) {
-                console.log("trying earn");
                 vault.lastEarnBlock = block.number;
                 if (interval > 1 && block.number > vault.lastEarnBlock + interval)
                     vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)

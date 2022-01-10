@@ -27,7 +27,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
-
         LibVaultSwaps.SwapConfig memory swap = LibVaultSwaps.SwapConfig({
             magnetite: settings.magnetite,
             router: settings.router,

@@ -339,16 +339,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
-        it('Should accurately increase users stakedWantTokens upon second deposit by user1', async () => {
+        it('Should accurately increase users shares upon second deposit by user1', async () => {
             const LPtokenBalanceBeforeSecondDeposit = await LPtoken.balanceOf(user1.address);
             await LPtoken.approve(vaultHealer.address, LPtokenBalanceBeforeSecondDeposit);
-            const vaultSharesTotalBeforeSecondDeposit = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             const User1sStakedTokensBeforeSecondDeposit = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
 
             await vaultHealer["deposit(uint256,uint256)"](strat1_pid, LPtokenBalanceBeforeSecondDeposit); //user1 (default signer) deposits LP tokens into specified strat1_pid vaulthealer
             
             const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(user1.address);
-            const vaultSharesTotalAfterSecondDeposit = await strategyVHStandard.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0;
             const User1sStakedTokensAfterSecondDeposit = await vaultHealer.stakedWantTokens(strat1_pid, user1.address);
 
             expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.equal(User1sStakedTokensAfterSecondDeposit.sub(User1sStakedTokensBeforeSecondDeposit)); //will this work for 2nd deposit? on normal masterchef?
@@ -409,12 +407,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //ensure no funds left in the vault.
         it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
             // console.log(await crystlToken.balanceOf(strategyVHStandard.address))
-            expect(UsersStakedTokensAfterFinalWithdrawal.toNumber()).to.equal(0);
+            expect(UsersStakedTokensAfterFinalWithdrawal).to.equal(0);
         })
 
         it('Should leave zero user1 funds in boostPool after 100% withdrawal', async () => {
             // console.log(await crystlToken.balanceOf(strategyVHStandard.address))
-            expect(userBoostedWantTokensAfterWithdrawal.toNumber()).to.equal(0);
+            user = await boostPool.userInfo(user1.address);
+            userBalanceOfBoostPoolAtEnd = user.amount;
+            expect(userBalanceOfBoostPoolAtEnd).to.equal(0);
         })
         
     })

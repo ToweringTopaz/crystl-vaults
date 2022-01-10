@@ -114,7 +114,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
-        console.log(_wantAmt);
         _doEarn(_vid);
 
         IStrategy strategy = strat(_vid);
@@ -123,7 +122,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         }
 
         (uint256 sharesRemoved, uint256 wantAmt) = strategy.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
-        console.log(wantAmt);
 
         //burn the tokens equal to sharesRemoved
         _burn(
@@ -143,7 +141,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             wantAmt -= feeAmt;
             vault.want.safeTransferFrom(address(strategy), feeReceiver, feeAmt); //todo: zap to correct fee token
         }
-        console.log(wantAmt);
 
         //this call transfers wantTokens from the strat to the user
         vault.want.safeTransferFrom(address(strategy), _to, wantAmt);
