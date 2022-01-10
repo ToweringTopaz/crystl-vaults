@@ -39,35 +39,52 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //User's balance, in want tokens
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
-        uint256 userWant = HardMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal) ;
-
+        uint256 userWant = HardMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal);
+        console.log("_wantAmt: ", _wantAmt);
+        console.log("_userShares: ", _userShares);
+        console.log("_sharesTotal", _sharesTotal);
+        console.log("wantBal: ", wantBal);
+        console.log("wantLockedBefore: ", wantLockedBefore);
+        console.log("userWant: ", userWant);
+        
         // user requested all, very nearly all, or more than their balance, so withdraw all
-        if (_wantAmt + settings.dust > userWant)
+        if (_wantAmt + settings.dust > userWant) {
             _wantAmt = userWant;
+            console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
+        }
         
         // Check if strategy has tokens from panic
         if (_wantAmt > wantBal) {
             _vaultWithdraw(_wantAmt - wantBal);
             
-            wantBal = _wantBalance();   
+            wantBal = _wantBalance();
+            console.log("wantBal after vaultWithdraw: ", wantBal);
         }
         
         //Account for reflect, pool withdraw fee, etc; charge these to user
         uint wantLockedAfter = wantLockedTotal();
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
-        
+        console.log("wantLockedAfter: ", wantLockedAfter);
+        console.log("withdrawSlippage: ", withdrawSlippage);
+
         //Calculate shares to remove
         sharesRemoved = HardMath.mulDivRoundingUp(
             _wantAmt + withdrawSlippage,
             _sharesTotal,
             wantLockedBefore
         );
-        
+        console.log("sharesRemoved: ", sharesRemoved);
+
         //Get final withdrawal amount
-        if (sharesRemoved > _userShares) sharesRemoved = _userShares;
+        if (sharesRemoved > _userShares) {
+            sharesRemoved = _userShares;
+            console.log("sharesRemoved: ", sharesRemoved);
+        }
+
         _wantAmt = HardMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
-        
+        console.log("_wantAmt: ", _wantAmt);
         if (_wantAmt > wantBal) _wantAmt = wantBal;
+        console.log("_wantAmt: ", _wantAmt);
         require(_wantAmt > 0, "nothing to withdraw after slippage");
         
         return (sharesRemoved, _wantAmt);

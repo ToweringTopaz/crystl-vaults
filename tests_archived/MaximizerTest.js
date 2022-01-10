@@ -896,7 +896,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
 
-            await vaultHealer["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFinalWithdrawal); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
+            await vaultHealer["withdrawAll(uint256)"](maximizer_strat_pid); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
             // console.log("LPtokenBalanceAfterFinalWithdrawal - user1")

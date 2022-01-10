@@ -114,7 +114,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
-        console.log(_wantAmt);
+        console.log("_wantAmt: ", _wantAmt);
         _doEarn(_vid);
 
         IStrategy strategy = strat(_vid);
