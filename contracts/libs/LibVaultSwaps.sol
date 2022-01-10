@@ -22,29 +22,14 @@ library LibVaultSwaps {
         bool feeOnTransfer;
     }
 
-    function distribute(Vault.Fees calldata earnFees, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
-
-        earnedAmt = _earnedAmt;
-        // To pay for earn function
-        uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
-        if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), tx.origin);
-            earnedAmt -= fee;
-            }
-
-        //distribute rewards
-        fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
-        if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), earnFees.treasuryFee.receiver);
-            earnedAmt -= fee;
-            }
-        
-        //burn crystl
-        fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
-        if (fee > 0) {
-            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), earnFees.burn.receiver);
-            earnedAmt -= fee;
-            }
+    function distribute(uint256 feeRate, SwapConfig memory swap, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
+        if (feeRate > 0) {
+            assert(feeRate <= FEE_MAX);
+            uint fee = feeRate * _earnedAmt / FEE_MAX;
+            safeSwap(swap, fee, _earnedToken, swap.router.WETH(), msg.sender); //msg.sender is vaulthealer
+            _earnedAmt -= fee;
+        }
+        return _earnedAmt;
     }
 
     function safeSwap(
@@ -81,7 +66,7 @@ library LibVaultSwaps {
         //allow swap.router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(swap.router), _amountIn);
         
-        if (_tokenB != swap.router.WETH() || _to.isContract() ) {
+        if (_tokenB != swap.router.WETH() ) {
             if (swap.feeOnTransfer) { //reflect mode on
                 swap.router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
@@ -89,7 +74,7 @@ library LibVaultSwaps {
                 swap.router.swapExactTokensForTokens(
                     _amountIn,amountOut, cleanedUpPath, _to, block.timestamp);
             }
-        } else { //Non-contract address (extcodesize zero) receives native ETH
+        } else {
             if (swap.feeOnTransfer) { //reflect mode on
                 swap.router.swapExactTokensForETHSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);

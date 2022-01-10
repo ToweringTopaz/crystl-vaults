@@ -30,7 +30,7 @@ interface IStrategy {
     function targetVault() external view returns (IStrategy);
     function maximizerRewardToken() external view returns (IERC20);
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external;
-    function earn(Vault.Fees calldata _fees) external returns (bool success); // Main want token compounding function
+    function earn(uint256 feeRate) external returns (bool success); // Main want token compounding function
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
     function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
     function panic() external;

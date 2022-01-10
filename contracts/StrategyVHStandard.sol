@@ -9,8 +9,6 @@ import {ERC1155Holder} from "./libs/OpenZeppelin.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
     using SafeERC20 for IERC20;
-    using Vault for Vault.Fees;
-    using LibVaultSwaps for Vault.Fees;
 
     function initEncode(
         IERC20 _wantToken,
@@ -66,15 +64,6 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         emit SetSettings(_settings);
 
         settings.magnetite = IVaultHealer(msg.sender).magnetite();
-
-        // maximizerVault.setFees(
-        //                 [
-        //         [ ZERO_ADDRESS, FEE_ADDRESS, 0 ], // withdraw fee: token is not set here; standard fee address; 10 now means 0.1% consistent with other fees
-        //         [ WMATIC, FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
-        //         [ WMATIC, FEE_ADDRESS, 0 ], //reward fee: paid in DAI; standard fee address; 0% rate
-        //         [ CRYSTL, BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
-        //     ]
-        // );
         
     }
     function vaultSharesTotal() public override view returns (uint256) {

@@ -11,8 +11,6 @@ import "./libs/IVaultHealer.sol";
 
 //Contains the strategy's functions related to swapping, earning, etc.
 abstract contract BaseStrategySwapLogic is BaseStrategy {
-    using Vault for Vault.Fees;
-    using LibVaultSwaps for Vault.Fees;
     
     function isMaximizer() public view returns (bool) {
         return address(targetVault) != address(0);
@@ -22,7 +20,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return wantToken.balanceOf(address(this));
     }
 
-    function _earn(Vault.Fees calldata earnFees) internal virtual returns (bool success) {
+    function earn(uint256 feeRate) external returns (bool success) {
         uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
         _vaultHarvest(); // Harvest farm tokens
 
@@ -43,7 +41,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 
             if (earnedAmt > dust) {
                 success = true; //We have something worth compounding
-                earnedAmt = earnFees.distribute(swap, earnedToken, earnedAmt); // handles all fees for this earned token
+                earnedAmt = LibVaultSwaps.distribute(feeRate, swap, earnedToken, earnedAmt); // handles all fees for this earned token
 
                 if (address(lpToken[1]) == address(0)) { //single stake
                     LibVaultSwaps.safeSwap(swap, earnedAmt, earnedToken, lpToken[0], address(this));

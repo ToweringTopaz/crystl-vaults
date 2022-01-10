@@ -9,7 +9,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
     function earnAll() external nonReentrant {
 
-        Vault.Fees memory _defaultEarnFees = defaultEarnFees;
+        Vault.Fee[] memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
 
         for (uint i; i < bucketLength; i++) {
@@ -31,7 +31,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
     
     function earnSome(uint256[] calldata vids) external nonReentrant {
 
-        Vault.Fees memory _defaultEarnFees = defaultEarnFees;
+        Vault.Fee[] memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
         uint256[] memory selBuckets = new uint256[](bucketLength); //BitMap of selected vids
 
@@ -62,16 +62,18 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         _doEarn(vid);
     }
 
-    function _tryEarn(uint256 vid, Vault.Fees memory _earnFees) private {
+    function _tryEarn(uint256 vid, Vault.Fee[] memory _earnFees) private {
         Vault.Info storage vault = _vaultInfo[vid];
         uint interval = vault.minBlocksBetweenEarns;
 
         if (block.number > vault.lastEarnBlock + interval) {
             console.log("Earning vid: ", vid);
             console.log("Earning strat: ", address(strat(vid)));
-            try strat(vid).earn(_earnFees) returns (bool success) {
+            uint totalFeeRate = totalRate(_earnFees);
+            try strat(vid).earn(totalFeeRate) returns (bool success) {
                 if (success) {
                     vault.lastEarnBlock = block.number;
+                    distributeFees(_earnFees, totalFeeRate);
                     if (interval > 1) vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 } else {
                     vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
@@ -84,10 +86,13 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
     function _doEarn(uint256 vid) internal {
         Vault.Info storage vault = _vaultInfo[vid];
         uint interval = vault.minBlocksBetweenEarns;   
+        Vault.Fee[] memory _earnFees = getEarnFees(vid);
+        uint totalFeeRate = totalRate(_earnFees);
 
-        try strat(vid).earn(getEarnFees(vid)) returns (bool success) {
+        try strat(vid).earn(totalFeeRate) returns (bool success) {
             if (success) {
                 vault.lastEarnBlock = block.number;
+                distributeFees(_earnFees, totalFeeRate);
                 if (interval > 1 && block.number > vault.lastEarnBlock + interval)
                     vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
             } else if (block.number > vault.lastEarnBlock + interval) {

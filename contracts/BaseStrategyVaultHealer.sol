@@ -7,11 +7,6 @@ import "./BaseStrategySwapLogic.sol";
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
-    
-    //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
-    function earn(Vault.Fees calldata earnFees) external returns (bool success) {
-        return _earn(earnFees);    
-    }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 sharesAdded) {

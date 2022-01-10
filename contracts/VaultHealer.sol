@@ -12,10 +12,10 @@ contract VaultHealer is VaultHealerFactory {
     Magnetite public magnetite;
     QuartzUniV2Zap public zap;
 
-    constructor(Vault.Fees memory _fees, Vault.Fee memory _withdrawFee)
+    constructor(address[] memory _earnFeeReceivers, uint16[] memory _earnFeeRates, address _withdrawFeeReceiver, uint16 _withdrawFeeRate)
         VaultHealerBase(msg.sender) 
         VaultHealerBoostedPools(msg.sender)
-        VaultHealerFees(msg.sender, _fees, _withdrawFee)
+        VaultHealerFees(msg.sender, _earnFeeReceivers, _earnFeeRates, _withdrawFeeReceiver, _withdrawFeeRate)
         VaultHealerPause(msg.sender)
     {
         magnetite = new Magnetite();

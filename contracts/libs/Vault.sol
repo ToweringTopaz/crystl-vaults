@@ -9,12 +9,15 @@ import "./IUniRouter.sol";
 import {BitMapsUpgradeable as BitMaps} from "@openzeppelin/contracts-upgradeable/utils/structs/BitMapsUpgradeable.sol";
 
 library Vault {
-    
+
+    type Fee is uint176;
+    uint16 constant FEE_MAX = 10000;
+
     struct Info {
         IERC20 want; //  want token.
         //IUniRouter router;
         Fee withdrawFee;
-        Fees earnFees;
+        Fee[] earnFees;
         IBoostPool[] boosts;
         BitMaps.BitMap activeBoosts;
         mapping (address => User) user;
@@ -42,32 +45,43 @@ library Vault {
         IMagnetite magnetite;
     }
 
-    struct Fees {
-        Fee userReward; //rate paid to user who called earn()
-        Fee treasuryFee; //fees that get paid to the crystl.finance treasury
-        Fee burn; //burn address for CRYSTL
+    function rate(Fee _fee) internal pure returns (uint16) {
+        return uint16(Fee.unwrap(_fee));
     }
-    struct Fee {
-        address receiver;
-        uint16 rate;
+    function receiver(Fee _fee) internal pure returns (address) {
+        return address(uint160(Fee.unwrap(_fee) >> 16));
     }
-
-    uint256 constant FEE_MAX_TOTAL = 10000; //hard-coded maximum fee (100%)
-    uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
-    uint256 constant SLIPPAGE_FACTOR_UL = 9950; // Must allow for at least 0.5% slippage (rounding errors)
-    
-    function check(Fees memory _fees) internal pure {
-        require(_fees.treasuryFee.receiver != address(0) || _fees.treasuryFee.rate == 0, "Invalid treasury address");
-        require(_fees.burn.receiver != address(0) || _fees.treasuryFee.rate == 0, "Invalid buyback address");
-        require(_fees.userReward.rate + _fees.treasuryFee.rate + _fees.burn.rate <= FEE_MAX_TOTAL, "Max fee of 100%");
+    function receiverAndRate(Fee _fee) internal pure returns (address, uint16) {
+        uint fee = Fee.unwrap(_fee);
+        return (address(uint160(fee >> 16)), uint16(fee));
+    }
+    function createFee(address _receiver, uint16 _rate) internal pure returns (Fee) {
+        return Fee.wrap(uint176(uint160(_receiver)) | _rate);
     }
 
-    function check(Fee memory _fee) internal pure {
-        if (_fee.rate > 0) {
-            require(_fee.receiver != address(0), "Invalid treasury address");
-            require(_fee.rate <= FEE_MAX_TOTAL, "Max fee of 100%");
+    function set(Fee[] storage _fees, address[] memory _receivers, uint16[] memory _rates) internal {
+        uint len = _receivers.length;
+        require(_rates.length == len);
+        
+        uint oldLen = _fees.length; 
+        for (uint i = len; i < oldLen; i++) {
+            _fees.pop();
         }
+
+        uint feeTotal;
+        for (uint i; i < len; i++) {
+            address _receiver = _receivers[i];
+            uint16 _rate = _rates[i];
+            require(_receiver != address(0) && _rate != 0);
+            feeTotal += _rate;
+            uint176 _fee = uint176(uint160(_receiver)) << 16 | _rate;
+            if (_fees.length < len) _fees.push();
+            _fees[i] = Fee.wrap(_fee);
+        }
+        require(feeTotal <= FEE_MAX, "Max total fee of 100%");
     }
+
+    uint256 constant SLIPPAGE_FACTOR_UL = 9950; // Must allow for at least 0.5% slippage (rounding errors)
 
     function check(Settings memory _settings) internal pure {
         try _settings.router.factory() returns (IUniFactory) {}

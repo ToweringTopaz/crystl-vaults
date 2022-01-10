@@ -134,10 +134,8 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         transferData(_vid, _from).withdrawals += wantAmt;
         
         //withdraw fee is implemented here
-        Vault.Fee storage withdrawFee = getWithdrawFee(_vid);
-        address feeReceiver = withdrawFee.receiver;
-        uint16 feeRate = withdrawFee.rate;
-        if (feeReceiver != address(0) && feeRate > 0 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+        (address feeReceiver, uint feeRate) = getWithdrawFee(_vid);
+        if (!paused(_vid) && feeReceiver != address(0)) { //waive withdrawal fee on paused vaults as there's generally something wrong
             uint feeAmt = wantAmt * feeRate / 10000;
             wantAmt -= feeAmt;
             vault.want.safeTransferFrom(address(strategy), feeReceiver, feeAmt); //todo: zap to correct fee token
