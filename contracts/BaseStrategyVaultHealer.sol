@@ -18,8 +18,9 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         // _earn(_from); //earn before deposit prevents abuse
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
+        uint dust = settings.dust;
 
-        if (_wantAmt < settings.dust) return 0; //do nothing if nothing is requested
+        if (_wantAmt < dust) return 0; //do nothing if nothing is requested
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
@@ -31,7 +32,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (_sharesTotal > 0) { //mulDiv prevents overflow for certain tokens/amounts
             sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
         }
-        require(sharesAdded > settings.dust, "deposit: no/dust shares added");
+        require(sharesAdded > dust, "deposit: no/dust shares added");
     }
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
@@ -49,7 +50,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         unchecked {
-            if (_wantAmt + settings.dust < _wantAmt || _wantAmt + settings.dust > userWant) { // first condition checks for overflow which happens on withdrawAll
+            uint dust = settings.dust;
+            if (_wantAmt + dust < _wantAmt || _wantAmt + dust > userWant) { // first condition checks for overflow which happens on withdrawAll
                 _wantAmt = userWant;
                 console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
             }
@@ -62,7 +64,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
                 console.log("wantBal after vaultWithdraw: ", wantBal);
             }
         }
-        
+
         //Account for reflect, pool withdraw fee, etc; charge these to user
         uint wantLockedAfter = wantLockedTotal();
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
