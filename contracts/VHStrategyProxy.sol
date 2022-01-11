@@ -68,11 +68,4 @@ contract VHStrategyProxy {
             invalid()
         }
     }
-
-    function getProxyMetadata() external pure returns (bytes memory) {
-        assembly {
-            codecopy(0, 0x7f7f, 0xbebe)
-            return(0, 0xbebe)
-        }
-    }
 }
