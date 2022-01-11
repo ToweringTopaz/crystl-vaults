@@ -48,17 +48,19 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         console.log("userWant: ", userWant);
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
-        if (_wantAmt + settings.dust > userWant) {
-            _wantAmt = userWant;
-            console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
-        }
+        unchecked {
+            if (_wantAmt + settings.dust < _wantAmt || _wantAmt + settings.dust > userWant) { // first condition checks for overflow which happens on withdrawAll
+                _wantAmt = userWant;
+                console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
+            }
         
-        // Check if strategy has tokens from panic
-        if (_wantAmt > wantBal) {
-            _vaultWithdraw(_wantAmt - wantBal);
-            
-            wantBal = _wantBalance();
-            console.log("wantBal after vaultWithdraw: ", wantBal);
+            // Check if strategy has tokens from panic
+            if (_wantAmt > wantBal) {
+                _vaultWithdraw(_wantAmt - wantBal);
+                
+                wantBal = _wantBalance();
+                console.log("wantBal after vaultWithdraw: ", wantBal);
+            }
         }
         
         //Account for reflect, pool withdraw fee, etc; charge these to user
