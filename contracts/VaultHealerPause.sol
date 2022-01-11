@@ -8,7 +8,7 @@ abstract contract VaultHealerPause is VaultHealerBase {
     using BitMaps for BitMaps.BitMap;
     
     uint constant PANIC_LOCK_DURATION = 6 hours;
-    bytes32 public constant PAUSER = keccak256("PAUSER");
+    bytes32 constant PAUSER = keccak256("PAUSER");
 
     BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
 
@@ -19,8 +19,8 @@ abstract contract VaultHealerPause is VaultHealerBase {
         _setupRole(PAUSER, _owner);
     }
 
-    function addVault(address _strat, uint minBlocksBetweenEarns) internal virtual override returns (uint vid) {
-        vid = super.addVault(_strat, minBlocksBetweenEarns);
+    function addVault(address _strat) internal virtual override returns (uint vid) {
+        vid = super.addVault(_strat);
         pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
     }    
 
@@ -40,30 +40,19 @@ abstract contract VaultHealerPause is VaultHealerBase {
         _unpause(vid);
         strat(vid).unpanic();
     }
-    function paused() external view returns (bool) {
-        return paused(findVid(msg.sender));
-    }
-    
-    function paused(address _strat) external view returns (bool) {
-        return paused(findVid(_strat));
-    }
     function paused(uint vid) public view returns (bool) {
         return !pauseMap.get(vid);
     }
     modifier whenNotPaused(uint vid) {
-        require(!paused(vid), "Pausable: paused");
-        _;
-    }
-    modifier whenPaused(uint vid) {
-        require(paused(vid), "Pausable: not paused");
+        require(!paused(vid), "VH: paused");
         _;
     }
     function _pause(uint vid) internal whenNotPaused(vid) {
         pauseMap.unset(vid);
         emit Paused(vid);
     }
-    function _unpause(uint vid) internal whenPaused(vid) {
-        require(vid > 0 && vid < _vaultInfo.length, "invalid vid");
+    function _unpause(uint vid) internal {
+        require(paused(vid) && vid > 0 && vid < _vaultInfo.length);
         pauseMap.set(vid);
         emit Unpaused(vid);
     }

@@ -45,7 +45,6 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
         for (uint i; i < bucketLength; i++) {
             uint earnMap = pauseMap._data[i] & selBuckets[i]; //earn selected, unpaused vaults
-            console.log("earnMap: ", earnMap);
             uint feeMap = _overrideDefaultEarnFees._data[i];
 
             uint end = (i+1) << 8; // buckets end at multiples of 256
@@ -69,8 +68,6 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         uint32 interval = vault.minBlocksBetweenEarns;
 
         if (block.number > vault.lastEarnBlock + interval) {
-            console.log("Earning vid: ", vid);
-            console.log("Earning strat: ", address(strat(vid)));
             try strat(vid).earn(_earnFees) returns (bool success, uint256 wantLockedTotal) {
                 if (success) {
                     vault.lastEarnBlock = uint32(block.number);
@@ -110,7 +107,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         } catch {}
     }
 
-    function addVault(address _strat, uint minBlocksBetweenEarns) internal override(VaultHealerBase, VaultHealerPause) returns (uint vid) {
-        return VaultHealerPause.addVault(_strat, minBlocksBetweenEarns);
+    function addVault(address _strat) internal override(VaultHealerBase, VaultHealerPause) returns (uint vid) {
+        return VaultHealerPause.addVault(_strat);
     }
 }

@@ -8,7 +8,7 @@ abstract contract VaultHealerFees is VaultHealerBase {
     using BitMaps for BitMaps.BitMap;
     using Vault for Vault.Fee;
 
-    bytes32 public constant FEE_SETTER = keccak256("FEE_SETTER");
+    bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
     BitMaps.BitMap internal _overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
     BitMaps.BitMap private _overrideDefaultWithdrawFee;

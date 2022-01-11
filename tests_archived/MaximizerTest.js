@@ -49,6 +49,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     before(async () => {
         [user1, user2, user3, user4, _] = await ethers.getSigners();
         
+		Magnetite = await ethers.getContractFactory("Magnetite");
+		ZapDeployer = await ethers.getContractFactory("QuartzUniV2ZapDeployer");
+		VaultView = await ethers.getContractFactory("VaultView");
+		magnetite = await Magnetite.deploy();
+		zapDeployer = await ZapDeployer.deploy();
+		vaultView = await VaultView.deploy();
+		
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
             // libraries: {
@@ -63,8 +70,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 [ BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(feeConfig, [ FEE_ADDRESS, 10 ]);
-        
+        vaultHealer = await VaultHealer.deploy(magnetite.address, zapDeployer.address, vaultView.address, feeConfig, [ FEE_ADDRESS, 10 ]);
+		vaultHealerView = await ethers.getContractAt('VaultView', vaultHealer.address);
         quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', vaultHealer.zap());
 
         StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
@@ -76,7 +83,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		strategyImplementation = await StrategyVHStandard.deploy();
 		const abiCoder = new ethers.utils.AbiCoder;
         const DEPLOYMENT_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint32, bool, address, uint96)", "address[]", "address" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
 			[
 				apeSwapVaults[1]['want'],
 				apeSwapVaults[1]['masterchef'],
@@ -84,7 +91,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 				apeSwapVaults[1]['PID'],
 				vaultSettings.standard,
 				apeSwapVaults[1]['earned'],
-				ZERO_ADDRESS
+				0
             ]
 		);
 
@@ -94,7 +101,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN_OTHER = CRYSTL;
 
 		const CRYSTL_COMPOUNDER_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "uint256" ],
 			[
 				crystlVault[0]['want'], //wantAddress
 				crystlVault[0]['masterchef'], 
@@ -102,11 +109,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 				crystlVault[0]['PID'], //what is the PID of this thing in our masterhealer?
 				vaultSettings.standard,
 				crystlVault[0]['earned'],
-				ZERO_ADDRESS
+				0
             ]
 		);
 
-        vaultHealerOwner = await vaultHealer.owner();
+        vaultHealerOwner = await vaultHealerView.owner();
 
         await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
@@ -115,18 +122,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
         await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
-        strat1_pid = await vaultHealer.vaultLength() -1;
+        strat1_pid = await vaultHealerView.vaultLength() -1;
 		strategyVHStandard = await vaultHealer.strat(strat1_pid);
 
         strategyVHStandard = await ethers.getContractAt('StrategyVHStandard', strategyVHStandard);
 
         await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
-        crystl_compounder_strat_pid = await vaultHealer.vaultLength() -1;
+        crystl_compounder_strat_pid = await vaultHealerView.vaultLength() -1;
 		strategyCrystlCompounder = await vaultHealer.strat(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('StrategyVHStandard', strategyCrystlCompounder);
 
         const MAXIMIZER_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "uint256" ],
 			[
 				apeSwapVaults[1]['want'],
 				apeSwapVaults[1]['masterchef'],
@@ -134,13 +141,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 				apeSwapVaults[1]['PID'],
 				vaultSettings.standard,
 				apeSwapVaults[1]['earned'],
-				strategyCrystlCompounder.address
+				crystl_compounder_strat_pid
 			]
 		);
         console.log("4");
 
         await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
-        maximizer_strat_pid = await vaultHealer.vaultLength() -1;
+        maximizer_strat_pid = await vaultHealerView.vaultLength() -1;
 		strategyVHMaximizer = await vaultHealer.strat(maximizer_strat_pid);
 
         strategyVHMaximizer = await ethers.getContractAt('StrategyVHStandard', strategyVHMaximizer);
@@ -386,7 +393,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         //ensure no funds left in the vault after zap out
         it('Should leave zero user funds in vault after 100% zap out', async () => {
-            UsersStakedTokensAfterZapOut = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user4.address);
+            UsersStakedTokensAfterZapOut = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user4.address);
             expect(UsersStakedTokensAfterZapOut.toNumber()).to.equal(0);
         })
 
@@ -485,7 +492,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should withdraw 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user1.address);
-            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
+            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
@@ -612,7 +619,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should withdraw 50% of user 2 LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user2.address);
-            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user2.address);
+            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user2.address);
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal));
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -656,7 +663,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should withdraw the other 50% of user 2 LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
             const LPtokenBalanceBeforeSecondWithdrawal = await LPtoken.balanceOf(user2.address);
-            const UsersStakedTokensBeforeSecondWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user2.address);
+            const UsersStakedTokensBeforeSecondWithdrawal = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user2.address);
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeSecondWithdrawal));
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -785,7 +792,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should withdraw 50% of user 3 LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user3.address);
-            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user3.address);
+            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal));
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -826,8 +833,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should transfer 1155 tokens from user 3 to user 1, updating shares and rewardDebt accurately', async () => {
-            const User3StakedTokensBeforeTransfer = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user3.address);
-            const User1StakedTokensBeforeTransfer = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
+            const User3StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
+            const User1StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
             User1RewardDebtBeforeTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
 
             vaultHealer.connect(user3).setApprovalForAll(user1.address, true);
@@ -839,8 +846,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 User3StakedTokensBeforeTransfer,
                 0);
 
-            const User3StakedTokensAfterTransfer = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user3.address);
-            const User1StakedTokensAfterTransfer = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
+            const User3StakedTokensAfterTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
+            const User1StakedTokensAfterTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
 
             expect(User3StakedTokensBeforeTransfer.sub(User3StakedTokensAfterTransfer)).to.eq(User1StakedTokensAfterTransfer.sub(User1StakedTokensBeforeTransfer))
         })
@@ -888,7 +895,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
 
-            const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
+            const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
             // console.log("UsersStakedTokensBeforeFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFinalWithdrawal))
 
@@ -898,7 +905,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
 
-            UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.stakedWantTokens(maximizer_strat_pid, user1.address);
+            UsersStakedTokensAfterFinalWithdrawal = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
             // console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
             // console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
 

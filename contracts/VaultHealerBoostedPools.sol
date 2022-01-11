@@ -80,12 +80,11 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         bytes memory data
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
         //If boosted pools are affected, update them
         for (uint i; i < ids.length; i++) {
             Vault.Info storage vault = _vaultInfo[i];
 
-            for (uint k; k < _vaultInfo[i].boosts.length; k++) {
+            for (uint k; k < vault.boosts.length; k++) {
                 bool fromBoosted = from != address(0) && vault.user[from].boosts.get(k);
                 bool toBoosted = to != address(0) && vault.user[to].boosts.get(k);
 
