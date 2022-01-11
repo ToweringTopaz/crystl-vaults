@@ -150,7 +150,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
 
     // Withdraw everything from vault for yourself
     function withdrawAll(uint256 _vid) external nonReentrant {
-        _withdraw(_vid, type(uint256).max, msg.sender, msg.sender);
+        _withdraw(_vid, type(uint112).max, msg.sender, msg.sender);
     }
     
     //called by strategy, cannot be nonReentrant
@@ -198,10 +198,12 @@ function _beforeTokenTransfer(
         uint targetVid = vault.targetVid;
         IStrategy targetStrat = strat(targetVid);
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
+        uint targetWantLocked = targetStrat.wantLockedTotal();
+        require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
 
-        vault.accRewardTokensPerShare += (targetStrat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / strat(_vid).wantLockedTotal(); 
+        vault.accRewardTokensPerShare += uint112((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / strat(_vid).wantLockedTotal()); 
 
-        vault.balanceCrystlCompounderLastUpdate = targetStrat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vault.balanceCrystlCompounderLastUpdate = uint112(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
 
     }
 
@@ -211,8 +213,10 @@ function _beforeTokenTransfer(
         IStrategy vaultStrat = strat(_vid);
         Vault.Info storage target = _vaultInfo[vault.targetVid];
         IStrategy targetStrat = strat(targetVid);
+        uint targetWantLocked = targetStrat.wantLockedTotal();
+        require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
 
-        vault.accRewardTokensPerShare += (targetStrat.wantLockedTotal() - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal();
+        vault.accRewardTokensPerShare += uint112((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
         //calculate total crystl amount this user owns
         uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
         //withdraw proportional amount of crystl from targetVault()
@@ -221,6 +225,6 @@ function _beforeTokenTransfer(
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
             vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid);
             }
-        vault.balanceCrystlCompounderLastUpdate = targetStrat.wantLockedTotal(); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vault.balanceCrystlCompounderLastUpdate = uint112(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 }

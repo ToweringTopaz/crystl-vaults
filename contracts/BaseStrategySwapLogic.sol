@@ -22,8 +22,9 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return wantToken.balanceOf(address(this));
     }
 
-    function _earn(Vault.Fees calldata earnFees) internal virtual returns (bool success) {
-        uint wantBalanceBefore = _wantBalance(); //Don't touch starting want balance (anti-rug)
+    function earn(Vault.Fees calldata earnFees) external returns (bool success, uint256 _wantLockedTotal) {
+        uint wantBalanceBefore = _wantBalance(); //Don't sell starting want balance (anti-rug)
+
         _vaultHarvest(); // Harvest farm tokens
 
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
@@ -34,6 +35,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             feeOnTransfer: settings.feeOnTransfer
         });
         
+        success;
         for (uint i; address(earned[i]) != address(0); i++) { //Process each earned token, whether it's 1, 2, or 8. 
             IERC20 earnedToken = earned[i];
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
@@ -68,6 +70,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 _farm();
             }
         }
+        _wantLockedTotal = wantLockedTotal();
     }
     
     //Safely deposits want tokens in farm

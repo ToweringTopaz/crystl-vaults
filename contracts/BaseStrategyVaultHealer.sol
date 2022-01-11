@@ -3,15 +3,10 @@ pragma solidity ^0.8.4;
 
 import {IStrategy, IVaultHealer} from "./libs/Interfaces.sol";
 import "./BaseStrategySwapLogic.sol";
-
+import {MathUpgradeable as Math} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 //Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
 abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
-    
-    //Earn should be called with the vaulthealer, which has nonReentrant checks on deposit, withdraw, and earn.
-    function earn(Vault.Fees calldata earnFees) external returns (bool success) {
-        return _earn(earnFees);    
-    }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 sharesAdded) {
@@ -29,8 +24,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         sharesAdded = wantLockedTotal() - wantLockedBefore;
-        if (_sharesTotal > 0) { //mulDiv prevents overflow for certain tokens/amounts
-            sharesAdded = HardMath.mulDiv(sharesAdded, _sharesTotal, wantLockedBefore);
+        if (_sharesTotal > 0) { 
+            sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
         }
         require(sharesAdded > dust, "deposit: no/dust shares added");
     }
@@ -40,7 +35,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //User's balance, in want tokens
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
-        uint256 userWant = HardMath.mulDiv(_userShares, wantLockedBefore, _sharesTotal);
+        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
         console.log("_wantAmt: ", _wantAmt);
         console.log("_userShares: ", _userShares);
         console.log("_sharesTotal", _sharesTotal);
@@ -49,20 +44,18 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         console.log("userWant: ", userWant);
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
-        unchecked {
-            uint dust = settings.dust;
-            if (_wantAmt + dust < _wantAmt || _wantAmt + dust > userWant) { // first condition checks for overflow which happens on withdrawAll
-                _wantAmt = userWant;
-                console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
-            }
+        uint dust = settings.dust;
+        if (_wantAmt + dust < _wantAmt || _wantAmt + dust > userWant) { // first condition checks for overflow which happens on withdrawAll
+            _wantAmt = userWant;
+            console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
+        }
         
-            // Check if strategy has tokens from panic
-            if (_wantAmt > wantBal) {
-                _vaultWithdraw(_wantAmt - wantBal);
-                
-                wantBal = _wantBalance();
-                console.log("wantBal after vaultWithdraw: ", wantBal);
-            }
+        // Check if strategy has tokens from panic
+        if (_wantAmt > wantBal) {
+            _vaultWithdraw(_wantAmt - wantBal);
+            
+            wantBal = _wantBalance();
+            console.log("wantBal after vaultWithdraw: ", wantBal);
         }
 
         //Account for reflect, pool withdraw fee, etc; charge these to user
@@ -72,11 +65,11 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         console.log("withdrawSlippage: ", withdrawSlippage);
 
         //Calculate shares to remove
-        sharesRemoved = HardMath.mulDivRoundingUp(
-            _wantAmt + withdrawSlippage,
-            _sharesTotal,
+        sharesRemoved = Math.ceilDiv(
+            (_wantAmt + withdrawSlippage) * _sharesTotal,
             wantLockedBefore
         );
+
         console.log("sharesRemoved: ", sharesRemoved);
 
         //Get final withdrawal amount
@@ -85,7 +78,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
             console.log("sharesRemoved: ", sharesRemoved);
         }
 
-        _wantAmt = HardMath.mulDiv(sharesRemoved, wantLockedBefore, _sharesTotal) - withdrawSlippage;
+        _wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
         console.log("_wantAmt: ", _wantAmt);
         if (_wantAmt > wantBal) _wantAmt = wantBal;
         console.log("_wantAmt: ", _wantAmt);

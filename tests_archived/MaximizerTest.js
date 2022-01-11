@@ -76,7 +76,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		strategyImplementation = await StrategyVHStandard.deploy();
 		const abiCoder = new ethers.utils.AbiCoder;
         const DEPLOYMENT_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint32, bool, address, uint96)", "address[]", "address" ],
 			[
 				apeSwapVaults[1]['want'],
 				apeSwapVaults[1]['masterchef'],

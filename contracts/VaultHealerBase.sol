@@ -17,7 +17,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     Vault.Info[] internal _vaultInfo; // Info of each vault.
 
     //vid for any of our strategies
-    mapping(address => uint) private _strats;
+    mapping(address => uint32) private _strats;
     
     event AddVault(address indexed strat);
     
@@ -38,16 +38,19 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         grantRole(STRATEGY, _strat); //requires msg.sender is VAULT_ADDER
 
         IStrategy strat_ = IStrategy(_strat);
+        require(_vaultInfo.length < type(uint32).max); //absurd number of vaults
         vid = _vaultInfo.length;
         _vaultInfo.push();
         Vault.Info storage vault = _vaultInfo[vid];
-        vault.want = strat_.wantToken();
+        IERC20 _want = strat_.wantToken();
+        vault.want = _want;
+        require(_want.totalSupply() <= type(uint112).max);
         //vault.router = strat.router();
-        vault.lastEarnBlock = block.number;
-        vault.minBlocksBetweenEarns = minBlocksBetweenEarns;
-        vault.targetVid = _strats[address(strat_.targetVault())];
+        vault.lastEarnBlock = uint32(block.number);
+        vault.minBlocksBetweenEarns = uint32(minBlocksBetweenEarns);
+        vault.targetVid = uint32(_strats[address(strat_.targetVault())]);
         
-        _strats[_strat] = vid;
+        _strats[_strat] = uint32(vid);
         emit AddVault(_strat);
     }
 
@@ -55,10 +58,9 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     function isStrat(address _strat) public view returns (bool) {
         return _strats[_strat] > 0;
     }
-    function findVid(address _strat) public view returns (uint) {
-        uint vid = _strats[_strat];
+    function findVid(address _strat) public view returns (uint32 vid) {
+        vid = _strats[_strat];
         require(vid > 0, "address is not a strategy on this VaultHealer"); //must revert here for security
-        return vid;
     }
     function setSettings(uint vid, Vault.Settings calldata _settings) external onlyRole(SETTINGS_SETTER) {
         strat(vid).setSettings(_settings);

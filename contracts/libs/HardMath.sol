@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 /// @title Contains 512-bit math functions
 /// @notice Facilitates multiplication and division that can have overflow of an intermediate value without any loss of precision
 /// @dev Handles "phantom overflow" i.e., allows multiplication and division where an intermediate value overflows 256 bits
+
 library HardMath {
+/*
     /// @notice Calculates floor(a×b÷denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
     /// @param a The multiplicand
     /// @param b The multiplier
@@ -121,6 +123,7 @@ library HardMath {
             result++;
         }
     }
+    */
     // credit for this implementation goes to
     // https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol#L687
     function sqrt(uint256 x) internal pure returns (uint256) {

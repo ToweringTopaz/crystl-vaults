@@ -11,7 +11,7 @@ abstract contract BaseStrategy is Initializable, IStrategy {
     Vault.Settings internal settings; //the major storage variables used to configure the vault
     IERC20 public wantToken; //The token which is deposited and earns a yield 
     IStrategy public targetVault;
-    uint public targetVid;
+    uint32 public targetVid;
     IERC20 public maximizerRewardToken;
     IERC20[4] public earned;
     IERC20[2] public lpToken;

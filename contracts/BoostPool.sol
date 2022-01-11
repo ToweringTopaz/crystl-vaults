@@ -11,6 +11,7 @@ Join us at PolyCrystal.Finance!
 
 import {Ownable, SafeERC20} from "./libs/OpenZeppelin.sol";
 import {IERC20, IStrategy, IVaultHealer, IBoostPool} from "./libs/Interfaces.sol";
+import "hardhat/console.sol";
 
 contract BoostPool is IBoostPool, Ownable {
     using SafeERC20 for IERC20;
@@ -177,6 +178,7 @@ contract BoostPool is IBoostPool, Ownable {
     //Used in place of deposit/withdraw because nothing is actually stored here
     function notifyOnTransfer(address _from, address _to, uint _amount) external onlyVaultHealer returns (uint status) {
         updatePool();
+        console.log("notify on transfer: ", _amount);
 
         //User remains "active" unless rewards have expired and there are no unpaid pending amounts
         //4: pool done, 2: to done; 1: from done

@@ -12,7 +12,7 @@ interface IVaultHealer {
     function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
     function stratWithdraw(uint256 _vid, uint256 _wantAmt) external;
     function executePendingDeposit(address _to, uint _amount) external;
-    function findVid(address) external view returns (uint256);
+    function findVid(address) external view returns (uint32);
     function magnetite() external view returns (IMagnetite);
     function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external;
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;

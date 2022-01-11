@@ -7,6 +7,8 @@ import "./VaultHealerFees.sol";
 //For calling the earn function
 abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
+    event Earned(uint256 indexed vid, uint256 wantAmountEarned);
+
     function earnAll() external nonReentrant {
 
         Vault.Fees memory _defaultEarnFees = defaultEarnFees;
@@ -64,17 +66,23 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
     function _tryEarn(uint256 vid, Vault.Fees memory _earnFees) private {
         Vault.Info storage vault = _vaultInfo[vid];
-        uint interval = vault.minBlocksBetweenEarns;
+        uint32 interval = vault.minBlocksBetweenEarns;
 
         if (block.number > vault.lastEarnBlock + interval) {
             console.log("Earning vid: ", vid);
             console.log("Earning strat: ", address(strat(vid)));
-            try strat(vid).earn(_earnFees) returns (bool success) {
+            try strat(vid).earn(_earnFees) returns (bool success, uint256 wantLockedTotal) {
                 if (success) {
-                    vault.lastEarnBlock = block.number;
+                    vault.lastEarnBlock = uint32(block.number);
                     if (interval > 1) vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 } else {
                     vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+                }
+                if (wantLockedTotal > vault.wantLockedLastUpdate) 
+                {
+                    require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
+                    emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
+                    vault.wantLockedLastUpdate = uint112(wantLockedTotal);
                 }
             } catch {}
         }
@@ -83,17 +91,23 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
     //performs earn even if it's not been long enough
     function _doEarn(uint256 vid) internal {
         Vault.Info storage vault = _vaultInfo[vid];
-        uint interval = vault.minBlocksBetweenEarns;   
-
-        try strat(vid).earn(getEarnFees(vid)) returns (bool success) {
+        uint32 interval = vault.minBlocksBetweenEarns;   
+        try strat(vid).earn(getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
             if (success) {
-                vault.lastEarnBlock = block.number;
-                if (interval > 1 && block.number > vault.lastEarnBlock + interval)
+                vault.lastEarnBlock = uint32(block.number);
+                if (interval > 1 && block.number > vault.lastEarnBlock + interval) {
                     vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
+                }
             } else if (block.number > vault.lastEarnBlock + interval) {
-                vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+            vault.minBlocksBetweenEarns = uint32(interval * 21 / 20 + 1); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
             }
-        } catch {}     
+            if (wantLockedTotal > vault.wantLockedLastUpdate) 
+                {
+                    require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
+                    emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
+                    vault.wantLockedLastUpdate = uint112(wantLockedTotal);
+                }
+        } catch {}
     }
 
     function addVault(address _strat, uint minBlocksBetweenEarns) internal override(VaultHealerBase, VaultHealerPause) returns (uint vid) {

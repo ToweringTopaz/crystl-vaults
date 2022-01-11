@@ -76,7 +76,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyImplementation = await StrategyVHStandard.deploy();
 		const abiCoder = new ethers.utils.AbiCoder;
         const DEPLOYMENT_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "address" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint32, bool, address, uint96)", "address[]", "address" ],
 			[
 				apeSwapVaults[1]['want'],
 				apeSwapVaults[1]['masterchef'],
@@ -335,7 +335,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`User 2 deposits ${ethers.utils.formatEther(user2InitialDeposit)} LP tokens`)
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser2FirstDeposit)} LP tokens after user 2 deposits`)
 
-            expect(user2InitialDeposit).to.equal(User2sStakedTokensAfterFirstDeposit.add(1)) //.sub(vaultSharesTotalBeforeUser2FirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
+            expect(user2InitialDeposit).to.equal(User2sStakedTokensAfterFirstDeposit) //.sub(vaultSharesTotalBeforeUser2FirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
         })
 
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.

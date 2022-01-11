@@ -32,7 +32,7 @@ abstract contract VaultHealerPause is VaultHealerBase {
     }
     function panic(uint vid) external onlyRole("PAUSER") {
         require (_vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");
-        _vaultInfo[vid].panicLockExpiry = block.timestamp + PANIC_LOCK_DURATION;
+        _vaultInfo[vid].panicLockExpiry = uint40(block.timestamp + PANIC_LOCK_DURATION);
         _pause(vid);
         strat(vid).panic();
     }

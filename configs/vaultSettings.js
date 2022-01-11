@@ -7,27 +7,27 @@ const vaultSettings = {
         9500, //uint256 slippageFactor;
         1, //uint256 tolerance;
 		10, //uint256 minBlocksBetweenSwaps;
-		1000000000000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
         false, //bool feeOnTransfer;
-		ZERO_ADDRESS //Magnetite == vaultHealer; this value is initialized automatically later
+		ZERO_ADDRESS, //Magnetite == vaultHealer; this value is initialized automatically later
+		1000000000000 //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
 	],
 	reflect: [
 		routers.polygon.APESWAP_ROUTER, //aperouter
         9000, //uint256 slippageFactor;
         1, //uint256 tolerance;
 		10, //uint256 minBlocksBetweenSwaps;
-		1000000000000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
         true, //bool feeOnTransfer;
-		ZERO_ADDRESS //Magnetite == vaultHealer; this value is initialized automatically later
+		ZERO_ADDRESS, //Magnetite == vaultHealer; this value is initialized automatically later
+		1000000000000 //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
 	],
 	doubleReflect: [
 		routers.polygon.APESWAP_ROUTER, //aperouter
         9000, //uint256 slippageFactor;
         1, //uint256 tolerance;
 		10, //uint256 minBlocksBetweenSwaps;
-		1000000000000, //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
         true, //bool feeOnTransfer;
-		ZERO_ADDRESS //Magnetite == vaultHealer; this value is initialized automatically later
+		ZERO_ADDRESS, //Magnetite == vaultHealer; this value is initialized automatically later
+		1000000000000 //uint256 dust; //minimum raw token value considered to be worth swapping or depositing
 	]
 }
 // const feeConfig = {

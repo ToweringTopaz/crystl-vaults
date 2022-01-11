@@ -18,12 +18,16 @@ library Vault {
         IBoostPool[] boosts;
         BitMaps.BitMap activeBoosts;
         mapping (address => User) user;
-        uint256 accRewardTokensPerShare;
-        uint256 balanceCrystlCompounderLastUpdate;
-        uint256 targetVid; //maximizer target, which accumulates tokens
-        uint256 panicLockExpiry; //panic can only happen again after the time has elapsed
-        uint256 lastEarnBlock;
-        uint256 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
+        uint112 accRewardTokensPerShare;
+        uint112 balanceCrystlCompounderLastUpdate;
+        uint32 targetVid; //maximizer target, which accumulates tokens
+
+        uint112 wantLockedLastUpdate;
+        uint112 totalDepositsLastUpdate;
+        uint32 lastEarnBlock;
+        uint32 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
+        
+        uint40 panicLockExpiry; //panic can only happen again after the time has elapsed
         // bytes data;
     }
 
@@ -36,10 +40,10 @@ library Vault {
         IUniRouter router; //UniswapV2 compatible router
         uint16 slippageFactor; // sets a limit on losses due to deposit fee in pool, reflect fees, rounding errors, etc.
         uint16 tolerance; // "Hidden Gem", "Premiere Gem", etc. frontend indicator
-        uint64 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
-        uint88 dust; //min token amount to swap/deposit. Prevents token waste, exploits and unnecessary reverts
+        uint32 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
         bool feeOnTransfer;
         IMagnetite magnetite;
+        uint96 dust; //min token amount to swap/deposit. Prevents token waste, exploits and unnecessary reverts
     }
 
     struct Fees {
