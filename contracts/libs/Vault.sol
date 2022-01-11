@@ -34,12 +34,19 @@ library Vault {
     struct User {
         BitMaps.BitMap boosts;
         uint256 rewardDebt;
+        TransferData stats;
+    }
+
+    struct TransferData { //All stats in underlying want tokens
+        uint128 deposits;
+        uint128 withdrawals;
+        uint128 transfersIn;
+        uint128 transfersOut;
     }
 
     struct Settings {
         IUniRouter router; //UniswapV2 compatible router
         uint16 slippageFactor; // sets a limit on losses due to deposit fee in pool, reflect fees, rounding errors, etc.
-        uint16 tolerance; // "Hidden Gem", "Premiere Gem", etc. frontend indicator
         uint32 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
         bool feeOnTransfer;
         IMagnetite magnetite;

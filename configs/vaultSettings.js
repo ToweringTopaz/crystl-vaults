@@ -5,7 +5,6 @@ const vaultSettings = {
 	standard: [
 		routers.polygon.APESWAP_ROUTER, //aperouter
         9500, //uint256 slippageFactor;
-        1, //uint256 tolerance;
 		10, //uint256 minBlocksBetweenSwaps;
         false, //bool feeOnTransfer;
 		ZERO_ADDRESS, //Magnetite == vaultHealer; this value is initialized automatically later
@@ -14,7 +13,6 @@ const vaultSettings = {
 	reflect: [
 		routers.polygon.APESWAP_ROUTER, //aperouter
         9000, //uint256 slippageFactor;
-        1, //uint256 tolerance;
 		10, //uint256 minBlocksBetweenSwaps;
         true, //bool feeOnTransfer;
 		ZERO_ADDRESS, //Magnetite == vaultHealer; this value is initialized automatically later
@@ -23,7 +21,6 @@ const vaultSettings = {
 	doubleReflect: [
 		routers.polygon.APESWAP_ROUTER, //aperouter
         9000, //uint256 slippageFactor;
-        1, //uint256 tolerance;
 		10, //uint256 minBlocksBetweenSwaps;
         true, //bool feeOnTransfer;
 		ZERO_ADDRESS, //Magnetite == vaultHealer; this value is initialized automatically later

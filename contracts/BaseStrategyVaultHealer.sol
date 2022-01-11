@@ -20,7 +20,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
-        IVaultHealer(msg.sender).executePendingDeposit(address(this), _wantAmt);
+        IVaultHealer(msg.sender).executePendingDeposit(address(this), uint112(_wantAmt));
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         sharesAdded = wantLockedTotal() - wantLockedBefore;
@@ -36,18 +36,11 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
-        console.log("_wantAmt: ", _wantAmt);
-        console.log("_userShares: ", _userShares);
-        console.log("_sharesTotal", _sharesTotal);
-        console.log("wantBal: ", wantBal);
-        console.log("wantLockedBefore: ", wantLockedBefore);
-        console.log("userWant: ", userWant);
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         uint dust = settings.dust;
-        if (_wantAmt + dust < _wantAmt || _wantAmt + dust > userWant) { // first condition checks for overflow which happens on withdrawAll
+        if (_wantAmt + dust > userWant) {
             _wantAmt = userWant;
-            console.log("_wantAmt adjusted for withdraw all conditions: ", _wantAmt);
         }
         
         // Check if strategy has tokens from panic
@@ -55,14 +48,11 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
             _vaultWithdraw(_wantAmt - wantBal);
             
             wantBal = _wantBalance();
-            console.log("wantBal after vaultWithdraw: ", wantBal);
         }
 
         //Account for reflect, pool withdraw fee, etc; charge these to user
         uint wantLockedAfter = wantLockedTotal();
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
-        console.log("wantLockedAfter: ", wantLockedAfter);
-        console.log("withdrawSlippage: ", withdrawSlippage);
 
         //Calculate shares to remove
         sharesRemoved = Math.ceilDiv(
@@ -70,18 +60,14 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
             wantLockedBefore
         );
 
-        console.log("sharesRemoved: ", sharesRemoved);
-
         //Get final withdrawal amount
         if (sharesRemoved > _userShares) {
             sharesRemoved = _userShares;
-            console.log("sharesRemoved: ", sharesRemoved);
         }
 
         _wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
-        console.log("_wantAmt: ", _wantAmt);
         if (_wantAmt > wantBal) _wantAmt = wantBal;
-        console.log("_wantAmt: ", _wantAmt);
+
         require(_wantAmt > 0, "nothing to withdraw after slippage");
         
         return (sharesRemoved, _wantAmt);

@@ -13,7 +13,7 @@ interface IStrategy {
         uint256 _pid,
         Vault.Settings calldata _settings,
         IERC20[] calldata _earned,
-        address _targetVault //maximizer target
+        uint256 _targetVid //maximizer target
     ) external pure returns (bytes memory data);
     function _destroy_() external;
     function initialize (bytes calldata data) external;

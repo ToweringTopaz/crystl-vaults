@@ -7,51 +7,36 @@ import "./VaultHealerEarn.sol";
 abstract contract VaultHealerGate is VaultHealerEarn {
     using SafeERC20 for IERC20;
     
-    struct TransferData { //All stats in underlying want tokens
-        uint256 deposits;
-        uint256 withdrawals;
-        uint256 transfersIn;
-        uint256 transfersOut;
-    }
     struct PendingDeposit {
         IERC20 token;
         address from;
-        uint256 amount;
+        uint112 amount;
     }
-    mapping(bytes32 => TransferData) private _transferData;
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
     event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
-    function transferData(uint vid, address user) internal view returns (TransferData storage) {
-        return _transferData[keccak256(abi.encodePacked(vid, user))]; //what does this do?
-    }
     function userTotals(uint256 vid, address user) external view 
-        returns (TransferData memory stats, int256 earned) 
+        returns (Vault.TransferData memory stats, int256 earned) 
     {
-        stats = transferData(vid, user);
+        stats = _vaultInfo[vid].user[user].stats;
         
         uint _ts = totalSupply(vid);
         uint staked = _ts == 0 ? 0 : balanceOf(user, vid) * strat(vid).wantLockedTotal() / _ts;
-        earned = int(stats.withdrawals + staked + stats.transfersOut) - int(stats.deposits + stats.transfersIn);
+        earned = int(stats.withdrawals + staked + stats.transfersOut) - int(uint(stats.deposits + stats.transfersIn));
     }
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
-    }
-    // Want tokens moved from user -> this -> Strat (compounding)
-
-    function stratDeposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) onlyRole(STRATEGY) {
+    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
         _deposit(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
         _deposit(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
@@ -60,7 +45,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
                 token: vault.want,
                 from: _from,
-                amount: _wantAmt
+                amount: uint112(_wantAmt)
             });
             IStrategy strategy = strat(_vid);
             uint256 wantLockedBefore = strategy.wantLockedTotal();
@@ -80,7 +65,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                 hex'' //leave this blank for now
             );
             //update the user's data for earn tracking purposes
-            transferData(_vid, _to).deposits += _wantAmt - pendingDeposits[pendingDeposits.length - 1].amount;
+            vault.user[_to].stats.deposits += uint128(_wantAmt - pendingDeposits[pendingDeposits.length - 1].amount);
             
             pendingDeposits.pop();
         }
@@ -88,30 +73,24 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
-        _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
-    }
-
-    // Withdraw LP tokens from MasterChef.
-
-    function stratWithdraw(uint256 _vid, uint256 _wantAmt) external onlyRole(STRATEGY) {
+    function withdraw(uint256 _vid, uint256 _wantAmt) external {
         _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external {
         _withdraw(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
+    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external {
         require(
-            _from == _msgSender() || isApprovedForAll(_from, _msgSender()),
+            _from == msg.sender || isApprovedForAll(_from, msg.sender),
             "ERC1155: caller is not owner nor approved"
         );
         _withdraw(_vid, _wantAmt, _from, _to);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
         _doEarn(_vid);
@@ -130,7 +109,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             sharesRemoved
         );
         //updates transferData for this user, so that we are accurately tracking their earn
-        transferData(_vid, _from).withdrawals += wantAmt;
+        vault.user[_from].stats.withdrawals += uint128(wantAmt);
         
         //withdraw fee is implemented here
         Vault.Fee storage withdrawFee = getWithdrawFee(_vid);
@@ -149,14 +128,14 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     // Withdraw everything from vault for yourself
-    function withdrawAll(uint256 _vid) external nonReentrant {
+    function withdrawAll(uint256 _vid) external {
         _withdraw(_vid, type(uint112).max, msg.sender, msg.sender);
     }
     
     //called by strategy, cannot be nonReentrant
-    function executePendingDeposit(address _to, uint _amount) external onlyRole(STRATEGY) {
+    function executePendingDeposit(address _to, uint112 _amount) external {
         PendingDeposit storage pendingDeposit = pendingDeposits[pendingDeposits.length - 1];
-        pendingDeposit.amount -= _amount;
+        pendingDeposit.amount -= uint112(_amount);
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,
             _to,
@@ -178,9 +157,9 @@ function _beforeTokenTransfer(
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
                 uint vid = ids[i];
-                uint underlyingValue = amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid);
-                transferData(vid, from).transfersOut += underlyingValue;
-                transferData(vid, to).transfersIn += underlyingValue;
+                uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
+                _vaultInfo[vid].user[from].stats.transfersOut += underlyingValue;
+                _vaultInfo[vid].user[to].stats.transfersIn += underlyingValue;
 
                 if (_vaultInfo[vid].targetVid != 0) {
                     _doEarn(vid); //does it matter who calls the earn? -- this one credits msg.sender, the account responsible for paying the gas
