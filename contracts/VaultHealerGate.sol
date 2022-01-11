@@ -173,6 +173,7 @@ function _beforeTokenTransfer(
         bytes memory data
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        console.log("gate version of beforeTT");
 
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {

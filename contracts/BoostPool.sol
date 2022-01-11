@@ -185,6 +185,7 @@ contract BoostPool is IBoostPool, Ownable {
         status = block.number >= bonusEndBlock ? 4 : 0; //if rewards have ended, mark pool done
 
         if (_to != address(0)) {
+            console.log("made it into first conditional");
             User storage user = userInfo[_to];
             uint pending = _harvest(_to);
             if (pending == 0 && status >= 4)
@@ -195,6 +196,7 @@ contract BoostPool is IBoostPool, Ownable {
             emit Deposit(_to, _amount);
         }
         if (_from != address(0)) {
+            console.log("made it into second conditional");
             User storage user = userInfo[_from];
             uint pending = _harvest(_from);
             if (pending == 0 && status >= 4)
