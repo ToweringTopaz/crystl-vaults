@@ -24,7 +24,7 @@ abstract contract VaultHealerFactory is VaultHealerBoostedPools {
         proxyImplementation = _implementation;
         address newStrat = Create2.deploy(0, bytes32(_vaultInfo.length), type(VHStrategyProxy).creationCode);
         IStrategy(newStrat).initialize(data);
-        addVault(newStrat, 10); //qq - what's the 10 here?
+        addVault(newStrat, 10); //qq - what's the 10 here? -- minBlocksBetweenEarns -- todo: does this need to be configurable? In theory it should sort itself
     }
     
     function strat(uint _vid) public override view returns (IStrategy) {
