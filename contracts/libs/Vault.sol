@@ -24,7 +24,6 @@ library Vault {
         uint112 totalDepositsLastUpdate;
         uint32 lastEarnBlock;
         uint32 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
-        
         uint40 panicLockExpiry; //panic can only happen again after the time has elapsed
         // bytes data;
     }

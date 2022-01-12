@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./VaultHealerPause.sol";
+import "./VaultHealerBase.sol";
 
 //For calling the earn function
-abstract contract VaultHealerEarn is VaultHealerPause {
+abstract contract VaultHealerEarn is VaultHealerBase {
 
     event Earned(uint256 indexed vid, uint256 wantAmountEarned);
 
@@ -63,41 +63,55 @@ abstract contract VaultHealerEarn is VaultHealerPause {
                 if (success) {
                     console.log("VHE - success");
                     vault.lastEarnBlock = uint32(block.number);
-                    if (interval > 1) vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
+                    decrementMinBlocksBetweenEarns(vault, interval);  //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 } else {
-                    vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+                    increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
                     console.log("VHE - not success");
-
                 }
-                if (wantLockedTotal > vault.wantLockedLastUpdate) 
-                {
-                    require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
-                    emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
-                    vault.wantLockedLastUpdate = uint112(wantLockedTotal);
-                }
-            } catch {}
+                updateWantLockedLast(vault, vid, wantLockedTotal);
+            } catch Error(string memory reason) {
+                increaseMinBlocksBetweenEarns(vault, interval);
+                console.log("earn failed:", reason);
+            }
         }
     }
 
     //performs earn even if it's not been long enough
     function _doEarn(uint256 vid) internal {
         Vault.Info storage vault = _vaultInfo[vid];
-        uint32 interval = vault.minBlocksBetweenEarns;   
+        uint32 interval = vault.minBlocksBetweenEarns;
+        uint lastEarnBlock = vault.lastEarnBlock;
         try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
             if (success) {
+                console.log("VHE - success");
                 vault.lastEarnBlock = uint32(block.number);
-                if (interval > 1 && block.number > vault.lastEarnBlock + interval) {
-                    vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
+                if (block.number > lastEarnBlock + interval) {
+                    decrementMinBlocksBetweenEarns(vault, interval); //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 }
-            } else if (block.number > vault.lastEarnBlock + interval) {
-            vault.minBlocksBetweenEarns = uint32(interval * 21 / 20 + 1); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+            } else if (block.number > lastEarnBlock + interval) {
+                console.log("VHE - not success");
+                increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
             }
-            if (wantLockedTotal > vault.wantLockedLastUpdate) 
-                {
-                    require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
-                    emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
-                    vault.wantLockedLastUpdate = uint112(wantLockedTotal);
-                }
-        } catch {}
+            updateWantLockedLast(vault, vid, wantLockedTotal);
+        } catch Error(string memory reason) {
+            if (block.number > vault.lastEarnBlock + interval) {
+                increaseMinBlocksBetweenEarns(vault, interval);
+            }
+            console.log("earn failed:", reason);
+        }
+    }
+    function updateWantLockedLast(Vault.Info storage vault, uint vid, uint wantLockedTotal) private {
+        if (wantLockedTotal > vault.wantLockedLastUpdate) {
+            require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
+            emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
+            vault.wantLockedLastUpdate = uint112(wantLockedTotal);
+        }
+    }
+    function decrementMinBlocksBetweenEarns(Vault.Info storage vault, uint32 oldInterval) private {
+        if (oldInterval > 1) vault.minBlocksBetweenEarns = oldInterval - 1;
+    }
+
+    function increaseMinBlocksBetweenEarns(Vault.Info storage vault, uint oldInterval) private {
+        vault.minBlocksBetweenEarns = uint32(oldInterval * 21 / 20 + 1); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
     }
 }

@@ -48,13 +48,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
     before(async () => {
         [user1, user2, user3, user4, _] = await ethers.getSigners();
-        
+        /*
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		ZapDeployer = await ethers.getContractFactory("QuartzUniV2ZapDeployer");
 		VaultView = await ethers.getContractFactory("VaultView");
 		magnetite = await Magnetite.deploy();
 		zapDeployer = await ZapDeployer.deploy();
 		vaultView = await VaultView.deploy();
+		*/
 		
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
@@ -70,9 +71,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 [ BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-        vaultHealer = await VaultHealer.deploy(magnetite.address, zapDeployer.address, vaultView.address, feeConfig, [ FEE_ADDRESS, 10 ]);
+        vaultHealer = await VaultHealer.deploy(FEE_ADDRESS, 10, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
 		vaultHealerView = await ethers.getContractAt('VaultView', vaultHealer.address);
-        quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
+        quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealerView.zap());
 
         StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
             // libraries: {
@@ -82,6 +83,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         });        
 		strategyImplementation = await StrategyVHStandard.deploy();
 		const abiCoder = new ethers.utils.AbiCoder;
+		const NULL_BYTES = [];
         const DEPLOYMENT_DATA = abiCoder.encode(
 			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
 			[
@@ -121,13 +123,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, DEPLOYMENT_DATA);
         strat1_pid = await vaultHealerView.vaultLength() -1;
 		strategyVHStandard = await vaultHealer.strat(strat1_pid);
 
         strategyVHStandard = await ethers.getContractAt('StrategyVHStandard', strategyVHStandard);
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, CRYSTL_COMPOUNDER_DATA);
         crystl_compounder_strat_pid = await vaultHealerView.vaultLength() -1;
 		strategyCrystlCompounder = await vaultHealer.strat(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('StrategyVHStandard', strategyCrystlCompounder);
@@ -146,7 +148,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		);
         console.log("4");
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, MAXIMIZER_DATA);
         maximizer_strat_pid = await vaultHealerView.vaultLength() -1;
 		strategyVHMaximizer = await vaultHealer.strat(maximizer_strat_pid);
 

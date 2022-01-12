@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./VaultHealerGate.sol";
+import "./VaultHealerBase.sol";
 import "hardhat/console.sol";
 
 import {IBoostPool} from "./libs/Interfaces.sol";
-abstract contract VaultHealerBoostedPools is VaultHealerGate {
+abstract contract VaultHealerBoostedPools is VaultHealerBase {
     using BitMaps for BitMaps.BitMap;
 
     bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
@@ -74,14 +74,14 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     }
 
     function _beforeTokenTransfer(
-        address operator,
+        address /*operator*/,
         address from,
         address to,
         uint256[] memory ids,
         uint256[] memory amounts,
-        bytes memory data
+        bytes memory //data
     ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
 
         for (uint i; i < ids.length; i++) {

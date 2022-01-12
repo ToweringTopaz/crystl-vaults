@@ -6,7 +6,7 @@ import "./libs/Vault.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IVaultHealer.sol";
 import "./libs/IVaultFeeManager.sol";
-
+import "./QuartzUniV2Zap.sol";
 contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultView {
 
     bytes32 public constant STRATEGY = keccak256("STRATEGY");
@@ -32,11 +32,17 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     }
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
-    bytes proxyMetadata;
 }
 */
     bytes32[3] internal __reserved;
     bytes internal proxyData;
+    IMagnetite public magnetite;
+    QuartzUniV2Zap immutable public zap;
+    VaultView public vaultView;
+
+    constructor(QuartzUniV2Zap _zap) {
+        zap = _zap;
+    }
 
     function vaultLength() external view returns (uint256) {
         return _vaultInfo.length;
@@ -73,6 +79,7 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
     function getProxyData() external view returns (bytes memory) {
+        console.log("getProxyData");
         bytes memory data = proxyData;
         uint len = proxyData.length;
         assembly {

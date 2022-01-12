@@ -7,10 +7,14 @@ import "./libs/Vault.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IVaultHealer.sol";
 import "./libs/IVaultFeeManager.sol";
+import "hardhat/console.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultHealerMain {
     using SafeERC20 for IERC20;
+    using BitMaps for BitMaps.BitMap;
 
+    uint constant PANIC_LOCK_DURATION = 6 hours;
+    bytes32 constant PAUSER = keccak256("PAUSER");
     bytes32 constant STRATEGY = keccak256("STRATEGY");
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
@@ -18,6 +22,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
 
     IVaultFeeManager internal vaultFeeManager;
     Vault.Info[] internal _vaultInfo; // Info of each vault.
+    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
 
     //vid for any of our strategies
     mapping(address => uint32) private _strats;
@@ -25,11 +30,16 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
 
     event AddVault(address indexed strat);
     event SetVaultFeeManager(IVaultFeeManager indexed _manager);
+    event Paused(uint vid);
+    event Unpaused(uint vid);
+
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(VAULT_ADDER, _owner);
         _setRoleAdmin(STRATEGY, VAULT_ADDER);
-
+        _setupRole(PAUSER, _owner);
+        _setupRole(FEE_SETTER, _owner);
+        _setupRole(SETTINGS_SETTER, _owner);
         _vaultInfo.push(); //so uninitialized vid variables (vid 0) can be assumed as invalid
     }
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
@@ -56,6 +66,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         vault.lastEarnBlock = uint32(block.number);
         vault.minBlocksBetweenEarns = 10;
         vault.targetVid = uint32(_strats[address(strat_.targetVault())]);
+        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
         
         _strats[_strat] = uint32(vid);
         emit AddVault(_strat);
@@ -75,6 +86,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         _;
         _lock = lock; //restore initial state
     }
+
     function findVid(address _strat) internal view returns (uint32 vid) {
         vid = _strats[_strat];
         require(vid > 0/*, "address is not a strategy on this VaultHealer"*/); //must revert here for security
@@ -88,4 +100,39 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     }
 
     function strat(uint _vid) internal virtual view returns (IStrategy);
+
+//Like OpenZeppelin Pausable, but centralized here at the vaulthealer
+
+    function pause(uint vid) external onlyRole("PAUSER") {
+        _pause(vid);
+    }
+    function unpause(uint vid) external onlyRole("PAUSER") {
+        _unpause(vid);
+    }
+    function panic(uint vid) external onlyRole("PAUSER") {
+        require (_vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");
+        _vaultInfo[vid].panicLockExpiry = uint40(block.timestamp + PANIC_LOCK_DURATION);
+        _pause(vid);
+        strat(vid).panic();
+    }
+    function unpanic(uint vid) external onlyRole("PAUSER") {
+        _unpause(vid);
+        strat(vid).unpanic();
+    }
+    function paused(uint vid) internal view returns (bool) {
+        return !pauseMap.get(vid);
+    }
+    modifier whenNotPaused(uint vid) {
+        require(!paused(vid), "VH: paused");
+        _;
+    }
+    function _pause(uint vid) internal whenNotPaused(vid) {
+        pauseMap.unset(vid);
+        emit Paused(vid);
+    }
+    function _unpause(uint vid) internal {
+        require(paused(vid) && vid > 0 && vid < _vaultInfo.length);
+        pauseMap.set(vid);
+        emit Unpaused(vid);
+    }
 }

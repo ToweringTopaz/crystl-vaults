@@ -135,14 +135,14 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
 function _beforeTokenTransfer(
-        address operator,
+        address /*operator*/,
         address from,
         address to,
         uint256[] memory ids,
         uint256[] memory amounts,
-        bytes memory data
+        bytes memory //data
     ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //console.log("gate version of beforeTT");
 
         if (from != address(0) && to != address(0)) {

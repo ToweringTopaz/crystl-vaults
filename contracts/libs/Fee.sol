@@ -1,19 +1,7 @@
 // SPDX-License-Identifier: GPLv2
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-
-// @author Wivern for Beefy.Finance, ToweringTopaz for Crystl.Finance
-// @notice This contract adds liquidity to Uniswap V2 compatible liquidity pair pools and stake.
-
 pragma solidity ^0.8.0;
+
+import "hardhat/console.sol";
 
 library Fee {
     using Fee for Data;
@@ -30,10 +18,10 @@ library Fee {
     }
     function receiverAndRate(Data _fee) internal pure returns (address, uint16) {
         uint fee = Data.unwrap(_fee);
-        return (address(uint160(fee >> 16)), uint16(fee));
+        return (address(uint160(fee >> 16)), uint16(fee & 0x3fff));
     }
     function create(address _receiver, uint16 _rate) internal pure returns (Data) {
-        return Data.wrap(uint256(uint160(_receiver)) | _rate);
+        return Data.wrap((uint256(uint160(_receiver)) << 16) | _rate);
     }
 
     function set(Data[3] storage _fees, address[3] memory _receivers, uint16[3] memory _rates) internal {
@@ -42,24 +30,24 @@ library Fee {
         for (uint i; i < 3; i++) {
             address _receiver = _receivers[i];
             uint16 _rate = _rates[i];
-            require(_receiver != address(0) && _rate != 0);
+            require(_receiver != address(0) || _rate == 0, "Invalid treasury address");
             feeTotal += _rate;
             uint256 _fee = uint256(uint160(_receiver)) << 16 | _rate;
             _fees[i] = Data.wrap(_fee);
         }
         require(feeTotal <= FEE_MAX, "Max total fee of 100%");
     }
-    function check(Data[3] memory _fees) internal pure {
+    function check(Data[3] memory _fees) internal pure { 
         uint totalRate;
         for (uint i; i < 3; i++) {
             (address _receiver, uint _rate) = _fees[i].receiverAndRate();
             require(_receiver != address(0) || _rate == 0, "Invalid treasury address");
             totalRate += _rate;
         }
-        require(totalRate <= FEE_MAX, "Max fee of 100%");
+        require(totalRate <= FEE_MAX, "Max total fee of 100%");
     }
 
-    function check(Data _fee) internal pure {
+    function check(Data _fee) internal pure { 
         (address _receiver, uint _rate) = _fee.receiverAndRate();
         if (_rate > 0) {
             require(_receiver != address(0), "Invalid treasury address");

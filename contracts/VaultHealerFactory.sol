@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./VaultHealerBoostedPools.sol";
+import "./VaultHealerBase.sol";
 
-abstract contract VaultHealerFactory is VaultHealerBoostedPools {
+abstract contract VaultHealerFactory is VaultHealerBase {
 
     bytes constant PROXY_CODE = hex"63ad3b358e34526014605c600434335afa5067366000818182377360c01b3360201b1734526040605b601c39601660456070393d6013198101601460863e6072810134f3fe5af491505b503d82833e806081573d82fd5b503d81f3331415603757633074440c813560e01c141560335733ff5b8091505b303314156042578091505b8082801560565782833685305afa91506074565b8283368573";
     bytes32 constant PROXY_CODE_HASH = keccak256(PROXY_CODE);
