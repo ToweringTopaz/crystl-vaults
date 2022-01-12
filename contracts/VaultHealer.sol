@@ -11,7 +11,7 @@ contract VaultHealer is VaultHealerFactory {
     bytes32 constant PATH_SETTER = keccak256("PATH_SETTER");
 
     IMagnetite immutable public magnetite;
-    address immutable zap;
+    address immutable public zap;
     VaultView internal vaultView;
 
     event SetVaultView(VaultView);

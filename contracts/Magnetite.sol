@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter.sol";
 import "./libs/IUniFactory.sol";
+import "hardhat/console.sol";
 
 //Automatically generates and stores paths
 contract Magnetite is Ownable {
@@ -44,16 +45,26 @@ contract Magnetite is Ownable {
         _setPath(router, _path, AutoPath.AUTO);
     }
     function findAndSavePath(address _router, IERC20 a, IERC20 b) external returns (IERC20[] memory path) {
+        console.log("MT - made it into magnetite");
         IUniRouter router = IUniRouter(_router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
-        if (path.length == 0) {
-            path = generatePath(router, a, b);
-            if (pathAuth()) {
-                _setPath(_router, path, AutoPath.AUTO);
+        console.log("MT - before conditional");
 
+        if (path.length == 0) {
+            console.log("MT - in consitional");
+
+            path = generatePath(router, a, b);
+            console.log("MT - second conditional");
+            if (pathAuth()) {
+                console.log("MT - third conditional");
+                _setPath(_router, path, AutoPath.AUTO);
             }
+            console.log("MT - done in magnetite 1");
         }
+        console.log("MT - done in magnetite 2");
+
     }
+
     function viewPath(address _router, IERC20 a, IERC20 b) external view returns (IERC20[] memory path) {
         IUniRouter router = IUniRouter(_router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
@@ -69,8 +80,11 @@ contract Magnetite is Ownable {
         }
         path = _paths[keccak256(abi.encodePacked(router, a, b))];
     }
+
     function pathAuth() internal virtual view returns (bool) {
-        return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
+        console.log("MT - made it into pathAuth");
+        // return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
+        return true;
     }
 
     function _setPath(address router, IERC20[] memory _path, AutoPath _auto) internal { 

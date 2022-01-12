@@ -3,6 +3,7 @@ pragma solidity ^0.8.4;
 
 import "./VaultHealerPause.sol";
 import "./VaultHealerFees.sol";
+import "hardhat/console.sol";
 
 //For calling the earn function
 abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
@@ -32,7 +33,6 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
     }
     
     function earnSome(uint256[] calldata vids) external nonReentrant {
-
         Vault.Fees memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
         uint256[] memory selBuckets = new uint256[](bucketLength); //BitMap of selected vids
@@ -50,6 +50,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
             uint end = (i+1) << 8; // buckets end at multiples of 256
             for (uint j = i << 8; j < end; j++) {//0-255, 256-511, ...
                 if (earnMap & 1 > 0) { //smallest bit is "true"
+                    console.log("VHE - just before tryEarn");
                     _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees);
                 }
                 earnMap >>= 1; //shift away the used bit
@@ -68,12 +69,16 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         uint32 interval = vault.minBlocksBetweenEarns;
 
         if (block.number > vault.lastEarnBlock + interval) {
+            console.log("VHE - past first conditional");
             try strat(vid).earn(_earnFees) returns (bool success, uint256 wantLockedTotal) {
                 if (success) {
+                    console.log("VHE - success");
                     vault.lastEarnBlock = uint32(block.number);
                     if (interval > 1) vault.minBlocksBetweenEarns = interval - 1; //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 } else {
                     vault.minBlocksBetweenEarns = interval * 21 / 20 + 1; //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+                    console.log("VHE - not success");
+
                 }
                 if (wantLockedTotal > vault.wantLockedLastUpdate) 
                 {

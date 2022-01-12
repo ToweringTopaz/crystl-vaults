@@ -10,6 +10,7 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {AddressUpgradeable as Address} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 import "./libs/IVaultHealer.sol";
+import "hardhat/console.sol";
 
 //Contains the strategy's functions related to swapping, earning, etc.
 abstract contract BaseStrategySwapLogic is BaseStrategy {
@@ -29,23 +30,31 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         uint wantBalanceBefore = _wantBalance(); //Don't sell starting want balance (anti-rug)
 
         _vaultHarvest(); // Harvest farm tokens
-
+        console.log("BSSL - A");
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         
         success;
         for (uint i; address(earned[i]) != address(0); i++) { //Process each earned token, whether it's 1, 2, or 8. 
+            console.log("BSSL - B");
+
             IERC20 earnedToken = earned[i];
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == wantToken)
+                console.log("BSSL - B");
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
                 
             if (earnedAmt > dust) {
+                console.log("BSSL - C");
                 success = true; //We have something worth compounding
                 earnedAmt = distribute(earnFees, earnedToken, earnedAmt); // handles all fees for this earned token
+                console.log("BSSL - past fees");
 
                 if (address(lpToken[1]) == address(0)) { //single stake
+                    console.log("BSSL - D");
+
                     safeSwap(earnedAmt, earnedToken, lpToken[0], address(this));
                 } else {
+                    console.log("BSSL - E");
                     safeSwap(earnedAmt / 2, earnedToken, lpToken[0], address(this));
                     safeSwap(earnedAmt / 2, earnedToken, lpToken[1], address(this));
                 }
@@ -55,15 +64,22 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         if (success) {
 
             if (isMaximizer()) {
+                console.log("BSSL - in Maximizer conditional");
                 IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
                 uint256 crystlBalance = crystlToken.balanceOf(address(this));
+                console.log("BSSL - in Maximizer conditional 2");
+                console.log(crystlBalance);
 
                 IVaultHealer(msg.sender).deposit(targetVid, crystlBalance);
+                console.log("BSSL - deposited to vaultHealer");
             } else {
+                console.log("BSSL - second half of Maximizer conditional");
                 if (address(lpToken[1]) != address(0)) {
+                    console.log("BSSL - past if statement in Maximizer conditional");
                     // Get want tokens, ie. add liquidity
                     LibQuartz.optimalMint(IUniPair(address(wantToken)), lpToken[0], lpToken[1]);
                 }
+                console.log("BSSL - about to farm");
                 _farm();
             }
         }
@@ -78,6 +94,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         uint256 sharesBefore = vaultSharesTotal();
         
         _vaultDeposit(wantAmt); //approves the transfer then calls the pool contract to deposit
+        console.log("BSSL - deposited to vault");
         uint256 sharesAfter = vaultSharesTotal();
         
         //including settings.dust to reduce the chance of false positives
@@ -93,7 +110,10 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         IUniRouter router = settings.router;
         // To pay for earn function
         uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
+        console.log("BSSL - just before first conditional");
+
         if (fee > 0) {
+            console.log("BSSL - in first conditional");
             safeSwap(fee, _earnedToken, router.WETH(), tx.origin);
             earnedAmt -= fee;
             }
@@ -101,6 +121,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         //distribute rewards
         fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
         if (fee > 0) {
+            console.log("BSSL - in seecond conditional");
             safeSwap(fee, _earnedToken, router.WETH(), earnFees.treasuryFee.receiver);
             earnedAmt -= fee;
             }
@@ -108,6 +129,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         //burn crystl
         fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
         if (fee > 0) {
+            console.log("BSSL - in third conditional");
+
             safeSwap(fee, _earnedToken, router.WETH(), earnFees.burn.receiver);
             earnedAmt -= fee;
             }
@@ -119,15 +142,19 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         IERC20 _tokenB,
         address _to
     ) internal {
-        
+        console.log("BSSL - in SafeSwap");
         //Handle one-token paths which are simply a transfer
         if (_tokenA == _tokenB) {
+            console.log("BSSL - doing a transfer");
             if (_to != address(this)) //skip transfers to self
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
-        IUniRouter router = settings.router;  
-        IERC20[] memory path = settings.magnetite.findAndSavePath(address(router), _tokenA, _tokenB);      
+        IUniRouter router = settings.router;
+        console.log("BSSL - just before magnetite call");  
+        IERC20[] memory path = settings.magnetite.findAndSavePath(address(router), _tokenA, _tokenB);
+        console.log("BSSL - came out of magnetite");      
+
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
         uint256 counter=0;
@@ -138,29 +165,36 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         for (uint256 i=0; i<counter; i++) {
             cleanedUpPath[i] =path[i];
         }
+        console.log("BSSL - got here");
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
 
         uint256[] memory amounts = router.getAmountsOut(_amountIn, cleanedUpPath);
         uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
-        
+        console.log("BSSL - got here");
+
         //allow swap.router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(settings.router), _amountIn);
         bool feeOnTransfer = settings.feeOnTransfer;
-
+        console.log("BSSL - just before conditional");
         if (_tokenB != router.WETH() || Address.isContract(_to) ) {
+            console.log("BSSL - 11");
             if (feeOnTransfer) { //reflect mode on
+                console.log("BSSL - 12");
                 router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             } else { //reflect mode off
+                console.log("BSSL - 13");
                 router.swapExactTokensForTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             }
         } else { //Non-contract address (extcodesize zero) receives native ETH
             if (feeOnTransfer) { //reflect mode on
+                console.log("BSSL - 14");
                 router.swapExactTokensForETHSupportingFeeOnTransferTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             } else { //reflect mode off
+                console.log("BSSL - 15");
                 router.swapExactTokensForETH(
                     _amountIn ,amountOut, cleanedUpPath, _to, block.timestamp);
             }            

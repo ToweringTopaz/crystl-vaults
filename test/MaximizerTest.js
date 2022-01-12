@@ -72,7 +72,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         vaultHealer = await VaultHealer.deploy(magnetite.address, zapDeployer.address, vaultView.address, feeConfig, [ FEE_ADDRESS, 10 ]);
 		vaultHealerView = await ethers.getContractAt('VaultView', vaultHealer.address);
-        quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', vaultHealer.zap());
+        quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
 
         StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
             // libraries: {
@@ -101,7 +101,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN_OTHER = CRYSTL;
 
 		const CRYSTL_COMPOUNDER_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "uint256" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
 			[
 				crystlVault[0]['want'], //wantAddress
 				crystlVault[0]['masterchef'], 
@@ -133,7 +133,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyCrystlCompounder = await ethers.getContractAt('StrategyVHStandard', strategyCrystlCompounder);
 
         const MAXIMIZER_DATA = abiCoder.encode(
-			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint16, uint64, uint88, bool, address)", "address[]", "uint256" ],
+			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
 			[
 				apeSwapVaults[1]['want'],
 				apeSwapVaults[1]['masterchef'],
@@ -285,13 +285,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should zap token0 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
             token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
             var token0Balance = await token0.balanceOf(user4.address);
+            console.log("1");
             await token0.connect(user4).approve(quartzUniV2Zap.address, token0Balance);
-            
+            console.log("2");
+
             const vaultSharesTotalBeforeFirstZap = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log("3");
 
             await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, token0.address, token0Balance); //todo - change min in amount from 0
-            
+            console.log("4");
+
             const vaultSharesTotalAfterFirstZap = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log("5");
 
             expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap);
         })
@@ -469,7 +474,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`Before calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarnSome)} CRYSTL tokens in it`)
             console.log(`We let 100 blocks pass...`)
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
-            // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
+            console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
             for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
@@ -479,9 +484,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            // console.log(`vaultSharesTotalInCrystalCompounderAfterCallingEarnSome: ${vaultSharesTotalInCrystalCompounderAfterCallingEarnSome}`)
+            console.log(`vaultSharesTotalInCrystalCompounderAfterCallingEarnSome: ${vaultSharesTotalInCrystalCompounderAfterCallingEarnSome}`)
             console.log(`After calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarnSome)} CRYSTL tokens in it`)
-            // console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
+            console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
 
             const differenceInVaultSharesTotal = vaultSharesTotalInCrystalCompounderAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
 
@@ -835,7 +840,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should transfer 1155 tokens from user 3 to user 1, updating shares and rewardDebt accurately', async () => {
             const User3StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
             const User1StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
-            User1RewardDebtBeforeTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
+            User1RewardDebtBeforeTransfer = await vaultView.rewardDebt(maximizer_strat_pid, user1.address);
 
             vaultHealer.connect(user3).setApprovalForAll(user1.address, true);
 
@@ -853,7 +858,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should increase rewardDebt when you receive transferred tokens', async () => {
-            const User1RewardDebtAfterTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
+            const User1RewardDebtAfterTransfer = await vaultView.rewardDebt(maximizer_strat_pid, user1.address);
 
             expect(User1RewardDebtAfterTransfer).to.be.gt(User1RewardDebtBeforeTransfer);
         })
