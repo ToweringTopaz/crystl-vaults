@@ -7,6 +7,7 @@ import "./libs/IStrategy.sol";
 import "./libs/IVaultHealer.sol";
 import "./libs/IVaultFeeManager.sol";
 import "./QuartzUniV2Zap.sol";
+import "./VHStrategyProxy.sol";
 contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultView {
 
     bytes32 public constant STRATEGY = keccak256("STRATEGY");
@@ -15,8 +16,9 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     bytes32 public constant PATH_SETTER = keccak256("PATH_SETTER");
     bytes32 public constant PAUSER = keccak256("PAUSER");
     bytes32 public constant FEE_SETTER = keccak256("FEE_SETTER");
-    bytes constant PROXY_CODE = hex'600063ad3b358e815260408160048384335af150805180601d578182fd5b755af491505b503d82833e806081573d82fd5b503d81f360665260505260205180604060863e67366000818182377360c01b3360201b1782527f331415603757633074440c813560e01c141560335733ff5b8091505b30331415601c527f6042578091505b8082801560565782833685305afa91506074565b8283368573603c526086810182f3';
-    bytes32 constant PROXY_CODE_HASH = keccak256(PROXY_CODE);
+    //bytes constant PROXY_CODE = hex'600063ad3b358e815260408160048384335af150805180601d578182fd5b755af491505b503d82833e806081573d82fd5b503d81f360665260505260205180604060863e67366000818182377360c01b3360201b1782527f331415603757633074440c813560e01c141560335733ff5b8091505b30331415601c527f6042578091505b8082801560565782833685305afa91506074565b8283368573603c526086810182f3';
+    bytes32 constant PROXY_CODE_HASH = keccak256(type(VHStrategyProxy).creationCode);
+    //bytes32 constant PROXY_CODE_HASH = keccak256(PROXY_CODE);
 
     IVaultFeeManager public vaultFeeManager;
     Vault.Info[] internal _vaultInfo; // Info of each vault.
