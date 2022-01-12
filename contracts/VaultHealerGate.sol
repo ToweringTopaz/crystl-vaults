@@ -31,7 +31,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         Vault.Info storage vault = _vaultInfo[_vid];
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
-
+        console.log("VHG - made it into deposit");
         if (_wantAmt > 0) {
             pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
                 token: vault.want,
@@ -171,10 +171,16 @@ function _beforeTokenTransfer(
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
         uint targetWantLocked = targetStrat.wantLockedTotal();
         require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
+        console.log(_vaultInfo.length);
+        console.log(vault.accRewardTokensPerShare);
+        console.log(strat(_vid).wantLockedTotal());
+        console.log(targetWantLocked);
+        console.log(vault.balanceCrystlCompounderLastUpdate);
 
-        vault.accRewardTokensPerShare += uint112((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / strat(_vid).wantLockedTotal()); 
-
+        vault.accRewardTokensPerShare += uint112((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e18 / strat(_vid).wantLockedTotal()); 
+        console.log("VHG - made it here");
         vault.balanceCrystlCompounderLastUpdate = uint112(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        console.log("VHG - and here");
 
     }
 

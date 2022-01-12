@@ -2,6 +2,8 @@
 pragma solidity ^0.8.4;
 
 import "./VaultHealerGate.sol";
+import "hardhat/console.sol";
+
 import {IBoostPool} from "./libs/Interfaces.sol";
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
