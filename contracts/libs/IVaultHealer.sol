@@ -16,6 +16,7 @@ interface IVaultHealerMain {
     function withdraw(uint256 _vid, uint256 _wantAmt) external;
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;
     function deposit(uint256 _vid, uint256 _wantAmt) external;
+    function getProxyData() external returns (address, bytes memory);
 
 }
 interface IVaultView {

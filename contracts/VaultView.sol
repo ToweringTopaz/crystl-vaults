@@ -20,10 +20,10 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
 
     IVaultFeeManager public vaultFeeManager;
     Vault.Info[] internal _vaultInfo; // Info of each vault.
+    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
     mapping(address => uint32) private _strats;
     uint256 private _lock = type(uint32).max;
 
-    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
 /*
     struct PendingDeposit {
         IERC20 token;
@@ -34,8 +34,9 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
 
 }
 */
-    bytes32[3] internal __reserved;
-    bytes internal proxyData;
+    bytes32 internal __reserved;
+    address proxyImplementation;
+    bytes proxyMetadata;
     IMagnetite public magnetite;
     QuartzUniV2Zap immutable public zap;
     VaultView public vaultView;

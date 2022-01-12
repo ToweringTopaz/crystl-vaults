@@ -18,7 +18,7 @@ library Fee {
     }
     function receiverAndRate(Data _fee) internal pure returns (address, uint16) {
         uint fee = Data.unwrap(_fee);
-        return (address(uint160(fee >> 16)), uint16(fee & 0x3fff));
+        return (address(uint160(fee >> 16)), uint16(fee));
     }
     function create(address _receiver, uint16 _rate) internal pure returns (Data) {
         return Data.wrap((uint256(uint160(_receiver)) << 16) | _rate);

@@ -123,15 +123,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, DEPLOYMENT_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
         strat1_pid = await vaultHealerView.vaultLength() -1;
-		strategyVHStandard = await vaultHealer.strat(strat1_pid);
+		strategyVHStandard = await vaultHealerView.strat(strat1_pid);
 
         strategyVHStandard = await ethers.getContractAt('StrategyVHStandard', strategyVHStandard);
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, CRYSTL_COMPOUNDER_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
         crystl_compounder_strat_pid = await vaultHealerView.vaultLength() -1;
-		strategyCrystlCompounder = await vaultHealer.strat(crystl_compounder_strat_pid);
+		strategyCrystlCompounder = await vaultHealerView.strat(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('StrategyVHStandard', strategyCrystlCompounder);
 
         const MAXIMIZER_DATA = abiCoder.encode(
@@ -148,9 +148,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		);
         console.log("4");
 
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, MAXIMIZER_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
         maximizer_strat_pid = await vaultHealerView.vaultLength() -1;
-		strategyVHMaximizer = await vaultHealer.strat(maximizer_strat_pid);
+		strategyVHMaximizer = await vaultHealerView.strat(maximizer_strat_pid);
 
         strategyVHMaximizer = await ethers.getContractAt('StrategyVHStandard', strategyVHMaximizer);
 
