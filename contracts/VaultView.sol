@@ -20,10 +20,10 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
 
     IVaultFeeManager public vaultFeeManager;
     Vault.Info[] internal _vaultInfo; // Info of each vault.
+    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
     mapping(address => uint32) private _strats;
     uint256 private _lock = type(uint32).max;
 
-    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
 /*
     struct PendingDeposit {
         IERC20 token;
@@ -34,8 +34,9 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
 
 }
 */
-    bytes32[3] internal __reserved;
-    bytes internal proxyData;
+    bytes32 internal __reserved;
+    address proxyImplementation;
+    bytes proxyMetadata;
     IMagnetite public magnetite;
     QuartzUniV2Zap immutable public zap;
     VaultView public vaultView;
@@ -78,14 +79,7 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Upgradeable) returns (bool) {
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
-    function getProxyData() external view returns (bytes memory) {
-        console.log("getProxyData");
-        bytes memory data = proxyData;
-        uint len = proxyData.length;
-        assembly {
-            return(add(data,0x20), len)
-        }
-    }
+
     function userTotals(uint256 vid, address user) external view 
         returns (Vault.TransferData memory stats, int256 earned) 
     {
