@@ -2,16 +2,17 @@
 pragma solidity ^0.8.9;
 
 import "./QuartzUniV2Zap.sol";
+import "./VaultHealerGate.sol";
+import "./VaultHealerBoostedPools.sol";
 import "./VaultHealerFactory.sol";
 import {Magnetite} from "./Magnetite.sol";
 import "./VaultView.sol";
 import {VaultFeeManager} from "./VaultFeeManager.sol";
-
-contract VaultHealer is VaultHealerFactory {
+contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools, VaultHealerFactory {
     
     bytes32 constant PATH_SETTER = keccak256("PATH_SETTER");
 
-    IMagnetite public magnetite;
+    IMagnetite internal magnetite;
     QuartzUniV2Zap immutable zap;
     VaultView internal vaultView;
 
@@ -20,11 +21,10 @@ contract VaultHealer is VaultHealerFactory {
     constructor(address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates)
         VaultHealerBase(msg.sender) 
         VaultHealerBoostedPools(msg.sender)
-        VaultHealerPause(msg.sender)
     {
         magnetite = new Magnetite();
         zap = new QuartzUniV2Zap(address(this));
-        vaultView = new VaultView();
+        vaultView = new VaultView(zap);
         vaultFeeManager = new VaultFeeManager(address(this), withdrawReceiver, withdrawRate, earnReceivers, earnRates);
         _setupRole(PATH_SETTER, msg.sender);
 
@@ -38,6 +38,20 @@ contract VaultHealer is VaultHealerFactory {
    function isApprovedForAll(address account, address operator) public view override returns (bool) {
         return super.isApprovedForAll(account, operator) || operator == address(zap);
    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override(ERC1155SupplyUpgradeable, VaultHealerGate, VaultHealerBoostedPools) {
+        ERC1155SupplyUpgradeable._beforeTokenTransfer(operator, from, to, ids, amounts, data);        
+        VaultHealerGate._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        VaultHealerBoostedPools._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        
+    }
 
     //Passes calls to VaultView within a staticcall
     fallback(bytes calldata) external returns (bytes memory) {
