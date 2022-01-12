@@ -17,7 +17,7 @@ if (!mnemonic) {
   throw new Error("Please set your MNEMONIC in a .env file");
 }
 // Ensure that we have archive mainnet node URL set as an environment variable
-const archiveMainnetNodeURL = process.env.PRIVATE_RPC;
+const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
 if (!archiveMainnetNodeURL) {
   throw new Error("Please set your PRIVATE_RPC in a .env file");
 }
