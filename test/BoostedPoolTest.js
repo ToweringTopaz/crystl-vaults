@@ -26,7 +26,7 @@ const { crystlVault } = require('../configs/crystlVault'); //<-- replace all ref
 
 const MASTERCHEF = apeSwapVaults[1].masterchef;
 const TACTIC = apeSwapVaults[1].tactic;
-const VAULT_HEALER = apeSwapVaults[0].vaulthealer;
+const VAULT_HEALER = apeSwapVaults[1].vaulthealer;
 const WANT = apeSwapVaults[1].want;
 const EARNED = apeSwapVaults[1].earned;
 const PATHS = apeSwapVaults[1].paths;
@@ -50,7 +50,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
     before(async () => {
         [user1, user2, user3, _] = await ethers.getSigners();
-        
+        /*
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
 		
 		Magnetite = await ethers.getContractFactory("Magnetite");
@@ -60,7 +60,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		magnetite = await Magnetite.deploy();
 		zapDeployer = await ZapDeployer.deploy();
 		vaultView = await VaultView.deploy();
-		
+		*/
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
             // libraries: {
             //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
@@ -74,9 +74,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 [ BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
             ]
         
-            vaultHealer = await VaultHealer.deploy(magnetite.address, zapDeployer.address, vaultView.address, feeConfig, [ FEE_ADDRESS, 10 ]);
-			vaultHealerView = await ethers.getContractAt('VaultView', vaultHealer.address);
-		
+            vaultHealer = await VaultHealer.deploy(FEE_ADDRESS, 10, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
+            vaultHealerView = await ethers.getContractAt('VaultView', vaultHealer.address);
+            quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealerView.zap());
+            
             StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
                 // libraries: {
             //     LibVaultSwaps: "0x1B20Dab7BE777a9CFC363118BC46f7905A7628a1",
@@ -85,6 +86,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         });        
         strategyImplementation = await StrategyVHStandard.deploy();
 		const abiCoder = new ethers.utils.AbiCoder;
+        const NULL_BYTES = [];
         const DEPLOYMENT_DATA = abiCoder.encode(
 			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
 			[
@@ -109,7 +111,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
         
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, NULL_BYTES, DEPLOYMENT_DATA);
         strat1_pid = await vaultHealerView.vaultLength() -1;
 		strategyVHStandard = await vaultHealer.strat(strat1_pid);
 
