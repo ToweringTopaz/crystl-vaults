@@ -40,7 +40,7 @@ abstract contract VaultHealerPause is VaultHealerBase {
         _unpause(vid);
         strat(vid).unpanic();
     }
-    function paused(uint vid) public view returns (bool) {
+    function paused(uint vid) internal view returns (bool) {
         return !pauseMap.get(vid);
     }
     modifier whenNotPaused(uint vid) {

@@ -6,6 +6,7 @@ import "./libs/OpenZeppelin.sol";
 import "./libs/Vault.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IVaultHealer.sol";
+import "./libs/IVaultFeeManager.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultHealerMain {
     using SafeERC20 for IERC20;
@@ -13,7 +14,9 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     bytes32 constant STRATEGY = keccak256("STRATEGY");
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
+    bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
+    IVaultFeeManager internal vaultFeeManager;
     Vault.Info[] internal _vaultInfo; // Info of each vault.
 
     //vid for any of our strategies
@@ -21,13 +24,16 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     uint256 private _lock = type(uint32).max;
 
     event AddVault(address indexed strat);
-    
+    event SetVaultFeeManager(IVaultFeeManager indexed _manager);
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(VAULT_ADDER, _owner);
         _setRoleAdmin(STRATEGY, VAULT_ADDER);
 
         _vaultInfo.push(); //so uninitialized vid variables (vid 0) can be assumed as invalid
+    }
+    function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
+        vaultFeeManager = _manager;
     }
 
     /**
@@ -81,5 +87,5 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
-    function strat(uint _vid) public virtual view returns (IStrategy);
+    function strat(uint _vid) internal virtual view returns (IStrategy);
 }

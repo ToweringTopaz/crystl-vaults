@@ -5,7 +5,7 @@ import "./libs/OpenZeppelin.sol";
 import "./libs/Vault.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IVaultHealer.sol";
-import "./VHStrategyProxy.sol";
+import "./libs/IVaultFeeManager.sol";
 
 contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultView {
 
@@ -15,17 +15,15 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     bytes32 public constant PATH_SETTER = keccak256("PATH_SETTER");
     bytes32 public constant PAUSER = keccak256("PAUSER");
     bytes32 public constant FEE_SETTER = keccak256("FEE_SETTER");
-    bytes32 constant PROXY_CODE_HASH = keccak256(type(VHStrategyProxy).creationCode);
+    bytes constant PROXY_CODE = hex'600063ad3b358e815260408160048384335af150805180601d578182fd5b755af491505b503d82833e806081573d82fd5b503d81f360665260505260205180604060863e67366000818182377360c01b3360201b1782527f331415603757633074440c813560e01c141560335733ff5b8091505b30331415601c527f6042578091505b8082801560565782833685305afa91506074565b8283368573603c526086810182f3';
+    bytes32 constant PROXY_CODE_HASH = keccak256(PROXY_CODE);
 
+    IVaultFeeManager public vaultFeeManager;
     Vault.Info[] internal _vaultInfo; // Info of each vault.
     mapping(address => uint32) private _strats;
     uint256 private _lock = type(uint32).max;
-    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
 
-    BitMaps.BitMap internal _overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
-    BitMaps.BitMap private _overrideDefaultWithdrawFee;
-    Vault.Fees public defaultEarnFees; // Settings which are generally applied to all strategies
-    Vault.Fee public defaultWithdrawFee; //withdrawal fee is set separately from earn fees
+    BitMaps.BitMap internal pauseMap; //Boolean pause status for each vault; true == unpaused
 /*
     struct PendingDeposit {
         IERC20 token;
@@ -34,14 +32,17 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     }
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
-    address proxyImplementation;
     bytes proxyMetadata;
 }
 */
     bytes32[3] internal __reserved;
+    bytes internal proxyData;
 
     function vaultLength() external view returns (uint256) {
         return _vaultInfo.length;
+    }
+    function paused(uint vid) external view returns (bool) {
+        return !BitMaps.get(pauseMap, vid);
     }
 
     function owner() external view returns (address) {
@@ -70,5 +71,21 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Upgradeable) returns (bool) {
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
+    }
+    function getProxyData() external view returns (bytes memory) {
+        bytes memory data = proxyData;
+        uint len = proxyData.length;
+        assembly {
+            return(add(data,0x20), len)
+        }
+    }
+    function userTotals(uint256 vid, address user) external view 
+        returns (Vault.TransferData memory stats, int256 earned) 
+    {
+        stats = _vaultInfo[vid].user[user].stats;
+        
+        uint _ts = totalSupply(vid);
+        uint staked = _ts == 0 ? 0 : balanceOf(user, vid) * strat(vid).wantLockedTotal() / _ts;
+        earned = int(stats.withdrawals + staked + stats.transfersOut) - int(uint(stats.deposits + stats.transfersIn));
     }
 }

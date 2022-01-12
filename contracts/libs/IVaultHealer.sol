@@ -8,7 +8,6 @@ import "./IStrategy.sol";
 interface IVaultHealerMain {
 
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
-    function getProxyData() external returns (address _implementation, bytes memory _metadata);
     //function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
     //function stratWithdraw(uint256 _vid, uint256 _wantAmt) external;
     function executePendingDeposit(address _to, uint112 _amount) external;
@@ -18,9 +17,10 @@ interface IVaultHealerMain {
     function withdraw(uint256 _vid, uint256 _wantAmt) external;
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;
     function deposit(uint256 _vid, uint256 _wantAmt) external;
-    function strat(uint256 _vid) external view returns (IStrategy);
+
 }
 interface IVaultView {
     function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
+    function strat(uint256 _vid) external view returns (IStrategy);
 }
 interface IVaultHealer is IVaultHealerMain, IVaultView {}

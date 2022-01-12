@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import {Vault} from "./Vault.sol";
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "./IUniRouter.sol";
+import "./Fee.sol";
 
 interface IStrategy {
     function initEncode(
@@ -30,7 +31,7 @@ interface IStrategy {
     function targetVault() external view returns (IStrategy);
     function maximizerRewardToken() external view returns (IERC20);
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external;
-    function earn(Vault.Fees calldata _fees) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
+    function earn(Fee.Data[3] memory fees) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
     function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
     function panic() external;

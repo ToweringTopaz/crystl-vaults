@@ -30,8 +30,8 @@ contract QuartzUniV2Zap {
 
     mapping(bytes32 => bool) private approvals;
 
-    constructor(IVaultHealer _vaultHealer) {
-        vaultHealer = _vaultHealer;
+    constructor(address _vaultHealer) {
+        vaultHealer = IVaultHealer(_vaultHealer);
     }
 
     receive() external payable {
