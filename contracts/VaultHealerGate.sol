@@ -17,15 +17,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
-    function userTotals(uint256 vid, address user) external view 
-        returns (Vault.TransferData memory stats, int256 earned) 
-    {
-        stats = _vaultInfo[vid].user[user].stats;
-        
-        uint _ts = totalSupply(vid);
-        uint staked = _ts == 0 ? 0 : balanceOf(user, vid) * strat(vid).wantLockedTotal() / _ts;
-        earned = int(stats.withdrawals + staked + stats.transfersOut) - int(uint(stats.deposits + stats.transfersIn));
-    }
     // Want tokens moved from user -> this -> Strat (compounding)
     function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
         _deposit(_vid, _wantAmt, msg.sender, msg.sender);
@@ -112,14 +103,14 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         vault.user[_from].stats.withdrawals += uint128(wantAmt);
         
         //withdraw fee is implemented here
-        Vault.Fee storage withdrawFee = getWithdrawFee(_vid);
-        address feeReceiver = withdrawFee.receiver;
-        uint16 feeRate = withdrawFee.rate;
-        if (feeReceiver != address(0) && feeRate > 0 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
-            uint feeAmt = wantAmt * feeRate / 10000;
-            wantAmt -= feeAmt;
-            vault.want.safeTransferFrom(address(strategy), feeReceiver, feeAmt); //todo: zap to correct fee token
-        }
+        try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
+            //hardcoded 5% max fee rate
+            if (feeReceiver != address(0) && feeRate <= 500 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+                uint feeAmt = wantAmt * feeRate / 10000;
+                wantAmt -= feeAmt;
+                vault.want.safeTransferFrom(address(strategy), feeReceiver, feeAmt); //todo: zap to correct fee token
+            }
+        } catch {}
 
         //this call transfers wantTokens from the strat to the user
         vault.want.safeTransferFrom(address(strategy), _to, wantAmt);
@@ -152,6 +143,7 @@ function _beforeTokenTransfer(
         bytes memory data
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        //console.log("gate version of beforeTT");
 
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
@@ -166,7 +158,7 @@ function _beforeTokenTransfer(
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 
                     UpdatePoolAndRewarddebtOnDeposit(vid, to, underlyingValue);
-                    }
+                }
 
             }
         }

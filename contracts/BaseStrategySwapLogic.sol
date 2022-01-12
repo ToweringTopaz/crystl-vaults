@@ -26,7 +26,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return wantToken.balanceOf(address(this));
     }
 
-    function earn(Vault.Fees calldata earnFees) external returns (bool success, uint256 _wantLockedTotal) {
+    function earn(Fee.Data[3] memory fees) external returns (bool success, uint256 _wantLockedTotal) {
         uint wantBalanceBefore = _wantBalance(); //Don't sell starting want balance (anti-rug)
 
         _vaultHarvest(); // Harvest farm tokens
@@ -46,8 +46,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             if (earnedAmt > dust) {
                 console.log("BSSL - C");
                 success = true; //We have something worth compounding
-                earnedAmt = distribute(earnFees, earnedToken, earnedAmt); // handles all fees for this earned token
-                console.log("BSSL - past fees");
+                earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
 
                 if (address(lpToken[1]) == address(0)) { //single stake
                     console.log("BSSL - D");
@@ -104,36 +103,29 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         return;
     }
 
-    function distribute(Vault.Fees calldata earnFees, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
+    function distribute(Fee.Data[3] memory fees, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
         IUniRouter router = settings.router;
-        // To pay for earn function
-        uint256 fee = _earnedAmt * earnFees.userReward.rate / FEE_MAX;
-        console.log("BSSL - just before first conditional");
 
-        if (fee > 0) {
-            console.log("BSSL - in first conditional");
-            safeSwap(fee, _earnedToken, router.WETH(), tx.origin);
-            earnedAmt -= fee;
-            }
-
-        //distribute rewards
-        fee = _earnedAmt * earnFees.treasuryFee.rate / FEE_MAX;
-        if (fee > 0) {
-            console.log("BSSL - in seecond conditional");
-            safeSwap(fee, _earnedToken, router.WETH(), earnFees.treasuryFee.receiver);
-            earnedAmt -= fee;
-            }
+        uint feeTotalRate;
+        for (uint i; i < 3; i++) {
+            feeTotalRate += Fee.rate(fees[i]);
+        }
         
-        //burn crystl
-        fee = _earnedAmt * earnFees.burn.rate / FEE_MAX;
-        if (fee > 0) {
-            console.log("BSSL - in third conditional");
-
-            safeSwap(fee, _earnedToken, router.WETH(), earnFees.burn.receiver);
-            earnedAmt -= fee;
+        if (feeTotalRate > 0) {
+            uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
+            earnedAmt -= feeEarnedAmt;
+            uint nativeBefore = address(this).balance;
+            safeSwap(feeEarnedAmt, _earnedToken, router.WETH(), address(this));
+            uint feeNativeAmt = address(this).balance - nativeBefore;
+            for (uint i; i < 3; i++) {
+                (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
+                if (receiver == address(0) || rate == 0) break;
+                (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate}("");
+                require(success, "Strategy: Transfer failed");
             }
+        }
     }
 
     function safeSwap(
@@ -176,9 +168,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         //allow swap.router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(settings.router), _amountIn);
         bool feeOnTransfer = settings.feeOnTransfer;
-        console.log("BSSL - just before conditional");
-        if (_tokenB != router.WETH() || Address.isContract(_to) ) {
-            console.log("BSSL - 11");
+
+        if (_tokenB != router.WETH() ) {
             if (feeOnTransfer) { //reflect mode on
                 console.log("BSSL - 12");
                 router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
@@ -188,7 +179,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
                 router.swapExactTokensForTokens(
                     _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
             }
-        } else { //Non-contract address (extcodesize zero) receives native ETH
+        } else {
             if (feeOnTransfer) { //reflect mode on
                 console.log("BSSL - 14");
                 router.swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -200,4 +191,5 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             }            
         }
     }
+    receive() external payable {}
 }

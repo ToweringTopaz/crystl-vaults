@@ -1,30 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import "./QuartzUniV2Zap.sol";
 import "./VaultHealerFactory.sol";
-import "./QuartzUniV2ZapDeployer.sol";
-import "./libs/IMagnetite.sol";
+import {Magnetite} from "./Magnetite.sol";
 import "./VaultView.sol";
+import {VaultFeeManager} from "./VaultFeeManager.sol";
 
 contract VaultHealer is VaultHealerFactory {
     
     bytes32 constant PATH_SETTER = keccak256("PATH_SETTER");
 
-    IMagnetite immutable public magnetite;
-    address immutable public zap;
+    IMagnetite public magnetite;
+    QuartzUniV2Zap immutable zap;
     VaultView internal vaultView;
 
     event SetVaultView(VaultView);
 
-    constructor(IMagnetite _magnetite, address _zapDeployer, VaultView _vaultView, Vault.Fees memory _fees, Vault.Fee memory _withdrawFee)
+    constructor(address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates)
         VaultHealerBase(msg.sender) 
         VaultHealerBoostedPools(msg.sender)
-        VaultHealerFees(msg.sender, _fees, _withdrawFee)
         VaultHealerPause(msg.sender)
     {
-        magnetite = _magnetite;
-        zap = QuartzUniV2ZapDeployer(_zapDeployer).deployZap();
-        vaultView = _vaultView;
+        magnetite = new Magnetite();
+        zap = new QuartzUniV2Zap(address(this));
+        vaultView = new VaultView();
+        vaultFeeManager = new VaultFeeManager(address(this), withdrawReceiver, withdrawRate, earnReceivers, earnRates);
         _setupRole(PATH_SETTER, msg.sender);
 
     }
@@ -32,10 +33,6 @@ contract VaultHealer is VaultHealerFactory {
     function setVaultView(VaultView _vaultView) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vaultView = _vaultView;
         emit SetVaultView(_vaultView);
-    }
-
-    function setPath(address router, IERC20[] calldata path) external onlyRole(PATH_SETTER) {
-        magnetite.overridePath(router, path);
     }
 
    function isApprovedForAll(address account, address operator) public view override returns (bool) {

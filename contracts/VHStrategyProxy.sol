@@ -5,67 +5,25 @@ import {IVaultHealer} from "./libs/IVaultHealer.sol";
 
 contract VHStrategyProxy {
 
-    address immutable VAULTHEALER;
-    address immutable IMPLEMENTATION;
-
     constructor() {
-        VAULTHEALER = msg.sender;
-        bytes memory metadata;
-        (IMPLEMENTATION, metadata) = IVaultHealer(msg.sender).getProxyData();
-    }
+        (address implementation, bytes memory metadata) = IVaultHealer(msg.sender).getProxyData();
 
-    function _delegate() internal {
-        address vaultHealer = VAULTHEALER;
-        address implementation = IMPLEMENTATION;
         assembly {
-            // Copy msg.data. We take full control of memory in this inline assembly
-            // block because it will not return to Solidity code. We overwrite the
-            // Solidity scratch pad at memory position 0.
-            calldatacopy(0, 0, calldatasize())
+            let ptr := mload(0x40)
+            mstore(ptr, or(0x3660008181823773000000000000000000000000000000000000000033141560,shl(32, caller())))
+            mstore(add(ptr,0x20), 0x3757633074440c813560e01c141560335733ff5b8091505b3033141560425780)
+            mstore(add(ptr,0x40), 0x91505b8082801560565782833685305afa91506074565b828336857300000000)
+            mstore(add(ptr,0x5c), shl(96,implementation))
+            mstore(add(ptr,0x70), 0x5af491505b503d82833e806081573d82fd5b503d81f300000000000000000000)
 
-            //Safe transactions are from this address (will be staticcalls), vaultHealer, or have zero calldata
-            let safe := or(or(eq(caller(), vaultHealer), iszero(calldatasize())), eq(address(), caller()))
-            
-            let result
-            switch safe
-            case 0 {
-                //This does a staticcall to this address which is then delegated to the implementation. The static lock persists, preventing state changes
-                result := staticcall(gas(), address(), 0, calldatasize(), 0, 0)
+            let metadataLength := mload(metadata)
+            let ptr2 := add(ptr,0x86)
+            for { let i := 0 } lt(i, metadataLength) { i := add(i, 0x20) } {
+                
+                let chunk := mload(add(metadata, add(0x20,i)))
+                mstore(add(ptr2, i), chunk)
             }
-            default {
-                    // Call the implementation.
-                // out and outsize are 0 because we don't know the size yet.
-                result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
-            }
-
-            // Copy the returned data.
-            returndatacopy(0, 0, returndatasize())
-
-            switch result
-            // delegatecall returns 0 on error.
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
-        }
-    }
-    
-    fallback() external payable virtual {
-        _delegate();
-    }
-    receive() external payable virtual {
-        _delegate();
-    }
-
-    function _destroy_() external {
-        address vaultHealer = VAULTHEALER;
-        assembly {
-            if eq(caller(), vaultHealer) {
-                selfdestruct(caller())
-            }
-            invalid()
+            return(ptr, add(0x86, metadataLength))
         }
     }
 }

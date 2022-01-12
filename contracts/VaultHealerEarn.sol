@@ -2,38 +2,31 @@
 pragma solidity ^0.8.4;
 
 import "./VaultHealerPause.sol";
-import "./VaultHealerFees.sol";
-import "hardhat/console.sol";
 
 //For calling the earn function
-abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
+abstract contract VaultHealerEarn is VaultHealerPause {
 
     event Earned(uint256 indexed vid, uint256 wantAmountEarned);
 
     function earnAll() external nonReentrant {
 
-        Vault.Fees memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
 
         for (uint i; i < bucketLength; i++) {
             uint earnMap = pauseMap._data[i]; //earn unpaused vaults
-            uint feeMap = _overrideDefaultEarnFees._data[i];
             uint end = (i+1) << 8; // buckets end at multiples of 256
             if (_vaultInfo.length < end) end = _vaultInfo.length; //or if less, the final pool
             for (uint j = i << 8; j < end; j++) {
                 if (earnMap & 1 > 0) { //smallest bit is "true"
-                    _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees);
+                    _tryEarn(j);
                 }
                 earnMap >>= 1; //shift away the used bit
-                feeMap >>= 1;
-
                 if (earnMap == 0) break;
             }
         }
     }
     
     function earnSome(uint256[] calldata vids) external nonReentrant {
-        Vault.Fees memory _defaultEarnFees = defaultEarnFees;
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
         uint256[] memory selBuckets = new uint256[](bucketLength); //BitMap of selected vids
 
@@ -45,16 +38,13 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
 
         for (uint i; i < bucketLength; i++) {
             uint earnMap = pauseMap._data[i] & selBuckets[i]; //earn selected, unpaused vaults
-            uint feeMap = _overrideDefaultEarnFees._data[i];
 
             uint end = (i+1) << 8; // buckets end at multiples of 256
             for (uint j = i << 8; j < end; j++) {//0-255, 256-511, ...
                 if (earnMap & 1 > 0) { //smallest bit is "true"
-                    console.log("VHE - just before tryEarn");
-                    _tryEarn(j, feeMap & 1 > 0 ? _vaultInfo[i].earnFees : _defaultEarnFees);
+                    _tryEarn(j);
                 }
                 earnMap >>= 1; //shift away the used bit
-                feeMap >>= 1;
 
                 if (earnMap == 0) break; //if bucket is empty, done with bucket
             }
@@ -64,13 +54,12 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
         _doEarn(vid);
     }
 
-    function _tryEarn(uint256 vid, Vault.Fees memory _earnFees) private {
+    function _tryEarn(uint256 vid) private {
         Vault.Info storage vault = _vaultInfo[vid];
         uint32 interval = vault.minBlocksBetweenEarns;
 
         if (block.number > vault.lastEarnBlock + interval) {
-            console.log("VHE - past first conditional");
-            try strat(vid).earn(_earnFees) returns (bool success, uint256 wantLockedTotal) {
+            try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
                 if (success) {
                     console.log("VHE - success");
                     vault.lastEarnBlock = uint32(block.number);
@@ -94,7 +83,7 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
     function _doEarn(uint256 vid) internal {
         Vault.Info storage vault = _vaultInfo[vid];
         uint32 interval = vault.minBlocksBetweenEarns;   
-        try strat(vid).earn(getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
+        try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
             if (success) {
                 vault.lastEarnBlock = uint32(block.number);
                 if (interval > 1 && block.number > vault.lastEarnBlock + interval) {
@@ -110,9 +99,5 @@ abstract contract VaultHealerEarn is VaultHealerPause, VaultHealerFees {
                     vault.wantLockedLastUpdate = uint112(wantLockedTotal);
                 }
         } catch {}
-    }
-
-    function addVault(address _strat) internal override(VaultHealerBase, VaultHealerPause) returns (uint vid) {
-        return VaultHealerPause.addVault(_strat);
     }
 }

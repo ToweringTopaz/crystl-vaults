@@ -25,13 +25,9 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
         uint vid = IBoostPool(_boost).STAKE_TOKEN_VID();
         Vault.Info storage vault = _vaultInfo[vid];
-        console.log("VHBP - adding boost");
-        console.log(vault.boosts.length); //0
         IBoostPool(_boost).vaultHealerActivate(vault.boosts.length);
         uint _boostID = vault.boosts.length;
         vault.boosts.push() = IBoostPool(_boost);
-        console.log(vault.boosts.length); //1
-        console.log(_vaultInfo[vid].boosts.length); //1
         vault.activeBoosts.set(_boostID);
         emit AddBoost(_boost, vid, vault.boosts.length - 1);
     }
@@ -86,31 +82,22 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         bytes memory data
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        console.log("VHBP - bp version of beforeTT");
         //If boosted pools are affected, update them
-        console.log(ids[0]);
-        console.log(ids.length);
 
         for (uint i; i < ids.length; i++) {
             Vault.Info storage vault = _vaultInfo[i];
-            console.log(_vaultInfo[i].boosts.length);
             for (uint k; k < _vaultInfo[i].boosts.length; k++) {
-                console.log("VHBP - 1.1");
                 bool fromBoosted = from != address(0) && vault.user[from].boosts.get(k);
-                console.log("VHBP - 1.2");
                 bool toBoosted = to != address(0) && vault.user[to].boosts.get(k);
-                console.log("VHBP - 2");
 
                 if (!fromBoosted && !toBoosted) continue;
                 IBoostPool boostPool = vault.boosts[k];
-                console.log("VHBP - 3");
 
                 uint status = boostPool.notifyOnTransfer(
                     fromBoosted ? from : address(0),
                     toBoosted ? to : address(0),
                     amounts[i]
                 );
-                console.log("VHBP - 4");
 
                 if (status & 1 > 0) { //pool finished for "from"
                     vault.user[from].boosts.unset(k);

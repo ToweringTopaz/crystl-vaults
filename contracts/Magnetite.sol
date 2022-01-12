@@ -6,10 +6,9 @@ import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "./libs/IUniPair.sol";
 import "./libs/IUniRouter.sol";
 import "./libs/IUniFactory.sol";
-import "hardhat/console.sol";
-
+import "./libs/IMagnetite.sol";
 //Automatically generates and stores paths
-contract Magnetite is Ownable {
+contract Magnetite is Ownable, IMagnetite {
 
     struct PairData {
         IERC20 token;
@@ -36,7 +35,8 @@ contract Magnetite is Ownable {
     mapping(bytes32 => IERC20[]) private _paths;
 
     //Adds or modifies a swap path
-    function overridePath(address router, IERC20[] calldata _path) external onlyOwner {
+    function overridePath(address router, IERC20[] calldata _path) external {
+        require(IAccessControl(owner()).hasRole(keccak256("PATH_SETTER"), msg.sender), "!auth");
         _setPath(router, _path, AutoPath.MANUAL);
     }
 
