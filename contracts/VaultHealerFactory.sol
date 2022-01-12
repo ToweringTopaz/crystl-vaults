@@ -24,6 +24,7 @@ abstract contract VaultHealerFactory is VaultHealerBase {
     ) external nonReentrant {
         proxyImplementation = _implementation;
         address newStrat = Create2.deploy(0, bytes32(_vaultInfo.length), type(VHStrategyProxy).creationCode);
+        console.log("newStrat: ", newStrat);
         IStrategy(newStrat).initialize(data);
         addVault(newStrat); //qq - what's the 10 here? -- minBlocksBetweenEarns -- todo: does this need to be configurable? In theory it should sort itself
     }

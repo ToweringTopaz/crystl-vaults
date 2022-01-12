@@ -41,6 +41,7 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
         //maximizer config
         if (_targetVid != 0) {
             targetVault = IVaultHealer(msg.sender).strat(_targetVid);
+            console.log("targetVault: ", address(targetVault));
             maximizerRewardToken = targetVault.wantToken();
             targetVid = uint32(_targetVid);
             maximizerRewardToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
