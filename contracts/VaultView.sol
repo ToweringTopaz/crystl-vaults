@@ -79,14 +79,7 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Upgradeable) returns (bool) {
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
-    function getProxyData() external view returns (bytes memory) {
-        console.log("getProxyData");
-        bytes memory data = proxyData;
-        uint len = proxyData.length;
-        assembly {
-            return(add(data,0x20), len)
-        }
-    }
+
     function userTotals(uint256 vid, address user) external view 
         returns (Vault.TransferData memory stats, int256 earned) 
     {
