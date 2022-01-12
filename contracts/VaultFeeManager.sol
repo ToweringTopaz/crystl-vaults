@@ -42,7 +42,7 @@ contract VaultFeeManager is IVaultFeeManager {
     }
 
     modifier auth {
-        require(vaultHealer.hasRole(FEE_SETTER, msg.sender));
+        require(vaultHealer.hasRole(FEE_SETTER, msg.sender), "!auth");
         _;
     }
 
