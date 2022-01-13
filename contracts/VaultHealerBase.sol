@@ -26,7 +26,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
 
     //vid for any of our strategies
     mapping(address => uint32) private _strats;
-    uint256 private _lock = type(uint32).max;
+    uint256 internal _lock = type(uint32).max;
 
     event AddVault(address indexed strat);
     event SetVaultFeeManager(IVaultFeeManager indexed _manager);
@@ -81,7 +81,10 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
 
     modifier reentrantOnlyByStrategy(uint vid) {
         uint lock = _lock; //saves initial lock state
-        require(lock == type(uint32).max || msg.sender == address(strat(lock)), "reentrancy"); //must either not be entered, or caller is the active strategy
+        console.log("lock is ", _lock, address(strat(lock)));
+        console.log("caller is ", msg.sender);
+        
+        require(lock == type(uint32).max || msg.sender == address(strat(lock)), "reentrancy/!strat"); //must either not be entered, or caller is the active strategy
         _lock = vid; //this vid's strategy may reenter
         _;
         _lock = lock; //restore initial state
