@@ -488,7 +488,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             vaultSharesTotalInCrystalCompounderAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`vaultSharesTotalInCrystalCompounderAfterCallingEarnSome: ${vaultSharesTotalInCrystalCompounderAfterCallingEarnSome}`)
             console.log(`After calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarnSome)} CRYSTL tokens in it`)
-            console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
+            // console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
 
             const differenceInVaultSharesTotal = vaultSharesTotalInCrystalCompounderAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
 
@@ -842,7 +842,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should transfer 1155 tokens from user 3 to user 1, updating shares and rewardDebt accurately', async () => {
             const User3StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
             const User1StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
-            User1RewardDebtBeforeTransfer = await vaultView.rewardDebt(maximizer_strat_pid, user1.address);
+            User1RewardDebtBeforeTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
 
             vaultHealer.connect(user3).setApprovalForAll(user1.address, true);
 
@@ -860,7 +860,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should increase rewardDebt when you receive transferred tokens', async () => {
-            const User1RewardDebtAfterTransfer = await vaultView.rewardDebt(maximizer_strat_pid, user1.address);
+            const User1RewardDebtAfterTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
 
             expect(User1RewardDebtAfterTransfer).to.be.gt(User1RewardDebtBeforeTransfer);
         })

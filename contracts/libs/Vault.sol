@@ -16,8 +16,8 @@ library Vault {
         IBoostPool[] boosts;
         BitMaps.BitMap activeBoosts;
         mapping (address => User) user;
-        uint112 accRewardTokensPerShare;
-        uint112 balanceCrystlCompounderLastUpdate;
+        uint256 accRewardTokensPerShare;
+        uint256 balanceCrystlCompounderLastUpdate;
         uint32 targetVid; //maximizer target, which accumulates tokens
 
         uint112 wantLockedLastUpdate;

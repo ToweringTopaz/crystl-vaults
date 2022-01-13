@@ -170,16 +170,16 @@ function _beforeTokenTransfer(
         IStrategy targetStrat = strat(targetVid);
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
         uint targetWantLocked = targetStrat.wantLockedTotal();
-        require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
+        // require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
         console.log(_vaultInfo.length);
         console.log(vault.accRewardTokensPerShare);
         console.log(strat(_vid).wantLockedTotal());
         console.log(targetWantLocked);
         console.log(vault.balanceCrystlCompounderLastUpdate);
 
-        vault.accRewardTokensPerShare += uint112((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e18 / strat(_vid).wantLockedTotal()); 
+        vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / strat(_vid).wantLockedTotal()); 
         console.log("VHG - made it here");
-        vault.balanceCrystlCompounderLastUpdate = uint112(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vault.balanceCrystlCompounderLastUpdate = uint256(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
         console.log("VHG - and here");
 
     }
@@ -191,17 +191,19 @@ function _beforeTokenTransfer(
         Vault.Info storage target = _vaultInfo[vault.targetVid];
         IStrategy targetStrat = strat(targetVid);
         uint targetWantLocked = targetStrat.wantLockedTotal();
-        require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
+        // require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
 
-        vault.accRewardTokensPerShare += uint112((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
+        vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
         //calculate total crystl amount this user owns
         uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
         //withdraw proportional amount of crystl from targetVault()
         if (crystlShare > 0) {
             vaultStrat.withdrawMaximizerReward(vault.targetVid, crystlShare);
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
-            vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid);
+            console.log(vault.user[_from].rewardDebt);
+            console.log(vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid));
+            vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
             }
-        vault.balanceCrystlCompounderLastUpdate = uint112(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vault.balanceCrystlCompounderLastUpdate = uint256(targetStrat.wantLockedTotal()); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 }
