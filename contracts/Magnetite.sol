@@ -47,23 +47,23 @@ contract Magnetite is Ownable, IMagnetite {
         _setPath(router, _path, AutoPath.AUTO);
     }
     function findAndSavePath(address _router, IERC20 a, IERC20 b) external returns (IERC20[] memory path) {
-        console.log("MT - made it into magnetite");
+        // console.log("MT - made it into magnetite");
         IUniRouter router = IUniRouter(_router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
-        console.log("MT - before conditional");
+        // console.log("MT - before conditional");
 
         if (path.length == 0) {
-            console.log("MT - in consitional");
+            // console.log("MT - in consitional");
 
             path = generatePath(router, a, b);
-            console.log("MT - second conditional");
+            // console.log("MT - second conditional");
             if (pathAuth()) {
-                console.log("MT - third conditional");
+                // console.log("MT - third conditional");
                 _setPath(_router, path, AutoPath.AUTO);
             }
-            console.log("MT - done in magnetite 1");
+            // console.log("MT - done in magnetite 1");
         }
-        console.log("MT - done in magnetite 2");
+        // console.log("MT - done in magnetite 2");
 
     }
 
