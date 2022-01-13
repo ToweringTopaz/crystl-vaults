@@ -361,7 +361,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const LPtokenBalanceAfterSecondDeposit = await LPtoken.balanceOf(user1.address);
             const User1sStakedTokensAfterSecondDeposit = await vaultHealerView.stakedWantTokens(strat1_pid, user1.address);
 
-            expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.equal(User1sStakedTokensAfterSecondDeposit.sub(User1sStakedTokensBeforeSecondDeposit)); //will this work for 2nd deposit? on normal masterchef?
+            expect(LPtokenBalanceBeforeSecondDeposit.sub(LPtokenBalanceAfterSecondDeposit)).to.closeTo(User1sStakedTokensAfterSecondDeposit.sub(User1sStakedTokensBeforeSecondDeposit), ethers.BigNumber.from(1000000000000000)); //will this work for 2nd deposit? on normal masterchef?
         })
         
 
@@ -406,13 +406,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(WITHDRAW_FEE_FACTOR_MAX);
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
-            .to.equal(
+            .to.closeTo(
                 (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                 .sub(
                     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
                     .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
-                    .div(WITHDRAW_FEE_FACTOR_MAX)
-                )
+                    .div(WITHDRAW_FEE_FACTOR_MAX),
+                ),
+				ethers.BigNumber.from(1000000000000000)
                 );
         })
 

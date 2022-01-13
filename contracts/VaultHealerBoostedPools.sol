@@ -38,7 +38,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
         Vault.User storage user = vault.user[_user];
         require(vault.activeBoosts.get(_boostID), "not an active boost");
         require(!user.boosts.get(_boostID), "boost is already active for user");
-
+        console.log("VHBP: enable boost ", _user, _boostID);
         user.boosts.set(_boostID);
 
         vault.boosts[_boostID].joinPool(_user, balanceOf(_user, _vid));
@@ -85,8 +85,8 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
         //If boosted pools are affected, update them
 
         for (uint i; i < ids.length; i++) {
-            Vault.Info storage vault = _vaultInfo[i];
-            for (uint k; k < _vaultInfo[i].boosts.length; k++) {
+            Vault.Info storage vault = _vaultInfo[ids[i]];
+            for (uint k; k < vault.boosts.length; k++) {
                 bool fromBoosted = from != address(0) && vault.user[from].boosts.get(k);
                 bool toBoosted = to != address(0) && vault.user[to].boosts.get(k);
 
