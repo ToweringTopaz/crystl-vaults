@@ -116,6 +116,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		strategyVHStandard = await vaultHealerView.strat(strat1_pid);
 
         strategyVHStandard = await ethers.getContractAt('StrategyVHStandard', strategyVHStandard);
+        console.log("4");
         //create the staking pool for the boosted vault
         BoostPool = await ethers.getContractFactory("BoostPool", {});
         //need the wantToken address from the strategy!
@@ -134,6 +135,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         //fund the staking pool with reward token, Crystl 
         await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], boostPool.address, Date.now() + 900, { value: ethers.utils.parseEther("45") })
+        console.log("5");
 
         await network.provider.send("hardhat_setBalance", [
             user1.address,
