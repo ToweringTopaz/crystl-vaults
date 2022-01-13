@@ -40,20 +40,21 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             IERC20 earnedToken = earned[i];
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == wantToken)
-                // console.log("BSSL - B");
+                console.log(earnedAmt);
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
-                
+                console.log(earnedAmt);
+
             if (earnedAmt > dust) {
-                // console.log("BSSL - C");
+                console.log("BSSL - C");
                 success = true; //We have something worth compounding
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
 
                 if (address(lpToken[1]) == address(0)) { //single stake
-                    // console.log("BSSL - D");
+                    console.log("BSSL - D");
 
                     safeSwap(earnedAmt, earnedToken, lpToken[0], address(this));
                 } else {
-                    // console.log("BSSL - E");
+                    console.log("BSSL - E");
                     safeSwap(earnedAmt / 2, earnedToken, lpToken[0], address(this));
                     safeSwap(earnedAmt / 2, earnedToken, lpToken[1], address(this));
                 }
@@ -63,22 +64,22 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         if (success) {
 
             if (isMaximizer()) {
-                // console.log("BSSL - in Maximizer conditional");
+                console.log("BSSL - in Maximizer conditional");
                 IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
                 uint256 crystlBalance = crystlToken.balanceOf(address(this));
                 console.log("crystlBalance");
                 console.log(crystlBalance);
 
                 IVaultHealer(msg.sender).deposit(targetVid, crystlBalance);
-                // console.log("BSSL - deposited to vaultHealer");
+                console.log("BSSL - deposited to vaultHealer");
             } else {
-                // console.log("BSSL - second half of Maximizer conditional");
+                console.log("BSSL - second half of Maximizer conditional");
                 if (address(lpToken[1]) != address(0)) {
-                    // console.log("BSSL - past if statement in Maximizer conditional");
+                    console.log("BSSL - past if statement in Maximizer conditional");
                     // Get want tokens, ie. add liquidity
                     LibQuartz.optimalMint(IUniPair(address(wantToken)), lpToken[0], lpToken[1]);
                 }
-                // console.log("BSSL - about to farm");
+                console.log("BSSL - about to farm");
                 _farm();
             }
         }

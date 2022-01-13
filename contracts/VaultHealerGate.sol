@@ -192,7 +192,8 @@ function _beforeTokenTransfer(
         IStrategy targetStrat = strat(targetVid);
         uint targetWantLocked = targetStrat.wantLockedTotal();
         // require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
-
+        if (_wantAmt > balanceOf(_from, _vid)) _wantAmt = balanceOf(_from, _vid);
+        
         vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
         //calculate total crystl amount this user owns
         uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 

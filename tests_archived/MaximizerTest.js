@@ -5,10 +5,10 @@ const { WMATIC, CRYSTL, DAI } = tokens.polygon;
 const { FEE_ADDRESS, BURN_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
-const { token_abi } = require('./abi_files/token_abi.js');
-const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
-const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
+const { IUniRouter02_abi } = require('../test/abi_files/IUniRouter02_abi.js');
+const { token_abi } = require('../test/abi_files/token_abi.js');
+const { IWETH_abi } = require('../test/abi_files/IWETH_abi.js');
+const { IUniswapV2Pair_abi } = require('../test/abi_files/IUniswapV2Pair_abi.js');
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -478,7 +478,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<500;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
