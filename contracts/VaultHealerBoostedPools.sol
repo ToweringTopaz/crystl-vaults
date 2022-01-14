@@ -23,15 +23,16 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
 
         uint vid = IBoostPool(_boost).STAKE_TOKEN_VID();
         Vault.Info storage vault = _vaultInfo[vid];
-        IBoostPool(_boost).vaultHealerActivate(vault.boosts.length);
         uint _boostID = vault.boosts.length;
+        IBoostPool(_boost).vaultHealerActivate(_boostID);
         vault.boosts.push() = IBoostPool(_boost);
         vault.activeBoosts.set(_boostID);
-        emit AddBoost(_boost, vid, vault.boosts.length - 1);
+        emit AddBoost(_boost, vid, _boostID);
     }
 
     //Users can enableBoost to opt-in to a boosted vault
-    function _enableBoost(address _user, uint _vid, uint _boostID) internal {
+    function enableBoost(address _user, uint _vid, uint _boostID) public nonReentrant {
+        require(msg.sender == _user || isApprovedForAll(_user, msg.sender), "VH: must be approved to accept boost");
         Vault.Info storage vault = _vaultInfo[_vid];
         Vault.User storage user = vault.user[_user];
         require(vault.activeBoosts.get(_boostID), "not an active boost");
@@ -40,18 +41,14 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
 
         vault.boosts[_boostID].joinPool(_user, balanceOf(_user, _vid));
     }
-    //To opt-in an account other than the user's; needs approval
-    function enableBoost(address _user, uint _vid, uint _boostID) external nonReentrant {
-        require(isApprovedForAll(_user, _msgSender()) || _msgSender() == _user, "VH: must be approved to accept boost");
-        _enableBoost(_user, _vid, _boostID);
-    }
+
     //Standard opt-in function users will call
-    function enableBoost(uint _vid, uint _boostID) external nonReentrant {
-        _enableBoost(_msgSender(), _vid, _boostID);
+    function enableBoost(uint _vid, uint _boostID) external {
+        enableBoost(msg.sender, _vid, _boostID);
     }
 
     function harvestBoost(uint _vid, uint _boostID) external nonReentrant {
-        _vaultInfo[_vid].boosts[_boostID].harvest(_msgSender());
+        _vaultInfo[_vid].boosts[_boostID].harvest(msg.sender);
     }
 
     //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
@@ -61,7 +58,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
         IBoostPool boostPool = vault.boosts[_boostID];
 
         require(user.boosts.get(_boostID), "boost is not active for user");
-        try boostPool.emergencyWithdraw{gas: 500000}(_msgSender()) returns (bool success) {
+        try boostPool.emergencyWithdraw{gas: 500000}(msg.sender) returns (bool success) {
             if (!success) vault.activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         } catch {
             vault.activeBoosts.unset(_boostID);
