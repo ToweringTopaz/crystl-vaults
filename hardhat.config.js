@@ -60,6 +60,9 @@ module.exports = {
         enabled: true,
         runs: 1,
       },
+	  debug: {
+		  revertStrings: "strip"
+	  }
     },
   },
   mocha: {
