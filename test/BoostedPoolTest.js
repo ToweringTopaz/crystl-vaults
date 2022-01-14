@@ -431,6 +431,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             userBalanceOfBoostPoolAtEnd = user.amount;
             expect(userBalanceOfBoostPoolAtEnd).to.equal(0);
         })
+		
+		it('VaultHealer size should be no more than 24576 bytes', async () => {
+			ContractSizer = await ethers.getContractFactory("ContractSizer");
+			contractSizer = await ContractSizer.deploy();
+			
+			vhSize = await contractSizer.sizeOf(vaultHealer.address)
+			
+			expect(vhSize).to.lte(24576);
+
+		})
         
     })
 })

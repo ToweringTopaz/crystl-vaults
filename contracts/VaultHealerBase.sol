@@ -81,8 +81,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
 
     modifier reentrantOnlyByStrategy(uint vid) {
         uint lock = _lock; //saves initial lock state
-        console.log("lock is ", _lock, address(strat(lock)));
-        console.log("caller is ", msg.sender);
         
         require(lock == type(uint32).max || msg.sender == address(strat(lock)), "reentrancy/!strat"); //must either not be entered, or caller is the active strategy
         _lock = vid; //this vid's strategy may reenter

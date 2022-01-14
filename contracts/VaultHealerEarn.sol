@@ -97,11 +97,10 @@ abstract contract VaultHealerEarn is VaultHealerBase {
                 increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
             }
             updateWantLockedLast(vault, vid, wantLockedTotal);
-        } catch Error(string memory reason) {
+        } catch Error(string memory) {
             if (block.number > vault.lastEarnBlock + interval) {
                 increaseMinBlocksBetweenEarns(vault, interval);
             }
-            console.log("earn failed:", reason);
         }
         _lock = lock; //reset reentrancy state
     }

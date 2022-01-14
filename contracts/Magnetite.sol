@@ -84,7 +84,6 @@ contract Magnetite is Ownable, IMagnetite {
     }
 
     function pathAuth() internal virtual view returns (bool) {
-        console.log("MT - made it into pathAuth");
         // return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
         return true;
     }

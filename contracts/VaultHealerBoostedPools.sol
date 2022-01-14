@@ -2,8 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "./VaultHealerBase.sol";
-import "hardhat/console.sol";
-
 import {IBoostPool} from "./libs/Interfaces.sol";
 abstract contract VaultHealerBoostedPools is VaultHealerBase {
     using BitMaps for BitMaps.BitMap;
@@ -38,7 +36,6 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
         Vault.User storage user = vault.user[_user];
         require(vault.activeBoosts.get(_boostID), "not an active boost");
         require(!user.boosts.get(_boostID), "boost is already active for user");
-        console.log("VHBP: enable boost ", _user, _boostID);
         user.boosts.set(_boostID);
 
         vault.boosts[_boostID].joinPool(_user, balanceOf(_user, _vid));

@@ -11,7 +11,6 @@ Join us at PolyCrystal.Finance!
 
 import {Ownable, SafeERC20} from "./libs/OpenZeppelin.sol";
 import {IERC20, IStrategy, IVaultHealer, IBoostPool} from "./libs/Interfaces.sol";
-import "hardhat/console.sol";
 
 contract BoostPool is IBoostPool, Ownable {
     using SafeERC20 for IERC20;
@@ -178,14 +177,12 @@ contract BoostPool is IBoostPool, Ownable {
     //Used in place of deposit/withdraw because nothing is actually stored here
     function notifyOnTransfer(address _from, address _to, uint _amount) external onlyVaultHealer returns (uint status) {
         updatePool();
-        console.log("notify on transfer: ", _amount);
 
         //User remains "active" unless rewards have expired and there are no unpaid pending amounts
         //4: pool done, 2: to done; 1: from done
         status = block.number >= bonusEndBlock ? 4 : 0; //if rewards have ended, mark pool done
 
         if (_to != address(0)) {
-            console.log("made it into first conditional");
             User storage user = userInfo[_to];
             uint pending = _harvest(_to);
             if (pending == 0 && status >= 4)
@@ -196,7 +193,6 @@ contract BoostPool is IBoostPool, Ownable {
             emit Deposit(_to, _amount);
         }
         if (_from != address(0)) {
-            console.log("made it into second conditional");
             User storage user = userInfo[_from];
             uint pending = _harvest(_from);
             if (pending == 0 && status >= 4)

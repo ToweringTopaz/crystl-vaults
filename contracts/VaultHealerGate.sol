@@ -31,7 +31,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         Vault.Info storage vault = _vaultInfo[_vid];
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
-        console.log("VHG - made it into deposit");
         if (_wantAmt > 0) {
             pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
                 token: vault.want,
@@ -143,7 +142,6 @@ function _beforeTokenTransfer(
         bytes memory //data
     ) internal virtual override {
         //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        //console.log("gate version of beforeTT");
 
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
@@ -174,14 +172,8 @@ function _beforeTokenTransfer(
 
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
         // require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
-        console.log("vault.accRewardTokensPerShare");
-        console.log(vault.accRewardTokensPerShare);
-        console.log("vault.balanceCrystlCompounderLastUpdate");
-        console.log(vault.balanceCrystlCompounderLastUpdate);
 
         vault.balanceCrystlCompounderLastUpdate = uint256(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-        console.log("vault.balanceCrystlCompounderLastUpdate");
-        console.log(vault.balanceCrystlCompounderLastUpdate);
     }
 
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
@@ -197,21 +189,11 @@ function _beforeTokenTransfer(
         vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
         //calculate total crystl amount this user owns
         uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
-        console.log("crystlShare");
-        console.log(crystlShare);
 
         //withdraw proportional amount of crystl from targetVault()
         if (crystlShare > 0) {
             vaultStrat.withdrawMaximizerReward(vault.targetVid, crystlShare);
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
-            console.log("vault.user[_from].rewardDebt");
-            console.log(vault.user[_from].rewardDebt);
-            console.log("vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid)");
-            console.log(vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid));
-            console.log("_wantAmt");
-            console.log(_wantAmt);
-            console.log("balanceOf(_from, _vid)");
-            console.log(balanceOf(_from, _vid));
 
             vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
             }
