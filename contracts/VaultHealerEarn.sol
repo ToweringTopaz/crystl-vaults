@@ -62,17 +62,14 @@ abstract contract VaultHealerEarn is VaultHealerBase {
         if (block.number > vault.lastEarnBlock + interval) {
             try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
                 if (success) {
-                    console.log("VHE - success");
                     vault.lastEarnBlock = uint32(block.number);
                     decrementMinBlocksBetweenEarns(vault, interval);  //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 } else {
                     increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
-                    console.log("VHE - not success");
                 }
                 updateWantLockedLast(vault, vid, wantLockedTotal);
             } catch Error(string memory reason) {
                 increaseMinBlocksBetweenEarns(vault, interval);
-                console.log("earn failed:", reason);
             }
         }
         _lock = lock; //reset reentrancy state
@@ -87,13 +84,11 @@ abstract contract VaultHealerEarn is VaultHealerBase {
         _lock = vid; //permit reentrant calls by this vault only
         try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
             if (success) {
-                console.log("VHE - success");
                 vault.lastEarnBlock = uint32(block.number);
                 if (block.number > lastEarnBlock + interval) {
                     decrementMinBlocksBetweenEarns(vault, interval); //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 }
             } else if (block.number > lastEarnBlock + interval) {
-                console.log("VHE - not success");
                 increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
             }
             updateWantLockedLast(vault, vid, wantLockedTotal);

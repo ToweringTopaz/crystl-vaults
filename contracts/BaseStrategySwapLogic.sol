@@ -10,7 +10,6 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {AddressUpgradeable as Address} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 import "./libs/IVaultHealer.sol";
-import "hardhat/console.sol";
 
 //Contains the strategy's functions related to swapping, earning, etc.
 abstract contract BaseStrategySwapLogic is BaseStrategy {

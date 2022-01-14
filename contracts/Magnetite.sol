@@ -7,7 +7,6 @@ import "./libs/IUniPair.sol";
 import "./libs/IUniRouter.sol";
 import "./libs/IUniFactory.sol";
 import "./libs/IMagnetite.sol";
-import "hardhat/console.sol";
 
 //Automatically generates and stores paths
 contract Magnetite is Ownable, IMagnetite {

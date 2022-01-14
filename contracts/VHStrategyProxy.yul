@@ -1,3 +1,24 @@
+object "VHStrategyProxy" {
+    code {
+        mstore(0, 0xad3b358e) //getProxydata()
+        pop(call(gas(), caller(), 0, 0, 4, 0, 0x20))
+        let implementation := mload(0)
+        if iszero(implementation) {
+            revert(0,0)
+        }
+        //let metadataLength := mload(0x20)
+
+        mstore(0, or(0x3660008181823773000000000000000000000000000000000000000033141560, shl(32, caller())))
+        mstore(0x20, 0x3757633074440c813560e01c141560335733ff5b8091505b3033141560425780)
+        mstore(0x40, 0x91505b8082801560565782833685305afa91506074565b828336857300000000)
+        mstore(0x5c, shl(96, implementation))
+        mstore(0x70, 0x5af491505b503d82833e806081573d82fd5b503d81f300000000000000000000)
+
+        //returndatacopy(0x86, 0x40, metadataLength)
+        //return(0, add(0x86, metadataLength))
+        return(0, 0x86)
+    }
+}
 /*
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
@@ -81,21 +102,3 @@ object "VHStrategyProxy" {
     }
 }
 */
-/// @use-src 0:"VHStrategyProxy_flat.sol"
-object "VHStrategyProxy" {
-    code {
-            let _0 := callvalue()
-            mstore(_0, 0xad3b358e) //getProxyData()
-            pop(staticcall(gas(), caller(), _0, 4, 0x5c, 20))
-
-            mstore(_0, or(shl(192,0x3660008181823773), shl(32, caller())))
-            datacopy(0x1c, dataoffset("bytecodeSegment2"), 0x40)
-            datacopy(0x70, dataoffset("bytecodeSegment3"), 0x16)
-            let dataLength := sub(returndatasize(),20)
-            returndatacopy(0x86, 20, dataLength)
-
-            return(_0, add(dataLength,0x86))
-    }
-    data "bytecodeSegment2" hex"331415603757633074440c813560e01c141560335733ff5b8091505b303314156042578091505b8082801560565782833685305afa91506074565b8283368573"
-    data "bytecodeSegment3" hex"5af491505b503d82833e806081573d82fd5b503d81f3"
-}

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "./IMagnetite.sol";
-import "./IStrategy.sol";
+import {IMagnetite} from "./IMagnetite.sol";
+import {IStrategy} from "./IStrategy.sol";
 
 interface IVaultHealerMain {
 

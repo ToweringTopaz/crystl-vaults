@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
 library Fee {
     using Fee for Data;
 

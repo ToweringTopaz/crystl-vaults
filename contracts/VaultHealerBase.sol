@@ -7,7 +7,6 @@ import "./libs/Vault.sol";
 import "./libs/IStrategy.sol";
 import "./libs/IVaultHealer.sol";
 import "./libs/IVaultFeeManager.sol";
-import "hardhat/console.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultHealerMain {
     using SafeERC20 for IERC20;
@@ -81,7 +80,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
 
     modifier reentrantOnlyByStrategy(uint vid) {
         uint lock = _lock; //saves initial lock state
-        
+
         require(lock == type(uint32).max || msg.sender == address(strat(lock)), "reentrancy/!strat"); //must either not be entered, or caller is the active strategy
         _lock = vid; //this vid's strategy may reenter
         _;
