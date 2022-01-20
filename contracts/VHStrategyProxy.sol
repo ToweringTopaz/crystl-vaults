@@ -53,3 +53,44 @@ contract VHStrategyProxy {
         }
     }
 }
+
+/*
+    Source for the bytecode is below. The logic is simple:
+
+        Trust transactions with no calldata to allow the strategy to receive().
+        If the caller is the VaultHealer, selfdestruct if so ordered.
+        If the caller is the VaultHealer or the proxy's own address, trust the transaction.
+        If the transaction is still untrusted, we do a staticcall to this same proxy address, allowing the tx but ensuring no state changes.
+        If the transaction is trusted, do a typical delegatecall. Bubble up errors and return return data.
+
+    This might be named a FirewallProxy.
+
+   object "VHStrategyProxy_deployed" {
+        code {
+            /// @src 0:155:2469  "contract VHStrategyProxy {..."
+            let untrusted := calldatasize() //trust transactions with zero calldata or from vaulthealer or this address
+            calldatacopy(0, 0, calldatasize())
+            if eq(caller(), 0x7979797979797979797979797979797979797979) {
+                let selector := shr(224, calldataload(0))
+                if eq(selector, 0x3074440c) { //_destroy_
+                    selfdestruct(caller())
+                }
+                untrusted := 0 
+            }
+            if eq(caller(), address()) {
+                untrusted := 0
+            }
+            let result
+            switch untrusted
+            case 0 {
+                result := delegatecall(gas(), 0xbebebebebebebebebebebebebebebebebebebebe, 0, calldatasize(), 0, 0)
+            } default {
+                result := staticcall(gas(), address(), 0, calldatasize(), 0, 0)
+            }
+            returndatacopy(0, 0, returndatasize())
+            if iszero(result) { revert(0, returndatasize()) }
+            return(0, returndatasize())
+        }
+        //data ".metadata" hex""
+    }
+*/

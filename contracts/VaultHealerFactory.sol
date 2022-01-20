@@ -14,8 +14,8 @@ abstract contract VaultHealerFactory is VaultHealerBase {
     function getProxyData() external returns (address _implementation, bytes memory _metadata) {
         _implementation = proxyImplementation;
         _metadata = proxyMetadata;
-        delete proxyImplementation;
-        delete proxyMetadata;
+        proxyImplementation = address(0);
+        proxyMetadata = hex'';
     }
 
     function createVault(
