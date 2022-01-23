@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-import {IVaultHealer} from "./libs/IVaultHealer.sol";
+contract FirewallProxy {
 
-contract VHStrategyProxy {
-
-    constructor() { //Constructor must be called by a VaultHealer via create2
-        //The implementation address and any metadata are, at this point, stored in the calling VaultHealer's storage
+    constructor() { //Constructor must be called by a FirewallProxyDeployer via create2
+        //The implementation address and any metadata are, at this point, stored in the FirewallProxyDeployer's storage
 
         assembly {
                 
@@ -36,7 +34,7 @@ contract VHStrategyProxy {
 
             //_Y done; at 0x84 we have 0xad3b358e for the getProxyData() selector (will be overwritten)
             mstore(0x7e, 0xad3b358e5af491505b503d82833e806081573d82fd5b503d81f3)
-            //Call back to VaultHealer and get implementation address and metadata length
+            //Call back to deployer and get implementation address and metadata length
             let success := call(gas(), caller(), 0, 0x84, 4, 0x00, 64)
             if iszero(success) { revert(0,0) } //Require the call to succeed
             mstore(0x68, mload(0)) //implementation address stored: _X done
@@ -62,8 +60,6 @@ contract VHStrategyProxy {
         If the caller is the VaultHealer or the proxy's own address, trust the transaction.
         If the transaction is still untrusted, we do a staticcall to this same proxy address, allowing the tx but ensuring no state changes.
         If the transaction is trusted, do a typical delegatecall. Bubble up errors and return return data.
-
-    This might be named a FirewallProxy.
 
    object "VHStrategyProxy_deployed" {
         code {
