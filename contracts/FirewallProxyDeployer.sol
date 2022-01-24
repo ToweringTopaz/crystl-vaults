@@ -7,8 +7,8 @@ import "./FirewallProxyImplementation.sol";
 //Contracts which deploy FirewallProxy should inherit this
 abstract contract FirewallProxyDeployer {
 
-    address tempImplementation;
-    bytes tempData;
+    address private tempImplementation;
+    bytes private tempData;
 
     //used by the proxy constructor to generate the final bytecode
     function getProxyData() external returns (address implementation, bytes memory data) {
