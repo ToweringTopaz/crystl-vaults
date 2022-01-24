@@ -99,7 +99,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
-    function strat(uint _vid) internal virtual view returns (IStrategy);
+    function strat(uint _vid) public virtual view returns (IStrategy);
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 

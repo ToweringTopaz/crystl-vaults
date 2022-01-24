@@ -16,12 +16,10 @@ interface IVaultHealerMain {
     function withdraw(uint256 _vid, uint256 _wantAmt) external;
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;
     function deposit(uint256 _vid, uint256 _wantAmt) external;
-    function getProxyData() external returns (address, bytes memory);
-
+    function strat(uint256 _vid) external view returns (IStrategy);
 }
 interface IVaultView {
     function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
-    function strat(uint256 _vid) external view returns (IStrategy);
     function magnetite() external view returns (IMagnetite);
 }
 interface IVaultHealer is IVaultHealerMain, IVaultView {}

@@ -61,11 +61,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		zapDeployer = await ZapDeployer.deploy();
 		vaultView = await VaultView.deploy();
 		*/
+		
+		FirewallProxies = await ethers.getContractFactory("FirewallProxies");
+		firewallProxies = await FirewallProxies.deploy();
+		
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
-            // libraries: {
+             libraries: {
+				   FirewallProxies: firewallProxies.address
             //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
             //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-            //   },
+			},
         });
         const feeConfig = 
             [
@@ -79,10 +84,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealerView.zap());
             
             StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
-                // libraries: {
+            //    libraries: {
+			//		FirewallProxies: firewallProxies.address
             //     LibVaultSwaps: "0x1B20Dab7BE777a9CFC363118BC46f7905A7628a1",
             //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-            //   },
+			//	},
         });        
         strategyImplementation = await StrategyVHStandard.deploy();
 		const abiCoder = new ethers.utils.AbiCoder;
@@ -111,9 +117,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
         
-        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+        await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA, []);
         strat1_pid = await vaultHealerView.vaultLength() -1;
-		strategyVHStandard = await vaultHealerView.strat(strat1_pid);
+		strategyVHStandard = await vaultHealer.strat(strat1_pid);
 
         strategyVHStandard = await ethers.getContractAt('StrategyVHStandard', strategyVHStandard);
         console.log("4");
@@ -433,10 +439,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 		
 		it('VaultHealer size should be no more than 24576 bytes', async () => {
-			ContractSizer = await ethers.getContractFactory("ContractSizer");
-			contractSizer = await ContractSizer.deploy();
 			
-			vhSize = await contractSizer.sizeOf(vaultHealer.address)
+			vhSize = await firewallProxies.sizeOf(vaultHealer.address)
 			
 			expect(vhSize).to.lte(24576);
 

@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
 
-contract FirewallProxy {
+//Library FirewallProxies provides some complex functions and contains the actual initcode to deploy these.
+//FirewallProxyDeployer is a parent contract which enables deployment. Its temporary storage mechanism allows for the implementation address and 
+//  some data to be hardcoded here, without using a constructor or otherwise changing the initcode. This implements the "metamorphic contract" paradigm.
+//FirewallProxyImplementation is a parent contract for contracts intended for use behind a FirewallProxy, providing safety checks and access to the 
+//implementation address and hardcoded metadata.
+
+contract FirewallProxy /*is IFirewallProxy*/ {
 
     constructor() { //Constructor must be called by a FirewallProxyDeployer via create2
         //The implementation address and any metadata are, at this point, stored in the FirewallProxyDeployer's storage
@@ -35,11 +41,11 @@ contract FirewallProxy {
             //_Y done; at 0x84 we have 0xad3b358e for the getProxyData() selector (will be overwritten)
             mstore(0x7e, 0xad3b358e5af491505b503d82833e806081573d82fd5b503d81f3)
             //Call back to deployer and get implementation address and metadata length
-            let success := call(gas(), caller(), 0, 0x84, 4, 0x00, 64)
+            let success := call(gas(), caller(), 0, 0x84, 4, 0x00, 96)
             if iszero(success) { revert(0,0) } //Require the call to succeed
             mstore(0x68, mload(0)) //implementation address stored: _X done
-            let metadataLength := mload(0x20)
-            returndatacopy(0x9e, 0x40, metadataLength) //append metadata if any to bytecode; _Z done
+            let metadataLength := mload(0x40)
+            returndatacopy(0x9e, 0x60, sub(returndatasize(),0x60)) //append metadata if any to bytecode; _Z done
 
             mstore(0x14, caller()) //_S done        
             mstore(0x00, 0x3660008181823773) //_R done

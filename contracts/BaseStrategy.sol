@@ -4,9 +4,9 @@ pragma solidity ^0.8.4;
 import "./libs/IStrategy.sol";
 import "./libs/ITactic.sol";
 import "./libs/Vault.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./FirewallProxyImplementation.sol";
 
-abstract contract BaseStrategy is Initializable, IStrategy {
+abstract contract BaseStrategy is FirewallProxyImplementation, IStrategy {
 
     Vault.Settings internal settings; //the major storage variables used to configure the vault
     IERC20 public wantToken; //The token which is deposited and earns a yield 
