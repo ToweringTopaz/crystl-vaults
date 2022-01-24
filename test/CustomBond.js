@@ -10,6 +10,8 @@ const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
 const { token_abi } = require('./abi_files/token_abi.js');
 const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
+const { getOverrideOptions, setTokenBalanceInStorage } =require("./utils.ts");
+
 // const { IMasterchef_abi } = require('./IMasterchef_abi.js');
 const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
 
@@ -42,10 +44,10 @@ describe(`Testing Custom Bond`, () => {
         customBond.initializeBond(
             15812, //uint _controlVariable, 
             46200, //uint _vestingTerm,
-            1351351, //uint _minimumPrice,
+            0, //1351351, //uint _minimumPrice,
             100000000000, //uint _maxPayout,
             "100000000000000000000000", //uint _maxDebt,
-            0, //uint _initialDebt
+            "7000000000000000", //uint _initialDebt
         )
         
         // console.log(await customBond.bondPrice());
@@ -64,10 +66,6 @@ describe(`Testing Custom Bond`, () => {
     
         uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, APESWAP_ROUTER);
 
-        //fund the treasury with reward token, Crystl 
-        await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, CRYSTL], customTreasury.address, Date.now() + 900, { value: ethers.utils.parseEther("9000") })
-        // console.log("5");
-
         await network.provider.send("hardhat_setBalance", [
             user1.address,
             "0x21E19E0C9BAB2400000", //amount of 1000 in hex
@@ -75,12 +73,15 @@ describe(`Testing Custom Bond`, () => {
 
         await network.provider.send("hardhat_setBalance", [
             user2.address,
-            "0x21E19E0C9BAB2400000", //amount of 1000 in hex
+            "0x84595161401484A000000", //amount of 1000 in hex
         ]);
 
          //fund the treasury with reward token, Crystl 
-         await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, CRYSTL], customTreasury.address, Date.now() + 900, { value: ethers.utils.parseEther("9900") })
-        
+         crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+         await setTokenBalanceInStorage(crystlToken, customTreasury.address, "10000");
+
+         await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, CRYSTL], customTreasury.address, Date.now() + 900, { value: ethers.utils.parseEther("9900000") })
+        // I think I'm losing out massively to slippage here...
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
@@ -116,6 +117,9 @@ describe(`Testing Custom Bond`, () => {
     `, () => {
         it('Should deposit user1\'s LP tokens into the bond, increasing the bonds currentDebt by the amount of LP tokens deposited', async () => {
             initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
+            console.log("initialLPtokenBalance");
+            console.log(ethers.utils.formatEther(initialLPtokenBalance));
+            initialLPtokenBalance = "1000000000000000000";
             initialDebtBeforeDeposit = await customBond.currentDebt();
 
             await LPtoken.connect(user1).approve(customBond.address, initialLPtokenBalance);
@@ -147,9 +151,13 @@ describe(`Testing Custom Bond`, () => {
             userPendingPayoutBeforeRedemption = await customBond.pendingPayoutFor(user1.address);
             console.log("userPendingPayoutBeforeRedemption");
             console.log(ethers.utils.formatEther(userPendingPayoutBeforeRedemption));
+            
             userPendingPayoutAfterRedemption = await customBond.redeem(user1.address);
+            
+            userPendingPayoutAfterRedemption = await customBond.pendingPayoutFor(user1.address);
             console.log("userPendingPayoutAfterRedemption");
             console.log(ethers.utils.formatEther(userPendingPayoutAfterRedemption));
+
             expect(userPendingPayoutBeforeRedemption).to.be.gt(userPendingPayoutAfterRedemption); //will only be true on first deposit?
         })
         
