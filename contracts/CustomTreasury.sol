@@ -1,5 +1,5 @@
 /**
- *Submitted for verification at Etherscan.io on 2021-09-25
+ *Submitted for verification at Etherscan.io on 2021-10-26
 */
 
 // File contracts/libraries/SafeMath.sol
@@ -7,7 +7,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
-import "hardhat/console.sol";
 
 library SafeMath {
 
@@ -339,9 +338,6 @@ contract CustomTreasury is Ownable {
     function deposit(address _principleTokenAddress, uint _amountPrincipleToken, uint _amountPayoutToken) external {
         require(bondContract[msg.sender], "msg.sender is not a bond contract");
         IERC20(_principleTokenAddress).safeTransferFrom(msg.sender, address(this), _amountPrincipleToken);
-        console.log(_amountPayoutToken);
-        uint tempBalance = IERC20(payoutToken).balanceOf(address(this));
-        console.log(tempBalance);
         IERC20(payoutToken).safeTransfer(msg.sender, _amountPayoutToken);
     }
 
