@@ -18,15 +18,11 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     uint constant FEE_MAX = 10000;
 
     function isMaximizer() public view returns (bool) {
-        return address(targetVault) != address(0);
-    }
-
-    function _wantBalance() internal override view returns (uint256) {
-        return wantToken.balanceOf(address(this));
+        return targetVid != 0;
     }
 
     function earn(Fee.Data[3] memory fees) external returns (bool success, uint256 _wantLockedTotal) {
-        uint wantBalanceBefore = _wantBalance(); //Don't sell starting want balance (anti-rug)
+        uint wantBalanceBefore = wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
 
         _vaultHarvest(); // Harvest farm tokens
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
@@ -56,8 +52,8 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         if (success) {
 
             if (isMaximizer()) {
-                IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
-                uint256 crystlBalance = crystlToken.balanceOf(address(this));
+                (IERC20 targetWant,) = IVaultHealer(msg.sender).vaultInfo(targetVid);
+                uint256 crystlBalance = targetWant.balanceOf(address(this));
 
                 IVaultHealer(msg.sender).deposit(targetVid, crystlBalance);
             } else {
@@ -73,7 +69,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
     
     //Safely deposits want tokens in farm
     function _farm() override internal {
-        uint256 wantAmt = _wantBalance();
+        uint256 wantAmt = wantToken.balanceOf(address(this));
         if (wantAmt == 0) return;
         
         uint256 sharesBefore = vaultSharesTotal();
@@ -84,7 +80,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         
         //including settings.dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        require(sharesAfter + _wantBalance() + settings.dust >= (sharesBefore + wantAmt) * settings.slippageFactor / 10000,
+        require(sharesAfter + wantToken.balanceOf(address(this)) + settings.dust >= (sharesBefore + wantAmt) * settings.slippageFactor / 10000,
             "High vault deposit slippage");
         return;
     }

@@ -42,19 +42,27 @@ library Vault {
     }
 
     struct Settings {
-        IUniRouter router; //UniswapV2 compatible router
+        uint256 tacticsA;
+        uint256 tacticsB;
+        IERC20 wantToken; //The token which is deposited and earns a yield
         uint16 slippageFactor; // sets a limit on losses due to deposit fee in pool, reflect fees, rounding errors, etc.
-        uint32 minBlocksBetweenEarns; //Prevents token waste, exploits and unnecessary reverts
         bool feeOnTransfer;
-        IMagnetite magnetite;
         uint96 dust; //min token amount to swap/deposit. Prevents token waste, exploits and unnecessary reverts
+
+        uint32 targetVid;
+        IUniRouter router; //UniswapV2 compatible router
+        IMagnetite magnetite;
+        IERC20[2] lpToken;
+        IERC20[4] earned;
     }
+
+
 
     uint256 constant SLIPPAGE_FACTOR_UL = 9950; // Must allow for at least 0.5% slippage (rounding errors)
 
     function check(Settings memory _settings) internal pure {
-        try _settings.router.factory() returns (IUniFactory) {}
-        catch { revert("Invalid router"); }
+        //try _settings.router.factory() returns (IUniFactory) {}
+        //catch { revert("Invalid router"); }
         require(_settings.slippageFactor <= SLIPPAGE_FACTOR_UL, "_slippageFactor too high");
     }
 

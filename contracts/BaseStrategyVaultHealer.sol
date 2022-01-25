@@ -11,7 +11,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 sharesAdded) {
         // _earn(_from); //earn before deposit prevents abuse
-        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
+        uint wantBal = wantToken.balanceOf(address(this)); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint dust = settings.dust;
 
@@ -33,7 +33,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external returns (uint sharesRemoved, uint wantAmt) {
         //User's balance, in want tokens
-        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
+        uint wantBal = wantToken.balanceOf(address(this)); ///todo: why would there be want sitting in the strat contract?
         uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
         
@@ -47,7 +47,7 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
         if (_wantAmt > wantBal) {
             _vaultWithdraw(_wantAmt - wantBal);
             
-            wantBal = _wantBalance();
+            wantBal = wantToken.balanceOf(address(this));
         }
 
         //Account for reflect, pool withdraw fee, etc; charge these to user

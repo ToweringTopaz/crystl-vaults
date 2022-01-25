@@ -18,5 +18,8 @@ abstract contract FirewallProxyImplementation is Initializable {
         require (!isFirewallProxyBareImplementation(), "must be used with a proxy");
         return FirewallProxies.dataOf(address(this));
     }
+    function _destroy_() external pure {
+        revert("Cannot destroy implementation contract");
+    }
 
 }
