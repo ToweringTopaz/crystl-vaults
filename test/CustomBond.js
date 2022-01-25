@@ -10,7 +10,6 @@ const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
 const { token_abi } = require('./abi_files/token_abi.js');
 const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
-const { getOverrideOptions, setTokenBalanceInStorage } =require("./utils.ts");
 
 // const { IMasterchef_abi } = require('./IMasterchef_abi.js');
 const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
@@ -78,7 +77,7 @@ describe(`Testing Custom Bond`, () => {
 
          //fund the treasury with reward token, Crystl 
          crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-         await setTokenBalanceInStorage(crystlToken, customTreasury.address, "10000");
+        //  await setTokenBalanceInStorage(crystlToken, customTreasury.address, "10000");
 
          await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, CRYSTL], customTreasury.address, Date.now() + 900, { value: ethers.utils.parseEther("9900000") })
         // I think I'm losing out massively to slippage here...
