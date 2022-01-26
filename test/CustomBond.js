@@ -41,23 +41,41 @@ describe(`Testing Custom Bond`, () => {
         customBond.setBondTerms(0, 46200); //PARAMETER = { VESTING, PAYOUT, DEBT }
 
         customBond.initializeBond(
-            15812, //uint _controlVariable, 
+            250000, //uint _controlVariable, 
             46200, //uint _vestingTerm,
             0, //1351351, //uint _minimumPrice,
             100000000000, //uint _maxPayout,
             "100000000000000000000000", //uint _maxDebt,
-            "7000000000000000", //uint _initialDebt
+            "690000000000000000000", //uint _initialDebt
         )
         
-        // console.log(await customBond.bondPrice());
-        // console.log(await customBond.trueBondPrice());
-        // console.log(await customBond.maxPayout());
-        // console.log(await customBond.payoutFor(0));
-        // console.log(await customBond.debtRatio());
-        // console.log(await customBond.currentDebt());
-        // console.log(await customBond.debtDecay());
-        // console.log(await customBond.percentVestedFor(user1.address));
-        // console.log(await customBond.pendingPayoutFor(user1.address));
+        console.log("await customBond.bondPrice()");
+        console.log(await customBond.bondPrice());
+
+        console.log("await customBond.trueBondPrice()");
+        console.log(await customBond.trueBondPrice());
+
+        console.log("await customBond.maxPayout()");
+        console.log(await customBond.maxPayout());
+
+        console.log("await customBond.payoutFor(0)");
+        console.log(await customBond.payoutFor(0));
+
+        console.log("await customBond.debtRatio()");
+        console.log(await customBond.debtRatio());
+
+        console.log("await customBond.currentDebt()");
+        console.log(await customBond.currentDebt());
+
+        console.log("await customBond.debtDecay()");
+        console.log(await customBond.debtDecay());
+
+        console.log("await customBond.percentVestedFor(user1.address)");
+        console.log(await customBond.percentVestedFor(user1.address));
+
+        console.log("await customBond.pendingPayoutFor(user1.address)");
+        console.log(await customBond.pendingPayoutFor(user1.address));
+
 
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, MATIC_CRYSTL_APE_LP);
         TOKEN0ADDRESS = await LPtoken.token0()
@@ -120,14 +138,18 @@ describe(`Testing Custom Bond`, () => {
             console.log(ethers.utils.formatEther(initialLPtokenBalance));
             initialLPtokenBalance = "1000000000000000000";
             initialDebtBeforeDeposit = await customBond.currentDebt();
+            console.log("initialDebtBeforeDeposit");
+            console.log(initialDebtBeforeDeposit);
 
             await LPtoken.connect(user1).approve(customBond.address, initialLPtokenBalance);
 
             await customBond.deposit(initialLPtokenBalance, 1000000000000000 ,user1.address); //uint _maxPrice
             console.log(`User1 has deposited ${ethers.utils.formatEther(initialLPtokenBalance)} LP tokens`)
             debtAfterDeposit = await customBond.currentDebt();
-
-            expect(initialLPtokenBalance).to.equal(debtAfterDeposit);
+            console.log("debtAfterDeposit");
+            console.log(debtAfterDeposit);
+            console.log(initialLPtokenBalance-(debtAfterDeposit-initialDebtBeforeDeposit));
+            expect(initialLPtokenBalance).to.equal(debtAfterDeposit-initialDebtBeforeDeposit);
         })
 
 
@@ -136,7 +158,7 @@ describe(`Testing Custom Bond`, () => {
             console.log("userPendingPayoutAtStart");
             console.log(ethers.utils.formatEther(userPendingPayoutAtStart));
 
-            for (i=0; i<100;i++) { //minBlocksBetweenSwaps
+            for (i=0; i<462;i++) { //minBlocksBetweenSwaps
                 await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
                 }
             
