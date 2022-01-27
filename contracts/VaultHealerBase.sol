@@ -16,7 +16,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     bytes32 constant PAUSER = keccak256("PAUSER");
     bytes32 constant STRATEGY = keccak256("STRATEGY");
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
-    bytes32 constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
+    //bytes32 constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
     IVaultFeeManager internal vaultFeeManager;
@@ -38,7 +38,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         _setRoleAdmin(STRATEGY, VAULT_ADDER);
         _setupRole(PAUSER, _owner);
         _setupRole(FEE_SETTER, _owner);
-        _setupRole(SETTINGS_SETTER, _owner);
+ //       _setupRole(SETTINGS_SETTER, _owner);
         _vaultInfo.push(); //so uninitialized vid variables (vid 0) can be assumed as invalid
     }
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
@@ -64,7 +64,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         //vault.router = strat.router();
         vault.lastEarnBlock = uint32(block.number);
         vault.minBlocksBetweenEarns = 10;
-        vault.targetVid = uint32(_strats[address(strat_.targetVault())]);
+        vault.targetVid = uint32(strat_.targetVid());
         pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
         
         _strats[_strat] = uint32(vid);
@@ -90,9 +90,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     function findVid(address _strat) internal view returns (uint32 vid) {
         vid = _strats[_strat];
         require(vid > 0/*, "address is not a strategy on this VaultHealer"*/); //must revert here for security
-    }
-    function setSettings(uint vid, Vault.Settings calldata _settings) external onlyRole(SETTINGS_SETTER) {
-        strat(vid).setSettings(_settings);
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Upgradeable) returns (bool) {

@@ -21,5 +21,8 @@ abstract contract FirewallProxyImplementation is Initializable {
     function _destroy_() external pure {
         revert("Cannot destroy implementation contract");
     }
+    function beforeProxyDestruction() external virtual {
+        
+    }
 
 }

@@ -26,7 +26,7 @@ library FirewallProxies {
     }
 
     //Returns metadata stored in a proxy contract after the executable proxy code
-    function dataOf(address proxy) public view returns (bytes memory data) { //todo: analyze gas and codesize effects: if internal, does the whole code get copied or just its length?
+    function dataOf(address proxy) internal view returns (bytes memory data) { //todo: analyze gas and codesize effects: if internal, does the whole code get copied or just its length?
         uint codelen = CODE.length;
         uint proxysize = sizeOf(proxy);
         require(proxysize >= codelen, "dataOf bad firewall proxy");
@@ -37,9 +37,8 @@ library FirewallProxies {
         }
     }
 
-    function dataOf(address proxy, uint offset, uint len) public view returns (bytes memory data) {
+    function dataOf(address proxy, uint offset, uint len) internal view returns (bytes memory data) {
         uint codelen = CODE.length;
-        uint proxysize = sizeOf(proxy);
         data = new bytes(len); //allocate return variable's memory and set length
         assembly {
             extcodecopy(proxy, add(data,0x20), add(offset,codelen), len) //copy the data from proxy's code to memory
@@ -59,9 +58,4 @@ library FirewallProxies {
         data = dataOf(proxy);
         IFirewallProxy(proxy)._destroy_();
     }
-}
-contract Test {
-
-    function cl() external view returns (uint)
-    
 }
