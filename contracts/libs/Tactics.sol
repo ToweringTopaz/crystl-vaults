@@ -17,10 +17,15 @@ library Tactics {
         uint256 tacticsB:
             32: deposit selector
             32: deposit encoded call format
-            32: withdraw...
-            32: ...
-            ...harvest
-            ...emergencyVaultWithdraw
+            
+            32: withdraw selector
+            32: withdraw encoded call format
+            
+            32: harvest selector
+            32: harvest encoded call format
+            
+            32: emergencyVaultWithdraw selector
+            32: emergencyVaultWithdraw encoded call format
 
     Encoded calls use function selectors followed by single nibbles as follows, with the output packed to 32 bytes:
         0: end of line/null
