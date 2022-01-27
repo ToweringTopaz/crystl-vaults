@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/libs/Address.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../../index.html">all files</a> / <a href="index.html">contracts/libs/</a> Address.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">17.95% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>7/39</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">9.09% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>2/22</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">23.08% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>3/13</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">19.05% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>8/42</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">pragma solidity 0.7.5;
+&nbsp;
+library Address {
+&nbsp;
+    function isContract(address account) internal view returns (bool) {
+&nbsp;
+        uint256 size;
+        // solhint-disable-next-line no-inline-assembly
+        assembly { size := extcodesize(account) }
+        return size &gt; 0;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function sendValue(address payable recipient, uint256 amount) internal {</span>
+<span class="cstat-no" title="statement not covered" >        require(address(this).balance &gt;= amount, "Address: insufficient balance")</span>;
+&nbsp;
+        // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
+<span class="cstat-no" title="statement not covered" >        (bool success, ) = recipient.call{ value: amount }("");</span>
+<span class="cstat-no" title="statement not covered" >        require(success, "Address: unable to send value, recipient may have reverted")</span>;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionCall(address target, bytes memory data) internal returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >      return functionCall(target, data, "Address: low-level call failed");</span>
+    }
+&nbsp;
+    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
+        return _functionCallWithValue(target, data, 0, errorMessage);
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        require(address(this).balance &gt;= value, "Address: insufficient balance for call")</span>;
+<span class="cstat-no" title="statement not covered" >        require(isContract(target), "Address: call to non-contract")</span>;
+&nbsp;
+        // solhint-disable-next-line avoid-low-level-calls
+<span class="cstat-no" title="statement not covered" >        (bool success, bytes memory returndata) = target.call{ value: value }(data);</span>
+<span class="cstat-no" title="statement not covered" >        return _verifyCallResult(success, returndata, errorMessage);</span>
+    }
+&nbsp;
+    function _functionCallWithValue(address target, bytes memory data, uint256 weiValue, string memory errorMessage) private returns (bytes memory) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(isContract(target), "Address: call to non-contract");
+&nbsp;
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory returndata) = target.call{ value: weiValue }(data);
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (success) {
+            return returndata;
+        } else {
+            // Look for revert reason and bubble it up if present
+<span class="cstat-no" title="statement not covered" >            if (returndata.length &gt; 0) {</span>
+                // The easiest way to bubble the revert reason is using memory via assembly
+&nbsp;
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+<span class="cstat-no" title="statement not covered" >                revert(errorMessage)</span>;
+            }
+        }
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        return functionStaticCall(target, data, "Address: low-level static call failed");</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionStaticCall(address target, bytes memory data, string memory errorMessage) internal view returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        require(isContract(target), "Address: static call to non-contract")</span>;
+&nbsp;
+        // solhint-disable-next-line avoid-low-level-calls
+<span class="cstat-no" title="statement not covered" >        (bool success, bytes memory returndata) = target.staticcall(data);</span>
+<span class="cstat-no" title="statement not covered" >        return _verifyCallResult(success, returndata, errorMessage);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        return functionDelegateCall(target, data, "Address: low-level delegate call failed");</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function functionDelegateCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        require(isContract(target), "Address: delegate call to non-contract")</span>;
+&nbsp;
+        // solhint-disable-next-line avoid-low-level-calls
+<span class="cstat-no" title="statement not covered" >        (bool success, bytes memory returndata) = target.delegatecall(data);</span>
+<span class="cstat-no" title="statement not covered" >        return _verifyCallResult(success, returndata, errorMessage);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function _verifyCallResult(bool success, bytes memory returndata, string memory errorMessage) private pure returns(bytes memory) {</span>
+<span class="cstat-no" title="statement not covered" >        if (success) {</span>
+<span class="cstat-no" title="statement not covered" >            return returndata;</span>
+        } else {
+<span class="cstat-no" title="statement not covered" >            if (returndata.length &gt; 0) {</span>
+&nbsp;
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+<span class="cstat-no" title="statement not covered" >                revert(errorMessage)</span>;
+            }
+        }
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function addressToString(address _address) internal pure returns(string memory) {</span>
+<span class="cstat-no" title="statement not covered" >        bytes32 _bytes = bytes32(uint256(_address));</span>
+<span class="cstat-no" title="statement not covered" >        bytes memory HEX = "0123456789abcdef";</span>
+<span class="cstat-no" title="statement not covered" >        bytes memory _addr = new bytes(42);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        _addr[0] = '0'</span>;
+<span class="cstat-no" title="statement not covered" >        _addr[1] = 'x'</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        for(uint256 i = 0; i &lt; 20; i++) {</span>
+<span class="cstat-no" title="statement not covered" >            _addr[2+i*2] = HEX[uint8(_bytes[i + 12] &gt;&gt; 4)]</span>;
+<span class="cstat-no" title="statement not covered" >            _addr[3+i*2] = HEX[uint8(_bytes[i + 12] &amp; 0x0f)]</span>;
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return string(_addr);</span>
+&nbsp;
+    }
+}</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Thu Jan 27 2022 18:39:15 GMT+0200 (South Africa Standard Time)
+</div>
+</div>
+<script src="../../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../../sorter.js"></script>
+</body>
+</html>

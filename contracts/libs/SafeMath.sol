@@ -1,7 +1,5 @@
 pragma solidity 0.7.5;
 
-import "hardhat/console.sol";
-
 library SafeMath {
 
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
