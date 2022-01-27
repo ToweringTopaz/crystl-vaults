@@ -2,7 +2,8 @@
  * @type import('hardhat/config').HardhatUserConfig
  */
 require('@nomiclabs/hardhat-waffle');
-require('dotenv').config()
+require('dotenv').config();
+require('solidity-coverage');
 
 const chainIds = {
   hardhat: 31337,

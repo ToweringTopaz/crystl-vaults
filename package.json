@@ -30,7 +30,7 @@
     "ethers": "^5.4.6",
     "hardhat": "^2.6.4",
     "hardhat-console": "^1.0.0",
-    "solidity-coverage": "^0.7.16",
+    "solidity-coverage": "^0.7.18",
     "truffle-plugin-verify": "^0.5.14",
     "ts-node": "^9.1.1"
   }
