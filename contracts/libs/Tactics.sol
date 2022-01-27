@@ -36,11 +36,11 @@ library Tactics {
         address masterchef,
         uint24 pid, 
         uint8 vstReturnPosition, 
-        uint64 vstCode, 
-        uint64 depositCode, 
-        uint64 withdrawCode, 
-        uint64 harvestCode, 
-        uint64 emergencyCode
+        uint64 vstCode, //includes selector and encoded call format
+        uint64 depositCode, //includes selector and encoded call format
+        uint64 withdrawCode, //includes selector and encoded call format
+        uint64 harvestCode, //includes selector and encoded call format
+        uint64 emergencyCode//includes selector and encoded call format
     ) external pure returns (TacticsA tacticsA, TacticsB tacticsB) {
         assembly {
             tacticsA := or(or(shl(96, masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))

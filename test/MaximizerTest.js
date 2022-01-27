@@ -126,6 +126,17 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 
+        Tactics.generateTactics(
+			apeSwapVaults[1]['masterchef'],
+            apeSwapVaults[1]['PID'],
+            0, //have to look at contract and see
+            0x93f1a40b23000000, //includes selector and encoded call format
+            0x8dbdbe6d24300000, //includes selector and encoded call format
+            0x0ad58d2f24300000, //includes selector and encoded call format
+            0x18fccc7623000000, //includes selector and encoded call format
+            0x2f940c7023000000 //includes selector and encoded call format
+        );
+
         await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA, []);
         strat1_pid = await vaultHealerView.vaultLength() -1;
 		strategyVHStandard = await vaultHealer.strat(strat1_pid);
