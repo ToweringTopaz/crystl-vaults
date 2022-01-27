@@ -161,21 +161,24 @@ function _beforeTokenTransfer(
             }
         }
     }
-
+    // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
         Vault.Info storage vault = _vaultInfo[_vid];
         uint targetVid = vault.targetVid;
         IStrategy targetStrat = strat(targetVid);
         uint targetWantLocked = targetStrat.wantLockedTotal();
-
+        
+        // increase accRewardTokensPerShare by: the increase in balance of target vault since last deposit or withdrawal / total shares
         vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / strat(_vid).wantLockedTotal()); 
-
+            
+        // increase the depositing user's rewardDebt
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
-        // require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
 
+        // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
         vault.balanceCrystlCompounderLastUpdate = uint256(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
-
+    
+    // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
         Vault.Info storage vault = _vaultInfo[_vid];
         uint targetVid = vault.targetVid;
@@ -183,20 +186,24 @@ function _beforeTokenTransfer(
         Vault.Info storage target = _vaultInfo[vault.targetVid];
         IStrategy targetStrat = strat(targetVid);
         uint targetWantLocked = targetStrat.wantLockedTotal();
-        // require (targetWantLocked <= type(uint112).max, "VH: wantLockedTotal overflow");
         if (_wantAmt > balanceOf(_from, _vid)) _wantAmt = balanceOf(_from, _vid);
         
+        // increase accRewardTokensPerShare by: the increase in balance of target vault since last deposit or withdrawal / total shares
         vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
-        //calculate total crystl amount this user owns
+        
+        // calculate total crystl amount this user owns
         uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
 
-        //withdraw proportional amount of crystl from targetVault()
+        // withdraw proportional amount of crystl from targetVault()
         if (crystlShare > 0) {
+            // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
             vaultStrat.withdrawMaximizerReward(vault.targetVid, crystlShare);
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
-
+            
+            // decrease the depositing user's rewardDebt
             vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
             }
+        // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
         vault.balanceCrystlCompounderLastUpdate = uint256(targetStrat.wantLockedTotal()); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
     }
 }
