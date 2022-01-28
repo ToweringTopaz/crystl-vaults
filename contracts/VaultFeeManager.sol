@@ -10,7 +10,6 @@ contract VaultFeeManager is IVaultFeeManager {
     using Fee for *;
 
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
-    uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
     address constant public TX_ORIGIN = address(bytes20(keccak256("TX_ORIGIN"))); // if this address is used for earn fee, substitute tx.origin to pay the account providing the gas
 
     IAccessControl immutable public vaultHealer;
