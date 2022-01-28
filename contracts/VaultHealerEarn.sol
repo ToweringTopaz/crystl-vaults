@@ -56,13 +56,15 @@ abstract contract VaultHealerEarn is VaultHealerBase {
 
     function _tryEarn(uint256 vid) private {
         Vault.Info storage vault = _vaultInfo[vid];
+        uint32 lastEarnBlock = vault.lastEarnBlock;
         uint32 interval = vault.minBlocksBetweenEarns;
+
         uint lock = _lock;
         _lock = vid; //permit reentrant calls by this vault only
-        if (block.number > vault.lastEarnBlock + interval) {
+        if (block.number > lastEarnBlock + interval) {
             try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
                 if (success) {
-                    vault.lastEarnBlock = uint32(block.number);
+                    lastEarnBlock = uint32(block.number);
                     decrementMinBlocksBetweenEarns(vault, interval);  //Decrease number of blocks between earns by 1 if successful (settings.dust)
                 } else {
                     increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
@@ -78,8 +80,10 @@ abstract contract VaultHealerEarn is VaultHealerBase {
     //performs earn even if it's not been long enough
     function _doEarn(uint256 vid) internal {
         Vault.Info storage vault = _vaultInfo[vid];
+        uint32 lastEarnBlock = vault.lastEarnBlock;
         uint32 interval = vault.minBlocksBetweenEarns;
-        uint lastEarnBlock = vault.lastEarnBlock;
+        
+        if (lastEarnBlock == block.number) return; //earn only once per block ever
         uint lock = _lock;
         _lock = vid; //permit reentrant calls by this vault only
         try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
@@ -92,7 +96,7 @@ abstract contract VaultHealerEarn is VaultHealerBase {
                 increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
             }
             updateWantLockedLast(vault, vid, wantLockedTotal);
-        } catch Error(string memory) {
+        } catch {
             if (block.number > vault.lastEarnBlock + interval) {
                 increaseMinBlocksBetweenEarns(vault, interval);
             }

@@ -16,7 +16,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     bytes32 constant PAUSER = keccak256("PAUSER");
     bytes32 constant STRATEGY = keccak256("STRATEGY");
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
-    bytes32 constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
+    //bytes32 constant SETTINGS_SETTER = keccak256("SETTINGS_SETTER");
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
     IVaultFeeManager internal vaultFeeManager;
@@ -38,7 +38,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         _setRoleAdmin(STRATEGY, VAULT_ADDER);
         _setupRole(PAUSER, _owner);
         _setupRole(FEE_SETTER, _owner);
-        _setupRole(SETTINGS_SETTER, _owner);
+ //       _setupRole(SETTINGS_SETTER, _owner);
         _vaultInfo.push(); //so uninitialized vid variables (vid 0) can be assumed as invalid
     }
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
@@ -65,7 +65,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         //vault.router = strat.router();
         vault.lastEarnBlock = uint32(block.number);
         vault.minBlocksBetweenEarns = 10;
-        vault.targetVid = uint32(_strats[address(strat_.targetVault())]);
+        vault.targetVid = uint32(strat_.targetVid());
         pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
         
         _strats[_strat] = uint32(vid);
@@ -96,7 +96,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
-    function strat(uint _vid) internal virtual view returns (IStrategy);
+    function strat(uint _vid) public virtual view returns (IStrategy);
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
