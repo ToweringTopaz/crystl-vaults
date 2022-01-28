@@ -87,10 +87,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         _lock = lock; //restore initial state
     }
 
-    function findVid(address _strat) internal view returns (uint32 vid) {
-        vid = _strats[_strat];
-        require(vid > 0/*, "address is not a strategy on this VaultHealer"*/); //must revert here for security
-    }
     function setSettings(uint vid, Vault.Settings calldata _settings) external onlyRole(SETTINGS_SETTER) {
         strat(vid).setSettings(_settings);
     }
