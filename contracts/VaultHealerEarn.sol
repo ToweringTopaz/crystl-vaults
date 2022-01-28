@@ -7,24 +7,6 @@ import "./VaultHealerBase.sol";
 abstract contract VaultHealerEarn is VaultHealerBase {
 
     event Earned(uint256 indexed vid, uint256 wantAmountEarned);
-
-    function earnAll() external nonReentrant {
-
-        uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
-
-        for (uint i; i < bucketLength; i++) {
-            uint earnMap = pauseMap._data[i]; //earn unpaused vaults
-            uint end = (i+1) << 8; // buckets end at multiples of 256
-            if (_vaultInfo.length < end) end = _vaultInfo.length; //or if less, the final pool
-            for (uint j = i << 8; j < end; j++) {
-                if (earnMap & 1 > 0) { //smallest bit is "true"
-                    _tryEarn(j);
-                }
-                earnMap >>= 1; //shift away the used bit
-                if (earnMap == 0) break;
-            }
-        }
-    }
     
     function earnSome(uint256[] calldata vids) external nonReentrant {
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults

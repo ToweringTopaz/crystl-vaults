@@ -9,8 +9,9 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     
     struct PendingDeposit {
         IERC20 token;
+        uint96 amount0;
         address from;
-        uint112 amount;
+        uint96 amount1;
     }
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
@@ -18,24 +19,25 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
+    function deposit(address _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
         _deposit(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
+    function deposit(address _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
         _deposit(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
+    function _deposit(address _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
         if (_wantAmt > 0) {
             pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
                 token: vault.want,
+                amount0: uint96(_wantAmt << 96); // split amount into two parts so we only write to 2 storage slots instead of 3
                 from: _from,
-                amount: uint112(_wantAmt)
+                amount1: uint96(_wantAmt)
             });
             IStrategy strategy = strat(_vid);
             uint256 wantLockedBefore = strategy.wantLockedTotal();
@@ -54,25 +56,21 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                 sharesAdded,
                 hex'' //leave this blank for now
             );
-            //update the user's data for earn tracking purposes
-            vault.user[_to].stats.deposits += uint128(_wantAmt - pendingDeposits[pendingDeposits.length - 1].amount);
-            
-            pendingDeposits.pop();
         }
         emit Deposit(_from, _to, _vid, _wantAmt);
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _vid, uint256 _wantAmt) external {
+    function withdraw(address _vid, uint256 _wantAmt) external {
         _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external {
+    function withdraw(address _vid, uint256 _wantAmt, address _to) external {
         _withdraw(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external {
+    function withdrawFrom(address _vid, uint256 _wantAmt, address _from, address _to) external {
         require(
             _from == msg.sender || isApprovedForAll(_from, msg.sender),
             "ERC1155: caller is not owner nor approved"
@@ -80,7 +78,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         _withdraw(_vid, _wantAmt, _from, _to);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
+    function _withdraw(address _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
         _doEarn(_vid);
@@ -125,12 +123,13 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint112 _amount) external {
         PendingDeposit storage pendingDeposit = pendingDeposits[pendingDeposits.length - 1];
-        pendingDeposit.amount -= uint112(_amount);
+        require(_amount < (uint(pendingDeposit.amount0) << 96) | uint(pendingDeposit.amount1), "VH: transfer exceeds pending deposit");
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,
             _to,
             _amount
         );
+        pendingDeposits.pop();
     }
 
 function _beforeTokenTransfer(

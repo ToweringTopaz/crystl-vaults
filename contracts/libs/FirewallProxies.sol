@@ -10,10 +10,7 @@ library FirewallProxies {
 
     bytes constant public CODE = type(FirewallProxy).creationCode;
     bytes32 constant public CODE_HASH = keccak256(CODE);
-
-    function codeLength() external pure returns (uint) {
-        return CODE.length;
-    }
+    uint constant public BASE_PROXY_SIZE = 0x86;
 
     function sizeOf(address a) public view returns (uint size) {
         assembly {
@@ -27,21 +24,19 @@ library FirewallProxies {
 
     //Returns metadata stored in a proxy contract after the executable proxy code
     function dataOf(address proxy) internal view returns (bytes memory data) { //todo: analyze gas and codesize effects: if internal, does the whole code get copied or just its length?
-        uint codelen = CODE.length;
         uint proxysize = sizeOf(proxy);
-        require(proxysize >= codelen, "dataOf bad firewall proxy");
-        uint metadatasize = proxysize - codelen; //size of data after executable
+        require(proxysize >= BASE_PROXY_SIZE, "dataOf bad firewall proxy");
+        uint metadatasize = proxysize - BASE_PROXY_SIZE; //size of data after executable
         data = new bytes(metadatasize); //allocate return variable's memory and set length
         assembly {
-            extcodecopy(proxy, add(data,0x20), codelen, metadatasize) //copy the data from proxy's code to memory
+            extcodecopy(proxy, add(data,0x20), BASE_PROXY_SIZE, metadatasize) //copy the data from proxy's code to memory
         }
     }
 
     function dataOf(address proxy, uint offset, uint len) internal view returns (bytes memory data) {
-        uint codelen = CODE.length;
         data = new bytes(len); //allocate return variable's memory and set length
         assembly {
-            extcodecopy(proxy, add(data,0x20), add(offset,codelen), len) //copy the data from proxy's code to memory
+            extcodecopy(proxy, add(data,0x20), add(offset, BASE_PROXY_SIZE), len) //copy the data from proxy's code to memory
         }        
     }
 

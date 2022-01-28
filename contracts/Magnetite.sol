@@ -37,7 +37,7 @@ contract Magnetite is Ownable, IMagnetite {
 
     //Adds or modifies a swap path
     function overridePath(address router, IERC20[] calldata _path) external {
-        require(IAccessControl(owner()).hasRole(keccak256("PATH_SETTER"), msg.sender), "!auth");
+        require(IVaultHealer(owner()).hasRole(keccak256("PATH_SETTER"), msg.sender), "!auth");
         _setPath(router, _path, AutoPath.MANUAL);
     }
 

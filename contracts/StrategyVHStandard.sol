@@ -43,8 +43,6 @@ contract StrategyVHStandard is BaseStrategyVaultHealer, ERC1155Holder {
             swapToToken.safeApprove(msg.sender, 0);
             swapToToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
         }
-        
-
 
     }
 
