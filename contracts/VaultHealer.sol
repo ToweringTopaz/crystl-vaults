@@ -9,8 +9,6 @@ import {Magnetite} from "./Magnetite.sol";
 import "./VaultView.sol";
 import {VaultFeeManager} from "./VaultFeeManager.sol";
 contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools, VaultHealerFactory {
-    
-    bytes32 constant PATH_SETTER = keccak256("PATH_SETTER");
 
     IMagnetite internal magnetite;
     QuartzUniV2Zap immutable zap;
@@ -26,11 +24,10 @@ contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools, VaultHealerFac
         zap = new QuartzUniV2Zap(address(this));
         vaultView = new VaultView(zap);
         vaultFeeManager = new VaultFeeManager(address(this), withdrawReceiver, withdrawRate, earnReceivers, earnRates);
-        _setupRole(PATH_SETTER, msg.sender);
 
     }
     
-    function setVaultView(VaultView _vaultView) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVaultView(VaultView _vaultView) external onlyAdmin {
         vaultView = _vaultView;
         emit SetVaultView(_vaultView);
     }
