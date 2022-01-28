@@ -45,6 +45,7 @@ contract BoostPool is IBoostPool, Ownable {
     uint256 lastRewardBlock;
      // Accumulated Rewards per share, times 1e30
     uint256 accRewardTokenPerShare;
+    uint256 rewardsPaid;
 
 
     event Deposit(address indexed user, uint256 amount);
@@ -94,7 +95,11 @@ contract BoostPool is IBoostPool, Ownable {
     function vaultHealerActivate(uint _boostID) external onlyVaultHealer {
         
         require(boostID == type(uint).max, "boost already active!");
+        uint _startBlock = startBlock;
+        if (_startBlock < block.number) _startBlock = block.number;
+        require(REWARD_TOKEN.balanceOf(address(this)) >= (bonusEndBlock - _startBlock) * rewardPerBlock, "Can't activate pool without sufficient rewards");
         boostID = _boostID;
+        startBlock = _startBlock;
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -108,32 +113,29 @@ contract BoostPool is IBoostPool, Ownable {
         }
     }
 
-    /// @param  _bonusEndBlock The block when rewards will end
-    function setBonusEndBlock(uint256 _bonusEndBlock) external onlyOwner {
-        require(_bonusEndBlock > bonusEndBlock, 'new bonus end block must be greater than current');
-        bonusEndBlock = _bonusEndBlock;
-        emit LogUpdatePool(bonusEndBlock, rewardPerBlock);
-    }
-
     // View function to see pending Reward on frontend.
     function pendingReward(address _user) external view returns (uint256) {
         User storage user = userInfo[_user];
         uint256 _accRewardTokenPerShare = accRewardTokenPerShare;
-        if (block.number > lastRewardBlock && totalStaked != 0) {
-            uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
+        uint _lastRewardBlock = lastRewardBlock;
+        uint _totalStaked = totalStaked;
+        if (block.number > _lastRewardBlock && _totalStaked != 0) {
+            uint256 multiplier = getMultiplier(_lastRewardBlock, block.number);
             uint256 tokenReward = multiplier * rewardPerBlock;
-            _accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
+            _accRewardTokenPerShare += tokenReward * 1e30 / _totalStaked;
         }
         return calcPending(user, _accRewardTokenPerShare);
     }
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
-        if (block.number > lastRewardBlock) {
-            if (totalStaked > 0) {
-                uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
+        uint256 _lastRewardBlock = lastRewardBlock;
+        if (block.number > _lastRewardBlock) {
+            uint256 _totalStaked = totalStaked;
+            if (_totalStaked > 0) {
+                uint256 multiplier = getMultiplier(_lastRewardBlock, block.number);
                 uint256 tokenReward = multiplier * rewardPerBlock;
-                accRewardTokenPerShare += tokenReward * 1e30 / totalStaked;
+                accRewardTokenPerShare += tokenReward * 1e30 / _totalStaked;
             }
             lastRewardBlock = block.number;
         }
@@ -149,9 +151,11 @@ contract BoostPool is IBoostPool, Ownable {
                 if(currentRewardBalance > 0) {
                     if(pending > currentRewardBalance) {
                         safeTransferReward(_user, currentRewardBalance);
+                        rewardsPaid += currentRewardBalance;
                         pending -= currentRewardBalance;
                     } else {
                         safeTransferReward(_user, pending);
+                        rewardsPaid += pending;
                         pending = 0;
                     }
                 }
@@ -221,9 +225,26 @@ contract BoostPool is IBoostPool, Ownable {
 
     /// @param _rewardPerBlock The amount of reward tokens to be given per block
     function setRewardPerBlock(uint256 _rewardPerBlock) external onlyOwner {
+        uint oldRewardPerBlock = rewardPerBlock;
+        uint _bonusEndBlock = bonusEndBlock;
+
+        require(block.number > _bonusEndBlock || _rewardPerBlock > oldRewardPerBlock, "cannot reduce rewards while pool is active");
+        require(REWARD_TOKEN.balanceOf(address(this)) + rewardsPaid >= (_bonusEndBlock - startBlock) * _rewardPerBlock, "Can't extend pool without sufficient rewards");
         updatePool();
         rewardPerBlock = _rewardPerBlock;
-        emit LogUpdatePool(bonusEndBlock, rewardPerBlock);
+        emit LogUpdatePool(_bonusEndBlock, _rewardPerBlock);
+    }
+
+    /// @param  _bonusEndBlock The block when rewards will end
+    function setBonusEndBlock(uint256 _bonusEndBlock) external onlyOwner {
+        require(_bonusEndBlock > bonusEndBlock, 'new bonus end block must be greater than current');
+        uint _rewardPerBlock = rewardPerBlock;
+        require(REWARD_TOKEN.balanceOf(address(this)) + rewardsPaid >= (_bonusEndBlock - block.number) * _rewardPerBlock, "Can't extend pool without sufficient rewards");
+        updatePool();
+
+        if (bonusEndBlock < block.number) startBlock = block.number;
+        bonusEndBlock = _bonusEndBlock;
+        emit LogUpdatePool(_bonusEndBlock, _rewardPerBlock);
     }
 
     /* Emergency Functions */
@@ -242,6 +263,14 @@ contract BoostPool is IBoostPool, Ownable {
     // Withdraw reward. EMERGENCY ONLY.
     function emergencyRewardWithdraw(uint256 _amount) external onlyOwner {
         require(_amount <= REWARD_TOKEN.balanceOf(address(this)), 'not enough rewards');
+        uint _startBlock = startBlock;
+        uint _bonusEndBlock = bonusEndBlock;
+        require(
+            REWARD_TOKEN.balanceOf(address(this)) + rewardsPaid - _amount >= (_bonusEndBlock - _startBlock) * rewardPerBlock 
+            || block.number < _startBlock 
+            || block.number >= _bonusEndBlock + 100000, "cannot remove rewards from active pool"
+        );
+
         // Withdraw rewards
         safeTransferReward(msg.sender, _amount);
         emit EmergencyRewardWithdraw(msg.sender, _amount);
