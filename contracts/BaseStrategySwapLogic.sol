@@ -100,8 +100,11 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
             earnedAmt -= feeEarnedAmt;
             uint nativeBefore = address(this).balance;
-            safeSwap(feeEarnedAmt, _earnedToken, router.WETH(), address(this));
+            IWETH weth = router.WETH();
+            safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
             uint feeNativeAmt = address(this).balance - nativeBefore;
+
+            weth.withdraw(weth.balanceOf(address(this)));
             for (uint i; i < 3; i++) {
                 (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
                 if (receiver == address(0) || rate == 0) break;
