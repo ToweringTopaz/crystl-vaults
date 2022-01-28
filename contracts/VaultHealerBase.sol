@@ -43,6 +43,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
     }
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
         vaultFeeManager = _manager;
+        emit SetVaultFeeManager(_manager);
     }
 
     /**
