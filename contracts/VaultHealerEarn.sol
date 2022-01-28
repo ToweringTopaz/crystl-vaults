@@ -68,7 +68,7 @@ abstract contract VaultHealerEarn is VaultHealerBase {
                     increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
                 }
                 updateWantLockedLast(vault, vid, wantLockedTotal);
-            } catch Error(string memory reason) {
+            } catch
                 increaseMinBlocksBetweenEarns(vault, interval);
             }
         }
@@ -100,17 +100,22 @@ abstract contract VaultHealerEarn is VaultHealerBase {
         _lock = lock; //reset reentrancy state
     }
     function updateWantLockedLast(Vault.Info storage vault, uint vid, uint wantLockedTotal) private {
-        if (wantLockedTotal > vault.wantLockedLastUpdate) {
+        uint wantLockedLastUpdate = vault.wantLockedLastUpdate;
+        if (wantLockedTotal > wantLockedLastUpdate) {
             require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
-            emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
+            emit Earned(vid, wantLockedTotal - wantLockedLastUpdate);
             vault.wantLockedLastUpdate = uint112(wantLockedTotal);
         }
     }
     function decrementMinBlocksBetweenEarns(Vault.Info storage vault, uint32 oldInterval) private {
-        if (oldInterval > 1) vault.minBlocksBetweenEarns = oldInterval - 1;
+        unchecked {
+            if (oldInterval > 1) vault.minBlocksBetweenEarns = oldInterval - 1;
+        }
     }
 
     function increaseMinBlocksBetweenEarns(Vault.Info storage vault, uint oldInterval) private {
-        vault.minBlocksBetweenEarns = uint32(oldInterval * 21 / 20 + 1); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+        unchecked {
+            vault.minBlocksBetweenEarns = uint32(oldInterval * 21 / 20 + 1); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
+        }
     }
 }
