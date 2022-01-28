@@ -15,7 +15,7 @@
 
 pragma solidity ^0.8.0;
 
-import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./HardMath.sol";
 import "./IStrategy.sol";
 import "./IVaultHealer.sol";

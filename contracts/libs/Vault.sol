@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "./IBoostPool.sol";
 import "./IUniFactory.sol";
 import "./IMagnetite.sol";
 import "./IUniRouter.sol";
-import {BitMapsUpgradeable as BitMaps} from "@openzeppelin/contracts-upgradeable/utils/structs/BitMapsUpgradeable.sol";
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./Tactics.sol";
 
 library Vault {

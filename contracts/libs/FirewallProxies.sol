@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {Create2Upgradeable as Create2} from "@openzeppelin/contracts-upgradeable/utils/Create2Upgradeable.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
 
-import "./IFirewallProxy.sol";
 import "../FirewallProxy.sol";
 
 library FirewallProxies {
@@ -53,9 +52,4 @@ library FirewallProxies {
         return Create2.computeAddress(salt, CODE_HASH, deployer);
     }
 
-    //selfdestructs a proxy contract (must be called as deployer); returns the contract's data store
-    function destroyProxy(address proxy) external returns (bytes memory data) {
-        data = dataOf(proxy);
-        IFirewallProxy(proxy)._destroy_();
-    }
 }
