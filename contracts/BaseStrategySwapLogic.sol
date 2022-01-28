@@ -31,8 +31,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         _vaultHarvest(); // Harvest farm tokens
         uint dust = settings.dust; //minimum number of tokens to bother trying to compound
         
-        success;
-        for (uint i; address(earned[i]) != address(0); i++) { //Process each earned token, whether it's 1, 2, or 8. 
+        for (uint i; address(earned[i]) != address(0); i++) { //Process each earned token
 
             IERC20 earnedToken = earned[i];
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
@@ -56,8 +55,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         if (success) {
 
             if (isMaximizer()) {
-                IERC20 crystlToken = maximizerRewardToken; //todo: change this from a hardcoding
-                uint256 crystlBalance = crystlToken.balanceOf(address(this));
+                uint256 crystlBalance = maximizerRewardToken.balanceOf(address(this));
 
                 IVaultHealer(msg.sender).deposit(targetVid, crystlBalance);
             } else {
@@ -79,7 +77,6 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         uint256 sharesBefore = vaultSharesTotal();
         
         _vaultDeposit(wantAmt); //approves the transfer then calls the pool contract to deposit
-        // console.log("BSSL - deposited to vault");
         uint256 sharesAfter = vaultSharesTotal();
         
         //including settings.dust to reduce the chance of false positives
@@ -108,7 +105,7 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             for (uint i; i < 3; i++) {
                 (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
                 if (receiver == address(0) || rate == 0) break;
-                (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate}("");
+                (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate, gas: 0x40000}("");
                 require(success, "Strategy: Transfer failed");
             }
         }
@@ -120,18 +117,14 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         IERC20 _tokenB,
         address _to
     ) internal {
-        // console.log("BSSL - in SafeSwap");
         //Handle one-token paths which are simply a transfer
         if (_tokenA == _tokenB) {
-            // console.log("BSSL - doing a transfer");
             if (_to != address(this)) //skip transfers to self
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
         IUniRouter router = settings.router;
-        // console.log("BSSL - just before magnetite call");  
         IERC20[] memory path = settings.magnetite.findAndSavePath(address(router), _tokenA, _tokenB);
-        // console.log("BSSL - came out of magnetite");      
 
         /////////////////////////////////////////////////////////////////////////////////////////////
         //this code snippet below could be removed if findAndSavePath returned a right-sized array //
@@ -143,39 +136,23 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         for (uint256 i=0; i<counter; i++) {
             cleanedUpPath[i] =path[i];
         }
-        // console.log("BSSL - got here");
         //this code snippet above could be removed if findAndSavePath returned a right-sized array
 
-
-        uint256[] memory amounts = router.getAmountsOut(_amountIn, cleanedUpPath);
-        uint256 amountOut = amounts[amounts.length - 1] * settings.slippageFactor / 10000;
-        // console.log("BSSL - got here");
-
         //allow swap.router to pull the correct amount in
-        IERC20(_tokenA).safeIncreaseAllowance(address(settings.router), _amountIn);
-        bool feeOnTransfer = settings.feeOnTransfer;
+        IERC20(_tokenA).safeIncreaseAllowance(address(router), _amountIn);
 
-        if (_tokenB != router.WETH() ) {
-            if (feeOnTransfer) { //reflect mode on
-                // console.log("BSSL - 12");
-                router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
-            } else { //reflect mode off
-                // console.log("BSSL - 13");
-                router.swapExactTokensForTokens(
-                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
-            }
+        if (settings.feeOnTransfer) {
+            router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                _amountIn, 
+                router.getAmountsOut(_amountIn, cleanedUpPath)[cleanedUpPath.length - 2] * settings.slippageFactor / 10000,
+                cleanedUpPath,
+                _to, 
+                block.timestamp
+            );
         } else {
-            if (feeOnTransfer) { //reflect mode on
-                // console.log("BSSL - 14");
-                router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-                    _amountIn, amountOut, cleanedUpPath, _to, block.timestamp);
-            } else { //reflect mode off
-                // console.log("BSSL - 15");
-                router.swapExactTokensForETH(
-                    _amountIn ,amountOut, cleanedUpPath, _to, block.timestamp);
-            }            
+            router.swapExactTokensForTokens(_amountIn, 0, cleanedUpPath, _to, block.timestamp);                
         }
     }
+
     receive() external payable {}
 }

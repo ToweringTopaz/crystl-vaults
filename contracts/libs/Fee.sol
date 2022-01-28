@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPLv2
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 library Fee {
     using Fee for Data;

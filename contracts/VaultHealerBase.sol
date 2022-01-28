@@ -55,13 +55,13 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgra
         grantRole(STRATEGY, _strat); //requires msg.sender is VAULT_ADDER
 
         IStrategy strat_ = IStrategy(_strat);
-        require(_vaultInfo.length < type(uint32).max); //absurd number of vaults
+        require(_vaultInfo.length < type(uint32).max, "too many vaults"); //absurd number of vaults
         vid = _vaultInfo.length;
         _vaultInfo.push();
         Vault.Info storage vault = _vaultInfo[vid];
         IERC20 _want = strat_.wantToken();
         vault.want = _want;
-        require(_want.totalSupply() <= type(uint112).max);
+        require(_want.totalSupply() <= type(uint112).max, "incompatible total supply");
         //vault.router = strat.router();
         vault.lastEarnBlock = uint32(block.number);
         vault.minBlocksBetweenEarns = 10;
