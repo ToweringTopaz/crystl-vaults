@@ -32,7 +32,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
         //require(address(vault.strat) != address(0), "That strategy does not exist");
         if (_wantAmt > 0) {
-            pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
+            pendingDeposits.push() = PendingDeposit({
                 token: vault.want,
                 from: _from,
                 amount: uint112(_wantAmt)
@@ -151,7 +151,7 @@ function _beforeTokenTransfer(
                 _vaultInfo[vid].user[to].stats.transfersIn += underlyingValue;
 
                 if (_vaultInfo[vid].targetVid != 0) {
-                    _doEarn(vid); //does it matter who calls the earn? -- this one credits msg.sender, the account responsible for paying the gas
+                    _doEarn(vid);
 
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 
@@ -175,8 +175,8 @@ function _beforeTokenTransfer(
         vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
 
         // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
-        vault.balanceCrystlCompounderLastUpdate = uint256(targetWantLocked); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
-    }
+        vault.balanceCrystlCompounderLastUpdate = uint256(targetWantLocked); 
+        }
     
     // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
@@ -204,6 +204,6 @@ function _beforeTokenTransfer(
             vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
             }
         // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
-        vault.balanceCrystlCompounderLastUpdate = uint256(targetStrat.wantLockedTotal()); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+        vault.balanceCrystlCompounderLastUpdate = uint256(targetStrat.wantLockedTotal());
     }
 }
