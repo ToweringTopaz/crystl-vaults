@@ -132,46 +132,81 @@ describe(`Testing Custom Bond`, () => {
     describe(`Testing depositing into the bond, running through some of the vesting period, redeeming CRYSTL from the bond:
     `, () => {
         it('Should deposit user1\'s LP tokens into the bond, increasing the bonds currentDebt by the amount of LP tokens deposited', async () => {
+            //init contract calls
+            
             initialLPtokenBalance = "1000000000000000000";
 
             initialDebtBeforeDeposit = await customBond.currentDebt();
-            
-            console.log(`Initial Debt for the bond is ${ethers.utils.formatEther(initialDebtBeforeDeposit)} LP tokens`);
 
+            initpayoutFor = await customBond.payoutFor(initialLPtokenBalance);
+
+            initdebtRatio = await customBond.debtRatio();
+
+            initUserCrystlBalance = await crystlToken.balanceOf(user1.address);
+
+            console.log(`Initial LP Balance for USER1 is ${ethers.utils.formatEther(initialLPtokenBalance)} LP tokens`);
+            console.log(`Initial CRYSTL balance for user1 is ${ethers.utils.formatEther(initialLPtokenBalance)} CRYSTL`);
+            console.log(`Initial Debt for the bond is ${ethers.utils.formatEther(initialDebtBeforeDeposit)} LP tokens`);
+            console.log(`Initial payout for 1 LP token is ${ethers.utils.formatEther(initpayoutFor)} CRYSTL`);
+            console.log(`Initial Debt Ratio for the bond is ${ethers.utils.formatEther(initdebtRatio)}`);
+
+
+            //User1 approves their tokens and deposits them to CustomBond
             await LPtoken.connect(user1).approve(customBond.address, initialLPtokenBalance);
 
             await customBond.deposit(initialLPtokenBalance, 1000000000000000, user1.address); //uint _maxPrice
 
-            console.log(`User1 has deposited ${ethers.utils.formatEther(initialLPtokenBalance)} LP tokens`)
-            console.log(`Total payout for this deposit is ${ethers.utils.formatEther(await customBond.payoutFor(initialLPtokenBalance))} CRYSTL`);
-
             debtAfterDeposit = await customBond.currentDebt();
-            console.log(`Current Debt for the bond after the deposit is ${ethers.utils.formatEther(debtAfterDeposit)} LP tokens`);
 
+            debtRatioAfterDeposit = await customBond.debtRatio();
+
+            payoutForAfterDeposit = await customBond.payoutFor(initialLPtokenBalance);
+
+            initPendingPayout = await customBond.pendingPayoutFor(user1.address);
+
+            console.log(`User1 has deposited ${ethers.utils.formatEther(initialLPtokenBalance)} LP tokens`)
+            console.log(`Payout for 1LP token is now  ${ethers.utils.formatEther(payoutForAfterDeposit)} CRYSTL`);
+            console.log(`Current Debt for the bond is now ${ethers.utils.formatEther(debtAfterDeposit)} LP tokens`);
+            console.log(`debtRatio for the bond after deposit is now ${ethers.utils.formatEther(debtRatioAfterDeposit)}`)
+
+
+            expect(debtRatioAfterDeposit).to.be.gt(initdebtRatio);
+            expect(initpayoutFor).to.be.gt(payoutForAfterDeposit);
             expect(debtAfterDeposit).to.be.gt(initialDebtBeforeDeposit);
         })
 
 
-        it('Should wait 1000 blocks and then check payout amount, which should have grown', async () => {
-            userPendingPayoutAtStart = await customBond.pendingPayoutFor(user1.address);
-            console.log(`Pending payout for User1 straight after deposit is ${ethers.utils.formatEther(userPendingPayoutAtStart)} CRYSTL`)
+        it('Should wait 1% of waiting period and then check payout amount, which should have grown', async () => {
+            console.log(`Pending payout for User1 straight after deposit is ${ethers.utils.formatEther(initPendingPayout)} CRYSTL`)
 
             for (i=0; i<462;i++) { //minBlocksBetweenSwaps
                 await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
                 }
             
             userPendingPayoutAfterTime = await customBond.pendingPayoutFor(user1.address);
+            debtRatioAfterWP = await customBond.debtRatio();
+            debtAfterWP = await customBond.debtRatio();
+            payoutForAfterWP = await customBond.payoutFor(initialLPtokenBalance);
+            USER1percentVestedAfterWP = await customBond.percentVestedFor(user1.address);
+        
             console.log(`Pending payout for User1 462 blocks after deposit is ${ethers.utils.formatEther(userPendingPayoutAfterTime)} CRYSTL`)
+            console.log(`debt Ratio after waiting period is ${ethers.utils.formatEther(debtRatioAfterWP)}`);
+            console.log(`payout for 1 LP token is ${ethers.utils.formatEther(payoutForAfterWP)}`)
+            console.log(`percent vested is ${ethers.utils.formatEther(USER1percentVestedAfterWP)}`);
 
-            expect(userPendingPayoutAfterTime).to.be.gt(userPendingPayoutAtStart); //will only be true on first deposit?
+            expect(userPendingPayoutAfterTime).to.be.gt(initPendingPayout); //will only be true on first deposit?
+            expect(debtRatioAfterDeposit).to.be.gt(debtRatioAfterWP);
         })
 
         it('Should redeem the outstanding payout amount', async () => {
             userPendingPayoutBeforeRedemption = await customBond.pendingPayoutFor(user1.address);
             userCrystlBalanceBeforeRedemption = await crystlToken.balanceOf(user1.address);
+            payoutForAfterRedemption = await customBond.payoutFor(initialLPtokenBalance);
+            debtAfterRedemption = await customBond.currentDebt();
 
             console.log(`Pending payout for User1 before redemption is ${ethers.utils.formatEther(userPendingPayoutBeforeRedemption)} CRYSTL`)
             console.log(`CRYSTL balance for User1 before redemption is ${ethers.utils.formatEther(userCrystlBalanceBeforeRedemption)} CRYSTL`)
+            console.log(`Debt after redemption is ${ethers.utils.formatEther(debtAfterRedemption)}`)
 
             await customBond.redeem(user1.address);
             
@@ -179,9 +214,11 @@ describe(`Testing Custom Bond`, () => {
             userCrystlBalanceAfterRedemption = await crystlToken.balanceOf(user1.address);
             console.log(`Pending payout for User1 after redemption is ${ethers.utils.formatEther(userPendingPayoutAfterRedemption)} CRYSTL`)
             console.log(`CRYSTL balance for User1 after redemption is ${ethers.utils.formatEther(userCrystlBalanceAfterRedemption)} CRYSTL`)
+            console.log(`Payout for 1 LP token after waiting period and redemption is ${ethers.utils.formatEther(payoutForAfterRedemption)}`)
 
-            expect(userPendingPayoutBeforeRedemption).to.be.gt(userPendingPayoutAfterRedemption); //will only be true on first deposit?
-            expect(userPendingPayoutBeforeRedemption).to.equal(userCrystlBalanceAfterRedemption); //will only be true on first deposit?
+            expect(initpayoutFor).to.be.gt(payoutForAfterRedemption);
+            expect(userCrystlBalanceBeforeRedemption).to.equal(initUserCrystlBalance * 1.1);
+            expect(USER1percentVestedAfterWP).to.equal(1);
         })
         
     })
