@@ -41,7 +41,7 @@ contract Magnetite is Ownable, IMagnetite {
         _setPath(router, _path, AutoPath.MANUAL);
     }
 
-    function setAutoPath_(address router, IERC20[] calldata _path) external {
+    function setAutoPath_(address router, IERC20[] calldata _path) internal {
         require(msg.sender == address(this));
         _setPath(router, _path, AutoPath.AUTO);
     }
