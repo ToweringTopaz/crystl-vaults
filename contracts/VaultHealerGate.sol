@@ -36,20 +36,28 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                 amount: uint112(_wantAmt)
             });
             IStrategy strategy = strat(_vid);
+
             uint256 wantLockedBefore = strategy.wantLockedTotal();
 
             _doEarn(_vid); 
 
-            if (vault.targetVid != 0 && wantLockedBefore > 0) { //
-                UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
+            uint256 totalSharesBeforeDeposit = totalSupply(_vid);
+
+            uint256 vidSharesAdded = strategy.deposit(_wantAmt, totalVidSharesBeforeDeposit);
+
+            if (vault.targetVid != 0 && wantLockedBefore > 0) { // if this is a maximizer vault, do these extra steps
+                IStrategy targetStrategy = strat(vault.targetVid);
+                uint256 targetVidSharesOwnedByMaxiBefore = targetStrategy.balanceOf(_vid) + vault.offset; //have to add in the offset here for the strategy
+                int256 targetVidTokenOffset = vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalVidSharesBeforeDeposit; //this will need to move below the deposit step - implications?
+                int256 user.offset -= targetVidTokenOffset; //todo where to save this?
+                int256 vault.offset += targetVidTokenOffset; //todo where to save this?
             }
 
-            uint256 sharesAdded = strategy.deposit(_wantAmt, totalSupply(_vid));
             //we mint tokens for the user via the 1155 contract
             _mint(
                 _to,
                 _vid, //use the vid of the strategy 
-                sharesAdded,
+                vidSharesAdded,
                 hex'' //leave this blank for now
             );
             //update the user's data for earn tracking purposes
@@ -85,16 +93,25 @@ abstract contract VaultHealerGate is VaultHealerEarn {
 
         IStrategy strategy = strat(_vid);
         if (vault.targetVid != 0 && strategy.wantLockedTotal() > 0) {
-            UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _from, _wantAmt);
+            IStrategy targetStrategy = strat(vault.targetVid);
+            uint256 targetVidSharesOwnedByMaxiBefore = targetStrategy.balanceOf(_vid) + vault.offset; //have to add in the offset here for the strategy
+            int256 targetVidTokenOffset = -vidSharesRemoved * targetVidSharesOwnedByMaxiBefore / totalVidSharesBeforeDeposit; //this will need to move below the deposit step - implications?
+            int256 user.offset -= targetVidTokenOffset; //todo where to save this?
+            int256 vault.offset += targetVidTokenOffset; //todo where to save this?
+            // todo - withdraw crystl proportional to the withdrawal at vid level? Is this still necessary? Must this come first?
+
+            // update the offsets for user and for vid
+
+            // UpdatePoolAndWithdrawCrystlOnWithdrawal(_vid, _from, _wantAmt);
         }
 
-        (uint256 sharesRemoved, uint256 wantAmt) = strategy.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
+        (uint256 vidSharesRemoved, uint256 wantAmt) = strategy.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
 
-        //burn the tokens equal to sharesRemoved
+        //burn the tokens equal to vidSharesRemoved
         _burn(
             _from,
             _vid,
-            sharesRemoved
+            vidSharesRemoved
         );
         //updates transferData for this user, so that we are accurately tracking their earn
         vault.user[_from].stats.withdrawals += uint128(wantAmt);

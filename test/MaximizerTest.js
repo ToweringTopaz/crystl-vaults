@@ -5,10 +5,10 @@ const { WMATIC, CRYSTL, DAI } = tokens.polygon;
 const { FEE_ADDRESS, BURN_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { IUniRouter02_abi } = require('../test/abi_files/IUniRouter02_abi.js');
-const { token_abi } = require('../test/abi_files/token_abi.js');
-const { IWETH_abi } = require('../test/abi_files/IWETH_abi.js');
-const { IUniswapV2Pair_abi } = require('../test/abi_files/IUniswapV2Pair_abi.js');
+const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
+const { token_abi } = require('./abi_files/token_abi.js');
+const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
+const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?

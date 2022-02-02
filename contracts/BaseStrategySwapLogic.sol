@@ -55,9 +55,9 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         if (success) {
 
             if (isMaximizer()) {
-                uint256 crystlBalance = maximizerRewardToken.balanceOf(address(this));
+                uint256 rewardTokenBalance = maximizerRewardToken.balanceOf(address(this));
 
-                IVaultHealer(msg.sender).deposit(targetVid, crystlBalance);
+                IVaultHealer(msg.sender).deposit(targetVid, rewardTokenBalance);
             } else {
                 if (address(lpToken[1]) != address(0)) {
                     // Get want tokens, ie. add liquidity
