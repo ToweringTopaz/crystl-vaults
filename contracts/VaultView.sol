@@ -61,8 +61,8 @@ contract VaultView is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultV
     function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat) {
         return (_vaultInfo[vid].want, strat(vid));
     }
-    function rewardDebt(uint vid, address _user) external view returns (uint) {
-        return _vaultInfo[vid].user[_user].rewardDebt;
+    function maximizerEarningsOffset(uint vid, address _user) external view returns (uint) {
+        return _vaultInfo[vid].user[_user].maximizerEarningsOffset;
     }
     // View function to see staked Want tokens on frontend.
     function stakedWantTokens(uint256 _vid, address _user) external view returns (uint256) {
