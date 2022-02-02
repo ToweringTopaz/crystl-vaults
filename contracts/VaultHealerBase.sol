@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./libs/OpenZeppelin.sol";
+import "./libraries/Vault.sol";
+import "./interfaces/IStrategy.sol";
+import "./interfaces/IUniRouter.sol";
+import "./interfaces/IVaultHealer.sol";
+import "./interfaces/IVaultFeeManager.sol";
 
-import "./libs/Vault.sol";
-import "./libs/IStrategy.sol";
-import "./libs/IVaultHealer.sol";
-import "./libs/IVaultFeeManager.sol";
-
-abstract contract VaultHealerBase is ERC1155SupplyUpgradeable, IVaultHealerMain {
+abstract contract VaultHealerBase is IVaultHealerMain {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
 
@@ -33,7 +32,7 @@ abstract contract VaultHealerBase is ERC1155SupplyUpgradeable, IVaultHealerMain 
     function setAccess(address _account, Vault.Access _access) external {
         Vault.Access oldAccess = access[_account];
         Vault.Access operatorAccess = access[msg.sender];
-        require(oldAccess != Vault.Access.STRATEGY && oldAccess != Vault.Access.IMPLEMENTATION && _access != Vault.A)
+        require(oldAccess != Vault.Access.STRATEGY && oldAccess != Vault.Access.IMPLEMENTATION && _access != Vault.A);
     }
     modifier onlyOwner {
         require(_vaultInfo[msg.sender].access >= Vault.Access.OWNER, "VH: only owner");

@@ -16,18 +16,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./HardMath.sol";
-import "./IStrategy.sol";
-import "./IVaultHealer.sol";
-import "./IUniRouter.sol";
-import "./IUniPair.sol";
-import "./IWETH.sol";
-import "./IUniFactory.sol";
+import "../interfaces/IVaultHealer.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
     using SafeERC20 for IUniPair;
-    
+
     uint256 constant MINIMUM_AMOUNT = 1000;
     
     function getRouter(IVaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
@@ -47,7 +41,7 @@ library LibQuartz {
         uint256 halfInvestment = investmentA / 2;
         uint256 numerator = router.getAmountOut(halfInvestment, reserveA, reserveB);
         uint256 denominator = router.quote(halfInvestment, reserveA + halfInvestment, reserveB - numerator);
-        swapAmount = investmentA - HardMath.sqrt(halfInvestment * halfInvestment * numerator / denominator);
+        swapAmount = investmentA - sqrt(halfInvestment * halfInvestment * numerator / denominator);
     }
     function returnAssets(IUniRouter router, IERC20[] memory tokens) internal {
         IWETH weth = router.WETH();
@@ -120,6 +114,54 @@ library LibQuartz {
             return hasLiquidity = true;
         } else {
             return hasLiquidity = false;
+        }
+    }
+
+    // credit for this implementation goes to
+    // https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMath64x64.sol#L687
+    function sqrt(uint256 x) internal pure returns (uint256) {
+        unchecked { //impossible for any of this to overflow
+            if (x == 0) return 0;
+            // this block is equivalent to r = uint256(1) << (BitMath.mostSignificantBit(x) / 2);
+            // however that code costs significantly more gas
+            uint256 xx = x;
+            uint256 r = 1;
+            if (xx >= 0x100000000000000000000000000000000) {
+                xx >>= 128;
+                r <<= 64;
+            }
+            if (xx >= 0x10000000000000000) {
+                xx >>= 64;
+                r <<= 32;
+            }
+            if (xx >= 0x100000000) {
+                xx >>= 32;
+                r <<= 16;
+            }
+            if (xx >= 0x10000) {
+                xx >>= 16;
+                r <<= 8;
+            }
+            if (xx >= 0x100) {
+                xx >>= 8;
+                r <<= 4;
+            }
+            if (xx >= 0x10) {
+                xx >>= 4;
+                r <<= 2;
+            }
+            if (xx >= 0x8) {
+                r <<= 1;
+            }
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1;
+            r = (r + x / r) >> 1; // Seven iterations should be enough
+            uint256 r1 = x / r;
+            return (r < r1 ? r : r1);
         }
     }
 

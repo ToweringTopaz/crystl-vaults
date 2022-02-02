@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "./IBoostPool.sol";
+//import "./IBoostPool.sol";
 import "./IUniFactory.sol";
 import "./IMagnetite.sol";
 import "./IUniRouter.sol";
@@ -19,9 +19,9 @@ library Vault {
         IBoostPool[] boosts;
         BitMaps.BitMap activeBoosts;
         mapping (address => User) user;
-        uint256 accRewardTokensPerShare;
-        uint256 balanceCrystlCompounderLastUpdate;
-        uint256 targetVid; //maximizer target, which accumulates tokens
+        //uint256 accRewardTokensPerShare;
+        //uint256 balanceCrystlCompounderLastUpdate;
+        //uint256 targetVid; //maximizer target, which accumulates tokens
     }
     struct User {
         BitMaps.BitMap boosts;

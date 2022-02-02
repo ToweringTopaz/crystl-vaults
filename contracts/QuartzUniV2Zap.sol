@@ -15,9 +15,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./libs/LibQuartz.sol";
-import {IUniRouter} from "./libs/Interfaces.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import "./libraries/LibQuartz.sol";
 
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;

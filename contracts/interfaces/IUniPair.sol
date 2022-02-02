@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity >=0.5.0;
 
-import {IERC20Upgradeable as IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IUniFactory.sol";
 
 interface IUniPair is IERC20 {

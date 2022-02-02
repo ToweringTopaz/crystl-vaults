@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
-import "./libs/IVaultFeeManager.sol";
+import "./interfaces/IVaultFeeManager.sol";
 
 contract VaultFeeManager is IVaultFeeManager {
     using BitMaps for BitMaps.BitMap;

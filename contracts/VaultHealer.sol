@@ -5,7 +5,7 @@ import "./QuartzUniV2Zap.sol";
 import "./VaultHealerGate.sol";
 import "./VaultHealerBoostedPools.sol";
 import "./VaultHealerFactory.sol";
-import {Magnetite} from "./Magnetite.sol";
+import "./Magnetite.sol";
 import "./VaultView.sol";
 import {VaultFeeManager} from "./VaultFeeManager.sol";
 contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools, VaultHealerFactory {

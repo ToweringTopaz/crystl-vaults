@@ -6,7 +6,7 @@ library Fee {
 
     type Data is uint256;
 
-    uint256 constant FEE_MAX = 10000; // 100 = 1% : basis points
+    uint256 constant FEE_MAX = 3000; // 100 = 1% : basis points
 
     function rate(Data _fee) internal pure returns (uint16) {
         return uint16(Data.unwrap(_fee));
@@ -33,7 +33,7 @@ library Fee {
             uint256 _fee = uint256(uint160(_receiver)) << 16 | _rate;
             _fees[i] = Data.wrap(_fee);
         }
-        require(feeTotal <= FEE_MAX, "Max total fee of 100%");
+        require(feeTotal <= FEE_MAX, "Max total fee of 30%");
     }
     function check(Data[3] memory _fees) internal pure { 
         uint totalRate;
@@ -42,14 +42,14 @@ library Fee {
             require(_receiver != address(0) || _rate == 0, "Invalid treasury address");
             totalRate += _rate;
         }
-        require(totalRate <= FEE_MAX, "Max total fee of 100%");
+        require(totalRate <= FEE_MAX, "Max total fee of 30%");
     }
 
     function check(Data _fee) internal pure { 
         (address _receiver, uint _rate) = _fee.receiverAndRate();
         if (_rate > 0) {
             require(_receiver != address(0), "Invalid treasury address");
-            require(_rate <= FEE_MAX, "Max fee of 100%");
+            require(_rate <= FEE_MAX, "Max fee of 30%");
         }
     }
 

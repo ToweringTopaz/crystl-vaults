@@ -8,17 +8,18 @@ Join us at PolyCrystal.Finance!
 █░░█ █░░█ █░░ █▄▄█ █░░ █▄▄▀ █▄▄█ ▀▀█ ░░█░░ █▄▄█ █░░ 
 █▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
 */
-
-import {Ownable, SafeERC20} from "./libs/OpenZeppelin.sol";
-import {IERC20, IStrategy, IVaultHealer, IBoostPool} from "./libs/Interfaces.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./interfaces/IBoostPool.sol";
+import "./interfaces/IVaultHealer.sol";
 
 contract BoostPool is IBoostPool, Ownable {
     using SafeERC20 for IERC20;
 
     // Info of each user.
     struct User {
-        uint256 amount;     // How many LP tokens the user has provided.
-        int256 rewardDebt; // Reward debt. See explanation below.
+        uint128 amount;     // How many LP tokens the user has provided.
+        int128 rewardDebt; // Reward debt. See explanation below.
     }
 
     // The vaultHealer where the staking / want tokens all reside
@@ -29,20 +30,20 @@ contract BoostPool is IBoostPool, Ownable {
     IERC20 public immutable REWARD_TOKEN;
 
     // Reward tokens created per block.
-    uint256 public rewardPerBlock;
+    uint128 public rewardPerBlock;
     // Keep track of number of tokens staked
-    uint256 public totalStaked;
+    uint128 public totalStaked;
 
     // Info of each user that stakes LP tokens.
     mapping (address => User) public userInfo;
     // The block number when Reward mining starts.
-    uint256 public startBlock;
+    uint64 public startBlock;
 	// The block number when mining ends.
-    uint256 public bonusEndBlock;
+    uint64 public bonusEndBlock;
     //The ID number used by the VaultHealer to identify this boost, among those with the same staked token
-    uint256 public boostID;
+    uint64 public boostID;
     // Last block number that Rewards distribution occurs.
-    uint256 lastRewardBlock;
+    uint64 lastRewardBlock;
      // Accumulated Rewards per share, times 1e30
     uint256 accRewardTokenPerShare;
     uint256 rewardsPaid;
@@ -75,16 +76,17 @@ contract BoostPool is IBoostPool, Ownable {
         REWARD_TOKEN = IERC20(_rewardToken);
         uint rewardTotalSupply = IERC20(_rewardToken).totalSupply();
 
-        rewardPerBlock = _rewardPerBlock;
+        rewardPerBlock = uint128(_rewardPerBlock);
         
-        startBlock = _startBlock;
-        bonusEndBlock = _bonusEndBlock;
-        lastRewardBlock = _startBlock;
+        startBlock = uint64(_startBlock);
+        bonusEndBlock = uint64(_bonusEndBlock);
+        lastRewardBlock = uint64(_startBlock);
 
         require (block.number <= startBlock, "rewards cannot have already started");
         require(rewardTotalSupply > _rewardPerBlock * (_bonusEndBlock - _startBlock), "pool would reward more than total supply of rewardtoken!");
+        require(rewardTotalSupply < uint(int(type(int128).max)), "reward total supply too large and might overflow");
 
-        boostID = type(uint).max; //will be set by VH
+        boostID = type(uint64).max; //will be set by VH
     }
 
     modifier onlyVaultHealer {
@@ -92,11 +94,11 @@ contract BoostPool is IBoostPool, Ownable {
         _;
     }
 
-    function vaultHealerActivate(uint _boostID) external onlyVaultHealer {
+    function vaultHealerActivate(uint64 _boostID) external onlyVaultHealer {
         
-        require(boostID == type(uint).max, "boost already active!");
-        uint _startBlock = startBlock;
-        if (_startBlock < block.number) _startBlock = block.number;
+        require(boostID == type(uint64).max, "boost already active!");
+        uint64 _startBlock = startBlock;
+        if (_startBlock < block.number) _startBlock = uint64(block.number);
         require(REWARD_TOKEN.balanceOf(address(this)) >= (bonusEndBlock - _startBlock) * rewardPerBlock, "Can't activate pool without sufficient rewards");
         boostID = _boostID;
         startBlock = _startBlock;
@@ -137,7 +139,7 @@ contract BoostPool is IBoostPool, Ownable {
                 uint256 tokenReward = multiplier * rewardPerBlock;
                 accRewardTokenPerShare += tokenReward * 1e30 / _totalStaked;
             }
-            lastRewardBlock = block.number;
+            lastRewardBlock = uint64(block.number);
         }
     }
 
@@ -174,8 +176,8 @@ contract BoostPool is IBoostPool, Ownable {
         User storage user = userInfo[_user];
         require (user.amount == 0, "user already is in pool");
         require (block.number < bonusEndBlock, "pool has ended");
-        user.amount = _amount;
-        totalStaked += _amount;
+        user.amount = uint128(_amount);
+        totalStaked += uint128(_amount);
         updateRewardDebt(user, 0);
     }
     //Used in place of deposit/withdraw because nothing is actually stored here
@@ -191,8 +193,8 @@ contract BoostPool is IBoostPool, Ownable {
             uint pending = _harvest(_to);
             if (pending == 0 && status >= 4)
                 status |= 2;
-            totalStaked += _amount;
-            user.amount += _amount;
+            totalStaked += uint128(_amount);
+            user.amount += uint128(_amount);
             updateRewardDebt(user, pending);
             emit Deposit(_to, _amount);
         }
@@ -201,8 +203,8 @@ contract BoostPool is IBoostPool, Ownable {
             uint pending = _harvest(_from);
             if (pending == 0 && status >= 4)
                 status |= 1;
-            totalStaked -= _amount;
-            user.amount -= _amount;
+            totalStaked -= uint128(_amount);
+            user.amount -= uint128(_amount);
             updateRewardDebt(user, pending);
             emit Withdraw(_from, _amount);
         }
@@ -231,7 +233,7 @@ contract BoostPool is IBoostPool, Ownable {
         require(block.number > _bonusEndBlock || _rewardPerBlock > oldRewardPerBlock, "cannot reduce rewards while pool is active");
         require(REWARD_TOKEN.balanceOf(address(this)) + rewardsPaid >= (_bonusEndBlock - startBlock) * _rewardPerBlock, "Can't extend pool without sufficient rewards");
         updatePool();
-        rewardPerBlock = _rewardPerBlock;
+        rewardPerBlock = uint64(_rewardPerBlock);
         emit LogUpdatePool(_bonusEndBlock, _rewardPerBlock);
     }
 
@@ -242,8 +244,8 @@ contract BoostPool is IBoostPool, Ownable {
         require(REWARD_TOKEN.balanceOf(address(this)) + rewardsPaid >= (_bonusEndBlock - block.number) * _rewardPerBlock, "Can't extend pool without sufficient rewards");
         updatePool();
 
-        if (bonusEndBlock < block.number) startBlock = block.number;
-        bonusEndBlock = _bonusEndBlock;
+        if (bonusEndBlock < block.number) startBlock = uint64(block.number);
+        bonusEndBlock = uint64(_bonusEndBlock);
         emit LogUpdatePool(_bonusEndBlock, _rewardPerBlock);
     }
 
@@ -287,14 +289,14 @@ contract BoostPool is IBoostPool, Ownable {
 
     //Standard reward debt calculation, but subtracting any delinquent pending rewards
     function updateRewardDebt(User storage user, uint pending) private {
-        user.rewardDebt = int(user.amount * accRewardTokenPerShare / 1e30) - int(pending);
+        user.rewardDebt = int128(int(user.amount * accRewardTokenPerShare / 1e30)) - int128(int(pending));
     }
 
     function calcPending(User storage user, uint _accRewardTokenPerShare) private view returns (uint pending) {
         pending = user.amount * _accRewardTokenPerShare / 1e30;
         
         unchecked { //If rewardDebt is negative, underflow is desired here. This adds delinquent pending rewards back into the current total
-            pending -= uint(user.rewardDebt);
+            pending -= uint128(user.rewardDebt);
         }
     }
 }

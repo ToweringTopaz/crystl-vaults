@@ -19,23 +19,27 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(address _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
-        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
+    function deposit(uint _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
+        address[] memory msgSender = _toSingletonArray[msg.sender];
+        _deposit(_vid, _toSingletonArray[_wantAmt], msgSender, msgSender);
     }
 
     // For depositing for other users
-    function deposit(address _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
-        _deposit(_vid, _wantAmt, msg.sender, _to);
+    function deposit(uint _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
+        _deposit(_toSingletonArray[_vid], _toSingletonArray[_wantAmt], _toSingletonArray[msg.sender], _toSingletonArray[_to]);
     }
 
-    function _deposit(address _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
+    function deposit(uint256[] memory _vid, uint256[] memory _wantAmt, address[] memory _from, address[] memory _to) {
+        require(_wantAmt.length == _from.length == _to.length, "VaultHealer: deposit arrays must be of same length");
+        
+    }
+
+    function _deposit(uint _vid, uint256 _wantAmt, address[] memory _from, address[] memory _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
-        //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
-        //require(address(vault.strat) != address(0), "That strategy does not exist");
         if (_wantAmt > 0) {
             pendingDeposits.push() = PendingDeposit({ //todo: understand better what this does
                 token: vault.want,
-                amount0: uint96(_wantAmt << 96); // split amount into two parts so we only write to 2 storage slots instead of 3
+                amount0: uint96(_wantAmt << 96), // split amount into two parts so we only write to 2 storage slots instead of 3
                 from: _from,
                 amount1: uint96(_wantAmt)
             });
@@ -61,16 +65,16 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(address _vid, uint256 _wantAmt) external {
+    function withdraw(uint _vid, uint256 _wantAmt) external {
         _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
     }
 
     // For withdrawing to other address
-    function withdraw(address _vid, uint256 _wantAmt, address _to) external {
+    function withdraw(uint _vid, uint256 _wantAmt, address _to) external {
         _withdraw(_vid, _wantAmt, msg.sender, _to);
     }
 
-    function withdrawFrom(address _vid, uint256 _wantAmt, address _from, address _to) external {
+    function withdrawFrom(uint _vid, uint256 _wantAmt, address _from, address _to) external {
         require(
             _from == msg.sender || isApprovedForAll(_from, msg.sender),
             "ERC1155: caller is not owner nor approved"
@@ -78,7 +82,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         _withdraw(_vid, _wantAmt, _from, _to);
     }
 
-    function _withdraw(address _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
+    function _withdraw(uint _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
         _doEarn(_vid);
@@ -101,8 +105,8 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
-            //hardcoded 5% max fee rate
-            if (feeReceiver != address(0) && feeRate <= 500 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            //hardcoded 3% max fee rate
+            if (feeReceiver != address(0) && feeRate <= 300 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
                 uint feeAmt = wantAmt * feeRate / 10000;
                 wantAmt -= feeAmt;
                 vault.want.safeTransferFrom(address(strategy), feeReceiver, feeAmt); //todo: zap to correct fee token
@@ -140,7 +144,6 @@ function _beforeTokenTransfer(
         uint256[] memory amounts,
         bytes memory //data
     ) internal virtual override {
-        //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
@@ -204,5 +207,14 @@ function _beforeTokenTransfer(
             }
         // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
         vault.balanceCrystlCompounderLastUpdate = uint256(targetStrat.wantLockedTotal()); //todo: move these two lines to prevent re-entrancy? but then how do they calc properly?
+    }
+
+    function _toSingletonArray(address _account) private pure returns (address[] memory account) {
+        account = new address[](1);
+        account[0] = _account;
+    }
+    function _toSingletonArray(uint256 _amount) private pure returns (uint256[] memory amount) {
+        amount = new address[](1);
+        amount[0] = _amount;
     }
 }

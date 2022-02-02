@@ -14,3 +14,4 @@ artifacts
 #Environment Variables
 .env
 .env.*
+contracts/.*

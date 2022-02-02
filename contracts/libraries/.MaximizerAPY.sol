@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity ^0.8.9;
 
-import "./HardMath.sol";
-
 library MaximizerAPY {
 
     uint constant PRECISION = 1e18;
