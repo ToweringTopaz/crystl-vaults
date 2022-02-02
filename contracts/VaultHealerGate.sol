@@ -29,8 +29,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
-        //require(vault.want.allowance(_from, address(this)) >= _wantAmt, "VH: Insufficient allowance for deposit");
-        //require(address(vault.strat) != address(0), "That strategy does not exist");
         if (_wantAmt > 0) {
             pendingDeposits.push() = PendingDeposit({
                 token: vault.want,
@@ -141,8 +139,6 @@ function _beforeTokenTransfer(
         uint256[] memory amounts,
         bytes memory //data
     ) internal virtual override {
-        //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-
         if (from != address(0) && to != address(0)) {
             for (uint i; i < ids.length; i++) {
                 uint vid = ids[i];
