@@ -2,6 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "./VaultHealerEarn.sol";
+import "hardhat/console.sol";
 
 //Handles "gate" functions like deposit/withdraw
 abstract contract VaultHealerGate is VaultHealerEarn {
@@ -38,7 +39,10 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             IStrategy vaultStrat = strat(_vid);
 
             uint256 wantLockedBefore = vaultStrat.wantLockedTotal();
-
+            console.log("deposit - wantLockedBefore");
+            console.log(wantLockedBefore);
+            console.log("deposit - vault.targetVid");
+            console.log(vault.targetVid);
             _doEarn(_vid); 
 
             uint256 totalVidSharesBeforeDeposit = totalSupply(_vid);
@@ -48,12 +52,22 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             if (vault.targetVid != 0 && wantLockedBefore > 0) { // if this is a maximizer vault, do these extra steps
                 IStrategy targetStrat = strat(vault.targetVid);
 
-                uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(_from, vault.targetVid) + vault.totalMaximizerEarningsOffset; //have to add in the offset here for the strategy
+                uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), vault.targetVid) + vault.totalMaximizerEarningsOffset; //have to add in the offset here for the strategy
+                console.log("targetVidSharesOwnedByMaxiBefore");
+                console.log(targetVidSharesOwnedByMaxiBefore);
+
                 uint256 targetVidTokenOffset = vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalVidSharesBeforeDeposit; //this will need to move below the deposit step - implications?
-                
+                console.log("targetVidTokenOffset");
+                console.log(targetVidTokenOffset);
+
                 // update the offsets for user and for vid
-                vault.user[_from].maximizerEarningsOffset -= targetVidTokenOffset; //todo where to save this?
+                vault.user[_from].maximizerEarningsOffset += targetVidTokenOffset; //todo where to save this?
+                console.log("vault.user[_from].maximizerEarningsOffset");
+                console.log(vault.user[_from].maximizerEarningsOffset);
+
                 vault.totalMaximizerEarningsOffset += targetVidTokenOffset; //todo where to save this?
+                console.log("vault.totalMaximizerEarningsOffset");
+                console.log(vault.totalMaximizerEarningsOffset);
             }
 
             //we mint tokens for the user via the 1155 contract
@@ -105,12 +119,19 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             Vault.Info storage target = _vaultInfo[vault.targetVid];
 
             // uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(_from, vault.targetVid) + vault.totalMaximizerEarningsOffset; //have to add in the offset here for the vaultStrat
-            
-            // calculate total crystl amount this user owns todo make this more generally applicable - not just for withdrawAll!
-            uint256 crystlShare = vidSharesRemoved/totalSupply(_vid) 
-                * (balanceOf(_from, vault.targetVid) + vault.totalMaximizerEarningsOffset) 
-                - vault.user[_from].maximizerEarningsOffset;
+            console.log(vidSharesRemoved);
+            console.log(totalSupply(_vid));
+            console.log(balanceOf(address(vaultStrat), vault.targetVid));
+            console.log(vault.totalMaximizerEarningsOffset);
+            console.log(vault.user[_from].maximizerEarningsOffset);
 
+            // calculate total crystl amount this user owns todo make this more generally applicable - not just for withdrawAll!
+            uint256 crystlShare = vidSharesRemoved
+                * (balanceOf(address(vaultStrat), vault.targetVid) + vault.totalMaximizerEarningsOffset) 
+                / totalSupply(_vid) 
+                - vault.user[_from].maximizerEarningsOffset;
+            
+            console.log(crystlShare);
             // withdraw proportional amount of crystl from targetVault()
             if (crystlShare > 0) {
                 // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
@@ -119,7 +140,12 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                             
                 // update the offsets for user and for vid
                 vault.totalMaximizerEarningsOffset -= (vault.user[_from].maximizerEarningsOffset * vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+                console.log("vault.user[_from].maximizerEarningsOffset");
+                console.log(vault.user[_from].maximizerEarningsOffset);
+                
                 vault.user[_from].maximizerEarningsOffset -= (vault.user[_from].maximizerEarningsOffset * vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+                console.log("vault.totalMaximizerEarningsOffset");
+                console.log(vault.totalMaximizerEarningsOffset);
                 }
         }
 
