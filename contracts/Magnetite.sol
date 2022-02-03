@@ -83,8 +83,7 @@ contract Magnetite is Ownable, IMagnetite {
     }
 
     function pathAuth() internal virtual view returns (bool) {
-        // return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
-        return true;
+        return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
     }
 
     function _setPath(address router, IERC20[] memory _path, AutoPath _auto) internal { 
