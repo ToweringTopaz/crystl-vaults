@@ -8,7 +8,7 @@ abstract contract VaultHealerEarn is VaultHealerBase {
 
     event Earned(uint256 indexed vid, uint256 wantAmountEarned);
     
-    function earnSome(uint256[] calldata vids) external nonReentrant {
+    function earn(uint256[] calldata vids) external nonReentrant {
         uint bucketLength = (_vaultInfo.length >> 8) + 1; // use one uint256 per 256 vaults
         uint256[] memory selBuckets = new uint256[](bucketLength); //BitMap of selected vids
 
@@ -24,7 +24,7 @@ abstract contract VaultHealerEarn is VaultHealerBase {
             uint end = (i+1) << 8; // buckets end at multiples of 256
             for (uint j = i << 8; j < end; j++) {//0-255, 256-511, ...
                 if (earnMap & 1 > 0) { //smallest bit is "true"
-                    _tryEarn(j);
+                    _earn(j);
                 }
                 earnMap >>= 1; //shift away the used bit
 
@@ -33,34 +33,11 @@ abstract contract VaultHealerEarn is VaultHealerBase {
         }
     }
     function earn(uint256 vid) external whenNotPaused(vid) nonReentrant {
-        _doEarn(vid);
-    }
-
-    function _tryEarn(uint256 vid) private {
-        Vault.Info storage vault = _vaultInfo[vid];
-        uint32 lastEarnBlock = vault.lastEarnBlock;
-        uint32 interval = vault.minBlocksBetweenEarns;
-
-        uint lock = _lock;
-        _lock = vid; //permit reentrant calls by this vault only
-        if (block.number > lastEarnBlock + interval) {
-            try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
-                if (success) {
-                    lastEarnBlock = uint32(block.number);
-                    decrementMinBlocksBetweenEarns(vault, interval);  //Decrease number of blocks between earns by 1 if successful (settings.dust)
-                } else {
-                    increaseMinBlocksBetweenEarns(vault, interval); //Increase number of blocks between earns by 5% + 1 if unsuccessful (settings.dust)
-                }
-                updateWantLockedLast(vault, vid, wantLockedTotal);
-            } catch {
-                increaseMinBlocksBetweenEarns(vault, interval);
-            }
-        }
-        _lock = lock; //reset reentrancy state
+        _earn(vid);
     }
 
     //performs earn even if it's not been long enough
-    function _doEarn(uint256 vid) internal {
+    function _earn(uint256 vid) internal {
         Vault.Info storage vault = _vaultInfo[vid];
         uint32 lastEarnBlock = vault.lastEarnBlock;
         uint32 interval = vault.minBlocksBetweenEarns;

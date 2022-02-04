@@ -4,11 +4,12 @@ pragma solidity ^0.8.9;
 import "./QuartzUniV2Zap.sol";
 import "./VaultHealerGate.sol";
 import "./VaultHealerBoostedPools.sol";
-import "./VaultHealerFactory.sol";
 import "./Magnetite.sol";
 import "./VaultView.sol";
-import {VaultFeeManager} from "./VaultFeeManager.sol";
-contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools, VaultHealerFactory {
+
+contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools {
+    
+    bytes32 constant PATH_SETTER = keccak256("PATH_SETTER");
 
     IMagnetite internal magnetite;
     QuartzUniV2Zap immutable zap;

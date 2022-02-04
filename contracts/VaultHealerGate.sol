@@ -46,7 +46,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             IStrategy strategy = strat(_vid);
             uint256 wantLockedBefore = strategy.wantLockedTotal();
 
-            _doEarn(_vid); 
+            _earn(_vid); 
 
             if (vault.targetVid != 0 && wantLockedBefore > 0) { //
                 UpdatePoolAndRewarddebtOnDeposit(_vid, _to, _wantAmt);
@@ -60,6 +60,8 @@ abstract contract VaultHealerGate is VaultHealerEarn {
                 sharesAdded,
                 hex'' //leave this blank for now
             );
+            
+            pendingDeposits.pop();
         }
         emit Deposit(_from, _to, _vid, _wantAmt);
     }
@@ -85,7 +87,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
     function _withdraw(uint _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         Vault.Info storage vault = _vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
-        _doEarn(_vid);
+        _earn(_vid);
 
         IStrategy strategy = strat(_vid);
         if (vault.targetVid != 0 && strategy.wantLockedTotal() > 0) {
@@ -100,8 +102,6 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             _vid,
             sharesRemoved
         );
-        //updates transferData for this user, so that we are accurately tracking their earn
-        vault.user[_from].stats.withdrawals += uint128(wantAmt);
         
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
@@ -116,7 +116,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         //this call transfers wantTokens from the strat to the user
         vault.want.safeTransferFrom(address(strategy), _to, wantAmt);
 
-        emit Withdraw(_from, _to, _vid, _wantAmt); //todo shouldn't this emit wantAmt?
+        emit Withdraw(_from, _to, _vid, wantAmt); //todo shouldn't this emit wantAmt?
     }
 
     // Withdraw everything from vault for yourself
@@ -153,7 +153,8 @@ function _beforeTokenTransfer(
                 _vaultInfo[vid].user[to].stats.transfersIn += underlyingValue;
 
                 if (_vaultInfo[vid].targetVid != 0) {
-                    _doEarn(vid); //does it matter who calls the earn? -- this one credits msg.sender, the account responsible for paying the gas
+
+                    _earn(vid);
 
                     UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 

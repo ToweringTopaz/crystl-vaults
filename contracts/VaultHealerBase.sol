@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./libraries/Vault.sol";
-import "./interfaces/IStrategy.sol";
-import "./interfaces/IUniRouter.sol";
-import "./interfaces/IVaultHealer.sol";
-import "./interfaces/IVaultFeeManager.sol";
+import "./libs/Vault.sol";
+import "./libs/IStrategy.sol";
+import "./libs/IVaultHealer.sol";
+import "./libs/IVaultFeeManager.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
-abstract contract VaultHealerBase is IVaultHealerMain {
+abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155SupplyUpgradeable, IVaultHealerMain {
+    using SafeERC20 for IERC20;
+    using BitMaps for BitMaps.BitMap;
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
 
@@ -15,7 +17,11 @@ abstract contract VaultHealerBase is IVaultHealerMain {
     mapping(address => Vault.Info) internal _vaultInfo; // Info of each vault.
     bool public vaultsPausedByDefault; //Vaults are paused when first created?
 
-    uint256 internal _lock = type(uint256).max;
+    //vid for any of our strategies
+    mapping(IStrategy => uint32) private _strats;
+    uint256 internal _lock = type(uint32).max;
+
+    event AddVault(IStrategy indexed strat);
 
     event SetVaultFeeManager(IVaultFeeManager indexed _manager);
     event Paused(IStrategy indexed vid);
@@ -54,16 +60,27 @@ abstract contract VaultHealerBase is IVaultHealerMain {
      * @dev Add a new want to the vault. Can only be called by the owner.
      */
 
+    function createVault(address _implementation, bytes calldata data) external returns (uint vid) {
+        vid = _vaultInfo.length;
+        Vault.Info storage vault = _vaultInfo[vid];
 
-    function addVault(IStrategy _strat) internal virtual returns (uint vid) {
-        Vault.Info storage vault = _vaultInfo[_strat];
-        IERC20 _want = _strat.wantToken();
-        vault.want = _want;
-        require(_want.totalSupply() <= type(uint112).max);
-        vault.targetVid = _strat.targetVid();
+        require(vid < 2**32, "too many vaults"); //absurd number of vaults
+        IStrategy _strat = IStrategy(Clones.clone(_implementation));
+        assert(_strat == strat(vid));
+        
+        _strat.initialize(data);
+        
+        grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
+        
+        _vaultInfo.push();
+        
+        IERC20 want = _strat.wantToken();
+        vault.want = want;
 
-        vault.exists = true;
-        if (!vaultsPausedByDefault) vault.unpaused = true;
+        require(want.totalSupply() <= type(uint112).max, "incompatible total supply");
+        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
+        
+        _strats[_strat] = uint32(vid);
         emit AddVault(_strat);
     }
 
@@ -86,6 +103,19 @@ abstract contract VaultHealerBase is IVaultHealerMain {
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155Upgradeable) returns (bool) {
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155Upgradeable.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
+
+
+    function strat(uint _vid) public view returns (IStrategy) {
+        require(_vid > 0 && _vid < 2**32, "VH: invalid vid");
+        bytes memory data;
+        if (_vid < 0x80)           data = abi.encodePacked(bytes2(0xd694), address(this), uint8(_vid));
+        else if (_vid < 0x100)     data = abi.encodePacked(bytes2(0xd794), address(this), bytes1(0x81), uint8(_vid));
+        else if (_vid < 0x10000)   data = abi.encodePacked(bytes2(0xd894), address(this), bytes1(0x82), uint16(_vid));
+        else if (_vid < 0x1000000) data = abi.encodePacked(bytes2(0xd994), address(this), bytes1(0x83), uint24(_vid));
+        else                       data = abi.encodePacked(bytes2(0xda94), address(this), bytes1(0x84), uint32(_vid));
+        return IStrategy(address(uint160(uint256(keccak256(data)))));
+    }
+
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
