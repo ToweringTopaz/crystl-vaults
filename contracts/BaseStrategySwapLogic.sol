@@ -10,6 +10,8 @@ import {SafeERC20Upgradeable as SafeERC20} from "@openzeppelin/contracts-upgrade
 import {AddressUpgradeable as Address} from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 import "./libs/IVaultHealer.sol";
+import "hardhat/console.sol";
+
 
 //Contains the strategy's functions related to swapping, earning, etc.
 abstract contract BaseStrategySwapLogic is BaseStrategy {
@@ -95,11 +97,13 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
         for (uint i; i < 3; i++) {
             feeTotalRate += Fee.rate(fees[i]);
         }
-        
+        console.log("made it here");
         if (feeTotalRate > 0) {
             uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
+            console.log(feeEarnedAmt);
             earnedAmt -= feeEarnedAmt;
             uint nativeBefore = address(this).balance;
+            console.log(nativeBefore);
             IWETH weth = router.WETH();
             safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
             uint feeNativeAmt = address(this).balance - nativeBefore;
@@ -107,8 +111,14 @@ abstract contract BaseStrategySwapLogic is BaseStrategy {
             weth.withdraw(weth.balanceOf(address(this)));
             for (uint i; i < 3; i++) {
                 (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
+                console.log(receiver);
+                console.log(rate);
                 if (receiver == address(0) || rate == 0) break;
+                console.log(feeNativeAmt);
+                console.log(feeTotalRate);
+                console.log(feeNativeAmt * rate / feeTotalRate);
                 (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate, gas: 0x40000}("");
+                console.log(success);
                 require(success, "Strategy: Transfer failed");
             }
         }
