@@ -839,10 +839,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(user3CrystlBalanceAfterWithdraw).to.be.gt(user3CrystlBalanceBeforeWithdraw);
         })
 
-        it('Should transfer 1155 tokens from user 3 to user 1, updating shares and offset accurately', async () => {
+        it('Should transfer 1155 tokens from user 3 to user 1, updating shares accurately', async () => {
             const User3StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
             const User1StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
-            // User1RewardDebtBeforeTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
 
             vaultHealer.connect(user3).setApprovalForAll(user1.address, true);
 
