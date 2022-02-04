@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/VaultHealerBoostedPools.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> VaultHealerBoostedPools.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">31.82% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>14/44</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">5% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>1/20</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">42.86% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>3/7</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">32.56% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>14/43</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">28×</span>
+<span class="cline-any cline-yes">28×</span>
+<span class="cline-any cline-yes">28×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.4;
+&nbsp;
+import "./VaultHealerBase.sol";
+import {IBoostPool} from "./libs/Interfaces.sol";
+abstract contract VaultHealerBoostedPools is VaultHealerBase {
+    using BitMaps for BitMaps.BitMap;
+&nbsp;
+    bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
+    bytes32 public constant BOOST_ADMIN = keccak256("BOOST_ADMIN");
+&nbsp;
+    event AddBoost(address boost, uint vid, uint boostid);
+    event BoostEmergencyWithdraw(address user, uint _vid, uint _boostID);
+    
+    constructor(address _owner) {
+        _setupRole(BOOST_ADMIN, _owner);
+        _setRoleAdmin(BOOSTPOOL, BOOST_ADMIN);
+    }
+&nbsp;
+    function addBoost(address _boost) external {
+        grantRole(BOOSTPOOL, _boost); //requires msg.sender is BOOST_ADMIN
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(block.number &lt; IBoostPool(_boost).bonusEndBlock(), "boost pool already ended");
+&nbsp;
+        uint vid = IBoostPool(_boost).STAKE_TOKEN_VID();
+        Vault.Info storage vault = _vaultInfo[vid];
+        uint _boostID = vault.boosts.length;
+        IBoostPool(_boost).vaultHealerActivate(_boostID);
+        vault.boosts.push() = IBoostPool(_boost);
+        vault.activeBoosts.set(_boostID);
+        emit AddBoost(_boost, vid, _boostID);
+    }
+&nbsp;
+    //Users can enableBoost to opt-in to a boosted vault
+<span class="fstat-no" title="function not covered" >    function enableBoost(address _user, uint _vid, uint _boostID) public nonReentrant {</span>
+<span class="cstat-no" title="statement not covered" >        require(msg.sender == _user || isApprovedForAll(_user, msg.sender), "VH: must be approved to accept boost")</span>;
+<span class="cstat-no" title="statement not covered" >        Vault.Info storage vault = _vaultInfo[_vid];</span>
+<span class="cstat-no" title="statement not covered" >        Vault.User storage user = vault.user[_user];</span>
+<span class="cstat-no" title="statement not covered" >        require(vault.activeBoosts.get(_boostID), "not an active boost")</span>;
+<span class="cstat-no" title="statement not covered" >        require(!user.boosts.get(_boostID), "boost is already active for user")</span>;
+<span class="cstat-no" title="statement not covered" >        user.boosts.set(_boostID)</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        vault.boosts[_boostID].joinPool(_user, balanceOf(_user, _vid))</span>;
+    }
+&nbsp;
+    //Standard opt-in function users will call
+<span class="fstat-no" title="function not covered" >    function enableBoost(uint _vid, uint _boostID) external {</span>
+<span class="cstat-no" title="statement not covered" >        enableBoost(msg.sender, _vid, _boostID)</span>;
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function harvestBoost(uint _vid, uint _boostID) external nonReentrant {</span>
+<span class="cstat-no" title="statement not covered" >        _vaultInfo[_vid].boosts[_boostID].harvest(msg.sender)</span>;
+    }
+&nbsp;
+    //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
+<span class="fstat-no" title="function not covered" >    function emergencyBoostWithdraw(uint _vid, uint _boostID) external nonReentrant {</span>
+<span class="cstat-no" title="statement not covered" >        Vault.Info storage vault = _vaultInfo[_vid];</span>
+<span class="cstat-no" title="statement not covered" >        Vault.User storage user = vault.user[msg.sender];</span>
+<span class="cstat-no" title="statement not covered" >        IBoostPool boostPool = vault.boosts[_boostID];</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        require(user.boosts.get(_boostID), "boost is not active for user")</span>;
+<span class="cstat-no" title="statement not covered" >        try boostPool.emergencyWithdraw{gas: 500000}(msg.sender) returns (bool success) {</span>
+<span class="cstat-no" title="statement not covered" >            if (!success) <span class="cstat-no" title="statement not covered" >vault.activeBoosts.unset(_boostID)</span>;</span> //Disable boost if the pool is broken
+        } catch {
+<span class="cstat-no" title="statement not covered" >            vault.activeBoosts.unset(_boostID)</span>;
+        }
+<span class="cstat-no" title="statement not covered" >        user.boosts.unset(_boostID)</span>;
+<span class="cstat-no" title="statement not covered" >        emit BoostEmergencyWithdraw(msg.sender, _vid, _boostID);</span>
+    }
+&nbsp;
+    function _beforeTokenTransfer(
+        address /*operator*/,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory //data
+    ) internal virtual override {
+        //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        //If boosted pools are affected, update them
+&nbsp;
+        for (uint i; i &lt; ids.length; i++) {
+            Vault.Info storage vault = _vaultInfo[ids[i]];
+            for (uint k; k &lt; vault.boosts.length; k++) {
+<span class="cstat-no" title="statement not covered" >                bool fromBoosted = from != address(0) &amp;&amp; vault.user[from].boosts.get(k);</span>
+<span class="cstat-no" title="statement not covered" >                bool toBoosted = to != address(0) &amp;&amp; vault.user[to].boosts.get(k);</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                if (!fromBoosted &amp;&amp; !toBoosted) continue;</span>
+<span class="cstat-no" title="statement not covered" >                IBoostPool boostPool = vault.boosts[k];</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                uint status = boostPool.notifyOnTransfer(</span>
+                    fromBoosted ? from : address(0),
+                    toBoosted ? to : address(0),
+                    amounts[i]
+                );
+&nbsp;
+<span class="cstat-no" title="statement not covered" >                if (status &amp; 1 &gt; 0) { //pool finished for "from"</span>
+<span class="cstat-no" title="statement not covered" >                    vault.user[from].boosts.unset(k)</span>;
+                }
+<span class="cstat-no" title="statement not covered" >                if (status &amp; 2 &gt; 0) { //pool finished for "to"</span>
+<span class="cstat-no" title="statement not covered" >                    vault.user[to].boosts.unset(k)</span>;
+                }
+<span class="cstat-no" title="statement not covered" >                if (status &amp; 4 &gt; 0) { //close finished pool</span>
+<span class="cstat-no" title="statement not covered" >                    vault.activeBoosts.unset(k)</span>;
+                }
+            }
+        }
+    }
+&nbsp;
+&nbsp;
+}
+&nbsp;
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Feb 04 2022 13:38:08 GMT+0200 (South Africa Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

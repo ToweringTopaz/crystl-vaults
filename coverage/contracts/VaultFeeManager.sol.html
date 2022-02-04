@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/VaultFeeManager.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> VaultFeeManager.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">35.48% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>11/31</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">25% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>1/4</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">30% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>3/10</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">34.38% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>11/32</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line low'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">102×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.4;
+&nbsp;
+import "@openzeppelin/contracts/access/IAccessControl.sol";
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+import "./libs/IVaultFeeManager.sol";
+&nbsp;
+contract VaultFeeManager is IVaultFeeManager {
+    using BitMaps for BitMaps.BitMap;
+    using Fee for *;
+&nbsp;
+    bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
+    address constant public TX_ORIGIN = address(bytes20(keccak256("TX_ORIGIN"))); // if this address is used for earn fee, substitute tx.origin to pay the account providing the gas
+&nbsp;
+    IAccessControl immutable public vaultHealer;
+&nbsp;
+    mapping(uint256 =&gt; Fee.Data) withdrawFee;
+    mapping(uint256 =&gt; Fee.Data[3]) earnFees;
+&nbsp;
+    BitMaps.BitMap internal _overrideDefaultEarnFees; // strategy's fee config doesn't change with the vaulthealer's default
+    BitMaps.BitMap private _overrideDefaultWithdrawFee;
+    Fee.Data[3] public defaultEarnFees; // Settings which are generally applied to all strategies
+    Fee.Data public defaultWithdrawFee; //withdrawal fee is set separately from earn fees
+&nbsp;
+    event SetDefaultEarnFees(Fee.Data[3] _earnFees);
+    event SetDefaultWithdrawFee(Fee.Data _withdrawFee);
+    event SetEarnFees(uint vid, Fee.Data[3] _earnFees);
+    event SetWithdrawFee(uint vid, Fee.Data _withdrawFee);
+    event ResetEarnFees(uint vid);
+    event ResetWithdrawFee(uint vid);
+&nbsp;
+    constructor(address _vaultHealer, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
+        vaultHealer = IAccessControl(_vaultHealer);
+&nbsp;
+        defaultEarnFees.set(earnReceivers, earnRates);
+        defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
+        Fee.check(defaultEarnFees);
+        Fee.check(defaultWithdrawFee);
+        emit SetDefaultEarnFees(defaultEarnFees);
+        emit SetDefaultWithdrawFee(defaultWithdrawFee);
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    modifier auth {</span>
+<span class="cstat-no" title="statement not covered" >        require(vaultHealer.hasRole(FEE_SETTER, msg.sender), "!auth")</span>;
+        _;
+    }
+&nbsp;
+    function getEarnFees(uint _vid) external view returns (Fee.Data[3] memory _fees) {
+        _fees = _overrideDefaultEarnFees.get(_vid) ? earnFees[_vid] : defaultEarnFees;
+        for (uint i; i &lt; 3; i++) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (_fees[i].receiver() == TX_ORIGIN)
+<span class="cstat-no" title="statement not covered" >                _fees[i] = Fee.create(tx.origin, _fees[i].rate())</span>;
+        }
+    }
+&nbsp;
+    function getWithdrawFee(uint _vid) external view returns (address _receiver, uint16 _rate) {
+        return _overrideDefaultWithdrawFee.get(_vid) ? withdrawFee[_vid].receiverAndRate() : defaultWithdrawFee.receiverAndRate();
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >     function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) external auth {</span>
+<span class="cstat-no" title="statement not covered" >        defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate)</span>;
+<span class="cstat-no" title="statement not covered" >        Fee.check(defaultEarnFees)</span>;
+<span class="cstat-no" title="statement not covered" >        Fee.check(defaultWithdrawFee)</span>;
+<span class="cstat-no" title="statement not covered" >        emit SetDefaultEarnFees(defaultEarnFees);</span>
+<span class="cstat-no" title="statement not covered" >        emit SetDefaultWithdrawFee(defaultWithdrawFee);</span>
+    }   
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function setEarnFees(uint _vid, Fee.Data[3] calldata _earnFees) external auth {</span>
+<span class="cstat-no" title="statement not covered" >        _overrideDefaultEarnFees.set(_vid)</span>;
+<span class="cstat-no" title="statement not covered" >        earnFees[_vid] = _earnFees</span>;
+<span class="cstat-no" title="statement not covered" >        emit SetEarnFees(_vid, _earnFees);</span>
+    }
+<span class="fstat-no" title="function not covered" >    function resetEarnFees(uint _vid) external auth {</span>
+<span class="cstat-no" title="statement not covered" >        _overrideDefaultEarnFees.unset(_vid)</span>;
+<span class="cstat-no" title="statement not covered" >        emit ResetEarnFees(_vid);</span>
+    }
+    
+<span class="fstat-no" title="function not covered" >    function setDefaultEarnFees(Fee.Data[3] calldata _earnFees) external auth {</span>
+<span class="cstat-no" title="statement not covered" >        defaultEarnFees = _earnFees</span>;
+<span class="cstat-no" title="statement not covered" >        emit SetDefaultEarnFees(_earnFees);</span>
+    }   
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function setWithdrawFee(uint _vid, address withdrawReceiver, uint16 withdrawRate) external auth {</span>
+<span class="cstat-no" title="statement not covered" >        _overrideDefaultWithdrawFee.set(_vid)</span>;
+<span class="cstat-no" title="statement not covered" >        Fee.Data _withdrawFee = Fee.create(withdrawReceiver, withdrawRate);</span>
+<span class="cstat-no" title="statement not covered" >        withdrawFee[_vid] = Fee.create(withdrawReceiver, withdrawRate)</span>;
+<span class="cstat-no" title="statement not covered" >        emit SetWithdrawFee(_vid, _withdrawFee);</span>
+    }
+&nbsp;
+<span class="fstat-no" title="function not covered" >    function resetWithdrawFee(uint _vid) external auth {</span>
+<span class="cstat-no" title="statement not covered" >        _overrideDefaultEarnFees.unset(_vid)</span>;   
+<span class="cstat-no" title="statement not covered" >         emit ResetWithdrawFee(_vid);</span>
+    }
+&nbsp;
+&nbsp;
+}</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Feb 04 2022 13:38:08 GMT+0200 (South Africa Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

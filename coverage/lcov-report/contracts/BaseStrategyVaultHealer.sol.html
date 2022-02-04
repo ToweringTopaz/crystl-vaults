@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/BaseStrategyVaultHealer.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> BaseStrategyVaultHealer.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">93.33% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>28/30</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">68.75% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>11/16</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>2/2</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">96.43% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>27/28</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.4;
+&nbsp;
+import {IStrategy, IVaultHealer} from "./libs/Interfaces.sol";
+import "./BaseStrategySwapLogic.sol";
+import {MathUpgradeable as Math} from "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+&nbsp;
+//Deposit and withdraw for a secure VaultHealer-based system. VaultHealer is responsible for tracking user shares.
+abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
+&nbsp;
+    //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 sharesAdded) {
+        // _earn(_from); //earn before deposit prevents abuse
+        uint wantBal = _wantBalance();
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); 
+        uint dust = settings.dust;
+&nbsp;
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (_wantAmt &lt; dust) <span class="cstat-no" title="statement not covered" >return 0;</span> //do nothing if nothing is requested
+&nbsp;
+        //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
+        //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
+        //a rogue strategy 
+        IVaultHealer(msg.sender).executePendingDeposit(address(this), uint112(_wantAmt));
+        _farm(); //deposits the tokens in the pool
+        // Proper deposit amount for tokens with fees, or vaults with deposit fees
+        sharesAdded = wantLockedTotal() - wantLockedBefore;
+        if (_sharesTotal &gt; 0) { 
+            sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
+        }
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(sharesAdded &gt; dust, "deposit: no/dust shares added");
+    }
+&nbsp;
+    //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
+    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external returns (uint sharesRemoved, uint wantAmt) {
+        //User's balance, in want tokens
+        uint wantBal = _wantBalance(); 
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); 
+        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
+        
+        // user requested all, very nearly all, or more than their balance, so withdraw all
+        uint dust = settings.dust;
+        if (_wantAmt + dust &gt; userWant) {
+            _wantAmt = userWant;
+        }
+        
+        // Check if strategy has tokens from panic
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (_wantAmt &gt; wantBal) {
+            _vaultWithdraw(_wantAmt - wantBal);
+            
+            wantBal = _wantBalance();
+        }
+&nbsp;
+        //Account for reflect, pool withdraw fee, etc; charge these to user
+        uint wantLockedAfter = wantLockedTotal();
+        uint withdrawSlippage = wantLockedAfter &lt; wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
+&nbsp;
+        //Calculate shares to remove
+        sharesRemoved = Math.ceilDiv(
+            (_wantAmt + withdrawSlippage) * _sharesTotal,
+            wantLockedBefore
+        );
+&nbsp;
+        //Get final withdrawal amount
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (sharesRemoved &gt; _userShares) {
+<span class="cstat-no" title="statement not covered" >            sharesRemoved = _userShares</span>;
+        }
+&nbsp;
+        _wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
+        if (_wantAmt &gt; wantBal) _wantAmt = wantBal;
+&nbsp;
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(_wantAmt &gt; 0, "nothing to withdraw after slippage");
+        
+        return (sharesRemoved, _wantAmt);
+    }
+&nbsp;
+}</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Feb 04 2022 13:38:08 GMT+0200 (South Africa Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>
