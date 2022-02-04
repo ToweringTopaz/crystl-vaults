@@ -66,12 +66,12 @@ contract Strategy is BaseStrategy {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
 
-        if (_wantAmt < dust) return 0; //do nothing if nothing is requested
+        if (_wantAmt < dust) return (0, 0); //do nothing if nothing is requested
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
@@ -79,7 +79,8 @@ contract Strategy is BaseStrategy {
         IVaultHealer(msg.sender).executePendingDeposit(address(this), uint112(_wantAmt));
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
-        sharesAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
+        wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
+        sharesAdded = wantAdded;
         if (_sharesTotal > 0) { 
             sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
         }

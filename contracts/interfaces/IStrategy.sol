@@ -18,7 +18,7 @@ interface IStrategy {
     //function targetVid() external view returns (uint256);
     //function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external;
     function earn(Fee.Data[3] memory fees) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256);
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 wantAdded, uint256 sharesAdded);
     function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
     function panic() external;
     function unpanic() external;

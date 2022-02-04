@@ -2,10 +2,9 @@
 pragma solidity ^0.8.9;
 
 import "./QuartzUniV2Zap.sol";
-import "./VaultHealerGate.sol";
 import "./VaultHealerBoostedPools.sol";
 
-contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools {
+contract VaultHealer is VaultHealerBoostedPools {
 
     QuartzUniV2Zap immutable public zap;
 
@@ -21,18 +20,6 @@ contract VaultHealer is VaultHealerGate, VaultHealerBoostedPools {
    function isApprovedForAll(address account, address operator) public view override returns (bool) {
         return super.isApprovedForAll(account, operator) || operator == address(zap);
    }
-
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override(ERC1155Supply, VaultHealerBoostedPools) {
-        ERC1155Supply._beforeTokenTransfer(operator, from, to, ids, amounts, data);     
-        VaultHealerBoostedPools._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-    }
 
     function owner() external view returns (address) {
         return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
