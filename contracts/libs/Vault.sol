@@ -16,8 +16,7 @@ library Vault {
         IBoostPool[] boosts;
         BitMaps.BitMap activeBoosts;
         mapping (address => User) user;
-        uint256 accRewardTokensPerShare;
-        uint256 balanceCrystlCompounderLastUpdate;
+        uint256 totalMaximizerEarningsOffset;
         uint32 targetVid; //maximizer target, which accumulates tokens
 
         uint112 wantLockedLastUpdate;
@@ -30,7 +29,7 @@ library Vault {
 
     struct User {
         BitMaps.BitMap boosts;
-        uint256 rewardDebt;
+        uint256 maximizerEarningsOffset;
         TransferData stats;
     }
 
