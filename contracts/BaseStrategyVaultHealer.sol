@@ -11,8 +11,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external returns (uint256 sharesAdded) {
         // _earn(_from); //earn before deposit prevents abuse
-        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
-        uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
+        uint wantBal = _wantBalance();
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); 
         uint dust = settings.dust;
 
         if (_wantAmt < dust) return 0; //do nothing if nothing is requested
@@ -33,8 +33,8 @@ abstract contract BaseStrategyVaultHealer is BaseStrategySwapLogic {
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external returns (uint sharesRemoved, uint wantAmt) {
         //User's balance, in want tokens
-        uint wantBal = _wantBalance(); ///todo: why would there be want sitting in the strat contract?
-        uint wantLockedBefore = wantBal + vaultSharesTotal(); //todo: why is this different to deposit function????????????
+        uint wantBal = _wantBalance(); 
+        uint wantLockedBefore = wantBal + vaultSharesTotal(); 
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
         
         // user requested all, very nearly all, or more than their balance, so withdraw all

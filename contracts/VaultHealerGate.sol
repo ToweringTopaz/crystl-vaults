@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "./VaultHealerEarn.sol";
-import "hardhat/console.sol";
 
 //Handles "gate" functions like deposit/withdraw
 abstract contract VaultHealerGate is VaultHealerEarn {
@@ -39,35 +38,16 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             IStrategy vaultStrat = strat(_vid);
 
             uint256 wantLockedBefore = vaultStrat.wantLockedTotal();
-            console.log("deposit - wantLockedBefore");
-            console.log(wantLockedBefore);
-            console.log("deposit - vault.targetVid");
-            console.log(vault.targetVid);
+
+            // we call an earn on the vault before we action the _deposit
             _doEarn(_vid); 
 
-            uint256 totalVidSharesBeforeDeposit = totalSupply(_vid);
-
-            uint256 vidSharesAdded = vaultStrat.deposit(_wantAmt, totalVidSharesBeforeDeposit);
-
-            if (vault.targetVid != 0 && wantLockedBefore > 0) { // if this is a maximizer vault, do these extra steps
-                IStrategy targetStrat = strat(vault.targetVid);
-
-                uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), vault.targetVid) + vault.totalMaximizerEarningsOffset; //have to add in the offset here for the strategy
-                console.log("targetVidSharesOwnedByMaxiBefore");
-                console.log(targetVidSharesOwnedByMaxiBefore);
-
-                uint256 targetVidTokenOffset = vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalVidSharesBeforeDeposit; //this will need to move below the deposit step - implications?
-                console.log("targetVidTokenOffset");
-                console.log(targetVidTokenOffset);
-
-                // update the offsets for user and for vid
-                vault.user[_from].maximizerEarningsOffset += targetVidTokenOffset; //todo where to save this?
-                console.log("vault.user[_from].maximizerEarningsOffset");
-                console.log(vault.user[_from].maximizerEarningsOffset);
-
-                vault.totalMaximizerEarningsOffset += targetVidTokenOffset; //todo where to save this?
-                console.log("vault.totalMaximizerEarningsOffset");
-                console.log(vault.totalMaximizerEarningsOffset);
+            // we make the deposit
+            uint256 vidSharesAdded = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
+            
+            // if this is a maximizer vault, do these extra steps
+            if (vault.targetVid != 0 && wantLockedBefore > 0) { 
+                UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
             }
 
             //we mint tokens for the user via the 1155 contract
@@ -109,44 +89,11 @@ abstract contract VaultHealerGate is VaultHealerEarn {
         _doEarn(_vid);
 
         IStrategy vaultStrat = strat(_vid);
-        // uint256 totalVidSharesBeforeWithdrawal = totalSupply(_vid);
-        // uint256 totalUserSharesBeforeWithdrawal = balanceOf(_from, _vid);
-        
+
         (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
 
         if (vault.targetVid != 0 && vaultStrat.wantLockedTotal() > 0) {
-            IStrategy targetStrat = strat(vault.targetVid);
-            Vault.Info storage target = _vaultInfo[vault.targetVid];
-
-            // uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(_from, vault.targetVid) + vault.totalMaximizerEarningsOffset; //have to add in the offset here for the vaultStrat
-            console.log(vidSharesRemoved);
-            console.log(totalSupply(_vid));
-            console.log(balanceOf(address(vaultStrat), vault.targetVid));
-            console.log(vault.totalMaximizerEarningsOffset);
-            console.log(vault.user[_from].maximizerEarningsOffset);
-
-            // calculate total crystl amount this user owns todo make this more generally applicable - not just for withdrawAll!
-            uint256 crystlShare = vidSharesRemoved
-                * (balanceOf(address(vaultStrat), vault.targetVid) + vault.totalMaximizerEarningsOffset) 
-                / totalSupply(_vid) 
-                - vault.user[_from].maximizerEarningsOffset * vidSharesRemoved / balanceOf(_from, _vid);
-            
-            console.log(crystlShare);
-            // withdraw proportional amount of crystl from targetVault()
-            if (crystlShare > 0) {
-                // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-                vaultStrat.withdrawMaximizerReward(vault.targetVid, crystlShare);
-                target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
-                            
-                // update the offsets for user and for vid
-                vault.totalMaximizerEarningsOffset -= (vault.user[_from].maximizerEarningsOffset * vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
-                console.log("vault.user[_from].maximizerEarningsOffset");
-                console.log(vault.user[_from].maximizerEarningsOffset);
-                
-                vault.user[_from].maximizerEarningsOffset -= (vault.user[_from].maximizerEarningsOffset * vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
-                console.log("vault.totalMaximizerEarningsOffset");
-                console.log(vault.totalMaximizerEarningsOffset);
-                }
+            withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
         }
 
         //burn the tokens equal to vidSharesRemoved todo should this be here, or higher up?
@@ -207,58 +154,53 @@ function _beforeTokenTransfer(
 
                 if (_vaultInfo[vid].targetVid != 0) {
                     _doEarn(vid);
-                    // todo - update here as well!
-                    // UpdatePoolAndWithdrawCrystlOnWithdrawal(vid, from, underlyingValue);
 
-                    // UpdatePoolAndRewarddebtOnDeposit(vid, to, underlyingValue);
+                    withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
+
+                    UpdateOffsetsOnDeposit(vid, to, underlyingValue); //todo should this be from or to?????
                 }
 
             }
         }
     }
+        
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    // function UpdatePoolAndRewarddebtOnDeposit (uint256 _vid, address _from, uint256 _wantAmt) internal {
-    //     Vault.Info storage vault = _vaultInfo[_vid];
-    //     uint targetVid = vault.targetVid;
-    //     IStrategy targetStrat = strat(targetVid);
-    //     uint targetWantLocked = targetStrat.wantLockedTotal();
-        
-    //     // increase accRewardTokensPerShare by: the increase in balance of target vault since last deposit or withdrawal / total shares
-    //     vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / strat(_vid).wantLockedTotal()); 
-            
-    //     // increase the depositing user's rewardDebt
-    //     vault.user[_from].rewardDebt += _wantAmt * vault.accRewardTokensPerShare / 1e30;
+    function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
+        Vault.Info storage vault = _vaultInfo[_vid];
+        IStrategy vaultStrat = strat(_vid);
 
-    //     // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
-    //     vault.balanceCrystlCompounderLastUpdate = uint256(targetWantLocked); 
-    //     }
-    
+        //calculate the offset for this particular deposit
+        uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), vault.targetVid) + vault.totalMaximizerEarningsOffset;
+        uint256 targetVidTokenOffset = _vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply(_vid); 
+
+        // increment the offsets for user and for vid
+        vault.user[_from].maximizerEarningsOffset += targetVidTokenOffset;
+        vault.totalMaximizerEarningsOffset += targetVidTokenOffset; 
+    }
+
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    // function UpdatePoolAndWithdrawCrystlOnWithdrawal(uint256 _vid, address _from, uint256 _wantAmt) internal {
-    //     Vault.Info storage vault = _vaultInfo[_vid];
-    //     uint targetVid = vault.targetVid;
-    //     IStrategy vaultStrat = strat(_vid);
-    //     Vault.Info storage target = _vaultInfo[vault.targetVid];
-    //     IStrategy targetStrat = strat(targetVid);
-    //     uint targetWantLocked = targetStrat.wantLockedTotal();
-    //     if (_wantAmt > balanceOf(_from, _vid)) _wantAmt = balanceOf(_from, _vid);
-        
-    //     // increase accRewardTokensPerShare by: the increase in balance of target vault since last deposit or withdrawal / total shares
-    //     vault.accRewardTokensPerShare += uint256((targetWantLocked - vault.balanceCrystlCompounderLastUpdate) * 1e30 / vaultStrat.wantLockedTotal());
-        
-    //     // calculate total crystl amount this user owns
-    //     uint256 crystlShare = _wantAmt * vault.accRewardTokensPerShare / 1e30 - vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
+    function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
+        Vault.Info storage vault = _vaultInfo[_vid];
+        Vault.Info storage target = _vaultInfo[vault.targetVid];
+        IStrategy vaultStrat = strat(_vid);
+        IStrategy targetStrat = strat(vault.targetVid);
 
-    //     // withdraw proportional amount of crystl from targetVault()
-    //     if (crystlShare > 0) {
-    //         // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-    //         vaultStrat.withdrawMaximizerReward(vault.targetVid, crystlShare);
-    //         target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
-            
-    //         // decrease the depositing user's rewardDebt
-    //         vault.user[_from].rewardDebt -= vault.user[_from].rewardDebt * _wantAmt / balanceOf(_from, _vid); 
-    //         }
-    //     // reset balanceCrystlCompounderLastUpdate to whatever balance the target vault has now
-    //     vault.balanceCrystlCompounderLastUpdate = uint256(targetStrat.wantLockedTotal());
-    // }
+        // calculate the amount of targetVid token to be withdrawn
+        uint256 targetVidAmount = _vidSharesRemoved
+            * (targetStrat.wantLockedTotal() + vault.totalMaximizerEarningsOffset)
+            / totalSupply(_vid) 
+            - vault.user[_from].maximizerEarningsOffset * _vidSharesRemoved / balanceOf(_from, _vid);
+        
+        // withdraw proportional amount of target vault token from targetVault()
+        if (targetVidAmount > 0) {
+            // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
+            vaultStrat.withdrawMaximizerReward(vault.targetVid, targetVidAmount);
+            target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
+                        
+            // update the offsets for user and for vid
+            vault.totalMaximizerEarningsOffset -= (vault.user[_from].maximizerEarningsOffset * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+            vault.user[_from].maximizerEarningsOffset -= (vault.user[_from].maximizerEarningsOffset * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+            }
+        }
+
 }

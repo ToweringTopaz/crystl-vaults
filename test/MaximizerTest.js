@@ -809,7 +809,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(user1CrystlBalanceBeforeWithdraw);
             console.log(`User 3 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal.div(2))} LP tokens from the maximizer vault`)
 
-            await vaultHealer.connect(user3)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
+            await vaultHealer.connect(user3)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2));  
             
             const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(user3.address);
             // console.log(ethers.utils.formatEther(LPtokenBalanceAfterFirstWithdrawal));
@@ -839,10 +839,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(user3CrystlBalanceAfterWithdraw).to.be.gt(user3CrystlBalanceBeforeWithdraw);
         })
 
-        it('Should transfer 1155 tokens from user 3 to user 1, updating shares and rewardDebt accurately', async () => {
+        it('Should transfer 1155 tokens from user 3 to user 1, updating shares and offset accurately', async () => {
             const User3StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user3.address);
             const User1StakedTokensBeforeTransfer = await vaultHealerView.stakedWantTokens(maximizer_strat_pid, user1.address);
-            User1RewardDebtBeforeTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
+            // User1RewardDebtBeforeTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
 
             vaultHealer.connect(user3).setApprovalForAll(user1.address, true);
 
@@ -859,11 +859,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(User3StakedTokensBeforeTransfer.sub(User3StakedTokensAfterTransfer)).to.eq(User1StakedTokensAfterTransfer.sub(User1StakedTokensBeforeTransfer))
         })
 
-        it('Should increase rewardDebt when you receive transferred tokens', async () => {
-            const User1RewardDebtAfterTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
+        // // it('Should increase rewardDebt when you receive transferred tokens', async () => {
+        // //     // const User1RewardDebtAfterTransfer = await vaultHealerView.rewardDebt(maximizer_strat_pid, user1.address);
 
-            expect(User1RewardDebtAfterTransfer).to.be.gt(User1RewardDebtBeforeTransfer);
-        })
+        // //     expect(User1RewardDebtAfterTransfer).to.be.gt(User1RewardDebtBeforeTransfer);
+        // // })
 
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return CRYSTL harvest to user when they withdraw (above test)', async () => {
