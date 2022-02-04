@@ -19,13 +19,9 @@ library Vault {
         IBoostPool[] boosts;
         BitMaps.BitMap activeBoosts;
         mapping (address => User) user;
-
-        uint256 accRewardTokensPerShare;
-        uint256 balanceCrystlCompounderLastUpdate;
         
     }
     struct User {
         BitMaps.BitMap boosts;
-        uint256 rewardDebt;
     }
 }
