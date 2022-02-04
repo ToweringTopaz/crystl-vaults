@@ -129,7 +129,7 @@ abstract contract VaultHealerGate is VaultHealerEarn {
             uint256 crystlShare = vidSharesRemoved
                 * (balanceOf(address(vaultStrat), vault.targetVid) + vault.totalMaximizerEarningsOffset) 
                 / totalSupply(_vid) 
-                - vault.user[_from].maximizerEarningsOffset;
+                - vault.user[_from].maximizerEarningsOffset * vidSharesRemoved / balanceOf(_from, _vid);
             
             console.log(crystlShare);
             // withdraw proportional amount of crystl from targetVault()
