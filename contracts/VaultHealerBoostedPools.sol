@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "./VaultHealerBase.sol";
-import {IBoostPool} from "./libs/Interfaces.sol";
-abstract contract VaultHealerBoostedPools is VaultHealerBase {
+import "./VaultHealerGate.sol";
+import "./interfaces/IBoostPool.sol";
+
+abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
 
     bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
@@ -24,7 +25,8 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
         uint vid = IBoostPool(_boost).STAKE_TOKEN_VID();
         Vault.Info storage vault = _vaultInfo[vid];
         uint _boostID = vault.boosts.length;
-        IBoostPool(_boost).vaultHealerActivate(_boostID);
+        require(_boostID < 2**32);
+        IBoostPool(_boost).vaultHealerActivate(uint32(_boostID));
         vault.boosts.push() = IBoostPool(_boost);
         vault.activeBoosts.set(_boostID);
         emit AddBoost(_boost, vid, _boostID);
@@ -68,14 +70,14 @@ abstract contract VaultHealerBoostedPools is VaultHealerBase {
     }
 
     function _beforeTokenTransfer(
-        address /*operator*/,
+        address operator,
         address from,
         address to,
         uint256[] memory ids,
         uint256[] memory amounts,
-        bytes memory //data
+        bytes memory data
     ) internal virtual override {
-        //super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
 
         for (uint i; i < ids.length; i++) {
