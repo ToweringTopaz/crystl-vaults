@@ -23,12 +23,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function earn(uint256[] calldata vids) external nonReentrant {
-        uint prevVid;
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
             if (!paused(vid)) _earn(vid);
         }
     }
+
 
     function _earn(uint256 vid) internal {
         Vault.Info storage vault = vaultInfo[vid];
@@ -78,7 +78,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // if this is a maximizer vault, do these extra steps
         if (_vid >> 32 > 0) {
             UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
-        }
 
         //we mint tokens for the user via the 1155 contract
         _mint(

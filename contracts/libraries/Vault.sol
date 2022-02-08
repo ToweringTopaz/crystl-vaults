@@ -24,6 +24,5 @@ library Vault {
         BitMaps.BitMap boosts;
         BitMaps.BitMap maximizers;
         uint112 maximizerEarningsOffset;
-
     }
 }

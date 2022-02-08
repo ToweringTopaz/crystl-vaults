@@ -8,8 +8,9 @@ contract VaultHealer is VaultHealerBoostedPools {
 
     QuartzUniV2Zap immutable public zap;
 
-    constructor(address _owner, address _feeManager, address _zap)
-        VaultHealerBase(_owner)
+    constructor(string _uri, address _owner, address _feeManager, address _zap)
+        ERC1155(_uri)
+		VaultHealerBase(_owner)
         VaultHealerBoostedPools(_owner)
     {
         magnetite = new Magnetite();
@@ -18,7 +19,6 @@ contract VaultHealer is VaultHealerBoostedPools {
         vaultFeeManager = new VaultFeeManager(address(this), withdrawReceiver, withdrawRate, earnReceivers, earnRates);
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(PATH_SETTER, _owner);
-
     }
     function isApprovedForAll(address account, address operator) public view override returns (bool) {
             return super.isApprovedForAll(account, operator) || operator == address(zap);
@@ -27,6 +27,10 @@ contract VaultHealer is VaultHealerBoostedPools {
     /* todo: remove this after updating tests
     function owner() external view returns (address) {
         return getRoleMember(DEFAULT_ADMIN_ROLE, 0);
+
+   function isApprovedForAll(address account, address operator) public view override returns (bool) {
+        return super.isApprovedForAll(account, operator) || operator == address(zap);
+   }
     }
     */
 

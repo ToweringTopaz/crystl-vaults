@@ -55,6 +55,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         require(vid == IBoostPool(_boost).STAKE_TOKEN_VID(), "VH: boost pool vid mismatch");
 
         activeBoosts[vid].set(_boostID);
+
         emit AddBoost(_boost, vid, _boostID);
     }
 

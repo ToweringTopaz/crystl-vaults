@@ -24,9 +24,11 @@ interface IStrategy {
     function unpanic() external;
         // Univ2 router used by this strategy
     function router() external view returns (IUniRouter);
-        function isMaximizer() external view returns (bool);
+
+    function isMaximizer() external view returns (bool);
     function targetVault() external view returns (IStrategy);
     function maximizerRewardToken() external view returns (IERC20);
     function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external;
     function getMaximizerImplementation() external view returns (IStrategy);
+
 }

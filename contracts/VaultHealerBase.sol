@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
 abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155Supply, IVaultHealerMain {
+
     using BitMaps for BitMaps.BitMap;
 
     uint constant MAX_MAXIMIZERS = 1024;
@@ -21,6 +22,7 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
     IVaultFeeManager public vaultFeeManager;
+
     mapping(uint => Vault.Info) public vaultInfo; // Info of each vault.
     mapping(address => mapping(uint => Vault.User)) internal vaultUser;
     uint32 public nextVid = 1; //first unused vid (vid 0 means null/invalid)
@@ -50,18 +52,20 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
     /**
      * @dev Add a new want to the vault. Can only be called by the owner.
      */
-    function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
-        vid = nextVid;
-        nextVid = vid + 1;
-        Vault.Info storage vault = vaultInfo[vid];
 
-        IStrategy _strat = IStrategy(clone(_implementation, STRATEGY ^ bytes32(uint256(vid))));
+    function createVault(address _implementation, bytes calldata data) external returns (uint vid) {
+        vid = _vaultInfo.length;
+        Vault.Info storage vault = _vaultInfo[vid];
+
+        require(vid < type(uint32).max, "too many vaults"); //absurd number of vaults
+        IStrategy _strat = IStrategy(Clones.clone(_implementation));
         assert(_strat == strat(vid));
         
         _strat.initialize(data);
         
         grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
         
+
         IERC20 want = _strat.wantToken();
         vault.want = want;
 
@@ -88,6 +92,8 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
         
         IERC20 want = _strat.wantToken();
         vaultInfo[vid].want = want;
+
+        emit AddVault(vid);
     }
 
     modifier nonReentrant() {
@@ -101,6 +107,7 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
         uint lock = _lock; //saves initial lock state
 
         require(lock == type(uint).max || strat(lock) == IStrategy(msg.sender), "reentrancy/!strat"); //must either not be entered, or caller is the active strategy
+		
         _lock = vid; //this vid's strategy may reenter
         _;
         _lock = lock; //restore initial state
@@ -140,9 +147,11 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
         pauseMap.set(vid);
         emit Unpaused(vid);
     }
-    function panic(uint vid) external {
-        require (vaultInfo[vid].panicLockExpiry << 8 < block.timestamp, "panic once per 6 hours");
-        vaultInfo[vid].panicLockExpiry = uint32((block.timestamp + PANIC_LOCK_DURATION) >> 8);
+    
+
+	function panic(uint vid) external {
+        require (vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");
+        vaultInfo[vid].panicLockExpiry = block.timestamp + PANIC_LOCK_DURATION;
         pause(vid);
         strat(vid).panic();
     }

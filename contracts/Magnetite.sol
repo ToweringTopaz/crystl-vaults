@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
-import "./libs/IUniPair.sol";
-import "./libs/IUniRouter.sol";
-import "./libs/IUniFactory.sol";
-import "./libs/IMagnetite.sol";
+import "./interfaces/IUniPair.sol";
+import "./interfaces/IUniRouter.sol";
+import "./interfaces/IUniFactory.sol";
+import "./interfaces/IMagnetite.sol";
+import "./interfaces/IVaultHealer.sol";
 
 //Automatically generates and stores paths
 contract Magnetite is Ownable, IMagnetite {
