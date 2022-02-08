@@ -121,9 +121,12 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
     }
 
     function _requireValidVid(uint vid) internal view {
-        if (vid == 0) revert("VH: null vid");
-        if (vid < nextVid) return;
-        if (vid >> 32 == 0 || vid & 0xffffffff < vaultInfo[vid >> 32].numMaximizers) revert("VH: nonexistent vid");
+        if (vid == 0 || 
+            ((vid >= nextVid) && 
+                (vid >> 32 == 0 || 
+                vid & 0xffffffff < vaultInfo[vid >> 32].numMaximizers)
+            )
+        ) revert("VH: nonexistent vid");
     }
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
