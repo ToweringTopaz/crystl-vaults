@@ -39,4 +39,7 @@ interface IStrategy {
         // Univ2 router used by this strategy
     //function settings() external view returns (Vault.Settings memory);
     function router() external view returns (IUniRouter);
+    
+    function getMaximizerImplementation() external view returns (IStrategy);
+    function deployMaximizer() external returns (IStrategy);
 }

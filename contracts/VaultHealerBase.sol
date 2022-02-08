@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
+import "./Cavendish.sol";
 import "./libraries/Vault.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
@@ -9,7 +10,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
-abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVaultHealerMain {
+abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155Supply, IVaultHealerMain {
     using BitMaps for BitMaps.BitMap;
 
     uint constant MAX_MAXIMIZERS = 1024;
@@ -21,15 +22,12 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 
     IVaultFeeManager public vaultFeeManager;
     mapping(uint => Vault.Info) public vaultInfo; // Info of each vault.
-    mapping(address => mapping(uint => Vault.User)) public vaultUser;
-    uint32 public vaultLength;
+    mapping(address => mapping(uint => Vault.User)) internal vaultUser;
+    uint32 public nextVid = 1; //first unused vid (vid 0 means null/invalid)
 
     BitMaps.BitMap pauseMap; //true for unpaused vaults;
 
-    //vid for any of our strategies
-    mapping(IStrategy => uint) private _strats;
-    uint32 internal _lock = type(uint32).max;
-
+    uint internal _lock = type(uint).max;
 
     event AddVault(uint indexed vid);
 
@@ -43,9 +41,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         _setRoleAdmin(STRATEGY, VAULT_ADDER);
         _setupRole(PAUSER, _owner);
         _setupRole(FEE_SETTER, _owner);
-        vaultLength = 1; //vaultInfo[0] is the null vault, so uninitialized vid variables (vid 0) can be assumed as invalid
     }
-
 
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vaultFeeManager = _manager;
@@ -54,19 +50,17 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
     /**
      * @dev Add a new want to the vault. Can only be called by the owner.
      */
-
-    function createVault(address _implementation, bytes calldata data) external returns (uint vid) {
-        vid = vaultLength;
+    function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
+        vid = nextVid;
+        nextVid = vid + 1;
         Vault.Info storage vault = vaultInfo[vid];
 
-        require(vid < type(uint32).max, "VH: too many vaults"); //absurd number of vaults
-        IStrategy _strat = IStrategy(Clones.cloneDeterministic(_implementation, bytes32(vid)));
+        IStrategy _strat = IStrategy(clone(_implementation, STRATEGY ^ bytes32(uint256(vid))));
         assert(_strat == strat(vid));
         
         _strat.initialize(data);
         
         grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
-        vaultLength++;
         
         IERC20 want = _strat.wantToken();
         vault.want = want;
@@ -74,19 +68,17 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         require(want.totalSupply() <= type(uint112).max, "incompatible total supply");
         pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
         
-        _strats[_strat] = uint32(vid);
         emit AddVault(vid);
     }
 
-    function createMaximizer(uint targetVid, bytes calldata data) external returns (uint vid) {
-        require(targetVid < vaultLength && targetVid > 0, "VH: invalid target vid");
+    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) returns (uint vid) {
         Vault.Info storage targetVault = vaultInfo[vid];
         require(targetVault.numMaximizers <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
         vid = (targetVid << 32) + targetVault.numMaximizers;
 
         IStrategy targetStrat = strat(vid);
 
-        IStrategy _strat = IStrategy(Clones.cloneDeterministic(targetStrat.getMaximizerImplementation(), bytes32(vid)));
+        IStrategy _strat = IStrategy(clone(address(targetStrat.getMaximizerImplementation()), STRATEGY ^ bytes32(vid)));
         assert(_strat == strat(vid));
         
         _strat.initialize(data);
@@ -96,7 +88,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         
         IERC20 want = _strat.wantToken();
         vaultInfo[vid].want = want;
-        
     }
 
     modifier nonReentrant() {
@@ -121,16 +112,19 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 
 
     function strat(uint _vid) public view returns (IStrategy) {
-        require(_vid > 0 && _vid < 2**32, "VH: invalid vid");
-        bytes memory data;
-        if (_vid < 0x80)           data = abi.encodePacked(bytes2(0xd694), address(this), uint8(_vid));
-        else if (_vid < 0x100)     data = abi.encodePacked(bytes2(0xd794), address(this), bytes1(0x81), uint8(_vid));
-        else if (_vid < 0x10000)   data = abi.encodePacked(bytes2(0xd894), address(this), bytes1(0x82), uint16(_vid));
-        else if (_vid < 0x1000000) data = abi.encodePacked(bytes2(0xd994), address(this), bytes1(0x83), uint24(_vid));
-        else                       data = abi.encodePacked(bytes2(0xda94), address(this), bytes1(0x84), uint32(_vid));
-        return IStrategy(address(uint160(uint256(keccak256(data)))));
+        return IStrategy(computeProxyAddress(bytes32(_vid) ^ STRATEGY));
     }
 
+    modifier requireValidVid(uint vid) {
+        _requireValidVid(vid);
+        _;
+    }
+
+    function _requireValidVid(uint vid) internal view {
+        if (vid == 0) revert("VH: null vid");
+        if (vid < nextVid) return;
+        if (vid >> 32 == 0 || vid & 0xffffffff < vaultInfo[vid >> 32].numMaximizers) revert("VH: nonexistent vid");
+    }
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
@@ -139,13 +133,13 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         emit Paused(vid);
     }
     function unpause(uint vid) public onlyRole("PAUSER") {
-        require(paused(vid) && vid > 0 && vid < vaultInfo.length);
+        require(paused(vid) && vid > 0 && vid < nextVid);
         pauseMap.set(vid);
         emit Unpaused(vid);
     }
     function panic(uint vid) external {
-        require (vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");
-        vaultInfo[vid].panicLockExpiry = uint40(block.timestamp + PANIC_LOCK_DURATION);
+        require (vaultInfo[vid].panicLockExpiry << 8 < block.timestamp, "panic once per 6 hours");
+        vaultInfo[vid].panicLockExpiry = uint32((block.timestamp + PANIC_LOCK_DURATION) >> 8);
         pause(vid);
         strat(vid).panic();
     }

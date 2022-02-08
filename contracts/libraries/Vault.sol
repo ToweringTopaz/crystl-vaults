@@ -11,17 +11,19 @@ import "./Tactics.sol";
 library Vault {
     
     struct Info {
-        uint40 panicLockExpiry; //panic can only happen again after the time has elapsed
         IERC20 want;
-        uint112 wantLockedLastUpdate;
         uint32 lastEarnBlock;
+        uint32 panicLockExpiry; //panic can only happen again after the time has elapsed
+        uint32 numBoosts;
+
+        uint112 wantLockedLastUpdate;
+        uint112 totalMaximizerEarningsOffset;
         uint32 numMaximizers; //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
-        uint32 targetVid; //maximizer target, which accumulates tokens. Zero for standard strategies compounding their own want token
-        IBoostPool[] boosts;
-        BitMaps.BitMap activeBoosts;
     }
     struct User {
         BitMaps.BitMap boosts;
         BitMaps.BitMap maximizers;
+        uint112 maximizerEarningsOffset;
+
     }
 }

@@ -51,4 +51,8 @@ abstract contract BaseStrategy is Initializable, IStrategy {
     function router() external view returns (IUniRouter) {
         return settings.router;
     }
+
+    function getMaximizerImplementation() external view returns (IStrategy) {
+        return IStrategy(address(this));
+    }
 }

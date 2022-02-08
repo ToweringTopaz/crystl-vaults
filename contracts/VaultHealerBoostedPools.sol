@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.9;
 
 import "./VaultHealerGate.sol";
 import "./interfaces/IBoostPool.sol";
@@ -10,6 +10,8 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
     bytes32 public constant BOOST_ADMIN = keccak256("BOOST_ADMIN");
 
+    mapping(uint256 => BitMaps.BitMap) activeBoosts;
+
     event AddBoost(address boost, uint vid, uint boostid);
     event BoostEmergencyWithdraw(address user, uint _vid, uint _boostID);
     
@@ -18,17 +20,41 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         _setRoleAdmin(BOOSTPOOL, BOOST_ADMIN);
     }
 
-    function addBoost(address _boost) external {
-        grantRole(BOOSTPOOL, _boost); //requires msg.sender is BOOST_ADMIN
-        require(block.number < IBoostPool(_boost).bonusEndBlock(), "boost pool already ended");
+    function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
+        vid = nextVid;
+        nextVid = vid + 1;
+        Vault.Info storage vault = vaultInfo[vid];
 
-        uint vid = IBoostPool(_boost).STAKE_TOKEN_VID();
-        Vault.Info storage vault = _vaultInfo[vid];
-        uint _boostID = vault.boosts.length;
-        require(_boostID < 2**32);
-        IBoostPool(_boost).vaultHealerActivate(uint32(_boostID));
-        vault.boosts.push() = IBoostPool(_boost);
-        vault.activeBoosts.set(_boostID);
+        IStrategy _strat = IStrategy(clone(_implementation, STRATEGY ^ bytes32(uint256(vid))));
+        assert(_strat == strat(vid));
+        
+        _strat.initialize(data);
+        
+        grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
+        
+        IERC20 want = _strat.wantToken();
+        vault.want = want;
+
+        require(want.totalSupply() <= type(uint112).max, "incompatible total supply");
+        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
+        
+        emit AddVault(vid);
+    }
+
+    function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) {
+        Vault.Info storage vault = vaultInfo[vid];
+        uint _boostID = vault.numBoosts;
+        vault.numBoosts = _boostID + 1;
+
+        IBoostPool _boost = IBoostPool(clone(_implementation, keccak256(abi.encodePacked(BOOSTPOOL, vid, _boostID))));
+        assert(_boost == boost(vid));
+        grantRole(BOOSTPOOL, _boost); //requires msg.sender is BOOST_ADMIN
+
+        _boost.initialize(initdata);
+
+        require(vid == IBoostPool(_boost).STAKE_TOKEN_VID(), "VH: boost pool vid mismatch");
+
+        activeBoosts[vid].set(_boostID);
         emit AddBoost(_boost, vid, _boostID);
     }
 

@@ -24,4 +24,6 @@ interface IStrategy {
     function unpanic() external;
         // Univ2 router used by this strategy
     function router() external view returns (IUniRouter);
+    
+    function getMaximizerImplementation() external view returns (IStrategy);
 }
