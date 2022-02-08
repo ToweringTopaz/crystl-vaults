@@ -101,6 +101,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN0ADDRESS = await LPtoken.token0()
         TOKEN1ADDRESS = await LPtoken.token1()
         TOKEN_OTHER = CRYSTL;
+        tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
+
 
 		const CRYSTL_COMPOUNDER_DATA = abiCoder.encode(
 			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
@@ -710,7 +712,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(user2CrystlBalanceAfterWithdraw).to.be.gt(user2CrystlBalanceBeforeWithdraw);
         })
 
-        it('Should deposit user3\'s whole balance of LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
+        it('Should deposit 1500 LP tokens from user into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user3.address);
             user3InitialDeposit = ethers.utils.parseEther("1500");
             const vaultSharesTotalBeforeUser3FirstDeposit = await strategyVHMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
@@ -730,6 +732,22 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             userBalanceOfStrategyTokens = await vaultHealer.balanceOf(user3.address, maximizer_strat_pid);
             console.log(`User3 balance of ERC1155 tokens is now ${ethers.utils.formatEther(userBalanceOfStrategyTokens)} tokens`)
             expect(userBalanceOfStrategyTokens).to.eq(user3InitialDeposit); 
+        })
+
+        it('Should deposit 15000 CRYSTL tokens from user 4 directly into the crystl compounder vault, increasing vaultSharesTotal by the correct amount', async () => {
+            // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user3.address);
+            user4InitialDeposit = ethers.utils.parseEther("15000");
+            const vaultSharesTotalBeforeUser4FirstDeposit = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser4FirstDeposit)} CRYSTL tokens before user 4 deposits`)
+
+            await tokenOther.connect(user4).approve(vaultHealer.address, user4InitialDeposit); //no, I have to approve the vaulthealer surely?
+            // console.log("lp token approved by user 2")
+            await vaultHealer.connect(user4)["deposit(uint256,uint256)"](crystl_compounder_strat_pid, user4InitialDeposit);
+            const vaultSharesTotalAfterUser4FirstDeposit = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            console.log(`User 4 deposits ${ethers.utils.formatEther(user4InitialDeposit)} CRYSTL tokens`);
+            console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4FirstDeposit)} CRYSTL tokens after user 4 deposits`)
+
+            expect(user4InitialDeposit).to.equal(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
         })
 
         // Compound LPs (Call the earnSome function with this specific farm’s maximizer_strat_pid).
@@ -937,6 +955,40 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
             console.log(`User1 now has ${ethers.utils.formatEther(user1CrystlBalanceAfterWithdraw)} crystl tokens`)
             expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
+        })
+
+        // Withdraw 100% of user 4 deposit into crystl compounder
+        it('Should withdraw remaining user4 balance back to user4, minus withdrawal fee (0.1%)', async () => {
+            user4BalanceOfCrystlCompounderTokensBeforeStaking = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
+            console.log(`User4 now has ${ethers.utils.formatEther(user4BalanceOfCrystlCompounderTokensBeforeStaking)} tokens in the crystl compounder vault`)
+
+            const CRYSTLBalanceBeforeUser4Withdrawal = await tokenOther.balanceOf(user4.address)
+            console.log("CRYSTLBalanceBeforeUser4Withdrawal - user4")
+            console.log(ethers.utils.formatEther(CRYSTLBalanceBeforeUser4Withdrawal))
+
+            const User4StakedTokensBeforeFinalWithdrawal = await vaultHealerView.stakedWantTokens(crystl_compounder_strat_pid, user4.address);
+            console.log("User4StakedTokensBeforeFinalWithdrawal - user4")
+            console.log(ethers.utils.formatEther(User4StakedTokensBeforeFinalWithdrawal))
+
+            await vaultHealer.connect(user4)["withdrawAll(uint256)"](crystl_compounder_strat_pid); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
+            
+            const CRYSTLBalanceAfterFinalWithdrawal = await tokenOther.balanceOf(user4.address);
+            console.log("CRYSTLBalanceAfterFinalWithdrawal - user4")
+            console.log(ethers.utils.formatEther(CRYSTLBalanceAfterFinalWithdrawal))
+
+            User4StakedTokensAfterFinalWithdrawal = await vaultHealerView.stakedWantTokens(crystl_compounder_strat_pid, user4.address);
+            console.log("User4StakedTokensAfterFinalWithdrawal - user4")
+            console.log(ethers.utils.formatEther(User4StakedTokensAfterFinalWithdrawal))
+
+            expect(CRYSTLBalanceAfterFinalWithdrawal.sub(CRYSTLBalanceBeforeUser4Withdrawal))
+            .to.equal(
+                (User4StakedTokensBeforeFinalWithdrawal.sub(User4StakedTokensAfterFinalWithdrawal))
+                // .sub(
+                //     (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                //     .mul(User4StakedTokensBeforeFinalWithdrawal.sub(User4StakedTokensAfterFinalWithdrawal))
+                //     .div(WITHDRAW_FEE_FACTOR_MAX)
+                // )
+                );
         })
 
         it('Should leave zero crystl in the crystl compounder once all 3 users have fully withdrawn their funds', async () => {
