@@ -23,10 +23,7 @@ contract Strategy is BaseStrategy {
         
         uint earnedLength = config.earnedLength();
         bool pairStake = config.isPairStake();
-        IERC20 token0;
-        IERC20 token1;
-        if (pairStake) (token0, token1) = config.token0And1();
-        bool isMaximizer = config.isMaximizer();
+
         for (uint i; i < earnedLength; i++) { //Process each earned token
 
             (IERC20 earnedToken, uint dust) = config.earned(i);
@@ -39,10 +36,11 @@ contract Strategy is BaseStrategy {
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
 
                 if (pairStake) {
+                    (IERC20 token0, IERC20 token1) = config.token0And1();
                     safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
                     safeSwap(earnedAmt / 2, earnedToken, token1, address(this));
                 } else {
-                    safeSwap(earnedAmt, earnedToken, isMaximizer ? config.targetWant() : _wantToken, address(this));
+                    safeSwap(earnedAmt, earnedToken, config.isMaximizer() ? config.targetWant() : _wantToken, address(this));
                 }
             }
         }
@@ -56,6 +54,7 @@ contract Strategy is BaseStrategy {
             } else { 
                 if (pairStake) {
                     // Get want tokens, ie. add liquidity
+                    (IERC20 token0, IERC20 token1) = config.token0And1();
                     LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
                 }
                 _farm();

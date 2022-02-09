@@ -217,6 +217,10 @@ abstract contract BaseStrategy is Initializable, IStrategy {
         return config.targetWant();
     }
 
+    function targetVid() external view getConfig returns (uint) {
+        return config.targetVid();
+    }
+
     function getMaximizerImplementation() external view returns (IStrategy) {
         return IStrategy(address(this));
     }

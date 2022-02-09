@@ -224,7 +224,7 @@ function _beforeTokenTransfer(
         // withdraw proportional amount of target vault token from targetVault()
         if (targetVidAmount > 0) {
             // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-            vaultStrat.withdrawMaximizerReward(targetVid, targetVidAmount);
+            _withdraw(targetVid, targetVidAmount, address(vaultStrat), _from);
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
                         
             // update the offsets for user and for vid

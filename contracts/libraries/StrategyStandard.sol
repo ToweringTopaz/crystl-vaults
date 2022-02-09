@@ -112,7 +112,7 @@ library StrategyStandard {
         uint8 _wantDust,
         address _router,
         address _magnetite,
-        address _targetVault,
+        uint _targetVid,
         address _targetWant,
         uint8 _slippageFactor,
         bool _feeOnTransfer,
@@ -125,7 +125,7 @@ library StrategyStandard {
         if (_feeOnTransfer) vaultType += 0x80;
         
         address swapToToken = _wantToken;
-        if (_targetVault != address(0)) {
+        if (_targetVid != 0) {
             vaultType += 0x40;       
             swapToToken = _targetWant; 
         }

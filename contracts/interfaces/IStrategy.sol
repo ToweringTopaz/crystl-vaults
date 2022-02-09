@@ -26,7 +26,6 @@ interface IStrategy {
 
     function isMaximizer() external view returns (bool);
     function maximizerRewardToken() external view returns (IERC20);
-    function withdrawMaximizerReward(uint256 _pid, uint256 _amount) external;
     function getMaximizerImplementation() external view returns (IStrategy);
 
 }
