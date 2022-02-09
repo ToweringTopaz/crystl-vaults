@@ -12,6 +12,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         address from;
         uint112 amount;
     }
+
+    mapping(address => mapping(uint256 => uint112)) public maximizerEarningsOffset;
+    mapping(uint256 => uint112) public totalMaximizerEarningsOffset;
+
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
     event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
@@ -31,7 +35,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
 
     function _earn(uint256 vid) internal {
-        Vault.Info storage vault = vaultInfo[vid];
+        VaultInfo storage vault = vaultInfo[vid];
         uint lastEarnBlock = vault.lastEarnBlock;
         
         if (lastEarnBlock == block.number) return; //earn only once per block ever
@@ -59,7 +63,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
-        Vault.Info storage vault = vaultInfo[_vid];
+        VaultInfo storage vault = vaultInfo[_vid];
 
         pendingDeposits.push() = PendingDeposit({
             token: vault.want,
@@ -76,7 +80,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
 
         // if this is a maximizer vault, do these extra steps
-        if (_vid >> 32 > 0) {
+        if (_vid >> 32 > 0)
             UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
 
         //we mint tokens for the user via the 1155 contract
@@ -112,7 +116,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
-        Vault.Info storage vault = vaultInfo[_vid];
+        VaultInfo storage vault = vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
         _earn(_vid);
 
@@ -188,37 +192,34 @@ function _beforeTokenTransfer(
             }
         }
     }
-        
+
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
-        Vault.Info storage vault = vaultInfo[_vid];
         IStrategy vaultStrat = strat(_vid);
         uint256 targetVid = _vid >> 32;
 
         //calculate the offset for this particular deposit
-        uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + vault.totalMaximizerEarningsOffset;
+        uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[_vid];
         uint112 targetVidTokenOffset = uint112(_vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply(_vid)); 
 
         // increment the offsets for user and for vid
-        vaultUser[_from][_vid].maximizerEarningsOffset += targetVidTokenOffset;
-        vault.totalMaximizerEarningsOffset += targetVidTokenOffset; 
+        maximizerEarningsOffset[_from][_vid] += targetVidTokenOffset;
+        totalMaximizerEarningsOffset[_vid] += targetVidTokenOffset; 
     }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
-        Vault.Info storage vault = vaultInfo[_vid];
-        Vault.User storage user = vaultUser[_from][_vid];
         uint targetVid = _vid >> 32;
-        Vault.Info storage target = vaultInfo[targetVid];
+        VaultInfo storage target = vaultInfo[targetVid];
         
         IStrategy vaultStrat = strat(_vid);
         IStrategy targetStrat = strat(targetVid);
 
         // calculate the amount of targetVid token to be withdrawn
         uint256 targetVidAmount = _vidSharesRemoved
-            * (targetStrat.wantLockedTotal() + vault.totalMaximizerEarningsOffset)
+            * (targetStrat.wantLockedTotal() + totalMaximizerEarningsOffset[_vid])
             / totalSupply(_vid) 
-            - user.maximizerEarningsOffset * _vidSharesRemoved / balanceOf(_from, _vid);
+            - maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid);
         
         // withdraw proportional amount of target vault token from targetVault()
         if (targetVidAmount > 0) {
@@ -227,8 +228,8 @@ function _beforeTokenTransfer(
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
                         
             // update the offsets for user and for vid
-            vault.totalMaximizerEarningsOffset -= (user.maximizerEarningsOffset * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
-            user.maximizerEarningsOffset -= (user.maximizerEarningsOffset * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+            totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+            maximizerEarningsOffset[_from][_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
             }
         }
 

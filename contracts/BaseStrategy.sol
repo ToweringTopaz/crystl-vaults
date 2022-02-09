@@ -11,6 +11,7 @@ abstract contract BaseStrategy is Initializable, IStrategy {
     using SafeERC20 for IERC20;
     using StrategyStandard for StrategyStandard.MemPointer;
 
+
     uint constant FEE_MAX = 10000;
     StrategyStandard.MemPointer constant config = StrategyStandard.MemPointer.wrap(0x80);
     address public immutable vaultHealer;
@@ -206,6 +207,14 @@ abstract contract BaseStrategy is Initializable, IStrategy {
         } else {
             _router.swapExactTokensForTokens(_amountIn, 0, cleanedUpPath, _to, block.timestamp);                
         }
+    }
+
+    function isMaximizer() external view getConfig returns (bool) {
+        return config.isMaximizer();
+    }
+
+    function maximizerRewardToken() external view getConfig returns (IERC20) {
+        return config.targetWant();
     }
 
     function getMaximizerImplementation() external view returns (IStrategy) {

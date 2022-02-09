@@ -49,11 +49,11 @@ library StrategyStandard {
             _isFeeOnTransfer := gt(and(mload(add(config,0x5F)), 0x80), 0)
         }
     }
-//    function isMaximizer(MemPointer config) internal pure returns (bool _isMaximizer) {
-//        assembly {
-//            _isMaximizer := gt(and(mload(add(config,0x5F)), 0x40), 0)
-//        }
-//    }
+    function isMaximizer(MemPointer config) internal pure returns (bool _isMaximizer) {
+        assembly {
+            _isMaximizer := gt(and(mload(add(config,0x5F)), 0x40), 0)
+        }
+    }
     function isPairStake(MemPointer config) internal pure returns (bool _isPairStake) {
         assembly {
             _isPairStake := gt(and(mload(add(config,0x5F)), 0x20), 0)
@@ -85,25 +85,25 @@ library StrategyStandard {
             dust := shl(and(mload(add(offset,1)), 0xff) , 1)
         }
     }
-/*    function targetVault(MemPointer config) internal pure returns (address _targetVault) {
+    function targetVid(MemPointer config) internal pure returns (uint256 _targetVid) {
         assert(isMaximizer(config));
         uint offset = 0x73 + earnedLength(config) * 0x14;
         if (isPairStake(config)) offset += 0x28;
 
         assembly {
-            _targetVault := mload(add(config,offset))
+            _targetVid := mload(add(config,offset))
         }
     }
     function targetWant(MemPointer config) internal pure returns (IERC20 _targetWant) {
         assert(isMaximizer(config));
-        uint offset = 0x87 + earnedLength(config) * 0x14;
+        uint offset = 0x93 + earnedLength(config) * 0x14;
         if (isPairStake(config)) offset += 0x28;
 
         assembly {
             _targetWant := and(mload(add(config,offset)), MASK_160)
         }
     }
-*/
+
 
     function generateConfig(
         Tactics.TacticsA _tacticsA,
@@ -112,6 +112,8 @@ library StrategyStandard {
         uint8 _wantDust,
         address _router,
         address _magnetite,
+        address _targetVault,
+        address _targetWant,
         uint8 _slippageFactor,
         bool _feeOnTransfer,
         address[] memory _earned,
@@ -121,14 +123,18 @@ library StrategyStandard {
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
         uint8 vaultType = uint8(_earned.length);
         if (_feeOnTransfer) vaultType += 0x80;
-        //if (_targetVault != address(0)) vaultType += 0x40;         
-
+        
+        address swapToToken = _wantToken;
+        if (_targetVault != address(0)) {
+            vaultType += 0x40;       
+            swapToToken = _targetWant; 
+        }
         configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
-
+        
         //Look for LP tokens. If not, want must be a single-stake
-        try IUniPair(_wantToken).token0() returns (IERC20 _token0) {
+        try IUniPair(swapToToken).token0() returns (IERC20 _token0) {
             vaultType += 0x20;
-            IERC20 _token1 = IUniPair(address(_wantToken)).token1();
+            IERC20 _token1 = IUniPair(address(swapToToken)).token1();
             configData = abi.encodePacked(configData, vaultType, _token0, _token1);
         } catch { //if not LP, then single stake
             configData = abi.encodePacked(configData, vaultType);

@@ -26,6 +26,7 @@ contract Strategy is BaseStrategy {
         IERC20 token0;
         IERC20 token1;
         if (pairStake) (token0, token1) = config.token0And1();
+        bool isMaximizer = config.isMaximizer();
         for (uint i; i < earnedLength; i++) { //Process each earned token
 
             (IERC20 earnedToken, uint dust) = config.earned(i);
@@ -41,26 +42,24 @@ contract Strategy is BaseStrategy {
                     safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
                     safeSwap(earnedAmt / 2, earnedToken, token1, address(this));
                 } else {
-                    safeSwap(earnedAmt, earnedToken, _wantToken, address(this));
+                    safeSwap(earnedAmt, earnedToken, isMaximizer ? config.targetWant() : _wantToken, address(this));
                 }
             }
         }
 
         //lpTokenLength == 1 means single-stake, not LP
         if (success) {
-            /*
-            if (isMaximizer()) {
-                uint256 crystlBalance = maximizerRewardToken.balanceOf(address(this));
+            if (config.isMaximizer()) {
+                uint256 maximizerRewardBalance = config.targetWant().balanceOf(address(this));
 
-                IVaultHealer(msg.sender).deposit(targetVid, crystlBalance);
+                IVaultHealer(msg.sender).deposit(config.targetVid(), maximizerRewardBalance);
             } else { 
-            */
                 if (pairStake) {
                     // Get want tokens, ie. add liquidity
                     LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
                 }
                 _farm();
-            //}
+            }
         }
         __wantLockedTotal = _wantLockedTotal();
     }

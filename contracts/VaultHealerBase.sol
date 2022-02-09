@@ -1,18 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "./Cavendish.sol";
-import "./libraries/Vault.sol";
+import "./CavendishDeployer.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import "./interfaces/IBoostPool.sol";
+import "./interfaces/IUniFactory.sol";
+import "./interfaces/IMagnetite.sol";
+import "./interfaces/IUniRouter.sol";
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
-abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155Supply, IVaultHealerMain {
+abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable, ERC1155Supply, IVaultHealer {
 
     using BitMaps for BitMaps.BitMap;
+
+    struct VaultInfo {
+        IERC20 want;
+        uint32 lastEarnBlock;
+        uint32 numMaximizers; //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
+
+        uint112 wantLockedLastUpdate;
+        uint112 totalMaximizerEarningsOffset;
+        uint32 numBoosts;
+
+        uint256 panicLockExpiry; //no gas savings from packing this variable
+    }
 
     uint constant MAX_MAXIMIZERS = 1024;
     uint constant PANIC_LOCK_DURATION = 6 hours;
@@ -23,8 +39,7 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
 
     IVaultFeeManager public vaultFeeManager;
 
-    mapping(uint => Vault.Info) public vaultInfo; // Info of each vault.
-    mapping(address => mapping(uint => Vault.User)) internal vaultUser;
+    mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
     uint32 public nextVid = 1; //first unused vid (vid 0 means null/invalid)
 
     BitMaps.BitMap pauseMap; //true for unpaused vaults;
@@ -53,11 +68,11 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
      * @dev Add a new want to the vault. Can only be called by the owner.
      */
 
-    function createVault(address _implementation, bytes calldata data) external returns (uint vid) {
-        vid = _vaultInfo.length;
-        Vault.Info storage vault = _vaultInfo[vid];
+    function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
+        vid = nextVid;
+        nextVid = vid + 1;
+        VaultInfo storage vault = vaultInfo[vid];
 
-        require(vid < type(uint32).max, "too many vaults"); //absurd number of vaults
         IStrategy _strat = IStrategy(Clones.clone(_implementation));
         assert(_strat == strat(vid));
         
@@ -76,7 +91,7 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
     }
 
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) returns (uint vid) {
-        Vault.Info storage targetVault = vaultInfo[vid];
+        VaultInfo storage targetVault = vaultInfo[vid];
         require(targetVault.numMaximizers <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
         vid = (targetVid << 32) + targetVault.numMaximizers;
 
@@ -119,7 +134,7 @@ abstract contract VaultHealerBase is Cavendish, AccessControlEnumerable, ERC1155
 
 
     function strat(uint _vid) public view returns (IStrategy) {
-        return IStrategy(computeProxyAddress(bytes32(_vid) ^ STRATEGY));
+        return IStrategy(Cavendish.computeAddress(bytes32(_vid) ^ STRATEGY));
     }
 
     modifier requireValidVid(uint vid) {

@@ -7,49 +7,41 @@ Deploys ERC-1167 compliant minimal proxies whose address is determined only by a
 
 Proxy init bytecode: 
 
-    15 bytes: 3d3d3d3d3d3d3d335afa503d3e3df3
+    12 bytes: 602d3481343434335afa50f3
 
-    3d is returndatasize, which is zero if this call frame has not yet made a call of its own
-    3d3d3d3d3d3d : 0 0 0 0 0 0 
-    33 caller         :  0 0 0 0 0 0 caller
-    5a gas            :  0 0 0 0 0 0 caller gas
-    fa staticcall     : 0 0 0 success
-    50 pop            : 0 0 0
-    3d returndatasize : 0 0 0 size
-    3e returndatacopy : 0
-    3d returndatasize : 0 size
-    f3 return         :
+    60 push1 2d       : size
+    34 callvalue      : 0 size
+    81 dup2           : size 0 size
+    34 callvalue      : 0 size 0 size 
+    34 callvalue      : 0 0 size 0 size 
+    34 callvalue      : 0 0 0 size 0 size 
+    33 caller         : caller 0 0 0 size 0 size
+    5a gas            : gas caller 0 0 0 size 0 size
+    fa staticcall     : success 0 size
+    50 pop            : 0 size
+    f3 return         : 
 
 */
 
-contract Cavendish {
+import "./libraries/Cavendish.sol";
 
-    bytes32 public constant PROXY_INIT_HASH = keccak256(abi.encodePacked(bytes15(0x3d3d3d3d3d3d3d335afa503d3e3df3)));
+abstract contract CavendishDeployer {
+
+    bytes12 public constant PROXY_INIT_CODE = hex'602d3481343434335afa50f3';
+    bytes32 public constant PROXY_INIT_HASH = keccak256(abi.encodePacked(PROXY_INIT_CODE));
 
     bytes32 private implementation;
 
-    function clone(address _implementation, bytes32 salt) public returns (address instance) {
+    function clone(address _implementation, bytes32 salt) internal returns (address instance) {
 
         require(_implementation != address(0), "ERC1167: zero address");
         assembly {
             sstore(implementation.slot, shl(96, _implementation))
-            mstore(0, 0x3d3d3d3d3d3d3d335afa503d3e3df3)
-            instance := create2(0, 0x11, 15, salt)
+            mstore(0, PROXY_INIT_CODE)
+            instance := create2(0, 0x00, 12, salt)
             sstore(implementation.slot, 0)
         }
         require(instance != address(0), "ERC1167: create2 failed");
-    }
-
-    function computeProxyAddress(bytes32 salt) public view returns (address) {
-        return computeProxyAddress(salt, address(this));
-    }
-
-    function computeProxyAddress(
-        bytes32 salt,
-        address deployer
-    ) public pure returns (address) {
-        bytes32 _data = keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, PROXY_INIT_HASH));
-        return address(uint160(uint256(_data)));
     }
 
     //Inheriting contracts must call super._fallback(). Will return to the external caller if clone is in progress; otherwise returns internally

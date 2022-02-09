@@ -17,7 +17,7 @@ import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IBoostPool.sol";
 
-contract BoostPool is IBoostPool, Ownable {
+contract BoostPool is  Ownable, IBoostPool {
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -28,8 +28,8 @@ contract BoostPool is IBoostPool, Ownable {
 
     // The vaultHealer where the staking / want tokens all reside
     IVaultHealer public VAULTHEALER;
-    // The stake token
-    uint256 public STAKE_TOKEN_VID;
+    // This is the vid + (a unique identifier << 224)
+    uint256 public BOOST_ID;
     // The reward token
     IERC20 public REWARD_TOKEN;
 
@@ -42,11 +42,8 @@ contract BoostPool is IBoostPool, Ownable {
     uint32 public startBlock;
 	// The block number when mining ends.
     uint32 public bonusEndBlock;
-    //The ID number used by the VaultHealer to identify this boost, among those with the same staked token
-    uint32 public boostID;
     // Last block number that Rewards distribution occurs.
     uint32 lastRewardBlock;
-
 
     // Info of each user that stakes LP tokens.
     mapping (address => User) public userInfo;
@@ -65,39 +62,36 @@ contract BoostPool is IBoostPool, Ownable {
     event EmergencyRewardWithdraw(address indexed user, uint256 amount);
     event EmergencySweepWithdraw(address indexed user, IERC20 indexed token, uint256 amount);
 
-    function initialize(address _owner, uint32 _stakeTokenVid, bytes calldata initdata) external {
+    function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external {
         (
             address _rewardToken,
             uint112 _rewardPerBlock,
             uint32 _startBlock,
-            uint32 _bonusEndBlock,
-            uint32 _boostID
-        ) = abi.decode(initdata, (address,uint112,uint32,uint32,uint32));
+            uint32 _bonusEndBlock
+        ) = abi.decode(initdata,(address,uint112,uint32,uint32));
         require(REWARD_TOKEN.balanceOf(address(this)) >= (bonusEndBlock - _startBlock) * rewardPerBlock, "Can't activate pool without sufficient rewards");
         
-        Ownable._transferOwnership(_owner);
+        _transferOwnership(_owner);
 
         VAULTHEALER = IVaultHealer(msg.sender);
         
-        STAKE_TOKEN_VID = _stakeTokenVid;
-        (IERC20 vaultWant, IStrategy vaultStrat) = IVaultHealer(msg.sender).vaultInfo(_stakeTokenVid);
-        require(address(vaultWant) != address(0) && address(vaultStrat) != address(0), "bad want/strat for stake_token_vid");
+        (IERC20 vaultWant,,,,,,) = IVaultHealer(msg.sender).vaultInfo(uint224(_boostID));
+        require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
         
         REWARD_TOKEN = IERC20(_rewardToken);
         uint rewardTotalSupply = IERC20(_rewardToken).totalSupply();
 
-        rewardPerBlock = uint128(_rewardPerBlock);
+        rewardPerBlock = uint112(_rewardPerBlock);
         
-        startBlock = uint64(_startBlock);
-        bonusEndBlock = uint64(_bonusEndBlock);
-        lastRewardBlock = uint64(_startBlock);
+        startBlock = uint32(_startBlock);
+        bonusEndBlock = uint32(_bonusEndBlock);
+        lastRewardBlock = uint32(_startBlock);
 
         require (block.number <= startBlock, "rewards cannot have already started");
         require(rewardTotalSupply > _rewardPerBlock * (_bonusEndBlock - _startBlock), "pool would reward more than total supply of rewardtoken!");
         require(rewardTotalSupply < uint(int(type(int128).max)), "reward total supply too large and might overflow");
 
-        boostID = _boostID;
-        boostID = type(uint64).max; //will be set by VH
+        BOOST_ID = _boostID;
     }
 
     modifier onlyVaultHealer {
@@ -178,8 +172,8 @@ contract BoostPool is IBoostPool, Ownable {
         User storage user = userInfo[_user];
         require (user.amount == 0, "user already is in pool");
         require (block.number < bonusEndBlock, "pool has ended");
-        user.amount = uint128(_amount);
-        totalStaked += uint128(_amount);
+        user.amount = _amount;
+        totalStaked += _amount;
         updateRewardDebt(user, 0);
     }
     //Used in place of deposit/withdraw because nothing is actually stored here
@@ -195,8 +189,8 @@ contract BoostPool is IBoostPool, Ownable {
             uint pending = _harvest(_to);
             if (pending == 0 && status >= 4)
                 status |= 2;
-            totalStaked += uint128(_amount);
-            user.amount += uint128(_amount);
+            totalStaked += _amount;
+            user.amount += _amount;
             updateRewardDebt(user, pending);
             emit Deposit(_to, _amount);
         }
@@ -205,8 +199,8 @@ contract BoostPool is IBoostPool, Ownable {
             uint pending = _harvest(_from);
             if (pending == 0 && status >= 4)
                 status |= 1;
-            totalStaked -= uint128(_amount);
-            user.amount -= uint128(_amount);
+            totalStaked -= _amount;
+            user.amount -= _amount;
             updateRewardDebt(user, pending);
             emit Withdraw(_from, _amount);
         }

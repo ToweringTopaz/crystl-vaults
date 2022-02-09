@@ -10,90 +10,66 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
     bytes32 public constant BOOST_ADMIN = keccak256("BOOST_ADMIN");
 
-    mapping(uint256 => BitMaps.BitMap) activeBoosts;
+    BitMaps.BitMap activeBoosts;
+    mapping(address => BitMaps.BitMap) userBoosts;
 
-    event AddBoost(address boost, uint vid, uint boostid);
-    event BoostEmergencyWithdraw(address user, uint _vid, uint _boostID);
+    event AddBoost(uint indexed boostid);
+    event BoostEmergencyWithdraw(address user, uint _boostID);
     
     constructor(address _owner) {
         _setupRole(BOOST_ADMIN, _owner);
         _setRoleAdmin(BOOSTPOOL, BOOST_ADMIN);
     }
-
-    function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
-        vid = nextVid;
-        nextVid = vid + 1;
-        Vault.Info storage vault = vaultInfo[vid];
-
-        IStrategy _strat = IStrategy(clone(_implementation, STRATEGY ^ bytes32(uint256(vid))));
-        assert(_strat == strat(vid));
-        
-        _strat.initialize(data);
-        
-        grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
-        
-        IERC20 want = _strat.wantToken();
-        vault.want = want;
-
-        require(want.totalSupply() <= type(uint112).max, "incompatible total supply");
-        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
-        
-        emit AddVault(vid);
+    function boostPool(uint _boostID) public view returns (IBoostPool) {
+        return IBoostPool(Cavendish.computeAddress(BOOSTPOOL ^ bytes32(_boostID)));
     }
 
     function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) {
-        Vault.Info storage vault = vaultInfo[vid];
-        uint _boostID = vault.numBoosts;
-        vault.numBoosts = _boostID + 1;
+        VaultInfo storage vault = vaultInfo[vid];
+        uint32 nonce = vault.numBoosts;
+        vault.numBoosts = nonce + 1;
+        uint _boostID = (uint(nonce) << 224) | vid;
 
-        IBoostPool _boost = IBoostPool(clone(_implementation, keccak256(abi.encodePacked(BOOSTPOOL, vid, _boostID))));
-        assert(_boost == boost(vid));
-        grantRole(BOOSTPOOL, _boost); //requires msg.sender is BOOST_ADMIN
+        IBoostPool _boost = IBoostPool(clone(_implementation, BOOSTPOOL ^ bytes32(_boostID)));
+        assert(_boost == boostPool(_boostID));
+        grantRole(BOOSTPOOL, address(_boost)); //requires msg.sender is BOOST_ADMIN
 
-        _boost.initialize(initdata);
+        _boost.initialize(msg.sender, _boostID, initdata);
 
-        require(vid == IBoostPool(_boost).STAKE_TOKEN_VID(), "VH: boost pool vid mismatch");
+        activeBoosts.set(_boostID);
 
-        activeBoosts[vid].set(_boostID);
-
-        emit AddBoost(_boost, vid, _boostID);
+        emit AddBoost(_boostID);
     }
 
     //Users can enableBoost to opt-in to a boosted vault
-    function enableBoost(address _user, uint _vid, uint _boostID) public nonReentrant {
+    function enableBoost(address _user, uint _boostID) public nonReentrant {
         require(msg.sender == _user || isApprovedForAll(_user, msg.sender), "VH: must be approved to accept boost");
-        Vault.Info storage vault = _vaultInfo[_vid];
-        Vault.User storage user = vault.user[_user];
-        require(vault.activeBoosts.get(_boostID), "not an active boost");
-        require(!user.boosts.get(_boostID), "boost is already active for user");
-        user.boosts.set(_boostID);
+        require(activeBoosts.get(_boostID), "not an active boost");
+        require(!userBoosts[_user].get(_boostID), "boost is already active for user");
+        userBoosts[_user].set(_boostID);
 
-        vault.boosts[_boostID].joinPool(_user, balanceOf(_user, _vid));
+        boostPool(_boostID).joinPool(_user, uint112(balanceOf(_user, uint224(_boostID))));
     }
 
     //Standard opt-in function users will call
-    function enableBoost(uint _vid, uint _boostID) external {
-        enableBoost(msg.sender, _vid, _boostID);
+    function enableBoost(uint _boostID) external {
+        enableBoost(msg.sender, _boostID);
     }
 
-    function harvestBoost(uint _vid, uint _boostID) external nonReentrant {
-        _vaultInfo[_vid].boosts[_boostID].harvest(msg.sender);
+    function harvestBoost(uint _boostID) external nonReentrant {
+        boostPool(_boostID).harvest(msg.sender);
     }
 
     //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
-    function emergencyBoostWithdraw(uint _vid, uint _boostID) external nonReentrant {
-        Vault.Info storage vault = _vaultInfo[_vid];
-        Vault.User storage user = vault.user[msg.sender];
-        IBoostPool boostPool = vault.boosts[_boostID];
-
-        require(user.boosts.get(_boostID), "boost is not active for user");
-        try boostPool.emergencyWithdraw{gas: 500000}(msg.sender) returns (bool success) {
-            if (!success) vault.activeBoosts.unset(_boostID); //Disable boost if the pool is broken
+    function emergencyBoostWithdraw(uint _boostID) external nonReentrant {
+        require(userBoosts[msg.sender].get(_boostID), "boost is not active for user");
+        try boostPool(_boostID).emergencyWithdraw{gas: 2**19}(msg.sender) returns (bool success) {
+            if (!success) activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         } catch {
-            vault.activeBoosts.unset(_boostID);
+            activeBoosts.unset(_boostID);
         }
-        user.boosts.unset(_boostID);
-        emit BoostEmergencyWithdraw(msg.sender, _vid, _boostID);
+        userBoosts[msg.sender].unset(_boostID);
+        emit BoostEmergencyWithdraw(msg.sender, _boostID);
     }
 
     function _beforeTokenTransfer(
@@ -108,28 +84,28 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         //If boosted pools are affected, update them
 
         for (uint i; i < ids.length; i++) {
-            Vault.Info storage vault = _vaultInfo[ids[i]];
-            for (uint k; k < vault.boosts.length; k++) {
-                bool fromBoosted = from != address(0) && vault.user[from].boosts.get(k);
-                bool toBoosted = to != address(0) && vault.user[to].boosts.get(k);
+            VaultInfo storage vault = vaultInfo[ids[i]];
+            uint numBoosts = vault.numBoosts;
+            for (uint k; k < numBoosts; k++) {
+                bool fromBoosted = from != address(0) && userBoosts[from].get(k);
+                bool toBoosted = to != address(0) && userBoosts[to].get(k);
 
                 if (!fromBoosted && !toBoosted) continue;
-                IBoostPool boostPool = vault.boosts[k];
 
-                uint status = boostPool.notifyOnTransfer(
+                uint status = boostPool((k << 224) | ids[i]).notifyOnTransfer(
                     fromBoosted ? from : address(0),
                     toBoosted ? to : address(0),
-                    amounts[i]
+                    uint112(amounts[i])
                 );
 
                 if (status & 1 > 0) { //pool finished for "from"
-                    vault.user[from].boosts.unset(k);
+                    userBoosts[from].unset(k);
                 }
                 if (status & 2 > 0) { //pool finished for "to"
-                    vault.user[to].boosts.unset(k);
+                    userBoosts[to].unset(k);
                 }
                 if (status & 4 > 0) { //close finished pool
-                    vault.activeBoosts.unset(k);
+                    activeBoosts.unset(k);
                 }
             }
         }

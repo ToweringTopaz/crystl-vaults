@@ -34,7 +34,7 @@ module.exports = {
     hardhat: {
       initialBaseFeePerGas: 1_00_000_000,
       gasPrice: "auto",
-      allowUnlimitedContractSize: true,
+      allowUnlimitedContractSize: false,
       accounts: {
         initialIndex: 0,
         count: 20,
@@ -59,10 +59,9 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 1,
+        runs: 999999,
       },
 	  debug: {
-		  revertStrings: "strip"
 	  }
     },
   },

@@ -25,13 +25,13 @@ library LibQuartz {
     uint256 constant MINIMUM_AMOUNT = 1000;
     
     function getRouter(IVaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
-        (,IStrategy strat) = vaultHealer.vaultInfo(vid);
+        IStrategy strat = vaultHealer.strat(vid);
         return strat.router();
     }
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
-        IERC20 want;
-        (want, strat) = vaultHealer.vaultInfo(_vid);
+        (IERC20 want,,,,,,) = vaultHealer.vaultInfo(_vid);
+        strat = vaultHealer.strat(_vid);
         
         pair = IUniPair(address(want));
         router = strat.router();
