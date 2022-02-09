@@ -19,9 +19,9 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
     using BitMaps for BitMaps.BitMap;
 
     struct VaultInfo {
-        IERC20 want;
         uint32 lastEarnBlock;
         uint32 numMaximizers; //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
+        IERC20 want;
 
         uint112 wantLockedLastUpdate;
         uint112 totalMaximizerEarningsOffset;
@@ -40,7 +40,7 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
     IVaultFeeManager public vaultFeeManager;
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
-    uint32 public nextVid = 1; //first unused vid (vid 0 means null/invalid)
+    uint32 public nextVid = 1; //first unused base vid (vid 0 means null/invalid)
 
     BitMaps.BitMap pauseMap; //true for unpaused vaults;
 
@@ -80,7 +80,6 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
         
         grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
         
-
         IERC20 want = _strat.wantToken();
         vault.want = want;
 
@@ -162,7 +161,6 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
         pauseMap.set(vid);
         emit Unpaused(vid);
     }
-    
 
 	function panic(uint vid) external {
         require (vaultInfo[vid].panicLockExpiry < block.timestamp, "panic once per 6 hours");

@@ -19,16 +19,6 @@ contract Magnetite is Ownable, IMagnetite {
         uint liquidity;
     }
     
-    bytes constant private COMMON_TOKENS = abi.encode([
-        address(0), //slot for wnative
-        0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
-        0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
-        0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
-        0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
-        0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063  //dai
-    ]);
-
-    uint constant private NUM_COMMON = 6;
     uint constant private WNATIVE_MULTIPLIER = 3; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 10; // Token B direct swap weighted 10x
 
@@ -213,9 +203,14 @@ contract Magnetite is Ownable, IMagnetite {
         return yLiquidity > xLiquidity;
     }
 
-    function allCommons(IUniRouter router) private pure returns (IERC20[NUM_COMMON] memory tokens) {
-        tokens = abi.decode(COMMON_TOKENS,(IERC20[6]));
+    function commonTokens(IUniRouter router) private pure returns (IERC20[] memory tokens) {
+        tokens = new IERC20[](len);
         tokens[0] = router.WETH();
+        tokens[1] = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; //usdc
+        tokens[2] = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619; //weth
+        tokens[3] = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13; //quick
+        tokens[4] = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F; //usdt
+        tokens[5] = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063; //dai
     }
     function setlength(IERC20[] memory array, uint n) internal pure returns (IERC20[] memory) {
         assembly { mstore(array, n) }

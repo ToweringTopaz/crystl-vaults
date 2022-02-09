@@ -48,26 +48,20 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
     before(async () => {
         [user1, user2, user3, user4, _] = await ethers.getSigners();
-        /*
+		
+		nonce = user1.getTransactionCount;
+		
 		Magnetite = await ethers.getContractFactory("Magnetite");
-		ZapDeployer = await ethers.getContractFactory("QuartzUniV2ZapDeployer");
-		VaultView = await ethers.getContractFactory("VaultView");
 		magnetite = await Magnetite.deploy();
-		zapDeployer = await ZapDeployer.deploy();
-		vaultView = await VaultView.deploy();
-		*/
 		
+		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
+		vaultFeeManager = await VaultFeeManager.deploy(
+
         // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
-		FirewallProxies = await ethers.getContractFactory("FirewallProxies");
-		firewallProxies = await FirewallProxies.deploy();
+
+
 		
-        VaultHealer = await ethers.getContractFactory("VaultHealer", {
-            libraries: {
-				   FirewallProxies: firewallProxies.address
-            //     LibMagnetite: "0xf34b0c8ab719dED106D6253798D3ed5c7fCA2E04",
-            //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-            },
-        });
+        VaultHealer = await ethers.getContractFactory("VaultHealer");
         const feeConfig = 
             [
                 [ FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
@@ -76,15 +70,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ]
         
         vaultHealer = await VaultHealer.deploy(FEE_ADDRESS, 10, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
-		vaultHealerView = await ethers.getContractAt('VaultView', vaultHealer.address);
         quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealerView.zap());
-		magnetite = await ethers.getContractAt('Magnetite', await vaultHealer.magnetite());
-        StrategyVHStandard = await ethers.getContractFactory('StrategyVHStandard', {
-            // libraries: {
-            //     LibVaultSwaps: "0x1B20Dab7BE777a9CFC363118BC46f7905A7628a1",
-            //     LibVaultConfig: "0x95Fe76f0BA650e7C3a3E1Bb6e6DFa0e8bA28fd6d"
-            //   },
-        });        
+		
+
+        Strategy = await ethers.getContractFactory('StrategyVHStandard');
 		strategyImplementation = await StrategyVHStandard.deploy();
 		
         const DEPLOYMENT_DATA = abiCoder.encode(
