@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libraries/Cavendish.sol";
-import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "./interfaces/IBoostPool.sol";
-import "./interfaces/IUniFactory.sol";
-import "./interfaces/IMagnetite.sol";
-import "./interfaces/IUniRouter.sol";
-import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+
+
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVaultHealer {
 

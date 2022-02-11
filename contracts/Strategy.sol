@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "./BaseStrategy.sol";
-import "./interfaces/IVaultHealer.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
