@@ -53,10 +53,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
 		
-		vaultHealer = await getContractAddress(1 + await user1.getTransactionCount(), user1.address)
+		nonce = await user1.getTransactionCount()
+		vaultHealer = await getContractAddress({
+			from: user1.address,
+			nonce: nonce + 1
+		})
 		
 		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
-		vaultFeeManager = await VaultFeeManager.deploy(getContractAddress(nonce + 1, user1.address), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
+		vaultFeeManager = await VaultFeeManager.deploy(vaultHealer.getAddress(), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
 
         VaultHealer = await ethers.getContractFactory("VaultHealer");
         
