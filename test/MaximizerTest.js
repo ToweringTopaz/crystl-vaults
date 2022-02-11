@@ -9,6 +9,7 @@ const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
 const { token_abi } = require('./abi_files/token_abi.js');
 const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
 const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
+const { getContractAddress } = require('@ethersproject/address')
 
 const withdrawFeeFactor = ethers.BigNumber.from(9990); //hardcoded for now - TODO change to pull from contract?
 const WITHDRAW_FEE_FACTOR_MAX = ethers.BigNumber.from(10000); //hardcoded for now - TODO change to pull from contract?
@@ -52,10 +53,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
 		
-		nonce = user1.getTransactionCount;
+		vaultHealer = await getContractAddress(1 + await user1.getTransactionCount(), user1.address)
 		
 		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
-		vaultFeeManager = await VaultFeeManager.deploy(getContractAddress(user1, nonce + 1), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
+		vaultFeeManager = await VaultFeeManager.deploy(getContractAddress(nonce + 1, user1.address), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
 
         VaultHealer = await ethers.getContractFactory("VaultHealer");
         
@@ -64,7 +65,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         Strategy = await ethers.getContractFactory('Strategy');
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 		
-		(tacticsA, tacticsB) = await Tactics.generateTactics(
+		[tacticsA, tacticsB] = await Tactics.generateTactics(
 			apeSwapVaults[1]['masterchef'],
             apeSwapVaults[1]['PID'],
             0, //have to look at contract and see
@@ -94,7 +95,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN1ADDRESS = await LPtoken.token1()
         TOKEN_OTHER = CRYSTL;
 
-        (tacticsA, tacticsB) = await Tactics.generateTactics(
+        [tacticsA, tacticsB] = await Tactics.generateTactics(
 			crystlVault[0]['masterchef'],
             crystlVault[0]['PID'],
             0, //have to look at contract and see
@@ -128,13 +129,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 */
 
-        strat1_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA]);
+        strat1_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
         crystl_compounder_strat_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
 
 		strategyCrystlCompounder = await vaultHealer.strat(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', strategyCrystlCompounder);
 		
-		(tacticsA, tacticsB) = await Tactics.generateTactics(
+		[tacticsA, tacticsB] = await Tactics.generateTactics(
 			apeSwapVaults[1]['masterchef'],
             apeSwapVaults[1]['PID'],
             0, //have to look at contract and see
@@ -145,7 +146,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             0x2f940c7023000000 //includes selector and encoded call format
         );
 		
-		MAXIMIZER_DATA = await strategyImplementation.generateConfig([
+		MAXIMIZER_DATA = await strategyImplementation.generateConfig(
 			tacticsA,
 			tacticsB,
 			apeSwapVaults[1]['want'],
@@ -154,10 +155,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			magnetite,
 			240,
 			false,
-			apeSwapVaults[1]]['earned'],
+			apeSwapVaults[1]['earned'],
 			[40],
 			crystl_compounder_strat_pid
-		])
+		)
         console.log("4");
 
         maximizer_strat_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
