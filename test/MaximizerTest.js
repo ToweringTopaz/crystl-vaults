@@ -1,6 +1,6 @@
 // import hre from "hardhat";
 
-const { tokens, accounts } = require('../configs/addresses.js');
+const { tokens, accounts, routers } = require('../configs/addresses.js');
 const { WMATIC, CRYSTL, DAI } = tokens.polygon;
 const { FEE_ADDRESS, BURN_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
 const { expect } = require('chai');
@@ -52,77 +52,85 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
-		
-		nonce = await user1.getTransactionCount()
-		vaultHealer = await getContractAddress({
-			from: user1.address,
-			nonce: nonce + 1
-		})
+        const from = user1.address;
+        const nonce = 1 + await user1.getTransactionCount();
+		vaultHealer = await getContractAddress({from, nonce});
 		
 		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
-		vaultFeeManager = await VaultFeeManager.deploy(vaultHealer.getAddress(), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
-
+		vaultFeeManager = await VaultFeeManager.deploy(await getContractAddress({from, nonce}), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
+        console.log("got here")
         VaultHealer = await ethers.getContractFactory("VaultHealer");
-        
-        vaultHealer = await VaultHealer.deploy("", user1, vaultFeeManager);
+        console.log("got here")
+        console.log(vaultFeeManager.address)
+        console.log(user1.address)
+        vaultHealer = await VaultHealer.deploy("", user1.address, vaultFeeManager.address);
+        console.log("got here")
 
         Strategy = await ethers.getContractFactory('Strategy');
+        console.log("got here")
+
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
-		
-		[tacticsA, tacticsB] = await Tactics.generateTactics(
+
+        Tactics = await ethers.getContractFactory("Tactics");
+        tactics = await Tactics.deploy()
+		let [tacticsA, tacticsB] = await tactics.generateTactics(
 			apeSwapVaults[1]['masterchef'],
             apeSwapVaults[1]['PID'],
             0, //have to look at contract and see
-            0x93f1a40b23000000, //includes selector and encoded call format
-            0x8dbdbe6d24300000, //includes selector and encoded call format
-            0x0ad58d2f24300000, //includes selector and encoded call format
-            0x18fccc7623000000, //includes selector and encoded call format
-            0x2f940c7023000000 //includes selector and encoded call format
+            String(0x93f1a40b23000000), //includes selector and encoded call format
+            String(0x8dbdbe6d24300000), //includes selector and encoded call format
+            String(0x0ad58d2f24300000), //includes selector and encoded call format
+            String(0x18fccc7623000000), //includes selector and encoded call format
+            String(0x2f940c7023000000) //includes selector and encoded call format
         );
-		
-        DEPLOYMENT_DATA = await strategyConfig.generateConfig([
+
+        DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
 			tacticsA,
 			tacticsB,
 			apeSwapVaults[1]['want'],
 			40,
 			routers.polygon.APESWAP_ROUTER,
-			magnetite,
+			magnetite.address,
 			240,
 			false,
 			apeSwapVaults[1]['earned'],
 			[40, 40],
 			0
-		]);
+		);
 
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
         TOKEN1ADDRESS = await LPtoken.token1()
         TOKEN_OTHER = CRYSTL;
+        
+        console.log(tacticsA)
+        console.log(tacticsB)
+        console.log([tacticsA, tacticsB])
 
-        [tacticsA, tacticsB] = await Tactics.generateTactics(
+        let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
 			crystlVault[0]['masterchef'],
             crystlVault[0]['PID'],
             0, //have to look at contract and see
-            0x93f1a40b23000000, //includes selector and encoded call format
-            0xe2bbb15824000000, //includes selector and encoded call format
-            0x441a3e7024000000, //includes selector and encoded call format
-            0xe2bbb1582f000000, //includes selector and encoded call format
-            0x5312ea8e20000000 //includes selector and encoded call format
+            String(0x93f1a40b23000000), //includes selector and encoded call format
+            String(0xe2bbb15824000000), //includes selector and encoded call format
+            String(0x441a3e7024000000), //includes selector and encoded call format
+            String(0xe2bbb1582f000000), //includes selector and encoded call format
+            String(0x5312ea8e20000000) //includes selector and encoded call format
         );
 
-		CRYSTL_COMPOUNDER_DATA = await strategyImplementation.generateConfig([
-			tacticsA,
-			tacticsB,
+		CRYSTL_COMPOUNDER_DATA = await strategyImplementation.generateConfig(
+			crystlTacticsA,
+			crystlTacticsB,
 			crystlVault[0]['want'],
 			40,
 			routers.polygon.APESWAP_ROUTER,
-			magnetite,
+			magnetite.address,
 			240,
 			false,
 			crystlVault[0]['earned'],
 			[40],
 			0
-		])
+		)
 
         vaultHealerOwnerSigner = user1
 /*
@@ -132,38 +140,40 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
           });
         vaultHealerOwnerSigner = await ethers.getSigner(vaultHealerOwner)
 */
-
+        console.log("got here")
         strat1_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+        console.log("not here")
+
         crystl_compounder_strat_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
 
 		strategyCrystlCompounder = await vaultHealer.strat(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', strategyCrystlCompounder);
 		
-		[tacticsA, tacticsB] = await Tactics.generateTactics(
+		[maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
 			apeSwapVaults[1]['masterchef'],
             apeSwapVaults[1]['PID'],
             0, //have to look at contract and see
-            0x93f1a40b23000000, //includes selector and encoded call format
-            0x8dbdbe6d24300000, //includes selector and encoded call format
-            0x0ad58d2f24300000, //includes selector and encoded call format
-            0x18fccc7623000000, //includes selector and encoded call format
-            0x2f940c7023000000 //includes selector and encoded call format
+            String(0x93f1a40b23000000), //includes selector and encoded call format
+            String(0x8dbdbe6d24300000), //includes selector and encoded call format
+            String(0x0ad58d2f24300000), //includes selector and encoded call format
+            String(0x18fccc7623000000), //includes selector and encoded call format
+            String(0x2f940c7023000000) //includes selector and encoded call format
         );
 		
 		MAXIMIZER_DATA = await strategyImplementation.generateConfig(
-			tacticsA,
-			tacticsB,
+			maxiTacticsA,
+			maxiTacticsB,
 			apeSwapVaults[1]['want'],
 			40,
 			routers.polygon.APESWAP_ROUTER,
-			magnetite,
+			magnetite.address,
 			240,
 			false,
 			apeSwapVaults[1]['earned'],
 			[40],
 			crystl_compounder_strat_pid
 		)
-        console.log("4");
+        console.log("yay");
 
         maximizer_strat_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
 
