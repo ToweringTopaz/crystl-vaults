@@ -52,7 +52,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         nextVid = vid + 1;
         VaultInfo storage vault = vaultInfo[vid];
 
-        IStrategy _strat = IStrategy(Cavendish.clone(_implementation, bytes32(uint(vid) ^ STRATEGY)));
+        IStrategy _strat = IStrategy(Cavendish.clone(_implementation, bytes32(uint(vid)) ^ STRATEGY));
         assert(_strat == strat(vid));
         
         _strat.initialize(data);
