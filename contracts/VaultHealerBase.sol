@@ -138,8 +138,8 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         pauseMap.unset(vid);
         emit Paused(vid);
     }
-    function unpause(uint vid) public onlyRole("PAUSER") {
-        require(paused(vid) && vid > 0 && vid < nextVid);
+    function unpause(uint vid) public onlyRole("PAUSER") requireValidVid(vid) {
+        require(paused(vid));
         pauseMap.set(vid);
         emit Unpaused(vid);
     }
