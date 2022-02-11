@@ -40,7 +40,7 @@ contract Strategy is BaseStrategy {
                     safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
                     safeSwap(earnedAmt / 2, earnedToken, token1, address(this));
                 } else {
-                    safeSwap(earnedAmt, earnedToken, config.isMaximizer() ? config.targetWant() : _wantToken, address(this));
+                    safeSwap(earnedAmt, earnedToken, config.targetWant(), address(this));
                 }
             }
         }

@@ -41,4 +41,5 @@ interface IVaultHealer is IAccessControlEnumerable {
     }
 
     function vaultInfo(uint vid) external view returns (IERC20, uint32,uint32,uint32,uint256);
+    function nextVid() external view returns (uint32);
 }

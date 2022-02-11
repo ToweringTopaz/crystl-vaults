@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
 
@@ -50,7 +49,6 @@ abstract contract BaseStrategy is Initializable, IStrategy {
         }
     }
 
-
     function initialize(bytes calldata _config) external initializer onlyVaultHealer {
         address targetAddr = configAddress();
         
@@ -65,6 +63,18 @@ abstract contract BaseStrategy is Initializable, IStrategy {
         }
         IERC20 _wantToken = IERC20(address(bytes20(_config[52:72])));
         _wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
+    }
+
+    //should only happen when this contract deposits as a maximizer
+    function onERC1155Received(
+        address operator, address from, uint256 id, uint256, bytes calldata) external view onlyVaultHealer getConfig returns (bytes4) {
+        require (operator == address(this) && from == address(0) && id == config.vid() >> 32);
+        return 0xf23a6e61;
+    }
+
+    //no batch transfer
+    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
+        revert();
     }
 
     function panic() external getConfig onlyVaultHealer {

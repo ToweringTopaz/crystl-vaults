@@ -2,10 +2,11 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "./IUniRouter.sol";
 import "../libraries/Fee.sol";
 
-interface IStrategy {
+interface IStrategy is IERC1155Receiver {
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
     //function boostPoolAddress() external view returns (address);
