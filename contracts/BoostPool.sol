@@ -9,15 +9,14 @@ Join us at PolyCrystal.Finance!
 █▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
 */
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IBoostPool.sol";
 
-contract BoostPool is  Ownable, IBoostPool {
+contract BoostPool is OwnableUpgradeable, IBoostPool {
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -62,7 +61,7 @@ contract BoostPool is  Ownable, IBoostPool {
     event EmergencyRewardWithdraw(address indexed user, uint256 amount);
     event EmergencySweepWithdraw(address indexed user, IERC20 indexed token, uint256 amount);
 
-    function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external {
+    function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external initializer {
         (
             address _rewardToken,
             uint112 _rewardPerBlock,
@@ -75,7 +74,7 @@ contract BoostPool is  Ownable, IBoostPool {
 
         VAULTHEALER = IVaultHealer(msg.sender);
         
-        (IERC20 vaultWant,,,,,,) = IVaultHealer(msg.sender).vaultInfo(uint224(_boostID));
+        (IERC20 vaultWant,,,,) = IVaultHealer(msg.sender).vaultInfo(uint224(_boostID));
         require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
         
         REWARD_TOKEN = IERC20(_rewardToken);
