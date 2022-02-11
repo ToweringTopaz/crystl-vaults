@@ -9,14 +9,15 @@ Join us at PolyCrystal.Finance!
 █▀▀▀ ▀▀▀▀ ▀▀▀ ▄▄▄█ ▀▀▀ ▀░▀▀ ▄▄▄█ ▀▀▀ ░░▀░░ ▀░░▀ ▀▀▀
 */
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IBoostPool.sol";
 
-contract BoostPool is OwnableUpgradeable, IBoostPool {
+contract BoostPool is IBoostPool, Initializable, Ownable {
     using SafeERC20 for IERC20;
 
     // Info of each user.
@@ -26,7 +27,7 @@ contract BoostPool is OwnableUpgradeable, IBoostPool {
     }
 
     // The vaultHealer where the staking / want tokens all reside
-    IVaultHealer public VAULTHEALER;
+    IVaultHealer public immutable VAULTHEALER;
     // This is the vid + (a unique identifier << 224)
     uint256 public BOOST_ID;
     // The reward token
@@ -61,6 +62,10 @@ contract BoostPool is OwnableUpgradeable, IBoostPool {
     event EmergencyRewardWithdraw(address indexed user, uint256 amount);
     event EmergencySweepWithdraw(address indexed user, IERC20 indexed token, uint256 amount);
 
+    constructor(address _vaultHealer) {
+        VAULTHEALER = IVaultHealer(_vaultHealer);
+    }
+
     function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external initializer {
         (
             address _rewardToken,
@@ -71,8 +76,6 @@ contract BoostPool is OwnableUpgradeable, IBoostPool {
         require(REWARD_TOKEN.balanceOf(address(this)) >= (bonusEndBlock - _startBlock) * rewardPerBlock, "Can't activate pool without sufficient rewards");
         
         _transferOwnership(_owner);
-
-        VAULTHEALER = IVaultHealer(msg.sender);
         
         (IERC20 vaultWant,,,,) = IVaultHealer(msg.sender).vaultInfo(uint224(_boostID));
         require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
