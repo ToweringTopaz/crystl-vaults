@@ -173,7 +173,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			[40],
 			crystl_compounder_strat_pid
 		)
-        console.log("4");
+        console.log("yay");
 
         maximizer_strat_pid = await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, MAXIMIZER_DATA);
 
