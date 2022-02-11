@@ -5,7 +5,7 @@ import "./Tactics.sol";
 import "../interfaces/IUniRouter.sol";
 import "../interfaces/IMagnetite.sol";
 
-library StrategyStandard {
+library StrategyConfig {
     
     type MemPointer is uint256;
 
@@ -118,7 +118,7 @@ library StrategyStandard {
         bool _feeOnTransfer,
         address[] memory _earned,
         uint8[] memory _earnedDust
-    ) public view returns (bytes memory configData) {
+    ) external view returns (bytes memory configData) {
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
         uint8 vaultType = uint8(_earned.length);
@@ -142,6 +142,10 @@ library StrategyStandard {
 
         for (uint i; i < _earned.length; i++) {
             configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
+        }
+
+        if (_targetVid != 0) {
+            configData = abi.encodePacked(configData, _targetVid, _targetWant);
         }
 
     }

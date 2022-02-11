@@ -18,10 +18,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
-    event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
-    event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
-    event Earned(uint256 indexed vid, uint256 wantAmountEarned);
-
     function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
         _earn(vid);
     }
@@ -44,8 +40,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
-                emit Earned(vid, wantLockedTotal - vault.wantLockedLastUpdate);
-                vault.wantLockedLastUpdate = uint112(wantLockedTotal);
+                emit Earned(vid, wantLockedTotal);
             }
         } catch {}
         vault.lastEarnBlock = uint32(block.number);
@@ -93,7 +88,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
             
         pendingDeposits.pop();
 
-        vault.wantLockedLastUpdate += uint112(wantAdded);
         emit Deposit(_from, _to, _vid, wantAdded);
     }
 
@@ -167,31 +161,31 @@ abstract contract VaultHealerGate is VaultHealerBase {
         );
     }
 
-function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        if (from != address(0) && to != address(0)) {
-            for (uint i; i < ids.length; i++) {
-                uint vid = ids[i];
+    function _beforeTokenTransfer(
+            address operator,
+            address from,
+            address to,
+            uint256[] memory ids,
+            uint256[] memory amounts,
+            bytes memory data
+        ) internal virtual override {
+            super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+            if (from != address(0) && to != address(0)) {
+                for (uint i; i < ids.length; i++) {
+                    uint vid = ids[i];
 
-                if (vid >> 32 > 0) {
-                    _earn(vid);
-                    uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
-                    
-                    withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
+                    if (vid >> 32 > 0) {
+                        _earn(vid);
+                        uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
+                        
+                        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
 
-                    UpdateOffsetsOnDeposit(vid, to, underlyingValue); //todo should this be from or to?????
+                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); //todo should this be from or to?????
+                    }
+
                 }
-
             }
         }
-    }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {

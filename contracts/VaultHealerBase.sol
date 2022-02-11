@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "./CavendishDeployer.sol";
+import "./libraries/Cavendish.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./interfaces/IBoostPool.sol";
@@ -14,21 +13,9 @@ import "./interfaces/IMagnetite.sol";
 import "./interfaces/IUniRouter.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
-abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable, ERC1155Supply, IVaultHealer {
+abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVaultHealer {
 
     using BitMaps for BitMaps.BitMap;
-
-    struct VaultInfo {
-        uint32 lastEarnBlock;
-        uint32 numMaximizers; //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
-        IERC20 want;
-
-        uint112 wantLockedLastUpdate;
-        uint112 totalMaximizerEarningsOffset;
-        uint32 numBoosts;
-
-        uint256 panicLockExpiry; //no gas savings from packing this variable
-    }
 
     uint constant MAX_MAXIMIZERS = 1024;
     uint constant PANIC_LOCK_DURATION = 6 hours;
@@ -46,11 +33,6 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
 
     uint internal _lock = type(uint).max;
 
-    event AddVault(uint indexed vid);
-
-    event SetVaultFeeManager(IVaultFeeManager indexed _manager);
-    event Paused(uint indexed vid);
-    event Unpaused(uint indexed vid);
 
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
@@ -73,7 +55,7 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
         nextVid = vid + 1;
         VaultInfo storage vault = vaultInfo[vid];
 
-        IStrategy _strat = IStrategy(Clones.clone(_implementation));
+        IStrategy _strat = IStrategy(Cavendish.clone(_implementation, bytes32(uint(vid))));
         assert(_strat == strat(vid));
         
         _strat.initialize(data);
@@ -96,7 +78,7 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
 
         IStrategy targetStrat = strat(vid);
 
-        IStrategy _strat = IStrategy(clone(address(targetStrat.getMaximizerImplementation()), STRATEGY ^ bytes32(vid)));
+        IStrategy _strat = IStrategy(Cavendish.clone(address(targetStrat.getMaximizerImplementation()), STRATEGY ^ bytes32(vid)));
         assert(_strat == strat(vid));
         
         _strat.initialize(data);
@@ -178,5 +160,9 @@ abstract contract VaultHealerBase is CavendishDeployer, AccessControlEnumerable,
     modifier whenNotPaused(uint vid) {
         require(!paused(vid), "VH: paused");
         _;
+    }
+
+    fallback() external {
+        Cavendish._fallback();
     }
 }

@@ -4,16 +4,16 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-import "./libraries/StrategyStandard.sol";
+import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
 
 abstract contract BaseStrategy is Initializable, IStrategy {
     using SafeERC20 for IERC20;
-    using StrategyStandard for StrategyStandard.MemPointer;
+    using StrategyConfig for StrategyConfig.MemPointer;
 
 
     uint constant FEE_MAX = 10000;
-    StrategyStandard.MemPointer constant config = StrategyStandard.MemPointer.wrap(0x80);
+    StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
     address public immutable vaultHealer;
 
 

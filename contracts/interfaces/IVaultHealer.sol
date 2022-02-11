@@ -4,8 +4,19 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IMagnetite.sol";
 import "./IStrategy.sol";
+import "./IVaultFeeManager.sol";
 
 interface IVaultHealer {
+
+    event AddVault(uint indexed vid);
+    event SetVaultFeeManager(IVaultFeeManager indexed _manager);
+    event Paused(uint indexed vid);
+    event Unpaused(uint indexed vid);
+    event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
+    event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
+    event Earned(uint256 indexed vid, uint256 wantAmountEarned);
+    event AddBoost(uint indexed boostid);
+    event BoostEmergencyWithdraw(address user, uint _boostID);
 
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
     //function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
@@ -17,13 +28,16 @@ interface IVaultHealer {
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;
     function deposit(uint256 _vid, uint256 _wantAmt) external;
     function strat(uint256 _vid) external view returns (IStrategy);
-    function vaultInfo(uint vid) external view returns (
-        IERC20 want,
-        uint32 lastEarnBlock,
-        uint32 numMaximizers, //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
-        uint112 wantLockedLastUpdate,
-        uint112 totalMaximizerEarningsOffset,
-        uint32 numBoosts,
-        uint256 panicLockExpiry //no gas savings from packing this variable
-    );
+
+    struct VaultInfo {
+        IERC20 want;
+
+        uint32 lastEarnBlock;
+        uint32 numBoosts;
+        uint32 numMaximizers; //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
+        
+        uint256 panicLockExpiry; //no gas savings from packing this variable
+    }
+
+    function vaultInfo(uint vid) external view returns (IERC20, uint32,uint32,uint32,uint256);
 }

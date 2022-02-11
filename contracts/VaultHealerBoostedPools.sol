@@ -12,9 +12,6 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
     BitMaps.BitMap activeBoosts;
     mapping(address => BitMaps.BitMap) userBoosts;
-
-    event AddBoost(uint indexed boostid);
-    event BoostEmergencyWithdraw(address user, uint _boostID);
     
     constructor(address _owner) {
         _setupRole(BOOST_ADMIN, _owner);
@@ -30,7 +27,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         vault.numBoosts = nonce + 1;
         uint _boostID = (uint(nonce) << 224) | vid;
 
-        IBoostPool _boost = IBoostPool(clone(_implementation, BOOSTPOOL ^ bytes32(_boostID)));
+        IBoostPool _boost = IBoostPool(Cavendish.clone(_implementation, BOOSTPOOL ^ bytes32(_boostID)));
         assert(_boost == boostPool(_boostID));
         grantRole(BOOSTPOOL, address(_boost)); //requires msg.sender is BOOST_ADMIN
 
@@ -84,8 +81,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         //If boosted pools are affected, update them
 
         for (uint i; i < ids.length; i++) {
-            VaultInfo storage vault = vaultInfo[ids[i]];
-            uint numBoosts = vault.numBoosts;
+            uint numBoosts = vaultInfo[ids[i]].numBoosts;
             for (uint k; k < numBoosts; k++) {
                 bool fromBoosted = from != address(0) && userBoosts[from].get(k);
                 bool toBoosted = to != address(0) && userBoosts[to].get(k);

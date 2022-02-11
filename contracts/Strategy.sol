@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
-    using StrategyStandard for StrategyStandard.MemPointer;
+    using StrategyConfig for StrategyConfig.MemPointer;
 
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 

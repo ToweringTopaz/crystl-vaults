@@ -160,15 +160,16 @@ contract Magnetite is Ownable, IMagnetite {
     function findPair(IUniRouter router, IERC20 a, IERC20[] memory b) internal view returns (IERC20) {
         IUniFactory factory = IUniFactory(router.factory());
         
-        PairData[] memory pairData = new PairData[](NUM_COMMON + b.length);
+        IERC20[] memory allCom = commonTokens(router);
+        PairData[] memory pairData = new PairData[](allCom.length + b.length);
 
-        IERC20[NUM_COMMON] memory allCom = allCommons(router);
+        
         
         //populate pair tokens
         for (uint i; i < b.length; i++) {
             pairData[i].token = b[i];   
         }
-        for (uint i; i < NUM_COMMON; i++) {
+        for (uint i; i < allCom.length; i++) {
             pairData[i+b.length].token = allCom[i];
         }
         
@@ -204,13 +205,13 @@ contract Magnetite is Ownable, IMagnetite {
     }
 
     function commonTokens(IUniRouter router) private pure returns (IERC20[] memory tokens) {
-        tokens = new IERC20[](len);
+        tokens = new IERC20[](6);
         tokens[0] = router.WETH();
-        tokens[1] = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; //usdc
-        tokens[2] = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619; //weth
-        tokens[3] = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13; //quick
-        tokens[4] = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F; //usdt
-        tokens[5] = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063; //dai
+        tokens[1] = IERC20(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174); //usdc
+        tokens[2] = IERC20(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619); //weth
+        tokens[3] = IERC20(0x831753DD7087CaC61aB5644b308642cc1c33Dc13); //quick
+        tokens[4] = IERC20(0xc2132D05D31c914a87C6611C10748AEb04B58e8F); //usdt
+        tokens[5] = IERC20(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063); //dai
     }
     function setlength(IERC20[] memory array, uint n) internal pure returns (IERC20[] memory) {
         assembly { mstore(array, n) }

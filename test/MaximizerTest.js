@@ -49,37 +49,43 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     before(async () => {
         [user1, user2, user3, user4, _] = await ethers.getSigners();
 		
-		nonce = user1.getTransactionCount;
-		
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
 		
+		nonce = user1.getTransactionCount;
+		
 		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
-		vaultFeeManager = await VaultFeeManager.deploy(
+		vaultFeeManager = await VaultFeeManager.deploy(getContractAddress(user1, nonce + 1), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
 
-        // vaultHealer = await ethers.getContractAt(vaultHealer_abi, VAULT_HEALER);
-
-
-		
         VaultHealer = await ethers.getContractFactory("VaultHealer");
-        const feeConfig = 
-            [
-                [ FEE_ADDRESS, 0 ], //earn fee: wmatic is paid; goes back to caller of earn; 0% rate
-                [ FEE_ADDRESS, 500 ], //reward fee: paid in DAI; standard fee address; 0% rate
-                [ BURN_ADDRESS, 0 ] //burn fee: crystl to burn address; 5% rate
-            ]
         
-        vaultHealer = await VaultHealer.deploy(FEE_ADDRESS, 10, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
-        quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealerView.zap());
-		
+        vaultHealer = await VaultHealer.deploy("", user1, vaultFeeManager);
 
-        Strategy = await ethers.getContractFactory('StrategyVHStandard');
-		strategyImplementation = await StrategyVHStandard.deploy();
+        Strategy = await ethers.getContractFactory('Strategy');
+		strategyImplementation = await Strategy.deploy();
 		
-        const DEPLOYMENT_DATA = abiCoder.encode(
+		StrategyConfig = await ethers.getContractFactory('StrategyConfig');
+		strategyConfig = await StrategyConfig.deploy();
+		
+		
+		
+        const DEPLOYMENT_DATA = strategyConfig.generateConfig([
+			apeSwapVaults[1]['tacticsA'],
+			apeSwapVaults[1]['tacticsB'],
+			apeSwapVaults[1]['want'],
+			40,
+			routers.polygon.APESWAP_ROUTER,
+			magnetite,
+			0,
+			ZERO_ADDRESS,
+			240,
+			false,
+			apeSwapVaults[1]['earned'],
+			[40]
+		]);
 			[ "address", "address", "address", "uint256", "tuple(address, uint16, uint32, bool, address, uint96)", "address[]", "uint256" ],
 			[
-				apeSwapVaults[1]['want'],
+				
 				apeSwapVaults[1]['masterchef'],
 				apeSwapVaults[1]['tactic'],
 				apeSwapVaults[1]['PID'],
