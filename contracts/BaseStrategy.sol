@@ -2,11 +2,10 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
-
-abstract contract BaseStrategy is Initializable, IStrategy {
+import "hardhat/console.sol";
+abstract contract BaseStrategy is IStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
 
@@ -49,19 +48,21 @@ abstract contract BaseStrategy is Initializable, IStrategy {
         }
     }
 
-    function initialize(bytes calldata _config) external initializer onlyVaultHealer {
-        address targetAddr = configAddress();
-        
+    function initialize(bytes memory _config) external onlyVaultHealer {
+        console.log(string(_config));
+        IERC20 _wantToken;
         assembly {
-            let len := _config.length //deploy with 13-byte code below plus config data
-            mstore(0x00, 0x600c80380380823d39803df3fe00000000000000000000000000000000000000) //simple bytecode which saves everything after the f3
-            calldatacopy(13, _config.offset, _config.length) //place everything aftr the f3
-            let configAddr := create(0, 0, add(len,13)) //0 value; send 13 bytes plus _config
-            if not(eq(targetAddr, configAddr)) { //create failed?
+            _wantToken := and(0xffffffffffffffffffffffffffffffffffffffff, mload(add(_config, 116)))
+            let len := mload(_config) //get length of config
+            mstore(_config, 0x600c80380380823d39803df3fe) //simple bytecode which saves everything after the f3
+
+            let configAddr := create(0, add(_config, 19), add(len,13)) //0 value; send 13 bytes plus _config
+            if iszero(configAddr) { //create failed?
                 revert(0, 0)
             }
         }
-        IERC20 _wantToken = IERC20(address(bytes20(_config[52:72])));
+        
+        console.log(address(_wantToken));
         _wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
     }
 
@@ -217,6 +218,9 @@ abstract contract BaseStrategy is Initializable, IStrategy {
         } else {
             _router.swapExactTokensForTokens(_amountIn, 0, cleanedUpPath, _to, block.timestamp);                
         }
+    }
+    function vid() external view getConfig returns (uint) {
+        return config.vid();
     }
 
     function isMaximizer() external view getConfig returns (bool) {

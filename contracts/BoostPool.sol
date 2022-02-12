@@ -16,6 +16,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IBoostPool.sol";
+import "hardhat/console.sol";
 
 contract BoostPool is IBoostPool, Initializable, Ownable {
     using SafeERC20 for IERC20;
@@ -67,33 +68,28 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
     }
 
     function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external initializer {
+        require(address(VAULTHEALER) == msg.sender, "Wrong vaulthealer for pool implementation");
         (
             address _rewardToken,
             uint112 _rewardPerBlock,
-            uint32 _startBlock,
-            uint32 _bonusEndBlock
+            uint32 _delayBlocks,
+            uint32 _durationBlocks
         ) = abi.decode(initdata,(address,uint112,uint32,uint32));
-        require(REWARD_TOKEN.balanceOf(address(this)) >= (bonusEndBlock - _startBlock) * rewardPerBlock, "Can't activate pool without sufficient rewards");
-        
+        require(IERC20(_rewardToken).balanceOf(address(this)) >= _durationBlocks * rewardPerBlock, "Can't activate pool without sufficient rewards");
+        BOOST_ID = _boostID;
+
         _transferOwnership(_owner);
         
-        (IERC20 vaultWant,,,,) = IVaultHealer(msg.sender).vaultInfo(uint224(_boostID));
+        (IERC20 vaultWant,,,,) = IVaultHealer(msg.sender).vaultInfo(uint256(_boostID & type(uint224).max));
         require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
-        
+
         REWARD_TOKEN = IERC20(_rewardToken);
-        uint rewardTotalSupply = IERC20(_rewardToken).totalSupply();
 
         rewardPerBlock = uint112(_rewardPerBlock);
         
-        startBlock = uint32(_startBlock);
-        bonusEndBlock = uint32(_bonusEndBlock);
-        lastRewardBlock = uint32(_startBlock);
-
-        require (block.number <= startBlock, "rewards cannot have already started");
-        require(rewardTotalSupply > _rewardPerBlock * (_bonusEndBlock - _startBlock), "pool would reward more than total supply of rewardtoken!");
-        require(rewardTotalSupply < uint(int(type(int128).max)), "reward total supply too large and might overflow");
-
-        BOOST_ID = _boostID;
+        startBlock = uint32(block.number + _delayBlocks);
+        bonusEndBlock = uint32(block.number + _durationBlocks);
+        lastRewardBlock = uint32(startBlock);
     }
 
     modifier onlyVaultHealer {
@@ -281,6 +277,8 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
     ///   Tokens are sent to owner
     /// @param token The address of the BEP20 token to sweep
     function sweepToken(IERC20 token) external onlyOwner {
+        
+        require(token != REWARD_TOKEN, "cannot sweep reward token");
         uint256 balance = token.balanceOf(address(this));
         token.transfer(msg.sender, balance);
         emit EmergencySweepWithdraw(msg.sender, token, balance);

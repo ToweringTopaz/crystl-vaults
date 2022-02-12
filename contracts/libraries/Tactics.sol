@@ -2,7 +2,11 @@
 
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/Address.sol";
+import "hardhat/console.sol";
+
 library Tactics {
+    using Address for address;
 
     /*
     This library handles masterchef function call data packed as follows:
@@ -55,13 +59,12 @@ library Tactics {
 
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
         uint returnvarPosition = (TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
-        bytes memory generatedCall = _generateCall((TacticsA.unwrap(tacticsA) >> 72) & 0xffffff, TacticsA.unwrap(tacticsA) & 0xffffffffffffffff, 0); //pid, vst call, 0
+        bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
 
+        address masterchef = address(uint160(TacticsA.unwrap(tacticsA) >> 96));
+        bytes memory returndata = masterchef.functionStaticCall(generatedCall, "Tactics: staticcall failed");
         assembly {
-            let ptr := generatedCall
-            let success := staticcall(gas(), shr(96, tacticsA), add(generatedCall, 0x20), generatedCall, generatedCall, add(returnvarPosition, 0x20))
-            if iszero(success) { revert(0, 0) }
-            amountStaked := mload(add(generatedCall, returnvarPosition))
+            amountStaked := mload(add(returndata, add(0x20,returnvarPosition)))
         }
     }
 
@@ -78,37 +81,32 @@ library Tactics {
         _doCall(tacticsA, tacticsB, 0, 0);
     }
     function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
-        bytes memory generatedCall = _generateCall((TacticsA.unwrap(tacticsA) >> 72) & 0xffffff, (TacticsB.unwrap(tacticsB) >> offset) & 0xffffffffffffffff, amount);
-
-        assembly {
-            let success := call(gas(), shr(96, tacticsA), 0, add(generatedCall, 0x20), generatedCall, 0, 0)
-            if iszero(success) { revert(0, 0) }
-        }
+        bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsB.unwrap(tacticsB) >> offset), amount);
+        address masterchef = address(uint160(TacticsA.unwrap(tacticsA) >> 96));
+        console.log("chef:", masterchef);
+        console.log(string(generatedCall));
+        masterchef.functionCall(generatedCall, "Tactics: call failed");
+        
     }
 
-    function _generateCall(uint pid, uint256 encodedCall, uint amount) private view returns (bytes memory generatedCall) {
-        assembly {
-            generatedCall := mload(0x40) //free memory pointer, will contain length value
-            
-            //store selector at start of data area, expecting area on left to be overwritten with length;
-            // area on right to be overwritten with data or, if number of parameters is zero, ignored
-            mstore(add(generatedCall,8), encodedCall) 
-            
-            let ptr := add(generatedCall,0x24) //place params after selector
+    function _generateCall(uint24 pid, uint64 encodedCall, uint amount) public view returns (bytes memory generatedCall) {
+        console.log(encodedCall);
 
-            for { let i := 28 } lt(i, 31) { i := sub(i, 4) } { //underflow expected
-                switch and(shr(i, encodedCall), 0x0f) // (encodedCall >> i) & 0x0f : isolates a nibble representing some 32-byte word
-                case 0 { break }
-                case 0x0f { mstore(ptr, 0) }
-                case 2 { mstore(ptr, pid) } //pid
-                case 4 { mstore(ptr, amount) }
-                case 3 { mstore(ptr, address()) } //address(this)
-                default { revert(0,0) } //tactic code out of range
-                
-                ptr := add(ptr, 0x20)
+        generatedCall = abi.encodePacked(bytes4(bytes8(encodedCall)));
 
+        for (bytes4 params = bytes4(bytes8(encodedCall) << 32); params != 0; params <<= 4) {
+            bytes4 p = params & 0xf0000000;
+            uint256 word;
+            if (p == 0x20000000) {
+                word = pid;
+            } else if (p == 0x30000000) {
+                word = uint(uint160(address(this)));
+            } else if (p == 0x40000000) {
+                word = amount;
+            } else if (p != 0xf0000000) {
+                revert("Tactics: invalid tactic");
             }
-            mstore(generatedCall, sub(ptr, add(generatedCall,0x20))) //store length
+            generatedCall = abi.encodePacked(generatedCall, word);
         }
     }
 }

@@ -28,13 +28,9 @@ contract Strategy is BaseStrategy {
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
 
-        uint _vid;
         IERC20 _targetWant = IERC20(_wantToken);
         if (_targetVid > 0) {
-            (_targetWant,,,_vid,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid); //numMaximizers
-            _vid |= (_targetVid << 32);
-        } else {
-            _vid = uint(IVaultHealer(vaultHealer).nextVid());
+            (_targetWant,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid); //numMaximizers
         }
 
         uint8 vaultType = uint8(_earned.length);
@@ -53,6 +49,9 @@ contract Strategy is BaseStrategy {
 
         for (uint i; i < _earned.length; i++) {
             configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
+        }
+        if (_targetVid > 0) {
+            configData = abi.encodePacked(configData, _targetVid);
         }
     }
 

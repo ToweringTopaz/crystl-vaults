@@ -30,7 +30,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 
     uint internal _lock = type(uint).max;
 
-
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(VAULT_ADDER, _owner);
@@ -50,42 +49,25 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
     function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
         vid = nextVid;
         nextVid = vid + 1;
-        VaultInfo storage vault = vaultInfo[vid];
-
-        IStrategy _strat = IStrategy(Cavendish.clone(_implementation, bytes32(uint(vid)) ^ STRATEGY));
-        assert(_strat == strat(vid));
-        
-        _strat.initialize(data);
-        
-        grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
-        
-        IERC20 want = _strat.wantToken();
-        vault.want = want;
-
-        require(want.totalSupply() <= type(uint112).max, "incompatible total supply");
-        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
-        
-        emit AddVault(vid);
+        addVault(vid, _implementation, data);
     }
 
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) returns (uint vid) {
-        VaultInfo storage targetVault = vaultInfo[vid];
-        require(targetVault.numMaximizers <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
-        vid = (targetVid << 32) + targetVault.numMaximizers;
+        VaultInfo storage targetVault = vaultInfo[targetVid];
+        uint32 nonce = targetVault.numMaximizers;
+        require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
+        vid = (targetVid << 32) + nonce;
+        targetVault.numMaximizers = nonce + 1;
+        addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
+    }
 
-        IStrategy targetStrat = strat(vid);
+    function addVault(uint256 vid, address implementation, bytes calldata data) internal {
 
-        IStrategy _strat = IStrategy(Cavendish.clone(address(targetStrat.getMaximizerImplementation()), STRATEGY ^ bytes32(vid)));
-        assert(_strat == strat(vid));
-        
-        _strat.initialize(data);
-        
+        IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid)) ^ STRATEGY));
+        _strat.initialize(abi.encodePacked(uint256(vid), data));
         grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
-        targetVault.numMaximizers++;
-        
-        IERC20 want = _strat.wantToken();
-        vaultInfo[vid].want = want;
-
+        vaultInfo[vid].want = _strat.wantToken();
+        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
         emit AddVault(vid);
     }
 
@@ -161,5 +143,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 
     fallback() external {
         Cavendish._fallback();
+        revert("VH: invalid call to fallback");
     }
 }
