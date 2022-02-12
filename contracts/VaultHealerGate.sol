@@ -3,14 +3,16 @@ pragma solidity ^0.8.9;
 
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "hardhat/console.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
     
     struct PendingDeposit {
         IERC20 token;
+        uint96 amount0;
         address from;
-        uint112 amount;
+        uint96 amount1;
     }
 
     mapping(address => mapping(uint256 => uint112)) public maximizerEarningsOffset;
@@ -49,21 +51,23 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // Want tokens moved from user -> this -> Strat (compounding)
     function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
-        _deposit(_vid, _wantAmt, msg.sender, msg.sender);
+        _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For depositing for other users
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
-        _deposit(_vid, _wantAmt, msg.sender, _to);
+        _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         VaultInfo storage vault = vaultInfo[_vid];
 
+        console.log(address(vault.want));
         pendingDeposits.push() = PendingDeposit({
             token: vault.want,
+            amount0: uint96(_wantAmt >> 96),
             from: _from,
-            amount: uint112(_wantAmt)
+            amount1: uint96(_wantAmt)
         });
         
         IStrategy vaultStrat = strat(_vid);
@@ -93,17 +97,17 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _vid, uint256 _wantAmt) external {
-        _withdraw(_vid, _wantAmt, msg.sender, msg.sender);
+        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For withdrawing to other address
     function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external {
-        _withdraw(_vid, _wantAmt, msg.sender, _to);
+        _withdraw(_vid, _wantAmt, _msgSender(), _to);
     }
 
     function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external {
         require(
-            _from == msg.sender || isApprovedForAll(_from, msg.sender),
+            _from == _msgSender() || isApprovedForAll(_from, _msgSender()),
             "ERC1155: caller is not owner nor approved"
         );
         _withdraw(_vid, _wantAmt, _from, _to);
@@ -147,18 +151,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // Withdraw everything from vault for yourself
     function withdrawAll(uint256 _vid) external {
-        _withdraw(_vid, type(uint112).max, msg.sender, msg.sender);
+        _withdraw(_vid, type(uint112).max, _msgSender(), _msgSender());
     }
     
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint112 _amount) external {
         PendingDeposit storage pendingDeposit = pendingDeposits[pendingDeposits.length - 1];
-        pendingDeposit.amount -= uint112(_amount);
+        require(_amount <= uint(pendingDeposit.amount0) << 96 | uint(pendingDeposit.amount1), "VH: strategy requesting more tokens than authorized");
         pendingDeposit.token.safeTransferFrom(
             pendingDeposit.from,
             _to,
             _amount
         );
+        pendingDeposits.pop();
     }
 
     function _beforeTokenTransfer(

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./VaultHealerGate.sol";
 import "./interfaces/IBoostPool.sol";
 
@@ -18,20 +19,19 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         _setRoleAdmin(BOOSTPOOL, BOOST_ADMIN);
     }
     function boostPool(uint _boostID) public view returns (IBoostPool) {
-        return IBoostPool(Cavendish.computeAddress(BOOSTPOOL ^ bytes32(_boostID)));
+        return IBoostPool(Cavendish.computeAddress(bytes32(_boostID)));
     }
 
     function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) {
         VaultInfo storage vault = vaultInfo[vid];
-        uint32 nonce = vault.numBoosts;
+        uint16 nonce = vault.numBoosts;
         vault.numBoosts = nonce + 1;
-        uint _boostID = (uint(nonce) << 224) | vid;
+        uint _boostID = (uint(bytes32(bytes4(0xB0057000 + nonce))) | vid);
 
-        IBoostPool _boost = IBoostPool(Cavendish.clone(_implementation, BOOSTPOOL ^ bytes32(_boostID)));
-        assert(_boost == boostPool(_boostID));
-        grantRole(BOOSTPOOL, address(_boost)); //requires msg.sender is BOOST_ADMIN
+        IBoostPool _boost = IBoostPool(Cavendish.clone(_implementation, bytes32(_boostID)));
+        grantRole(BOOSTPOOL, address(_boost)); //requires _msgSender() is BOOST_ADMIN
 
-        _boost.initialize(msg.sender, _boostID, initdata);
+        _boost.initialize(_msgSender(), _boostID, initdata);
 
         activeBoosts.set(_boostID);
 
@@ -40,7 +40,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
     //Users can enableBoost to opt-in to a boosted vault
     function enableBoost(address _user, uint _boostID) public nonReentrant {
-        require(msg.sender == _user || isApprovedForAll(_user, msg.sender), "VH: must be approved to accept boost");
+        require(_msgSender() == _user || isApprovedForAll(_user, _msgSender()), "VH: must be approved to accept boost");
         require(activeBoosts.get(_boostID), "not an active boost");
         require(!userBoosts[_user].get(_boostID), "boost is already active for user");
         userBoosts[_user].set(_boostID);
@@ -50,23 +50,23 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
     //Standard opt-in function users will call
     function enableBoost(uint _boostID) external {
-        enableBoost(msg.sender, _boostID);
+        enableBoost(_msgSender(), _boostID);
     }
 
     function harvestBoost(uint _boostID) external nonReentrant {
-        boostPool(_boostID).harvest(msg.sender);
+        boostPool(_boostID).harvest(_msgSender());
     }
 
     //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
     function emergencyBoostWithdraw(uint _boostID) external nonReentrant {
-        require(userBoosts[msg.sender].get(_boostID), "boost is not active for user");
-        try boostPool(_boostID).emergencyWithdraw{gas: 2**19}(msg.sender) returns (bool success) {
+        require(userBoosts[_msgSender()].get(_boostID), "boost is not active for user");
+        try boostPool(_boostID).emergencyWithdraw{gas: 2**19}(_msgSender()) returns (bool success) {
             if (!success) activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         } catch {
             activeBoosts.unset(_boostID);
         }
-        userBoosts[msg.sender].unset(_boostID);
-        emit BoostEmergencyWithdraw(msg.sender, _boostID);
+        userBoosts[_msgSender()].unset(_boostID);
+        emit BoostEmergencyWithdraw(_msgSender(), _boostID);
     }
 
     function _beforeTokenTransfer(
@@ -77,6 +77,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         uint256[] memory amounts,
         bytes memory data
     ) internal virtual override {
+        
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
 
@@ -88,7 +89,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
                 if (!fromBoosted && !toBoosted) continue;
 
-                uint status = boostPool((k << 224) | ids[i]).notifyOnTransfer(
+                uint status = boostPool(uint(bytes32(bytes4(0xB0057000 + ids[i])))).notifyOnTransfer(
                     fromBoosted ? from : address(0),
                     toBoosted ? to : address(0),
                     uint112(amounts[i])

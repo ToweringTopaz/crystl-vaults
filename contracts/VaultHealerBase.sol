@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
@@ -11,8 +10,6 @@ import "./interfaces/IVaultFeeManager.sol";
 
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVaultHealer {
-
-    using BitMaps for BitMaps.BitMap;
 
     uint constant MAX_MAXIMIZERS = 1024;
     uint constant PANIC_LOCK_DURATION = 6 hours;
@@ -24,9 +21,8 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
     IVaultFeeManager public vaultFeeManager;
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
-    uint32 public nextVid = 1; //first unused base vid (vid 0 means null/invalid)
 
-    BitMaps.BitMap pauseMap; //true for unpaused vaults;
+    uint32 public nextVid = 1; //first unused base vid (vid 0 means null/invalid)
 
     uint internal _lock = type(uint).max;
 
@@ -53,8 +49,9 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
     }
 
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) returns (uint vid) {
+        require(targetVid < 2**192, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
-        uint32 nonce = targetVault.numMaximizers;
+        uint16 nonce = targetVault.numMaximizers;
         require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
         vid = (targetVid << 32) + nonce;
         targetVault.numMaximizers = nonce + 1;
@@ -63,11 +60,11 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 
     function addVault(uint256 vid, address implementation, bytes calldata data) internal {
 
-        IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid)) ^ STRATEGY));
+        IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
         _strat.initialize(abi.encodePacked(uint256(vid), data));
         grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
         vaultInfo[vid].want = _strat.wantToken();
-        pauseMap.set(vid); //uninitialized vaults are paused; this unpauses
+        vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
         emit AddVault(vid);
     }
 
@@ -94,7 +91,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 
 
     function strat(uint _vid) public view returns (IStrategy) {
-        return IStrategy(Cavendish.computeAddress(bytes32(_vid) ^ STRATEGY));
+        return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
     }
 
     modifier requireValidVid(uint vid) {
@@ -114,12 +111,12 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
     function pause(uint vid) public onlyRole("PAUSER") whenNotPaused(vid) {
-        pauseMap.unset(vid);
+        vaultInfo[vid].active = false;
         emit Paused(vid);
     }
     function unpause(uint vid) public onlyRole("PAUSER") requireValidVid(vid) {
         require(paused(vid));
-        pauseMap.set(vid);
+        vaultInfo[vid].active = true;
         emit Unpaused(vid);
     }
 
@@ -134,7 +131,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         strat(vid).unpanic();
     }
     function paused(uint vid) public view returns (bool) {
-        return !pauseMap.get(vid);
+        return !vaultInfo[vid].active;
     }
     modifier whenNotPaused(uint vid) {
         require(!paused(vid), "VH: paused");

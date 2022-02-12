@@ -120,36 +120,42 @@ contract Magnetite is Ownable, IMagnetite {
         
         if (c == b || d == a) {
             path[1] = b;
+            setlength(path, 2);
             return path;
         } else if (c == d) {
             path[1] = c;
             path[2] = b;
-            return setlength(path, 3);
+            setlength(path, 3);
+            return path;
         }
         _b[1] = c;
         IERC20 e0 = findPair(router, d, _b);
         if (e0 == a) {
             path[1] = d;
             path[2] = b;
-            return setlength(path, 3);
+            setlength(path, 3);
+            return path;
         }
         path[1] = c;
         if (e0 == c) {
             path[2] = d;
             path[3] = b;
-            return setlength(path, 4);
+            setlength(path, 4);
+            return path;
         }
         _b[0] = b;
         _b[1] = d;
         IERC20 e1 = findPair(router, c, _b);
         if (e1 == b) {
             path[2] = b;
-            return setlength(path, 3);
+            setlength(path, 3);
+            return path;
         }
         if (e1 == d) {
             path[2] = d;
             path[3] = b;
-            return setlength(path, 4);
+            setlength(path, 4);
+            return path;
         }
         require (e1 == e0, "no path found");
         path[2] = e0;
@@ -213,8 +219,7 @@ contract Magnetite is Ownable, IMagnetite {
         tokens[4] = IERC20(0xc2132D05D31c914a87C6611C10748AEb04B58e8F); //usdt
         tokens[5] = IERC20(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063); //dai
     }
-    function setlength(IERC20[] memory array, uint n) internal pure returns (IERC20[] memory) {
+    function setlength(IERC20[] memory array, uint n) internal pure {
         assembly { mstore(array, n) }
-        return array;
     }
 }

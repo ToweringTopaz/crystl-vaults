@@ -33,13 +33,14 @@ interface IVaultHealer is IAccessControlEnumerable {
     struct VaultInfo {
         IERC20 want;
 
+        bool active; //not paused
         uint32 lastEarnBlock;
-        uint32 numBoosts;
-        uint32 numMaximizers; //number of maximizer vaults pointing here. If this is vid 0x00000045, its first maximizer will be 0x0000004500000000
+        uint16 numBoosts;
+        uint16 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
         
         uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 
-    function vaultInfo(uint vid) external view returns (IERC20, uint32,uint32,uint32,uint256);
+    function vaultInfo(uint vid) external view returns (IERC20, bool, uint32,uint16,uint16,uint256);
     function nextVid() external view returns (uint32);
 }

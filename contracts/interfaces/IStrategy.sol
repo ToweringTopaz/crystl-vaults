@@ -4,8 +4,8 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IUniRouter.sol";
 import "../libraries/Fee.sol";
-
-interface IStrategy {
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+interface IStrategy is IERC165 {
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
     //function boostPoolAddress() external view returns (address);
@@ -26,6 +26,6 @@ interface IStrategy {
 
     function isMaximizer() external view returns (bool);
     function maximizerRewardToken() external view returns (IERC20);
-    function getMaximizerImplementation() external view returns (IStrategy);
+    function getMaximizerImplementation() external view returns (address);
 
 }

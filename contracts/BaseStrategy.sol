@@ -2,10 +2,11 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
 import "hardhat/console.sol";
-abstract contract BaseStrategy is IStrategy {
+abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
 
@@ -13,10 +14,11 @@ abstract contract BaseStrategy is IStrategy {
     uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
     address public immutable vaultHealer;
-
+    address public immutable implementation;
 
     constructor(address _vaultHealer) { 
-        vaultHealer = _vaultHealer; 
+        vaultHealer = _vaultHealer;
+        implementation = address(this);
     }
 
 
@@ -231,11 +233,17 @@ abstract contract BaseStrategy is IStrategy {
         return config.targetWant();
     }
 
+    //For maximizers, the strategy where earnings are exported
     function targetVid() external view getConfig returns (uint) {
         return config.targetVid();
     }
 
-    function getMaximizerImplementation() external view returns (IStrategy) {
-        return IStrategy(address(this));
+    //For IStrategy-conforming strategies who don't implement their own maximizers. Should revert if a strategy implementation
+    //is incapable of being a maximizer.
+    function getMaximizerImplementation() external virtual view returns (address) {
+        return implementation;
+    }
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return super.supportsInterface(interfaceId) || interfaceId == type(IStrategy).interfaceId;
     }
 }
