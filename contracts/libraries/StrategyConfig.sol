@@ -141,6 +141,7 @@ library StrategyConfig {
     }
 
     function generateConfig(
+        address vaultHealer,
         Tactics.TacticsA _tacticsA,
         Tactics.TacticsB _tacticsB,
         address _wantToken,
@@ -158,7 +159,7 @@ library StrategyConfig {
 
         IERC20 _targetWant = IERC20(_wantToken);
         if (_targetVid > 0) {
-            (_targetWant,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
+            (_targetWant,,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
         }
 
         uint8 vaultType = uint8(_earned.length);

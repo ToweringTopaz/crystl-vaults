@@ -19,7 +19,7 @@ interface IVaultHealer is IAccessControlEnumerable {
     event AddBoost(uint indexed boostid);
     event EnableBoost(address indexed user, uint indexed boostid);
     event BoostEmergencyWithdraw(address user, uint _boostID);
-
+    event SetAutoEarn(uint indexed vid, bool earnBeforeDeposit, bool earnBeforeWithdraw);
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
     //function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
     //function stratWithdraw(uint256 _vid, uint256 _wantAmt) external;
@@ -33,7 +33,7 @@ interface IVaultHealer is IAccessControlEnumerable {
 
     struct VaultInfo {
         IERC20 want;
-
+        uint8 noAutoEarn;
         bool active; //not paused
         uint32 lastEarnBlock;
         uint16 numBoosts;
@@ -42,6 +42,6 @@ interface IVaultHealer is IAccessControlEnumerable {
         uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 
-    function vaultInfo(uint vid) external view returns (IERC20, bool, uint32,uint16,uint32,uint256);
+    function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint32,uint16,uint32,uint256);
     function nextVid() external view returns (uint32);
 }

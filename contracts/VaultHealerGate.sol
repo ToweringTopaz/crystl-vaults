@@ -73,7 +73,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IStrategy vaultStrat = strat(_vid);
 
         // we call an earn on the vault before we action the _deposit
-        _earn(_vid); 
+        if (vault.noAutoEarn & 1 == 0) _earn(_vid); 
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
@@ -110,7 +110,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         VaultInfo storage vault = vaultInfo[_vid];
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
-        _earn(_vid);
+        
+        if (vault.noAutoEarn & 2 == 0) _earn(_vid); 
 
         IStrategy vaultStrat = strat(_vid);
 

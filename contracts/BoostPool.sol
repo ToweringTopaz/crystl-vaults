@@ -80,7 +80,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
 
         _transferOwnership(_owner);
         
-        (IERC20 vaultWant,,,,) = IVaultHealer(msg.sender).vaultInfo(uint256(_boostID & type(uint224).max));
+        (IERC20 vaultWant,,,,,,) = IVaultHealer(msg.sender).vaultInfo(uint256(_boostID & type(uint224).max));
         require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
 
         REWARD_TOKEN = IERC20(_rewardToken);

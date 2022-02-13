@@ -144,6 +144,14 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
         _;
     }
 
+    //True values are the default behavior; call earn before deposit/withdraw?
+    function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
+        uint8 setting = earnBeforeDeposit ? 0 : 1;
+        if (!earnBeforeWithdraw) setting += 2;
+        vaultInfo[vid].noAutoEarn = setting;
+        emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
+    }
+
     fallback() external {
         Cavendish._fallback();
         revert("VH: invalid call to fallback");

@@ -59,7 +59,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
 		vaultFeeManager = await VaultFeeManager.deploy(await getContractAddress({from, nonce}), FEE_ADDRESS, 300, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [500, 0, 0]);
         VaultHealer = await ethers.getContractFactory("VaultHealer");
-        vaultHealer = await VaultHealer.deploy("", user1.address, vaultFeeManager.address);
+        vaultHealer = await VaultHealer.deploy("", user1.address, vaultFeeManager.address, ZERO_ADDRESS);
 
         Strategy = await ethers.getContractFactory('Strategy');
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
