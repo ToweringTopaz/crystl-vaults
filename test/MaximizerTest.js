@@ -106,7 +106,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0xe2bbb1582f000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
         );
-		console.log(crystlTacticsA, crystlTacticsB);
+
 		CRYSTL_COMPOUNDER_DATA = await strategyImplementation.generateConfig(
 			crystlTacticsA,
 			crystlTacticsB,
@@ -165,7 +165,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			[40, 40],
 			crystl_compounder_strat_pid
 		)
-        console.log("yay");
 
 		
         maximizer_strat_pid = crystl_compounder_strat_pid << 32
@@ -191,8 +190,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		boostID = strat1_pid
 		boostPool = await vaultHealer.boostPool(boostID);
-		console.log(boostPool)
-		console.log(ROUTER)
+
 		uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
 		
         await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], boostPool, Date.now() + 900, { value: ethers.utils.parseEther("45") })
@@ -223,7 +221,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user4.address,
             "0x21E19E0C9BAB240000000", //amount of 1000 in hex
         ]);
-		console.log("boost5")
 		
 	
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
@@ -280,7 +277,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         await uniswapRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
 
-		console.log("boost6")
 
         //create instances of token0 and token1
         token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);

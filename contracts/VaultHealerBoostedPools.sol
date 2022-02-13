@@ -23,6 +23,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     }
 
     function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) {
+        require(vid < 2**224, "VH: incompatible vid for boost pool");
         VaultInfo storage vault = vaultInfo[vid];
         uint16 nonce = vault.numBoosts;
         vault.numBoosts = nonce + 1;
@@ -32,7 +33,6 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         grantRole(BOOSTPOOL, address(_boost)); //requires _msgSender() is BOOST_ADMIN
 
         _boost.initialize(_msgSender(), _boostID, initdata);
-
         activeBoosts.set(_boostID);
 
         emit AddBoost(_boostID);
@@ -46,6 +46,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         userBoosts[_user].set(_boostID);
 
         boostPool(_boostID).joinPool(_user, uint112(balanceOf(_user, uint224(_boostID))));
+        emit EnableBoost(_user, _boostID);
     }
 
     //Standard opt-in function users will call
@@ -89,7 +90,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
                 if (!fromBoosted && !toBoosted) continue;
 
-                uint status = boostPool(uint(bytes32(bytes4(0xB0057000 + ids[i])))).notifyOnTransfer(
+                uint status = boostPool(uint(bytes32(bytes4(0xB0057000 + uint16(k)))) | ids[i]).notifyOnTransfer(
                     fromBoosted ? from : address(0),
                     toBoosted ? to : address(0),
                     uint112(amounts[i])

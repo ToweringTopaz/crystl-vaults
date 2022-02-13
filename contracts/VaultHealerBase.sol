@@ -6,12 +6,11 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
+abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC2771Context, IVaultHealer {
 
-
-abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVaultHealer {
-
-    uint constant MAX_MAXIMIZERS = 1024;
+    uint constant MAX_MAXIMIZERS = type(uint32).max;
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
     bytes32 constant STRATEGY = keccak256("STRATEGY");
@@ -23,8 +22,8 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 
     uint32 public nextVid = 1; //first unused base vid (vid 0 means null/invalid)
-
     uint internal _lock = type(uint).max;
+
 
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
@@ -34,13 +33,12 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         _setupRole(FEE_SETTER, _owner);
     }
 
+
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vaultFeeManager = _manager;
         emit SetVaultFeeManager(_manager);
     }
-    /**
-     * @dev Add a new want to the vault. Can only be called by the owner.
-     */
+
 
     function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
         vid = nextVid;
@@ -48,15 +46,17 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         addVault(vid, _implementation, data);
     }
 
+
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) returns (uint vid) {
         require(targetVid < 2**192, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
-        uint16 nonce = targetVault.numMaximizers;
+        uint32 nonce = targetVault.numMaximizers;
         require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
         vid = (targetVid << 32) + nonce;
         targetVault.numMaximizers = nonce + 1;
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }
+
 
     function addVault(uint256 vid, address implementation, bytes calldata data) internal {
 
@@ -67,6 +67,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
         emit AddVault(vid);
     }
+
 
     modifier nonReentrant() {
         require(_lock == type(uint).max, "reentrancy");
@@ -85,6 +86,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         _lock = lock; //restore initial state
     }
 
+
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
         return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
@@ -94,11 +96,11 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
         return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
     }
 
+
     modifier requireValidVid(uint vid) {
         _requireValidVid(vid);
         _;
     }
-
     function _requireValidVid(uint vid) internal view {
         if (vid == 0 || 
             ((vid >= nextVid) && 
@@ -107,6 +109,10 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, IVa
             )
         ) revert("VH: nonexistent vid");
     }
+
+
+   function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) { return ERC2771Context._msgData(); }
+   function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) { return ERC2771Context._msgSender(); }
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 

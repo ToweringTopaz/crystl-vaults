@@ -17,6 +17,7 @@ interface IVaultHealer is IAccessControlEnumerable {
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
     event Earned(uint256 indexed vid, uint256 wantAmountEarned);
     event AddBoost(uint indexed boostid);
+    event EnableBoost(address indexed user, uint indexed boostid);
     event BoostEmergencyWithdraw(address user, uint _boostID);
 
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
@@ -36,11 +37,11 @@ interface IVaultHealer is IAccessControlEnumerable {
         bool active; //not paused
         uint32 lastEarnBlock;
         uint16 numBoosts;
-        uint16 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
+        uint32 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
         
         uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 
-    function vaultInfo(uint vid) external view returns (IERC20, bool, uint32,uint16,uint16,uint256);
+    function vaultInfo(uint vid) external view returns (IERC20, bool, uint32,uint16,uint32,uint256);
     function nextVid() external view returns (uint32);
 }
