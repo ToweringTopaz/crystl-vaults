@@ -40,19 +40,19 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
     }
 
 
-    function createVault(address _implementation, bytes calldata data) external returns (uint32 vid) {
+    function createVault(address _implementation, bytes calldata data) external onlyRole(VAULT_ADDER) returns (uint32 vid) {
         vid = nextVid;
         nextVid = vid + 1;
         addVault(vid, _implementation, data);
     }
 
 
-    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) returns (uint vid) {
+    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) returns (uint vid) {
         require(targetVid < 2**192, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
         uint32 nonce = targetVault.numMaximizers;
         require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
-        vid = (targetVid << 32) + nonce;
+        vid = (targetVid << 32) + nonce;;
         targetVault.numMaximizers = nonce + 1;
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }
@@ -61,7 +61,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
     function addVault(uint256 vid, address implementation, bytes calldata data) internal {
 
         IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
-        _strat.initialize(abi.encodePacked(uint256(vid), data));
+        _strat.initialize(abi.encodePacked(vid, data));
         grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
         vaultInfo[vid].want = _strat.wantToken();
         vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
@@ -114,6 +114,15 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) { return ERC2771Context._msgData(); }
    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) { return ERC2771Context._msgSender(); }
 
+    //True values are the default behavior; call earn before deposit/withdraw?
+    function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
+        uint8 setting = earnBeforeDeposit ? 0 : 1;
+        if (!earnBeforeWithdraw) setting += 2;
+        vaultInfo[vid].noAutoEarn = setting;
+        emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
+    }
+
+
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
     function pause(uint vid) public onlyRole("PAUSER") whenNotPaused(vid) {
@@ -142,14 +151,6 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
     modifier whenNotPaused(uint vid) {
         require(!paused(vid), "VH: paused");
         _;
-    }
-
-    //True values are the default behavior; call earn before deposit/withdraw?
-    function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
-        uint8 setting = earnBeforeDeposit ? 0 : 1;
-        if (!earnBeforeWithdraw) setting += 2;
-        vaultInfo[vid].noAutoEarn = setting;
-        emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
     }
 
     fallback() external {
