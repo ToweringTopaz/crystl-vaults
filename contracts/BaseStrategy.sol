@@ -22,7 +22,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
 
-    receive() external payable virtual {}
+    receive() external payable virtual { require(Address.isContract(msg.sender), "Strategy: invalid deposit"); }
 
 
     modifier onlyVaultHealer {
@@ -51,7 +51,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     function initialize(bytes memory _config) external onlyVaultHealer {
-        console.log(string(_config));
+        require(address(this) != implementation, "Strategy: This contract must be used by proxy");
         IERC20 _wantToken;
         assembly {
             _wantToken := and(0xffffffffffffffffffffffffffffffffffffffff, mload(add(_config, 116)))
@@ -64,20 +64,19 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             }
         }
         
-        console.log(address(_wantToken));
         _wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
     }
 
     //should only happen when this contract deposits as a maximizer
     function onERC1155Received(
         address operator, address from, uint256 id, uint256, bytes calldata) external view onlyVaultHealer getConfig returns (bytes4) {
-        require (operator == address(this) && from == address(0) && id == config.vid() >> 32);
+        require (operator == address(this) && from == address(0) && id == config.vid() >> 32, "Strategy: Improper ERC1155 deposit");
         return 0xf23a6e61;
     }
 
     //no batch transfer
     function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
-        revert();
+        revert("Strategy: Batch transfers not supported here");
     }
 
     function panic() external getConfig onlyVaultHealer {
@@ -194,48 +193,61 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         IUniRouter _router = config.router();
         IERC20[] memory path = config.magnetite().findAndSavePath(address(_router), _tokenA, _tokenB);
 
-        /////////////////////////////////////////////////////////////////////////////////////////////
-        //this code snippet below could be removed if findAndSavePath returned a right-sized array //
-        uint256 counter=0;
-        for (counter; counter<path.length; counter++){
-            if (address(path[counter]) == address(0)) break;
-        }
-        IERC20[] memory cleanedUpPath = new IERC20[](counter);
-        for (uint256 i=0; i<counter; i++) {
-            cleanedUpPath[i] =path[i];
-        }
-        //this code snippet above could be removed if findAndSavePath returned a right-sized array
-
         //allow swap._router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(_router), _amountIn);
 
         if (config.feeOnTransfer()) {
             _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountIn, 
-                _router.getAmountsOut(_amountIn, cleanedUpPath)[cleanedUpPath.length - 2] * config.slippageFactor() / 10000,
-                cleanedUpPath,
+                _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256,
+                path,
                 _to, 
                 block.timestamp
             );
         } else {
-            _router.swapExactTokensForTokens(_amountIn, 0, cleanedUpPath, _to, block.timestamp);                
+            _router.swapExactTokensForTokens(_amountIn, 0, path, _to, block.timestamp);                
         }
     }
-    function vid() external view getConfig returns (uint) {
-        return config.vid();
+
+    function configInfo() external view getConfig returns (
+        uint256 vid,
+        IERC20 want,
+        uint256 wantDust,
+        IERC20 rewardToken,
+        address masterchef,
+        uint pid, 
+        IUniRouter _router, 
+        IMagnetite _magnetite,
+        IERC20[] memory earned,
+        uint256[] memory earnedDust,
+        uint slippageFactor,
+        bool feeOnTransfer
+    ) {
+        vid = config.vid();
+        (want, wantDust) = config.wantToken();
+        rewardToken = config.targetWant();
+        uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
+        masterchef = address(uint160(_tacticsA >> 96));
+        pid = uint24(_tacticsA >> 64);
+        _router = config.router();
+        _magnetite = config.magnetite();
+        uint len = config.earnedLength();
+        earned = new IERC20[](len);
+        earnedDust = new uint[](len);
+        for (uint i; i < len; i++) {
+            (earned[i], earnedDust[i]) = config.earned(i);
+        }
+        slippageFactor = config.slippageFactor();
+        feeOnTransfer = config.feeOnTransfer();
+    }
+
+
+    function tactics() external view getConfig returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) {
+        (tacticsA, tacticsB) = config.tactics();
     }
 
     function isMaximizer() external view getConfig returns (bool) {
         return config.isMaximizer();
-    }
-
-    function maximizerRewardToken() external view getConfig returns (IERC20) {
-        return config.targetWant();
-    }
-
-    //For maximizers, the strategy where earnings are exported
-    function targetVid() external view getConfig returns (uint) {
-        return config.targetVid();
     }
 
     //For IStrategy-conforming strategies who don't implement their own maximizers. Should revert if a strategy implementation
@@ -243,6 +255,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function getMaximizerImplementation() external virtual view returns (address) {
         return implementation;
     }
+
+    
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return super.supportsInterface(interfaceId) || interfaceId == type(IStrategy).interfaceId;
     }
