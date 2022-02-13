@@ -3,11 +3,12 @@ pragma solidity ^0.8.9;
 
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "hardhat/console.sol";
+import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
-    
+    using BitMaps for BitMaps.BitMap;
+
     struct PendingDeposit {
         IERC20 token;
         uint96 amount0;
@@ -15,8 +16,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint96 amount1;
     }
 
-    mapping(address => mapping(uint256 => uint112)) public maximizerEarningsOffset;
-    mapping(uint256 => uint112) public totalMaximizerEarningsOffset;
+    mapping(address => BitMaps.BitMap) maximizerMap;
+    mapping(address => mapping(uint256 => uint128)) public maximizerEarningsOffset;
+    mapping(uint256 => uint128) public totalMaximizerEarningsOffset;
 
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
@@ -30,7 +32,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (!paused(vid)) _earn(vid);
         }
     }
-
 
     function _earn(uint256 vid) internal {
         VaultInfo storage vault = vaultInfo[vid];
@@ -62,7 +63,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         VaultInfo storage vault = vaultInfo[_vid];
 
-        console.log(address(vault.want));
         pendingDeposits.push() = PendingDeposit({
             token: vault.want,
             amount0: uint96(_wantAmt >> 96),
@@ -78,10 +78,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
 
-        // if this is a maximizer vault, do these extra steps
-        if (_vid >> 32 > 0)
-            UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
-
         //we mint tokens for the user via the 1155 contract
         _mint(
             _to,
@@ -89,8 +85,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
             vidSharesAdded,
             hex'' //leave this blank for now
         );
-            
-        pendingDeposits.pop();
 
         emit Deposit(_from, _to, _vid, wantAdded);
     }
@@ -121,10 +115,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IStrategy vaultStrat = strat(_vid);
 
         (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, balanceOf(_from, _vid), totalSupply(_vid));
-
-        if (_vid >> 32 > 0) {
-            withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
-        }
 
         //burn the tokens equal to vidSharesRemoved todo should this be here, or higher up?
         _burn(
@@ -167,69 +157,128 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _beforeTokenTransfer(
-            address operator,
-            address from,
-            address to,
-            uint256[] memory ids,
-            uint256[] memory amounts,
-            bytes memory data
-        ) internal virtual override {
-            super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-            if (from != address(0) && to != address(0)) {
-                for (uint i; i < ids.length; i++) {
-                    uint vid = ids[i];
-
-                    if (vid >> 32 > 0) {
-                        _earn(vid);
-                        uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
-                        
-                        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
-
-                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); //todo should this be from or to?????
-                    }
-
-                }
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        for (uint i; i < ids.length; i++) {
+            uint vid = ids[i];
+            uint amount = amounts[i];
+            updateOffsetsOnTransfer(vid, from, to, amount);
+            if (vid > type(uint32).max) {
+                if (amount > 0) maximizerMap[to].set(vid);
+                if (amount == balanceOf(from, vid)) maximizerMap[from].unset(vid);
             }
         }
-
-    // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
-        IStrategy vaultStrat = strat(_vid);
-        uint256 targetVid = _vid >> 32;
-
-        //calculate the offset for this particular deposit
-        uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[_vid];
-        uint112 targetVidTokenOffset = uint112(_vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply(_vid)); 
-
-        // increment the offsets for user and for vid
-        maximizerEarningsOffset[_from][_vid] += targetVidTokenOffset;
-        totalMaximizerEarningsOffset[_vid] += targetVidTokenOffset; 
     }
 
-    // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
-        uint targetVid = _vid >> 32;
-        VaultInfo storage target = vaultInfo[targetVid];
-        
-        IStrategy vaultStrat = strat(_vid);
-        IStrategy targetStrat = strat(targetVid);
+    //For a maximizer vault, this is all of the reward tokens earned, paid out, or offset. Used in calculations 
+    function virtualTargetBalance(uint vid) internal view returns (uint256) {
+        return balanceOf(address(strat(vid)), vid >> 32) + totalMaximizerEarningsOffset[vid];
+    }
+    //Returns the number of target shares a user is entitled to, for one maximizer
+    function targetSharesFromMaximizer(uint _vid, address _account) internal view returns (uint256) {
+        uint _totalSupply = totalSupply(_vid);
+        if (_totalSupply == 0) return 0; //would divide by zero, and there would be no rewards
+        uint amount = virtualTargetBalance(_vid) * balanceOf(_account, _vid) / _totalSupply;
+        uint accountOffset = maximizerEarningsOffset[_account][_vid];
+        return amount > accountOffset ? amount - accountOffset : 0;
+    }
 
-        // calculate the amount of targetVid token to be withdrawn
-        uint256 targetVidAmount = _vidSharesRemoved
-            * (targetStrat.wantLockedTotal() + totalMaximizerEarningsOffset[_vid])
-            / totalSupply(_vid) 
-            - maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid);
-        
-        // withdraw proportional amount of target vault token from targetVault()
-        if (targetVidAmount > 0) {
-            // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-            _withdraw(targetVid, targetVidAmount, address(vaultStrat), _from);
-            target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
-                        
-            // update the offsets for user and for vid
-            totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
-            maximizerEarningsOffset[_from][_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+    //Overrides the balanceOf ERC1155 function to show the true balance an account owns and is able to spend
+    function balanceOf(address _account, uint _vid) public view override returns (uint amount) {
+        return super.balanceOf(_account, _vid) + targetSharesFromMaximizers(_vid, _account);
+    }
+
+    // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
+    function updateOffsetsOnTransfer(uint _vid, address _from, address _to, uint _vidSharesTransferred) internal {
+        if (_vid < 2**32) return; //not a maximizer, so nothing to do
+
+        //calculate the offset amount
+        uint numerator = _vidSharesTransferred * virtualTargetBalance(_vid);
+        uint _totalSupply = totalSupply(_vid);        
+        uint128 shareOffset = uint128(numerator / _totalSupply);
+
+        //For deposit/mint, ceildiv logic is used in order to prevent rounding exploits and subtraction underflow
+        if (_from == address(0)) {
+            shareOffset += numerator % _totalSupply == 0 ? 0 : 1;
+            maximizerEarningsOffset[_to][_vid] += shareOffset;
+            totalMaximizerEarningsOffset[_vid] += shareOffset;
+        } else if (_to == address(0)) { //withdrawal/burn
+        //Must give the sender all their tokens so they may spend them
+            realizeTargetShares(_vid, _from);
+            realizeMaximizerShares(_vid, _from);
+            maximizerEarningsOffset[_from][_vid] -= shareOffset;
+            totalMaximizerEarningsOffset[_vid] -= shareOffset;
+        } else { //transfer
+            realizeTargetShares(_vid, _from);
+            realizeMaximizerShares(_vid, _from);
+            maximizerEarningsOffset[_from][_vid] -= shareOffset;
+            maximizerEarningsOffset[_to][_vid] += shareOffset;
+        }
+    }
+    //For some maximizer, transfers target ERC1155 shares to the user and offsets them
+    function realizeTargetShares(uint _vid, address _account) internal {
+        uint amount = targetSharesFromMaximizer(_vid, _account);
+        if (amount > 0) {
+            uint128 _amount = uint128(amount);
+            require(_amount == amount, "VH: target shares overflow");
+            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 32, amount, hex''); //target shares from maximizer to user
+            maximizerEarningsOffset[_account][_vid] += _amount;
+            totalMaximizerEarningsOffset[_vid] += _amount;
+        }
+    }
+    //For some target, gathers all earned ERC1155 shares to the user and offsets them
+    function realizeMaximizerShares(uint _targetVid, address _account) internal {
+        uint numMaximizers = vaultInfo[_targetVid].numMaximizers;
+
+        for (
+            uint b = _targetVid << 24; // left 32 for target to maximizer, right 8 for bucket of 256-bit map
+            b < (_targetVid << 24) + (numMaximizers >> 8);
+            b++
+        ) {
+            uint map = maximizerMap[_account]._data[b];
+            for (uint vid = b << 8; map > 0;) { //terminate on empty bitmap
+                if (map & 0xff == 0) { //jump 8 bits at a time if all are empty
+                    map >>= 8;
+                    vid += 8;
+                    continue;
+                }
+                
+                if (map & 1 == 1) realizeTargetShares(vid, _account); //user has shares
+                map >>= 1;
+                vid += 1;
             }
         }
+    }
+
+    //For some target vid and account, finds the total number of shares payable by maximizers
+    function targetSharesFromMaximizers(uint _targetVid, address _account) internal view returns (uint total) {
+        uint numMaximizers = vaultInfo[_targetVid].numMaximizers;
+
+        for (
+            uint b = _targetVid << 24; // left 32 for target to maximizer, right 8 for 256-bit map
+            b < (_targetVid << 24) + (numMaximizers >> 8);
+            b++
+        ) {
+            uint map = maximizerMap[_account]._data[b]; //bitmap of up to 256 maximizers where the user has deposits
+            for (uint vid = b << 8; map > 0;) { //terminate on empty bitmap
+                if (map & 0xff == 0) { //jump 8 bits at a time if all are empty
+                    map >>= 8;
+                    vid += 8;
+                    continue;
+                }
+                if (map & 1 == 1) { //user has shares, so look for them and add them
+                    total += targetSharesFromMaximizer(vid, _account);
+                }
+                map >>= 1;
+                vid += 1;
+            }
+        }
+    }
 
 }
