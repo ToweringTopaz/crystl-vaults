@@ -52,7 +52,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
         VaultInfo storage targetVault = vaultInfo[targetVid];
         uint32 nonce = targetVault.numMaximizers;
         require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
-        vid = (targetVid << 32) + nonce;;
+        vid = (targetVid << 32) + nonce;
         targetVault.numMaximizers = nonce + 1;
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }
