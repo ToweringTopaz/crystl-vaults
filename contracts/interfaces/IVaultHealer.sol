@@ -38,7 +38,6 @@ interface IVaultHealer is IAccessControlEnumerable {
         uint32 lastEarnBlock;
         uint16 numBoosts;
         uint32 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
-        
         uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 

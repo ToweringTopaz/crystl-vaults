@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "hardhat/console.sol";
 
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
@@ -13,6 +14,7 @@ contract Strategy is BaseStrategy {
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
     function earn(Fee.Data[3] calldata fees) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
+        console.log("made itinto strategy.earn");
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
 
@@ -23,13 +25,14 @@ contract Strategy is BaseStrategy {
         bool pairStake = config.isPairStake();
 
         for (uint i; i < earnedLength; i++) { //Process each earned token
-
+            console.log("made it into the for loop");
             (IERC20 earnedToken, uint dust) = config.earned(i);
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == _wantToken)
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
 
             if (earnedAmt > dust) {
+                console.log("made it past the dust conditional");
                 success = true; //We have something worth compounding
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
 

@@ -7,6 +7,7 @@ import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "hardhat/console.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC2771Context, IVaultHealer {
 
@@ -50,9 +51,13 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) returns (uint vid) {
         require(targetVid < 2**192, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
-        uint32 nonce = targetVault.numMaximizers;
+        uint32 nonce = targetVault.numMaximizers + 1;
         require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
-        vid = (targetVid << 32) + nonce;
+        vid = (targetVid << 16) + nonce;
+        console.log(targetVid);
+        console.log(targetVid << 16);
+        console.log(nonce);
+        console.log(vid);
         targetVault.numMaximizers = nonce + 1;
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }

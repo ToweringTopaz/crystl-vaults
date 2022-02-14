@@ -17,6 +17,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/IVaultHealer.sol";
+import "hardhat/console.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
@@ -31,11 +32,15 @@ library LibQuartz {
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
         (IERC20 want,,,,,,) = vaultHealer.vaultInfo(_vid);
+        console.log(address(want));
         strat = vaultHealer.strat(_vid);
-        
+        console.log(address(strat));
+
         pair = IUniPair(address(want));
+        console.log(address(pair));
         router = strat.router();
-        require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
+        console.log(address(router));
+        // require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
     }
     function getSwapAmount(IUniRouter router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
