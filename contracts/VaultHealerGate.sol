@@ -170,7 +170,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             uint vid = ids[i];
             uint amount = amounts[i];
             updateOffsetsOnTransfer(vid, from, to, amount);
-            if (vid > type(uint32).max) {
+            if (vid >= 2**16) {
                 if (amount > 0) maximizerMap[to].set(vid);
                 if (amount == balanceOf(from, vid)) maximizerMap[from].unset(vid);
             }
@@ -179,7 +179,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     //For a maximizer vault, this is all of the reward tokens earned, paid out, or offset. Used in calculations 
     function virtualTargetBalance(uint vid) internal view returns (uint256) {
-        return balanceOf(address(strat(vid)), vid >> 32) + totalMaximizerEarningsOffset[vid];
+        return balanceOf(address(strat(vid)), vid >> 16) + totalMaximizerEarningsOffset[vid];
     }
     //Returns the number of target shares a user is entitled to, for one maximizer
     function targetSharesFromMaximizer(uint _vid, address _account) internal view returns (uint256) {
@@ -195,9 +195,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
         return super.balanceOf(_account, _vid) + targetSharesFromMaximizers(_vid, _account);
     }
 
+    function rawBalanceOf(address _account, uint _vid) public view returns (uint amount) {
+        return super.balanceOf(_account, _vid);
+    }
+
     // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function updateOffsetsOnTransfer(uint _vid, address _from, address _to, uint _vidSharesTransferred) internal {
-        if (_vid < 2**32) return; //not a maximizer, so nothing to do
+        if (_vid < 2**16) return; //not a maximizer, so nothing to do
 
         //calculate the offset amount
         uint numerator = _vidSharesTransferred * virtualTargetBalance(_vid);
@@ -228,7 +232,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         if (amount > 0) {
             uint128 _amount = uint128(amount);
             require(_amount == amount, "VH: target shares overflow");
-            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 32, amount, hex''); //target shares from maximizer to user
+            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, amount, hex''); //target shares from maximizer to user
             maximizerEarningsOffset[_account][_vid] += _amount;
             totalMaximizerEarningsOffset[_vid] += _amount;
         }
@@ -238,8 +242,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint numMaximizers = vaultInfo[_targetVid].numMaximizers;
 
         for (
-            uint b = _targetVid << 24; // left 32 for target to maximizer, right 8 for bucket of 256-bit map
-            b < (_targetVid << 24) + (numMaximizers >> 8);
+            uint b = _targetVid << 8; // left 16 for target to maximizer, right 8 for bucket of 256-bit map
+            b < (_targetVid << 8) + (numMaximizers >> 8);
             b++
         ) {
             uint map = maximizerMap[_account]._data[b];
@@ -262,8 +266,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint numMaximizers = vaultInfo[_targetVid].numMaximizers;
 
         for (
-            uint b = _targetVid << 24; // left 32 for target to maximizer, right 8 for 256-bit map
-            b < (_targetVid << 24) + (numMaximizers >> 8);
+            uint b = _targetVid << 8; // left 16 for target to maximizer, right 8 for 256-bit map
+            b < (_targetVid << 8) + (numMaximizers >> 8);
             b++
         ) {
             uint map = maximizerMap[_account]._data[b]; //bitmap of up to 256 maximizers where the user has deposits

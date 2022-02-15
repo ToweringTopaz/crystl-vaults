@@ -11,7 +11,6 @@ import "hardhat/console.sol";
 
 abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC2771Context, IVaultHealer {
 
-    uint constant MAX_MAXIMIZERS = type(uint32).max;
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
     bytes32 constant STRATEGY = keccak256("STRATEGY");
@@ -22,7 +21,7 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 
-    uint32 public nextVid = 1; //first unused base vid (vid 0 means null/invalid)
+    uint16 public numVaultsBase = 0; //number of non-maximizer vaults
     uint internal _lock = type(uint).max;
 
 
@@ -41,24 +40,23 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
     }
 
 
-    function createVault(address _implementation, bytes calldata data) external onlyRole(VAULT_ADDER) returns (uint32 vid) {
-        vid = nextVid;
-        nextVid = vid + 1;
+    function createVault(address _implementation, bytes calldata data) external onlyRole(VAULT_ADDER) returns (uint16 vid) {
+        vid = numVaultsBase + 1;
+        numVaultsBase = vid;
         addVault(vid, _implementation, data);
     }
 
 
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) returns (uint vid) {
-        require(targetVid < 2**192, "VH: maximizer too deep");
+        require(targetVid < 2**208, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
-        uint32 nonce = targetVault.numMaximizers + 1;
-        require(nonce <= MAX_MAXIMIZERS, "VH: too many maximizers on this vault");
+        uint16 nonce = targetVault.numMaximizers + 1;
         vid = (targetVid << 16) + nonce;
         console.log(targetVid);
         console.log(targetVid << 16);
         console.log(nonce);
         console.log(vid);
-        targetVault.numMaximizers = nonce + 1;
+        targetVault.numMaximizers = nonce;
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }
 
@@ -107,12 +105,10 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
         _;
     }
     function _requireValidVid(uint vid) internal view {
-        if (vid == 0 || 
-            ((vid >= nextVid) && 
-                (vid >> 32 == 0 || 
-                vid & 0xffffffff < vaultInfo[vid >> 32].numMaximizers)
-            )
-        ) revert("VH: nonexistent vid");
+        require(vid < 2**224, "VH: vid too large");
+        uint subVid = vid & 0xffff;
+        require(subVid > 0 && subVid < (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers),
+            "VH: vid out of range");
     }
 
 
