@@ -151,7 +151,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     function distribute(Fee.Data[3] calldata fees, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
-
+        console.log("made it into distribute");
         earnedAmt = _earnedAmt;
         IUniRouter _router = config.router();
 
@@ -161,13 +161,24 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
         
         if (feeTotalRate > 0) {
+            console.log("made it into conditional");
             uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
-            earnedAmt -= feeEarnedAmt;
-            uint nativeBefore = address(this).balance;
-            IWETH weth = _router.WETH();
-            safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
-            uint feeNativeAmt = address(this).balance - nativeBefore;
+                        console.log("made it into conditional1");
 
+            earnedAmt -= feeEarnedAmt;
+                        console.log("made it into conditional2");
+
+            uint nativeBefore = address(this).balance;
+                        console.log("made it into conditional3");
+
+            IWETH weth = _router.WETH();
+                        console.log("made it into conditional4");
+
+            safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
+                        console.log("made it into conditional5");
+
+            uint feeNativeAmt = address(this).balance - nativeBefore;
+            console.log("made it down here");
             weth.withdraw(weth.balanceOf(address(this)));
             for (uint i; i < 3; i++) {
                 (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
@@ -190,13 +201,24 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 _tokenA.safeTransfer(_to, _amountIn);
             return;
         }
+        console.log("safeswap1");
         IUniRouter _router = config.router();
+                console.log("safeswap2");
+
         IERC20[] memory path = config.magnetite().findAndSavePath(address(_router), _tokenA, _tokenB);
+        console.log(address(path[0]));
+        console.log(address(path[1]));
+        console.log(address(path[2]));
+        console.log(address(path[3]));
+
 
         //allow swap._router to pull the correct amount in
         IERC20(_tokenA).safeIncreaseAllowance(address(_router), _amountIn);
+        console.log("safeswap4");
 
         if (config.feeOnTransfer()) {
+                    console.log("safeswap5");
+
             _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                 _amountIn, 
                 _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256,
@@ -205,6 +227,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 block.timestamp
             );
         } else {
+                    console.log("safeswap6");
+
             _router.swapExactTokensForTokens(_amountIn, 0, path, _to, block.timestamp);                
         }
     }

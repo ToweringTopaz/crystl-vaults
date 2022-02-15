@@ -34,13 +34,18 @@ contract Strategy is BaseStrategy {
             if (earnedAmt > dust) {
                 console.log("made it past the dust conditional");
                 success = true; //We have something worth compounding
+                                console.log("and past success=true");
+
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
+                console.log("and past distribute");
 
                 if (pairStake) {
+                    console.log("and into if(pairstake)");
                     (IERC20 token0, IERC20 token1) = config.token0And1();
                     safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
                     safeSwap(earnedAmt / 2, earnedToken, token1, address(this));
                 } else {
+                    console.log("into the else rather");
                     safeSwap(earnedAmt, earnedToken, config.targetWant(), address(this));
                 }
             }
