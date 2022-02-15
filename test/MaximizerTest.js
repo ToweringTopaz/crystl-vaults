@@ -318,131 +318,131 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     describe(`Testing depositing into maximizer vault, compounding maximizer vault, withdrawing from maximizer vault:
     `, () => {
         // user zaps in their whole token0 balance
-         it('Should zap token0 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
-             token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
-             var token0Balance = await token0.balanceOf(user4.address);
-             console.log(quartzUniV2Zap.address);
-             await token0.connect(user4).approve(quartzUniV2Zap.address, token0Balance);
-             console.log("2");
+        //  it('Should zap token0 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
+        //      token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
+        //      var token0Balance = await token0.balanceOf(user4.address);
+        //      console.log(quartzUniV2Zap.address);
+        //      await token0.connect(user4).approve(quartzUniV2Zap.address, token0Balance);
+        //      console.log("2");
 
-             const vaultSharesTotalBeforeFirstZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
-             console.log("3");
+        //      const vaultSharesTotalBeforeFirstZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        //      console.log("3");
 
-             await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, token0.address, token0Balance); //todo - change min in amount from 0
-             console.log("4");
+        //      await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, token0.address, token0Balance); //todo - change min in amount from 0
+        //      console.log("4");
 
-             const vaultSharesTotalAfterFirstZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
-             console.log("5");
+        //      const vaultSharesTotalAfterFirstZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        //      console.log("5");
 
-             expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap);
-         })
+        //      expect(vaultSharesTotalAfterFirstZap).to.be.gt(vaultSharesTotalBeforeFirstZap);
+        //  })
         
-         //user zaps in their whole token1 balance
-         it('Should zap token1 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
-             token1 = await ethers.getContractAt(token_abi, TOKEN1ADDRESS);
-             var token1Balance = await token1.balanceOf(user4.address);
-             await token1.connect(user4).approve(quartzUniV2Zap.address, token1Balance);
+        //  //user zaps in their whole token1 balance
+        //  it('Should zap token1 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
+        //      token1 = await ethers.getContractAt(token_abi, TOKEN1ADDRESS);
+        //      var token1Balance = await token1.balanceOf(user4.address);
+        //      await token1.connect(user4).approve(quartzUniV2Zap.address, token1Balance);
             
-             const vaultSharesTotalBeforeSecondZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        //      const vaultSharesTotalBeforeSecondZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-             await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, token1.address, token1Balance); //To Do - change min in amount from 0
+        //      await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, token1.address, token1Balance); //To Do - change min in amount from 0
             
-             const vaultSharesTotalAfterSecondZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        //      const vaultSharesTotalAfterSecondZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-             expect(vaultSharesTotalAfterSecondZap).to.be.gt(vaultSharesTotalBeforeSecondZap);
-         })
+        //      expect(vaultSharesTotalAfterSecondZap).to.be.gt(vaultSharesTotalBeforeSecondZap);
+        //  })
 
-        //user zaps in their whole balance of token_other
-        it('Should zap a token that is neither token0 nor token1 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
-            // assume(TOKEN_OTHER != TOKEN0 && TOKEN_OTHER != TOKEN1);
-            tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
-            var tokenOtherBalance = await tokenOther.balanceOf(user4.address);
-            await tokenOther.connect(user4).approve(quartzUniV2Zap.address, tokenOtherBalance);
+        // //user zaps in their whole balance of token_other
+        // it('Should zap a token that is neither token0 nor token1 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
+        //     // assume(TOKEN_OTHER != TOKEN0 && TOKEN_OTHER != TOKEN1);
+        //     tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
+        //     var tokenOtherBalance = await tokenOther.balanceOf(user4.address);
+        //     await tokenOther.connect(user4).approve(quartzUniV2Zap.address, tokenOtherBalance);
             
-            const vaultSharesTotalBeforeThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        //     const vaultSharesTotalBeforeThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, tokenOther.address, tokenOtherBalance); //To Do - change min in amount from 0
+        //     await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, tokenOther.address, tokenOtherBalance); //To Do - change min in amount from 0
             
-            const vaultSharesTotalAfterThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+        //     const vaultSharesTotalAfterThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            expect(vaultSharesTotalAfterThirdZap).to.be.gt(vaultSharesTotalBeforeThirdZap);
-        })
+        //     expect(vaultSharesTotalAfterThirdZap).to.be.gt(vaultSharesTotalBeforeThirdZap);
+        // })
 
-        it('Zap out should withdraw LP tokens from vault, convert back to underlying tokens, and send back to user, increasing their token0 and token1 balances', async () => {
-            const vaultSharesTotalBeforeZapOut = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal();
-            var token0BalanceBeforeZapOut;
-            var token0BalanceAfterZapOut;
-            var token1BalanceBeforeZapOut;
-            var token1BalanceAfterZapOut;
+        // it('Zap out should withdraw LP tokens from vault, convert back to underlying tokens, and send back to user, increasing their token0 and token1 balances', async () => {
+        //     const vaultSharesTotalBeforeZapOut = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal();
+        //     var token0BalanceBeforeZapOut;
+        //     var token0BalanceAfterZapOut;
+        //     var token1BalanceBeforeZapOut;
+        //     var token1BalanceAfterZapOut;
 
-            if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
-                token0BalanceBeforeZapOut = await ethers.provider.getBalance(user4.address);
-            } else {
-                token0BalanceBeforeZapOut = await token0.balanceOf(user4.address); 
-            }
+        //     if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        //         token0BalanceBeforeZapOut = await ethers.provider.getBalance(user4.address);
+        //     } else {
+        //         token0BalanceBeforeZapOut = await token0.balanceOf(user4.address); 
+        //     }
 
-            if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
-                token1BalanceBeforeZapOut = await ethers.provider.getBalance(user4.address);
-            } else {
-                token1BalanceBeforeZapOut = await token1.balanceOf(user4.address); 
-            }
+        //     if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        //         token1BalanceBeforeZapOut = await ethers.provider.getBalance(user4.address);
+        //     } else {
+        //         token1BalanceBeforeZapOut = await token1.balanceOf(user4.address); 
+        //     }
 
-            await quartzUniV2Zap.connect(user4).quartzOut(maximizer_strat_pid, vaultSharesTotalBeforeZapOut); 
+        //     await quartzUniV2Zap.connect(user4).quartzOut(maximizer_strat_pid, vaultSharesTotalBeforeZapOut); 
                         
-            if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
-                token0BalanceAfterZapOut = await ethers.provider.getBalance(user4.address);
-            } else {
-                token0BalanceAfterZapOut = await token0.balanceOf(user4.address); 
-            }
+        //     if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        //         token0BalanceAfterZapOut = await ethers.provider.getBalance(user4.address);
+        //     } else {
+        //         token0BalanceAfterZapOut = await token0.balanceOf(user4.address); 
+        //     }
 
-            if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
-                token1BalanceAfterZapOut = await ethers.provider.getBalance(user4.address);
-            } else {
-                token1BalanceAfterZapOut = await token1.balanceOf(user4.address); 
-            }
+        //     if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        //         token1BalanceAfterZapOut = await ethers.provider.getBalance(user4.address);
+        //     } else {
+        //         token1BalanceAfterZapOut = await token1.balanceOf(user4.address); 
+        //     }
 
-            expect(token0BalanceAfterZapOut).to.be.gt(token0BalanceBeforeZapOut); //todo - change to check before and after zap out rather
-            expect(token1BalanceAfterZapOut).to.be.gt(token1BalanceBeforeZapOut); //todo - change to check before and after zap out rather
+        //     expect(token0BalanceAfterZapOut).to.be.gt(token0BalanceBeforeZapOut); //todo - change to check before and after zap out rather
+        //     expect(token1BalanceAfterZapOut).to.be.gt(token1BalanceBeforeZapOut); //todo - change to check before and after zap out rather
 
-        })
+        // })
 
-        //user should have positive balances of token0 and token1 after zap out (note - if one of the tokens is wmatic it gets paid back as matic...)
-        it('Should leave user with positive balance of token0', async () => {
-            var token0Balance;
+        // //user should have positive balances of token0 and token1 after zap out (note - if one of the tokens is wmatic it gets paid back as matic...)
+        // it('Should leave user with positive balance of token0', async () => {
+        //     var token0Balance;
 
-            if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
-                token0Balance = await ethers.provider.getBalance(user4.address);
-            } else {
-                token0Balance = await token0.balanceOf(user4.address); 
-            }
+        //     if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        //         token0Balance = await ethers.provider.getBalance(user4.address);
+        //     } else {
+        //         token0Balance = await token0.balanceOf(user4.address); 
+        //     }
 
-            expect(token0Balance).to.be.gt(0); //todo - change to check before and after zap out rather
-        })
+        //     expect(token0Balance).to.be.gt(0); //todo - change to check before and after zap out rather
+        // })
 
-        //user should have positive balances of token0 and token1 after zap out (note - if one of the tokens is wmatic it gets paid back as matic...)
-        it('Should leave user with positive balance of token1', async () => {
-            var token1Balance;
+        // //user should have positive balances of token0 and token1 after zap out (note - if one of the tokens is wmatic it gets paid back as matic...)
+        // it('Should leave user with positive balance of token1', async () => {
+        //     var token1Balance;
 
-            if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
-                token1Balance = await ethers.provider.getBalance(user4.address);
-            } else {
-                token1Balance = await token1.balanceOf(user4.address); 
-            }
+        //     if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        //         token1Balance = await ethers.provider.getBalance(user4.address);
+        //     } else {
+        //         token1Balance = await token1.balanceOf(user4.address); 
+        //     }
 
-            expect(token1Balance).to.be.gt(0);
-        })
+        //     expect(token1Balance).to.be.gt(0);
+        // })
 
-        //ensure no funds left in the vault after zap out
-        it('Should leave zero user funds in vault after 100% zap out', async () => {
-            UsersStakedTokensAfterZapOut = await vaultHealer.balanceOf(user4.address, maximizer_strat_pid);
-            expect(UsersStakedTokensAfterZapOut.toNumber()).to.equal(0);
-        })
+        // //ensure no funds left in the vault after zap out
+        // it('Should leave zero user funds in vault after 100% zap out', async () => {
+        //     UsersStakedTokensAfterZapOut = await vaultHealer.balanceOf(user4.address, maximizer_strat_pid);
+        //     expect(UsersStakedTokensAfterZapOut.toNumber()).to.equal(0);
+        // })
 
-        //ensure no funds left in the vault after zap out
-        it('Should leave vaultSharesTotal at zero after 100% zap out', async () => {
-            vaultSharesTotalAfterZapOut = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal();
-            expect(vaultSharesTotalAfterZapOut.toNumber()).to.equal(0);
-        })
+        // //ensure no funds left in the vault after zap out
+        // it('Should leave vaultSharesTotal at zero after 100% zap out', async () => {
+        //     vaultSharesTotalAfterZapOut = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal();
+        //     expect(vaultSharesTotalAfterZapOut.toNumber()).to.equal(0);
+        // })
 
         it('Should deposit user1\'s 5000 LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);

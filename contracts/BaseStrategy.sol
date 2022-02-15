@@ -205,7 +205,14 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 block.timestamp
             );
         } else {
-            _router.swapExactTokensForTokens(_amountIn, 0, path, _to, block.timestamp);                
+            console.log("about to make swap");
+            console.log(_to);
+            console.log(_amountIn);
+            console.log(path.length);
+            console.log(address(path[0]));
+            console.log(address(path[1]));
+            _router.swapExactTokensForTokens(_amountIn, 0, path, _to, block.timestamp);
+            console.log("swap done"); 
         }
     }
 
