@@ -23,21 +23,23 @@ abstract contract VaultHealerGate is VaultHealerBase {
     PendingDeposit[] private pendingDeposits; //LIFO stack, avoiding complications with maximizers
 
     function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
-        _earn(vid);
+        VaultInfo storage vault = vaultInfo[vid];
+        bool active = vault.active;
+        uint48 lastEarnBlock = vault.lastEarnBlock;
+        if (active && lastEarnBlock != block.number) _earn(vid);
     }
 
     function earn(uint256[] calldata vids) external nonReentrant {
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
-            if (!paused(vid)) _earn(vid);
+            VaultInfo storage vault = vaultInfo[vid];
+            bool active = vault.active;
+            uint48 lastEarnBlock = vault.lastEarnBlock;
+            if (active && lastEarnBlock != block.number) _earn(vid);
         }
     }
 
     function _earn(uint256 vid) internal {
-        VaultInfo storage vault = vaultInfo[vid];
-        uint lastEarnBlock = vault.lastEarnBlock;
-        
-        if (lastEarnBlock == block.number) return; //earn only once per block ever
         uint lock = _lock;
         _lock = vid; //permit reentrant calls by this vault only
         try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
@@ -54,7 +56,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
             console.log("earn failed");
             console.log(vid, string(reason));
         }
-        vault.lastEarnBlock = uint32(block.number);
         _lock = lock; //reset reentrancy state
     }
 
@@ -70,18 +71,22 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
         VaultInfo storage vault = vaultInfo[_vid];
+        IERC20 want = vault.want;
+        uint8 noAutoEarn = vault.noAutoEarn;
+        bool active = vault.active;
+        uint48 lastEarnBlock = vault.lastEarnBlock;
+
+        // we call an earn on the vault before we action the _deposit
+        if (noAutoEarn & 1 == 0 && active && lastEarnBlock != block.number) _earn(_vid); 
 
         pendingDeposits.push() = PendingDeposit({
-            token: vault.want,
+            token: want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
             amount1: uint96(_wantAmt)
         });
         
         IStrategy vaultStrat = strat(_vid);
-
-        // we call an earn on the vault before we action the _deposit
-        if (vault.noAutoEarn & 1 == 0) _earn(_vid); 
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
@@ -116,10 +121,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
-        VaultInfo storage vault = vaultInfo[_vid];
+        console.log("Withdrawing from vid ", _vid);
+        console.log(_wantAmt, _from);
+        console.log("Withdrawing to ", _to);
+
         require(balanceOf(_from, _vid) > 0, "User has 0 shares");
         
-        if (vault.noAutoEarn & 2 == 0) _earn(_vid); 
+        VaultInfo storage vault = vaultInfo[_vid];
+        IERC20 want = vault.want;
+        uint8 noAutoEarn = vault.noAutoEarn;
+        bool active = vault.active;
+        uint48 lastEarnBlock = vault.lastEarnBlock;
+
+        // we call an earn on the vault before we action the _deposit
+        if (noAutoEarn & 2 == 0 && active && lastEarnBlock != block.number) _earn(_vid); 
 
         IStrategy vaultStrat = strat(_vid);
 
@@ -138,12 +153,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (feeReceiver != address(0) && feeRate <= 300 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
                 uint feeAmt = wantAmt * feeRate / 10000;
                 wantAmt -= feeAmt;
-                vault.want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt); //todo: zap to correct fee token
+                want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt); //todo: zap to correct fee token
             }
         } catch {}
 
         //this call transfers wantTokens from the strat to the user
-        vault.want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
+        want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
 
         emit Withdraw(_from, _to, _vid, wantAmt); //todo shouldn't this emit wantAmt?
     }
@@ -210,14 +225,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         //calculate the offset amount
         uint _totalSupply = totalSupply(_vid);
-        if (_totalSupply == 0) return; //would divide by zero and there's nothing here
         uint numerator = _vidSharesTransferred * virtualTargetBalance(_vid);
-        uint shareOffset = numerator / _totalSupply;
+        uint shareOffset = _totalSupply == 0 ? 0 : numerator / _totalSupply;
 
         //For deposit/mint, ceildiv logic is used in order to prevent rounding exploits and subtraction underflow
         if (_from == address(0)) {
-            maximizerMap[_to].set(_vid);
-            shareOffset += numerator % _totalSupply == 0 ? 0 : 1;
+            if (_vidSharesTransferred > 0) maximizerMap[_to].set(_vid);
+            shareOffset += (_totalSupply == 0 || numerator % _totalSupply == 0) ? 0 : 1;
             maximizerEarningsOffset[_to][_vid] += shareOffset;
             totalMaximizerEarningsOffset[_vid] += shareOffset;
         } else if (_to == address(0)) { //withdrawal/burn
@@ -243,6 +257,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
     //For some maximizer, transfers target ERC1155 shares to the user and offsets them
     function realizeTargetShares(uint _vid, address _account) internal returns (uint amount) {
         amount = targetSharesFromMaximizer(_vid, _account);
+        console.log("RTS amount:", amount);
+        console.log("RTS account maximizer balance:", balanceOf(_account, _vid), rawBalanceOf(_account, _vid));
+        console.log("RTS account target balance:", balanceOf(_account, _vid >> 16), rawBalanceOf(_account, _vid >> 16));
+        console.log("RTS maximizer target balance:", balanceOf(address(strat(_vid)), _vid >> 16), rawBalanceOf(address(strat(_vid)), _vid >> 16));
         if (amount > 0) {
             _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, amount, hex''); //target shares from maximizer to user
             maximizerEarningsOffset[_account][_vid] += amount;

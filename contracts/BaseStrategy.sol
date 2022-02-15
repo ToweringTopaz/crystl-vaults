@@ -41,9 +41,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function _getConfig() private view {
         address configAddr = configAddress();
         assembly {
-//            if gt(mload(0x40), 0x80) { // asserting that this function is only called once at the beginning of every incoming call
-//                revert(0,0)
-//            }
+        //  if gt(mload(0x40), 0x80) { // asserting that this function is only called once at the beginning of every incoming call
+        //           revert(0,0)
+        //    }
             let len := sub(extcodesize(configAddr), 1) //get length, subtracting 1 for the invalid opcode
             mstore(0x40, add(0x80, len)) //update free memory pointer
             extcodecopy(configAddr, 0x80, 1, len) //get the data
@@ -62,12 +62,10 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             }
         }
 		_getConfig();
-		console.log("0");
 		(IERC20 _wantToken,) = config.wantToken();
-		console.log("want:", address(_wantToken));
 		_wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
 		IERC20 _targetWant = config.targetWant();
-		console.log("target:", address(_targetWant));
+
 		if (_wantToken != _targetWant) _targetWant.safeIncreaseAllowance(msg.sender, type(uint256).max);
     }
 
@@ -108,7 +106,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             configAddr := and(0xffffffffffffffffffffffffffffffffffffffff, keccak256(0, 23)) //create address, nonce 1
         }
     }
-
 
     function vaultSharesTotal() external view getConfig returns (uint256) {
         return _vaultSharesTotal();
@@ -181,12 +178,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             //This contract should not hold native between transactions but it could happen theoretically. Pay it out with the fees
             if (address(this).balance > 0) {
                 uint feeNativeAmt = address(this).balance;
-                console.log("feeNativeAmt: ", feeNativeAmt);
                 for (uint i; i < 3; i++) {
                     (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
                     if (receiver == address(0) || rate == 0) break;
-                    console.log("Paying to receiver, amount:");
-                    console.log(receiver, feeNativeAmt * rate / feeTotalRate);
                     (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate, gas: 0x40000}("");
                     require(success, "Strategy: Transfer failed");
                 }
@@ -221,15 +215,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 block.timestamp
             );
         } else {
-            console.log("about to make swap");
-            console.log("to:", _to);
-            console.log("amount in", _amountIn);
-            console.log("balance of path[0]:", path[0].balanceOf(address(this)));
-            console.log(path.length);
-            console.log(address(path[0]));
-            console.log(address(path[1]));
             _router.swapExactTokensForTokens(_amountIn, 0, path, _to, block.timestamp);
-            console.log("swap done"); 
         }
     }
 

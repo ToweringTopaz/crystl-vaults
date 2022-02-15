@@ -5,7 +5,6 @@ import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "hardhat/console.sol";
-
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -14,7 +13,7 @@ contract Strategy is BaseStrategy {
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
     function earn(Fee.Data[3] calldata fees) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
-        console.log("made itinto strategy.earn");
+
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
 
@@ -25,18 +24,14 @@ contract Strategy is BaseStrategy {
         bool pairStake = config.isPairStake();
 
         for (uint i; i < earnedLength; i++) { //Process each earned token
-            console.log("made it into the for loop");
             (IERC20 earnedToken, uint dust) = config.earned(i);
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             if (earnedToken == _wantToken)
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
 
             if (earnedAmt > dust) {
-                console.log("made it past the dust conditional");
                 success = true; //We have something worth compounding
-                console.log("Balance before fees: ", earnedToken.balanceOf(address(this)));
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
-                console.log("Balance after fees: ", earnedToken.balanceOf(address(this)));
                 if (pairStake) {
                     (IERC20 token0, IERC20 token1) = config.token0And1();
                     safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
@@ -48,30 +43,20 @@ contract Strategy is BaseStrategy {
         }
 
         //lpTokenLength == 1 means single-stake, not LP
-        if (success) {
-            console.log("Success!!!");
-            
+        if (success) {            
             IERC20 targetWant = config.targetWant();
             
             if (pairStake) {
-                console.log("pairstake");
                 // Get want tokens, ie. add liquidity
                 (IERC20 token0, IERC20 token1) = config.token0And1();
-				console.log("token0", address(token0));
-				console.log("token1", address(token1));
                 LibQuartz.optimalMint(IUniPair(address(targetWant)), token0, token1);
-				console.log("mint done");
             }
 
             if (config.isMaximizer()) {
                 uint256 rewardAmt = targetWant.balanceOf(address(this));
                 if (_wantToken == targetWant) rewardAmt -= wantBalanceBefore;
-
-				console.log("maximizer rewards", rewardAmt);
-                console.log("target vid: ", config.targetVid());
                 IVaultHealer(msg.sender).deposit(config.targetVid(), rewardAmt);
-            } else { 
-                console.log("standard rewards");
+            } else {
                 _farm();
             }
         }

@@ -28,7 +28,6 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
         _setupRole(VAULT_ADDER, _owner);
-        _setRoleAdmin(STRATEGY, VAULT_ADDER);
         _setupRole(PAUSER, _owner);
         _setupRole(FEE_SETTER, _owner);
     }
@@ -51,11 +50,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
         require(targetVid < 2**208, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
         uint16 nonce = targetVault.numMaximizers + 1;
-        vid = (targetVid << 16) + nonce;
-        console.log(targetVid);
-        console.log(targetVid << 16);
-        console.log(nonce);
-        console.log(vid);
+        vid = (targetVid << 16) | nonce;
         targetVault.numMaximizers = nonce;
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }
@@ -65,7 +60,6 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
 
         IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
         _strat.initialize(abi.encodePacked(vid, data));
-        grantRole(STRATEGY, address(_strat)); //requires msg.sender is VAULT_ADDER
         vaultInfo[vid].want = _strat.wantToken();
         vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
         emit AddVault(vid);
@@ -94,21 +88,18 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
         return AccessControl.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
-
+    //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
     function strat(uint _vid) public view returns (IStrategy) {
         return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
     }
 
-
+    //Requires that a vid represents some deployed vault
     modifier requireValidVid(uint vid) {
         _requireValidVid(vid);
         _;
     }
     function _requireValidVid(uint vid) internal view {
-        require(vid < 2**224, "VH: vid too large");
         uint subVid = vid & 0xffff;
-        console.log("subVid");
-        console.log(subVid);
         require(subVid > 0 && subVid <= (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers),
             "VH: vid out of range");
     }
