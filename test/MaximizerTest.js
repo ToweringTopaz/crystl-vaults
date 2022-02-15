@@ -125,7 +125,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			[40],
 			0
 		)
-
+		console.log(CRYSTL_COMPOUNDER_DATA);
+		
         vaultHealerOwnerSigner = user1
         
         zapAddress = await vaultHealer.zap()
@@ -153,7 +154,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
-		
+
 		MAXIMIZER_DATA = await strategyConfig.generateConfig(
             vaultHealer.address,
 			maxiTacticsA,
@@ -168,6 +169,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			[40, 40],
 			crystl_compounder_strat_pid
 		)
+		console.log(MAXIMIZER_DATA);
 
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
         console.log(maximizer_strat_pid)

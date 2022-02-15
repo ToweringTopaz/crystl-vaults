@@ -41,9 +41,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function _getConfig() private view {
         address configAddr = configAddress();
         assembly {
-            if gt(mload(0x40), 0x80) { // asserting that this function is only called once at the beginning of every incoming call
-                revert(0,0)
-            }
+//            if gt(mload(0x40), 0x80) { // asserting that this function is only called once at the beginning of every incoming call
+//                revert(0,0)
+//            }
             let len := sub(extcodesize(configAddr), 1) //get length, subtracting 1 for the invalid opcode
             mstore(0x40, add(0x80, len)) //update free memory pointer
             extcodecopy(configAddr, 0x80, 1, len) //get the data
@@ -52,9 +52,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function initialize(bytes memory _config) external onlyVaultHealer {
         require(address(this) != implementation, "Strategy: This contract must be used by proxy");
-        IERC20 _wantToken;
         assembly {
-            _wantToken := and(0xffffffffffffffffffffffffffffffffffffffff, mload(add(_config, 116)))
             let len := mload(_config) //get length of config
             mstore(_config, 0x600c80380380823d39803df3fe) //simple bytecode which saves everything after the f3
 
@@ -63,14 +61,20 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 revert(0, 0)
             }
         }
-        
-        _wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
+		_getConfig();
+		console.log("0");
+		(IERC20 _wantToken,) = config.wantToken();
+		console.log("want:", address(_wantToken));
+		_wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
+		IERC20 _targetWant = config.targetWant();
+		console.log("target:", address(_targetWant));
+		if (_wantToken != _targetWant) _targetWant.safeIncreaseAllowance(msg.sender, type(uint256).max);
     }
 
     //should only happen when this contract deposits as a maximizer
     function onERC1155Received(
         address operator, address from, uint256 id, uint256, bytes calldata) external view onlyVaultHealer getConfig returns (bytes4) {
-        require (operator == address(this) && from == address(0) && id == config.vid() >> 32, "Strategy: Improper ERC1155 deposit");
+        require (operator == address(this) && from == address(0) && id == config.vid() >> 16, "Strategy: Improper ERC1155 deposit");
         return 0xf23a6e61;
     }
 

@@ -50,19 +50,28 @@ contract Strategy is BaseStrategy {
         //lpTokenLength == 1 means single-stake, not LP
         if (success) {
             console.log("Success!!!");
-            if (config.isMaximizer()) {
-                console.log("maximizer rewards");
-                uint256 maximizerRewardBalance = config.targetWant().balanceOf(address(this));
+            
+            IERC20 targetWant = config.targetWant();
+            
+            if (pairStake) {
+                console.log("pairstake");
+                // Get want tokens, ie. add liquidity
+                (IERC20 token0, IERC20 token1) = config.token0And1();
+				console.log("token0", address(token0));
+				console.log("token1", address(token1));
+                LibQuartz.optimalMint(IUniPair(address(targetWant)), token0, token1);
+				console.log("mint done");
+            }
 
-                IVaultHealer(msg.sender).deposit(config.targetVid(), maximizerRewardBalance);
+            if (config.isMaximizer()) {
+                uint256 rewardAmt = targetWant.balanceOf(address(this));
+                if (_wantToken == targetWant) rewardAmt -= wantBalanceBefore;
+
+				console.log("maximizer rewards", rewardAmt);
+                console.log("target vid: ", config.targetVid());
+                IVaultHealer(msg.sender).deposit(config.targetVid(), rewardAmt);
             } else { 
                 console.log("standard rewards");
-                if (pairStake) {
-                    console.log("pairstake rewards");
-                    // Get want tokens, ie. add liquidity
-                    (IERC20 token0, IERC20 token1) = config.token0And1();
-                    LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-                }
                 _farm();
             }
         }

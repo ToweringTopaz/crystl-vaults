@@ -101,7 +101,7 @@ library StrategyConfig {
     function targetWant(MemPointer config) internal pure returns (IERC20 _targetWant) {
         if (isMaximizer(config)) {
             unchecked {
-                uint offset = 0x93 + earnedLength(config) * 0x14;
+                uint offset = 0x93 + earnedLength(config) * 0x15;
                 if (isPairStake(config)) offset += 0x28;
             
                 assembly {
@@ -109,9 +109,7 @@ library StrategyConfig {
                 }
             }
         } else {
-            assembly { 
-                _targetWant := mload(config)
-            }
+            (_targetWant,) = wantToken(config);
         }
     }
 
@@ -157,16 +155,17 @@ library StrategyConfig {
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
 
-        IERC20 _targetWant = IERC20(_wantToken);
-        if (_targetVid > 0) {
-            (_targetWant,,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
-        }
-
         uint8 vaultType = uint8(_earned.length);
         if (_feeOnTransfer) vaultType += 0x80;
         
         configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
         
+		
+		IERC20 _targetWant = IERC20(_wantToken);
+        if (_targetVid > 0) {
+            (_targetWant,,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
+        }
+		
         //Look for LP tokens. If not, want must be a single-stake
         try IUniPair(address(_targetWant)).token0() returns (IERC20 _token0) {
             vaultType += 0x20;
@@ -179,8 +178,7 @@ library StrategyConfig {
         for (uint i; i < _earned.length; i++) {
             configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
         }
-        if (_targetVid > 0) {
-            configData = abi.encodePacked(configData, _targetVid);
-        }
+		if (_targetVid > 0) 
+			configData = abi.encodePacked(configData, _targetWant);
     }
 }
