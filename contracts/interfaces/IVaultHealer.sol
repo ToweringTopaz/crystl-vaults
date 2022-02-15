@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IMagnetite.sol";
 import "./IStrategy.sol";
 import "./IVaultFeeManager.sol";
-import "@openzeppelin/contracts/access/IAccessControlEnumerable.sol";
+import "@openzeppelin/contracts/access/IAccessControl.sol";
 
-interface IVaultHealer is IAccessControlEnumerable {
+interface IVaultHealer is IAccessControl {
 
     event AddVault(uint indexed vid);
     event SetVaultFeeManager(IVaultFeeManager indexed _manager);
@@ -35,13 +35,13 @@ interface IVaultHealer is IAccessControlEnumerable {
         IERC20 want;
         uint8 noAutoEarn;
         bool active; //not paused
-        uint32 lastEarnBlock;
+        uint48 lastEarnBlock;
         uint16 numBoosts;
-        uint32 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
+        uint16 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
         uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 
-    function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint32,uint16,uint32,uint256);
-    function nextVid() external view returns (uint32);
+    function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16,uint256);
+    function numVaultsBase() external view returns (uint16);
     
 }

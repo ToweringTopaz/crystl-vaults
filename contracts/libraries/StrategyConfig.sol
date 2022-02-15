@@ -19,12 +19,12 @@ library StrategyConfig {
     }
     function targetVid(MemPointer config) internal pure returns (uint256 _targetVid) {
         assembly {
-            _targetVid := shr(0x20, mload(config))
+            _targetVid := shr(0x10, mload(config))
         }
     }
     function isMaximizer(MemPointer config) internal pure returns (bool _isMaximizer) {
         assembly {
-            _isMaximizer := gt(shr(0x20, mload(config)), 0)
+            _isMaximizer := gt(shr(0x10, mload(config)), 0)
         }
     }
 
