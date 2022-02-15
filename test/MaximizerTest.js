@@ -131,9 +131,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         zapAddress = await vaultHealer.zap()
 
 		quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
-        strat1_pid = await vaultHealer.numVaultsBase();
        
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+		strat1_pid = await vaultHealer.numVaultsBase();
 		strat1 = await ethers.getContractAt('Strategy', await vaultHealer.strat(strat1_pid))
 
         crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
@@ -197,6 +197,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
         await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], boostPool, Date.now() + 900, { value: ethers.utils.parseEther("45") })
 		
+		console.log("pid....")
+		console.log(strat1_pid)
 		await vaultHealer.createBoost(
 		    strat1_pid, //I'm hardcoding this for now - how can we do it in future??
 			boostPoolImplementation.address,
