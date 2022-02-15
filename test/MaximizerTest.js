@@ -131,12 +131,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         zapAddress = await vaultHealer.zap()
 
 		quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
-        strat1_pid = await vaultHealer.numVaultsBase() + 1;
+        strat1_pid = await vaultHealer.numVaultsBase();
        
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
 		strat1 = await ethers.getContractAt('Strategy', await vaultHealer.strat(strat1_pid))
 
-        crystl_compounder_strat_pid = await vaultHealer.numVaultsBase() + 1;
+        crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
         console.log("2")
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
