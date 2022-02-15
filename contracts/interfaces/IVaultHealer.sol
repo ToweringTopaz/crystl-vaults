@@ -20,6 +20,8 @@ interface IVaultHealer is IAccessControl {
     event EnableBoost(address indexed user, uint indexed boostid);
     event BoostEmergencyWithdraw(address user, uint _boostID);
     event SetAutoEarn(uint indexed vid, bool earnBeforeDeposit, bool earnBeforeWithdraw);
+    event FailedEarn(uint vid, string reason);
+    event FailedEarnBytes(uint vid, bytes reason);
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
     //function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
     //function stratWithdraw(uint256 _vid, uint256 _wantAmt) external;

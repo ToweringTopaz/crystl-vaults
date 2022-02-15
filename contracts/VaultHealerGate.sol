@@ -45,7 +45,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
                 emit Earned(vid, wantLockedTotal);
             }
-        } catch {}
+        } catch Error(string memory reason) {
+            emit FailedEarn(vid, reason);
+        } catch (bytes memory reason) {
+            emit FailedEarnBytes(vid, reason);
+        }
         vault.lastEarnBlock = uint32(block.number);
         _lock = lock; //reset reentrancy state
     }
