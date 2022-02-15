@@ -170,10 +170,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
             uint vid = ids[i];
             uint amount = amounts[i];
             updateOffsetsOnTransfer(vid, from, to, amount);
-            if (vid > 2**16) {
-                if (amount > 0) maximizerMap[to].set(vid);
-                if (amount == balanceOf(from, vid)) maximizerMap[from].unset(vid);
-            }
         }
     }
 
@@ -200,16 +196,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
+    // Also sets and unsets the maximizerMap
     function updateOffsetsOnTransfer(uint _vid, address _from, address _to, uint _vidSharesTransferred) internal {
         if (_vid < 2**16) return; //not a maximizer, so nothing to do
 
         //calculate the offset amount
+        uint _totalSupply = totalSupply(_vid);
+        if (_totalSupply == 0) return; //would divide by zero and there's nothing here
         uint numerator = _vidSharesTransferred * virtualTargetBalance(_vid);
-        uint _totalSupply = totalSupply(_vid);        
         uint shareOffset = numerator / _totalSupply;
 
         //For deposit/mint, ceildiv logic is used in order to prevent rounding exploits and subtraction underflow
         if (_from == address(0)) {
+            maximizerMap[_to].set(_vid);
             shareOffset += numerator % _totalSupply == 0 ? 0 : 1;
             maximizerEarningsOffset[_to][_vid] += shareOffset;
             totalMaximizerEarningsOffset[_vid] += shareOffset;
@@ -219,11 +218,18 @@ abstract contract VaultHealerGate is VaultHealerBase {
             doForAllMaximizersOfTargetAndAccount(_vid, _from, realizeTargetShares);
             maximizerEarningsOffset[_from][_vid] -= shareOffset;
             totalMaximizerEarningsOffset[_vid] -= shareOffset;
+            if (_vidSharesTransferred == balanceOf(_from, _vid)) maximizerMap[_from].unset(_vid);
         } else { //transfer
+            
             realizeTargetShares(_vid, _from);
             doForAllMaximizersOfTargetAndAccount(_vid, _from, realizeTargetShares);
             maximizerEarningsOffset[_from][_vid] -= shareOffset;
             maximizerEarningsOffset[_to][_vid] += shareOffset;
+            if (_vidSharesTransferred > 0) {
+                maximizerMap[_to].set(_vid);
+                if (_vidSharesTransferred == balanceOf(_from, _vid))
+                    maximizerMap[_from].unset(_vid);
+            }
         }
     }
     //For some maximizer, transfers target ERC1155 shares to the user and offsets them
