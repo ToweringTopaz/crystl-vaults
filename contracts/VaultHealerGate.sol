@@ -44,7 +44,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _lock = vid; //permit reentrant calls by this vault only
         try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
-                require(wantLockedTotal < type(uint112).max, "VH: wantLockedTotal overflow");
                 emit Earned(vid, wantLockedTotal);
             }
         } catch Error(string memory reason) {
@@ -76,7 +75,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         bool active = vault.active;
         uint48 lastEarnBlock = vault.lastEarnBlock;
 
-        // we call an earn on the vault before we action the _deposit
+        // If enabled, we call an earn on the vault before we action the _deposit
         if (noAutoEarn & 1 == 0 && active && lastEarnBlock != block.number) _earn(_vid); 
 
         pendingDeposits.push() = PendingDeposit({
@@ -160,12 +159,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
         //this call transfers wantTokens from the strat to the user
         want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
 
-        emit Withdraw(_from, _to, _vid, wantAmt); //todo shouldn't this emit wantAmt?
+        emit Withdraw(_from, _to, _vid, wantAmt);
     }
 
     // Withdraw everything from vault for yourself
     function withdrawAll(uint256 _vid) external {
-        _withdraw(_vid, type(uint112).max, _msgSender(), _msgSender());
+        _withdraw(_vid, type(uint256).max, _msgSender(), _msgSender());
     }
     
     //called by strategy, cannot be nonReentrant
@@ -197,7 +196,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     //For a maximizer vault, this is all of the reward tokens earned, paid out, or offset. Used in calculations 
-    function virtualTargetBalance(uint vid) internal view returns (uint256) {
+    function virtualTargetBalance(uint vid) public view returns (uint256) {
         return balanceOf(address(strat(vid)), vid >> 16) + totalMaximizerEarningsOffset[vid];
     }
     //Returns the number of target shares a user is entitled to, for one maximizer
