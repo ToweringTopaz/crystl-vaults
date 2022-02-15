@@ -34,8 +34,9 @@ contract Strategy is BaseStrategy {
             if (earnedAmt > dust) {
                 console.log("made it past the dust conditional");
                 success = true; //We have something worth compounding
+                console.log("Balance before fees: ", earnedToken.balanceOf(address(this)));
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
-
+                console.log("Balance after fees: ", earnedToken.balanceOf(address(this)));
                 if (pairStake) {
                     (IERC20 token0, IERC20 token1) = config.token0And1();
                     safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
@@ -48,12 +49,16 @@ contract Strategy is BaseStrategy {
 
         //lpTokenLength == 1 means single-stake, not LP
         if (success) {
+            console.log("Success!!!");
             if (config.isMaximizer()) {
+                console.log("maximizer rewards");
                 uint256 maximizerRewardBalance = config.targetWant().balanceOf(address(this));
 
                 IVaultHealer(msg.sender).deposit(config.targetVid(), maximizerRewardBalance);
             } else { 
+                console.log("standard rewards");
                 if (pairStake) {
+                    console.log("pairstake rewards");
                     // Get want tokens, ie. add liquidity
                     (IERC20 token0, IERC20 token1) = config.token0And1();
                     LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);

@@ -47,9 +47,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
             }
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
+            console.log("earn failed");
             console.log(vid, reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
+            console.log("earn failed");
             console.log(vid, string(reason));
         }
         vault.lastEarnBlock = uint32(block.number);

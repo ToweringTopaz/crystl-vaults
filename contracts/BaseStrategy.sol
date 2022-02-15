@@ -163,17 +163,29 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         if (feeTotalRate > 0) {
             uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
             earnedAmt -= feeEarnedAmt;
-            uint nativeBefore = address(this).balance;
+            
             IWETH weth = _router.WETH();
-            safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
-            uint feeNativeAmt = address(this).balance - nativeBefore;
-
-            weth.withdraw(weth.balanceOf(address(this)));
-            for (uint i; i < 3; i++) {
-                (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
-                if (receiver == address(0) || rate == 0) break;
-                (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate, gas: 0x40000}("");
-                require(success, "Strategy: Transfer failed");
+            
+            if (_earnedToken == weth) {
+                weth.withdraw(feeEarnedAmt);    
+            } else {
+                uint wethBefore = weth.balanceOf(address(this));
+                safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
+                weth.withdraw(weth.balanceOf(address(this)) - wethBefore);
+            }
+            
+            //This contract should not hold native between transactions but it could happen theoretically. Pay it out with the fees
+            if (address(this).balance > 0) {
+                uint feeNativeAmt = address(this).balance;
+                console.log("feeNativeAmt: ", feeNativeAmt);
+                for (uint i; i < 3; i++) {
+                    (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
+                    if (receiver == address(0) || rate == 0) break;
+                    console.log("Paying to receiver, amount:");
+                    console.log(receiver, feeNativeAmt * rate / feeTotalRate);
+                    (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate, gas: 0x40000}("");
+                    require(success, "Strategy: Transfer failed");
+                }
             }
         }
     }
@@ -206,8 +218,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             );
         } else {
             console.log("about to make swap");
-            console.log(_to);
-            console.log(_amountIn);
+            console.log("to:", _to);
+            console.log("amount in", _amountIn);
+            console.log("balance of path[0]:", path[0].balanceOf(address(this)));
             console.log(path.length);
             console.log(address(path[0]));
             console.log(address(path[1]));
