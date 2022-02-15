@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
@@ -9,7 +9,7 @@ import "./interfaces/IVaultFeeManager.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "hardhat/console.sol";
 
-abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC2771Context, IVaultHealer {
+abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
@@ -90,8 +90,8 @@ abstract contract VaultHealerBase is AccessControlEnumerable, ERC1155Supply, ERC
     }
 
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControlEnumerable, ERC1155) returns (bool) {
-        return AccessControlEnumerable.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC1155) returns (bool) {
+        return AccessControl.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
 

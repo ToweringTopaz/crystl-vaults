@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IMagnetite.sol";
 import "./IStrategy.sol";
 import "./IVaultFeeManager.sol";
-import "@openzeppelin/contracts/access/IAccessControlEnumerable.sol";
+import "@openzeppelin/contracts/access/IAccessControl.sol";
 
-interface IVaultHealer is IAccessControlEnumerable {
+interface IVaultHealer is IAccessControl {
 
     event AddVault(uint indexed vid);
     event SetVaultFeeManager(IVaultFeeManager indexed _manager);
