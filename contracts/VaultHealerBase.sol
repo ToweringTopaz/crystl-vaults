@@ -107,8 +107,10 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     function _requireValidVid(uint vid) internal view {
         require(vid < 2**224, "VH: vid too large");
         uint subVid = vid & 0xffff;
-        require(subVid > 0 && subVid < (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers),
-            "VH: vid out of range");
+        console.log("subVid");
+        console.log(subVid);
+        // require(subVid > 0 && subVid < (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers),
+        //     "VH: vid out of range");
     }
 
 
