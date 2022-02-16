@@ -125,7 +125,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			[40],
 			0
 		)
-		console.log(CRYSTL_COMPOUNDER_DATA);
 		
         vaultHealerOwnerSigner = user1
         
@@ -138,10 +137,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		strat1 = await ethers.getContractAt('Strategy', await vaultHealer.strat(strat1_pid))
 
         crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
-        console.log("2")
-
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
-
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		
 		let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
