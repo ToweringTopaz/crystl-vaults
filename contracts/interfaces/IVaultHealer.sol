@@ -37,9 +37,10 @@ interface IVaultHealer is IAccessControl {
         IERC20 want;
         uint8 noAutoEarn;
         bool active; //not paused
-        uint48 lastEarnBlock;
+        
         uint16 numBoosts;
         uint16 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
+
         uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 

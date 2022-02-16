@@ -64,10 +64,10 @@ contract Strategy is BaseStrategy {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 wantLockedBefore) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
-        uint wantLockedBefore = wantBal + _vaultSharesTotal();
+        wantLockedBefore = wantBal + _vaultSharesTotal();
 
         if (_wantAmt < dust) return (0, 0); //do nothing if nothing is requested
 
@@ -78,11 +78,7 @@ contract Strategy is BaseStrategy {
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
         wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
-        sharesAdded = wantAdded;
-        if (_sharesTotal > 0) { 
-            sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
-        }
-        require(sharesAdded > dust, "deposit: no/dust shares added");
+        require(wantAdded > dust, "deposit: no/dust shares added");
     }
 
 
@@ -92,7 +88,8 @@ contract Strategy is BaseStrategy {
         //User's balance, in want tokens
         uint wantBal = _wantToken.balanceOf(address(this)); 
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
-        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
+        bool isMaximizer = config.isMaximizer();
+        uint256 userWant = isMaximizer ? _userShares : _userShares * wantLockedBefore / _sharesTotal;
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         if (_wantAmt + dust > userWant) {
@@ -111,9 +108,12 @@ contract Strategy is BaseStrategy {
         uint wantLockedAfter = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
 
+        require (userWant >= withdrawSlippage, "Strategy: All withdraw earnings lost to slippage");
+
         //Calculate shares to remove
-        sharesRemoved = Math.ceilDiv(
-            (_wantAmt + withdrawSlippage) * _sharesTotal,
+        sharesRemoved = _wantAmt + withdrawSlippage;
+        if (!isMaximizer) sharesRemoved = Math.ceilDiv(
+            sharesRemoved * _sharesTotal,
             wantLockedBefore
         );
 
@@ -122,12 +122,10 @@ contract Strategy is BaseStrategy {
             sharesRemoved = _userShares;
         }
 
-        _wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
+        _wantAmt = isMaximizer ? sharesRemoved : Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
         if (_wantAmt > wantBal) _wantAmt = wantBal;
-
-        require(_wantAmt > 0, "nothing to withdraw after slippage");
         
         return (sharesRemoved, _wantAmt);
-    }    
+    }
 
 }
