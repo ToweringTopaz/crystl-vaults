@@ -539,18 +539,19 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should withdraw 50% of user 1 LPs with correct withdraw fee amount (0.1%) and decrease user\'s balance correctly', async () => {
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user1.address);
-            const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
-            // console.log(ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal));
+            const UsersSharesBeforeFirstWithdrawal = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
+            console.log(ethers.utils.formatEther(UsersSharesBeforeFirstWithdrawal));
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            console.log(ethers.utils.formatEther(vaultSharesTotalInMaximizerBeforeWithdraw));
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user1.address);
 			user1CrystlShareBalanceBeforeWithdraw = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
 			user1CrystlShareRawBalanceBeforeWithdraw = await vaultHealer.rawBalanceOf(user1.address, crystl_compounder_strat_pid);
 
-            console.log(`User 3 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal.div(2))} LP tokens from the maximizer vault`)
+            console.log(`User 1 withdraws ${ethers.utils.formatEther(UsersSharesBeforeFirstWithdrawal.div(2))} LP tokens from the maximizer vault`)
 
-            await vaultHealer.connect(user1)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2));  
+            await vaultHealer.connect(user1)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersSharesBeforeFirstWithdrawal.div(2));  
             
             const LPtokenBalanceAfterFirstWithdrawal = await LPtoken.balanceOf(user1.address);
             // console.log(ethers.utils.formatEther(LPtokenBalanceAfterFirstWithdrawal));
