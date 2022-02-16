@@ -747,7 +747,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`User 4 deposits ${ethers.utils.formatEther(user4InitialDeposit)} CRYSTL tokens`);
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4FirstDeposit)} CRYSTL tokens after user 4 deposits`)
 
-            expect(user4InitialDeposit).to.equal(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
+            expect(user4InitialDeposit).to.be.closeTo(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit), 1000000000); //will this work for 2nd deposit? on normal masterchef?
         })
 
         // Compound LPs (Call the earnSome function with this specific farm’s maximizer_strat_pid).
