@@ -59,7 +59,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 999999,
+        runs: 4294967295
       },
 	  debug: {
 	  }
@@ -68,6 +68,6 @@ module.exports = {
   mocha: {
     timeout: 90000,
   },
-}
+};
 
 
