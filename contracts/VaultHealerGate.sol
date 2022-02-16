@@ -84,9 +84,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
-
+        console.log(_vid);
+        console.log(totalSupply(_vid));
         // if this is a maximizer vault, do these extra steps
-        if (_vid >> 32 > 0)
+        if (_vid > 2**16)
             UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
 
         //we mint tokens for the user via the 1155 contract
@@ -131,7 +132,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply(_vid));
 
-        if (_vid >> 32 > 0) {
+        if (_vid > 2**16) {
             withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
         }
 
@@ -183,17 +184,21 @@ abstract contract VaultHealerGate is VaultHealerBase {
             bytes memory data
         ) internal virtual override {
             super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+            console.log("made it here");
+            console.log(from);
+            console.log(to);
             if (from != address(0) && to != address(0)) {
+                console.log("made it here2");
                 for (uint i; i < ids.length; i++) {
+                    console.log("made it here3");
                     uint vid = ids[i];
 
-                    if (vid >> 32 > 0) {
+                    if (vid > 2**16) {
                         _earn(vid);
                         uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
-                        
                         withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
-
-                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); //todo should this be from or to?????
+                        console.log("got here just before updateOffsets");
+                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); 
                     }
 
                 }
@@ -202,8 +207,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
+        console.log("inside update");
         IStrategy vaultStrat = strat(_vid);
-        uint256 targetVid = _vid >> 32;
+        uint256 targetVid = _vid >> 16;
 
         //calculate the offset for this particular deposit
         uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[_vid];
@@ -211,14 +217,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         // increment the offsets for user and for vid
         maximizerEarningsOffset[_from][_vid] += targetVidTokenOffset;
-        console.log("maximizerEarningsOffset[_from][_vid]");
-        console.log(maximizerEarningsOffset[_from][_vid]);
         totalMaximizerEarningsOffset[_vid] += targetVidTokenOffset; 
+        console.log("done update");
+
     }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
-        uint targetVid = _vid >> 32;
+        console.log("inside withdraw update");
+        uint targetVid = _vid >> 16;
         VaultInfo storage target = vaultInfo[targetVid];
         
         IStrategy vaultStrat = strat(_vid);
@@ -232,6 +239,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         
         // withdraw proportional amount of target vault token from targetVault()
         if (targetVidAmount > 0) {
+            console.log("inside targetVid conditional");
+
             // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
             _withdraw(targetVid, targetVidAmount, address(vaultStrat), _from);
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
