@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+import "hardhat/console.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
@@ -210,6 +211,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         // increment the offsets for user and for vid
         maximizerEarningsOffset[_from][_vid] += targetVidTokenOffset;
+        console.log("maximizerEarningsOffset[_from][_vid]");
+        console.log(maximizerEarningsOffset[_from][_vid]);
         totalMaximizerEarningsOffset[_vid] += targetVidTokenOffset; 
     }
 
@@ -234,8 +237,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
                         
             // update the offsets for user and for vid
-            totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
-            maximizerEarningsOffset[_from][_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); //todo this is the case for withdrawAll, what about withdrawSome?
+            totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
+            maximizerEarningsOffset[_from][_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
             }
         }
 }
