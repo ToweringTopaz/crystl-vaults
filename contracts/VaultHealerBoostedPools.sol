@@ -22,7 +22,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         return IBoostPool(Cavendish.computeAddress(bytes32(_boostID)));
     }
 
-    function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) {
+    function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) onlyRole(BOOST_ADMIN) {
         require(vid < 2**224, "VH: incompatible vid for boost pool");
         VaultInfo storage vault = vaultInfo[vid];
         uint16 nonce = vault.numBoosts;
@@ -30,7 +30,6 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         uint _boostID = (uint(bytes32(bytes4(0xB0057000 + nonce))) | vid);
 
         IBoostPool _boost = IBoostPool(Cavendish.clone(_implementation, bytes32(_boostID)));
-        grantRole(BOOSTPOOL, address(_boost)); //requires _msgSender() is BOOST_ADMIN
 
         _boost.initialize(_msgSender(), _boostID, initdata);
         activeBoosts.set(_boostID);

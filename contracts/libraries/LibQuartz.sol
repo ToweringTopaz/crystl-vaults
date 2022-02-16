@@ -31,7 +31,7 @@ library LibQuartz {
     }
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
-        (IERC20 want,,,,,,) = vaultHealer.vaultInfo(_vid);
+        (IERC20 want,,,,,) = vaultHealer.vaultInfo(_vid);
         console.log(address(want));
         strat = vaultHealer.strat(_vid);
         console.log(address(strat));

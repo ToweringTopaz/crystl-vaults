@@ -71,19 +71,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
-        VaultInfo storage vault = vaultInfo[_vid];
-        IERC20 want = vault.want;
-        uint8 noAutoEarn = vault.noAutoEarn;
-        bool active = vault.active;
-        uint48 lastEarnBlock = vault.lastEarnBlock;
+        VaultInfo memory vault = vaultInfo[_vid];
 
         // If enabled, we call an earn on the vault before we action the _deposit
-        if (noAutoEarn & 1 == 0 && active && lastEarnBlock != block.number) _earn(_vid); 
+        if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
         IStrategy vaultStrat = strat(_vid);
 
         pendingDeposits[vaultStrat]= PendingDeposit({
-            token: want,
+            token: vault.want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
             amount1: uint96(_wantAmt)
@@ -131,20 +127,16 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
-        uint balance = balanceOf(_from, _vid);
-        require(balance > 0, "User has 0 shares");
+		uint fromBalance = balanceOf(_from, _vid);
+        require(fromBalance > 0, "User has 0 shares");
         
-        VaultInfo storage vault = vaultInfo[_vid];
-        IERC20 want = vault.want;
-        uint8 noAutoEarn = vault.noAutoEarn;
-        bool active = vault.active;
-        uint48 lastEarnBlock = vault.lastEarnBlock;
+        VaultInfo memory vault = vaultInfo[_vid];
 
         // we call an earn on the vault before we action the _deposit
-        if (noAutoEarn & 2 == 0 && active && lastEarnBlock != block.number) _earn(_vid); 
+        if (vault.noAutoEarn & 2 == 0 && vault.lastEarnBlock != block.number) _earn(_vid); 
 
         IStrategy vaultStrat = strat(_vid);
-
+EAD
         uint wantBalance = _vid < 2**16 ? balance * vaultStrat.wantLockedTotal() / totalSupply(_vid) : balance;
         uint256 wantAmt = vaultStrat.withdraw(_wantAmt, wantBalance);
         uint sharesRemoved = wantAmt;
@@ -165,12 +157,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (feeReceiver != address(0) && feeRate <= 300 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
                 uint feeAmt = wantAmt * feeRate / 10000;
                 wantAmt -= feeAmt;
-                want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt); 
+                vault.want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
             }
         } catch {}
 
         //this call transfers wantTokens from the strat to the user
-        want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
+        vault.want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
 
         emit Withdraw(_from, _to, _vid, wantAmt);
     }

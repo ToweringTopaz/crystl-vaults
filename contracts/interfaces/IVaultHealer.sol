@@ -41,10 +41,9 @@ interface IVaultHealer is IAccessControl {
         uint16 numBoosts;
         uint16 numMaximizers; //number of maximizer vaults pointing here. For vid 0x00000045, its maximizer will be 0x000000450000000, 0x000000450000001, ...
 
-        uint256 panicLockExpiry; //no gas savings from packing this variable
     }
 
-    function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16,uint256);
+    function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16);
     function numVaultsBase() external view returns (uint16);
     
 }

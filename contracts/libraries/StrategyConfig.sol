@@ -163,7 +163,7 @@ library StrategyConfig {
 		
 		IERC20 _targetWant = IERC20(_wantToken);
         if (_targetVid > 0) {
-            (_targetWant,,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
+            (_targetWant,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
         }
 		
         //Look for LP tokens. If not, want must be a single-stake
