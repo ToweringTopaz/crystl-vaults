@@ -95,8 +95,10 @@ contract Strategy is BaseStrategy {
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
-        if (_wantAmt + dust > userWant) {
-            _wantAmt = userWant;
+        unchecked { //overflow is caught and handled in the second condition
+                if (_wantAmt + dust > userWant || _wantAmt + dust < _wantAmt) {
+                _wantAmt = userWant;
+            }
         }
         
         // Check if strategy has tokens from panic
