@@ -591,6 +591,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			user1CrystlShareBalanceBeforeTransfer = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
 			user3CrystlShareBalanceBeforeTransfer = await vaultHealer.balanceOf(user3.address, crystl_compounder_strat_pid);
 
+            User3OffsetBeforeTransfer = await vaultHealer.maximizerEarningsOffset(user3.address)(maximizer_strat_pid);
+            
             vaultHealer.connect(user1).setApprovalForAll(user3.address, true);
 
             await vaultHealer.connect(user3).safeTransferFrom(
@@ -616,7 +618,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should increase offset when you receive transferred tokens', async () => {
              // const User1OffsetAfterTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
-			const User3OffsetAfterTransfer = await vaultHealer.maximizerEarningsOffset(user3, maximizer_strat_pid);
+			const User3OffsetAfterTransfer = await vaultHealer.maximizerEarningsOffset[user3.address][maximizer_strat_pid];
 
              expect(User3OffsetAfterTransfer).to.be.gt(User3OffsetBeforeTransfer);
         })
