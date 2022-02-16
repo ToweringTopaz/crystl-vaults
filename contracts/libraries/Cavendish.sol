@@ -6,44 +6,46 @@ Deploys ERC-1167 compliant minimal proxies whose address is determined only by a
 
 Proxy init bytecode: 
 
-    12 bytes: 602d3481343434335afa50f3
+    11 bytes: 602d80343434335afa15f3
 
     60 push1 2d       : size
-    34 callvalue      : 0 size
-    81 dup2           : size 0 size
-    34 callvalue      : 0 size 0 size 
-    34 callvalue      : 0 0 size 0 size 
-    34 callvalue      : 0 0 0 size 0 size 
-    33 caller         : caller 0 0 0 size 0 size
-    5a gas            : gas caller 0 0 0 size 0 size
-    fa staticcall     : success 0 size
-    50 pop            : 0 size
+    80 dup1           : size size
+    34 callvalue      : 0 size size 
+    34 callvalue      : 0 0 size size 
+    34 callvalue      : 0 0 0 size size 
+    33 caller         : caller 0 0 0 size size
+    5a gas            : gas caller 0 0 0 size size
+    fa staticcall     : success size
+    15 iszero         : 0 size
     f3 return         : 
 
 */
 
 library Cavendish {
 
-    bytes12 constant PROXY_INIT_CODE = hex'602d3481343434335afa50f3';
+    bytes11 constant PROXY_INIT_CODE = hex'602d80343434335afa15f3';
                                               //keccak256(abi.encodePacked(PROXY_INIT_CODE));
-    bytes32 constant PROXY_INIT_HASH = 0x5bae5b6276a6c95513eb9718c054817f4181ae6d6a8c220675bdf8207ee02418;
+    bytes32 constant PROXY_INIT_HASH = hex'577cbdbf32026552c0ae211272febcff3ea352b0c755f8f39b49856dcac71019';
 
+    //Creates an 1167-compliant minimal proxy whose address is purely a function of the deployer address and the salt
     function clone(address _implementation, bytes32 salt) internal returns (address instance) {
 
         require(_implementation != address(0), "ERC1167: zero address");
         assembly {
             sstore(PROXY_INIT_HASH, shl(96, _implementation)) //store at slot PROXY_INIT_HASH which should be empty
             mstore(0, PROXY_INIT_CODE)
-            instance := create2(0, 0x00, 12, salt)
+            instance := create2(0, 0x00, 11, salt)
             sstore(PROXY_INIT_HASH, 0) 
         }
         require(instance != address(0), "ERC1167: create2 failed");
     }
     
+    //Standard function to compute a create2 address deployed by this address, but not impacted by the target implemention
     function computeAddress(bytes32 salt) internal view returns (address) {
         return computeAddress(salt, address(this));
     }
 
+    //Standard function to compute a create2 address, but not impacted by the target implemention
     function computeAddress(
         bytes32 salt,
         address deployer
