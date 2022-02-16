@@ -81,6 +81,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         });
         
         IStrategy vaultStrat = strat(_vid);
+        uint256 wantLockedBefore = vaultStrat.wantLockedTotal();
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
@@ -119,7 +120,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _withdraw(_vid, _wantAmt, _from, _to);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private  { //reentrantOnlyByStrategy(_vid)
 		uint fromBalance = balanceOf(_from, _vid);
         require(fromBalance > 0, "User has 0 shares");
         
