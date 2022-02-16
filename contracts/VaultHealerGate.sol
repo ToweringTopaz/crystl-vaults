@@ -26,18 +26,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
         VaultInfo storage vault = vaultInfo[vid];
-        bool active = vault.active;
-        uint48 lastEarnBlock = vault.lastEarnBlock;
-        if (active && lastEarnBlock != block.number) _earn(vid);
+        if (vault.active && vault.lastEarnBlock != block.number) _earn(vid);
     }
 
     function earn(uint256[] calldata vids) external nonReentrant {
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
             VaultInfo storage vault = vaultInfo[vid];
-            bool active = vault.active;
-            uint48 lastEarnBlock = vault.lastEarnBlock;
-            if (active && lastEarnBlock != block.number) _earn(vid);
+            if (vault.active && vault.lastEarnBlock != block.number) _earn(vid);
         }
     }
 
@@ -136,8 +132,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         if (vault.noAutoEarn & 2 == 0 && vault.lastEarnBlock != block.number) _earn(_vid); 
 
         IStrategy vaultStrat = strat(_vid);
-EAD
-        uint wantBalance = _vid < 2**16 ? balance * vaultStrat.wantLockedTotal() / totalSupply(_vid) : balance;
+
+        uint wantBalance = _vid < 2**16 ? fromBalance * vaultStrat.wantLockedTotal() / totalSupply(_vid) : fromBalance;
         uint256 wantAmt = vaultStrat.withdraw(_wantAmt, wantBalance);
         uint sharesRemoved = wantAmt;
         if (_vid < 2**16) {

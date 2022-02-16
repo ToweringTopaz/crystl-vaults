@@ -20,8 +20,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     IVaultFeeManager public vaultFeeManager;
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
-	mapping(uint => uint) public panicLockExpiry;
-
+    mapping(uint => uint) public panicLockExpiry;
 
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
     uint internal _lock = type(uint).max;
@@ -147,20 +146,6 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     modifier whenNotPaused(uint vid) {
         require(!paused(vid), "VH: paused");
         _;
-    }
-
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        for (uint i; i < ids.length; i++) {
-            require(!paused(ids[i]) || to == address(0), "VH: tokens for paused vaults may not be transferred except to burn");
-        }
     }
 
     fallback() external {
