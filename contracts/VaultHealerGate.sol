@@ -87,7 +87,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         console.log(_vid);
         console.log(totalSupply(_vid));
         // if this is a maximizer vault, do these extra steps
-        if (_vid > 2**16)
+        if (_vid > 2**16 && wantLockedBefore > 0)
             UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
 
         //we mint tokens for the user via the 1155 contract
