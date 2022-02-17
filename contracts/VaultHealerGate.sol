@@ -181,13 +181,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         for (uint i; i < ids.length; i++) {
             uint vid = ids[i];
-            if (vid < 2**16) continue;
+            
+            uint256 targetVid = vid >> 16;
+            if (targetVid == 0) continue;
             
             //_earn(vid); //I don't think earn is needed here. Either it's a same-block call after another earn, or it's an 1155 transfer unaffected by strategy internals
             console.log("got here just before updateOffsets");
 
             uint amount = amounts[i];
-            uint256 targetVid = vid >> 16;
             IStrategy vaultStrat = strat(vid);
 
             if (to != address(0)) { // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
