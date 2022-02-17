@@ -16,8 +16,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         address from;
         uint96 amount1;
     }
-    mapping(address => mapping(uint256 => uint112)) public maximizerEarningsOffset;
-    mapping(uint256 => uint112) public totalMaximizerEarningsOffset;
+    mapping(address => mapping(uint256 => uint256)) public maximizerEarningsOffset;
+    mapping(uint256 => uint256) public totalMaximizerEarningsOffset;
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
@@ -193,7 +193,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 
                 //calculate the offset for this particular deposit
                 uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[vid];
-                uint112 targetVidTokenOffset = uint112(amount * targetVidSharesOwnedByMaxiBefore / totalSupply(vid)); 
+                uint256 targetVidTokenOffset = amount * targetVidSharesOwnedByMaxiBefore / totalSupply(vid); 
 
                 // increment the offsets for user and for vid
                 maximizerEarningsOffset[to][vid] += targetVidTokenOffset;
@@ -204,8 +204,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 uint maximizerEarningsOffsetFromVidTimesAmountDivShareBal = maximizerEarningsOffset[from][vid] * amount / balanceOf(from, vid);
 
                 // calculate the amount of targetVid token to be withdrawn
-                uint256 targetVidSharesToRemove = amount
-                    * (targetStrat.wantLockedTotal() + totalMaximizerEarningsOffset[vid])
+                uint256 targetVidSharesToRemove = 
+                    amount * 
+                        (targetStrat.wantLockedTotal() + totalMaximizerEarningsOffset[vid])
                     / totalSupply(vid) 
                     - maximizerEarningsOffsetFromVidTimesAmountDivShareBal;
                 
@@ -213,13 +214,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 if (targetVidSharesToRemove > 0) {
 
                     // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-
+                    console.log("Sending target shares:", targetVidSharesToRemove);
+                    console.log(balanceOf(from, vid), balanceOf(from, targetVid));
                     _safeTransferFrom(address(vaultStrat), from, targetVid, targetVidSharesToRemove, "");
                                 
 
                     // update the offsets for user and for vid
-                    totalMaximizerEarningsOffset[vid] -= uint112(maximizerEarningsOffsetFromVidTimesAmountDivShareBal);
-                    maximizerEarningsOffset[from][vid] -= uint112(maximizerEarningsOffsetFromVidTimesAmountDivShareBal);
+                    totalMaximizerEarningsOffset[vid] -= maximizerEarningsOffsetFromVidTimesAmountDivShareBal;
+                    maximizerEarningsOffset[from][vid] -= maximizerEarningsOffsetFromVidTimesAmountDivShareBal;
                 }
             }
         }
