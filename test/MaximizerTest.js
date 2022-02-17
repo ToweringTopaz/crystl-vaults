@@ -137,10 +137,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		strat1_pid = await vaultHealer.numVaultsBase();
 		strat1 = await ethers.getContractAt('Strategy', await vaultHealer.strat(strat1_pid))
 
-        crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
-        console.log("2")
+        //crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
+        //console.log("2")
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, CRYSTL_COMPOUNDER_DATA);
+        crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
 
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		
@@ -169,11 +170,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			[40, 40],
 			crystl_compounder_strat_pid
 		)
-		console.log(MAXIMIZER_DATA);
+		//console.log(MAXIMIZER_DATA);
 
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
-        console.log(maximizer_strat_pid)
-        console.log(crystl_compounder_strat_pid)
+        //console.log(maximizer_strat_pid)
+        //console.log(crystl_compounder_strat_pid)
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createMaximizer(crystl_compounder_strat_pid, MAXIMIZER_DATA);
         strategyMaximizer = await ethers.getContractAt('Strategy', await vaultHealer.strat(maximizer_strat_pid));
@@ -199,8 +200,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
         await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], boostPool, Date.now() + 900, { value: ethers.utils.parseEther("45") })
 		
-		console.log("pid....")
-		console.log(strat1_pid)
+		//console.log("pid....")
+		//console.log(strat1_pid)
 		await vaultHealer.createBoost(
 		    strat1_pid, //I'm hardcoding this for now - how can we do it in future??
 			boostPoolImplementation.address,
@@ -289,11 +290,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //user 1 adds liquidity to get LP tokens
         var token0BalanceUser1 = await token0.balanceOf(user1.address);
         await token0.approve(uniswapRouter.address, token0BalanceUser1);
-		console.log(token0BalanceUser1);
+		//console.log(token0BalanceUser1);
 		
         var token1BalanceUser1 = await token1.balanceOf(user1.address);
         await token1.approve(uniswapRouter.address, token1BalanceUser1);
-        console.log(token1BalanceUser1);
+        //console.log(token1BalanceUser1);
 		
         await uniswapRouter.addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser1, token1BalanceUser1, 0, 0, user1.address, Date.now() + 900)
 
