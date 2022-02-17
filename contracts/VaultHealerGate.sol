@@ -177,7 +177,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         bytes memory data
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        console.log("made it here", from, to);
 
         for (uint i; i < ids.length; i++) {
             uint vid = ids[i];
@@ -186,13 +185,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (targetVid == 0) continue;
             
             //_earn(vid); //I don't think earn is needed here. Either it's a same-block call after another earn, or it's an 1155 transfer unaffected by strategy internals
-            console.log("got here just before updateOffsets");
 
             uint amount = amounts[i];
             IStrategy vaultStrat = strat(vid);
 
             if (to != address(0)) { // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-                console.log("inside update");
                 
                 //calculate the offset for this particular deposit
                 uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[vid];
@@ -201,30 +198,28 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 // increment the offsets for user and for vid
                 maximizerEarningsOffset[to][vid] += targetVidTokenOffset;
                 totalMaximizerEarningsOffset[vid] += targetVidTokenOffset; 
-                console.log("done update");
             }
             if (from != address(0)) {
-                console.log("inside withdraw update");
                 IStrategy targetStrat = strat(targetVid);
+                uint maximizerEarningsOffsetFromVidTimesAmountDivShareBal = maximizerEarningsOffset[from][vid] * amount / balanceOf(from, vid);
 
                 // calculate the amount of targetVid token to be withdrawn
                 uint256 targetVidSharesToRemove = amount
                     * (targetStrat.wantLockedTotal() + totalMaximizerEarningsOffset[vid])
                     / totalSupply(vid) 
-                    - maximizerEarningsOffset[from][vid] * amount / balanceOf(from, vid);
+                    - maximizerEarningsOffsetFromVidTimesAmountDivShareBal;
                 
                 // withdraw proportional amount of target vault token from targetVault()
                 if (targetVidSharesToRemove > 0) {
-                    console.log("inside targetVid conditional");
 
                     // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
 
                     _safeTransferFrom(address(vaultStrat), from, targetVid, targetVidSharesToRemove, "");
                                 
+
                     // update the offsets for user and for vid
-                    uint112 offsetUpdateAmt = uint112(maximizerEarningsOffset[from][vid] * amount / balanceOf(from, vid));
-                    totalMaximizerEarningsOffset[vid] -= offsetUpdateAmt;
-                    maximizerEarningsOffset[from][vid] -= offsetUpdateAmt;
+                    totalMaximizerEarningsOffset[vid] -= uint112(maximizerEarningsOffsetFromVidTimesAmountDivShareBal);
+                    maximizerEarningsOffset[from][vid] -= uint112(maximizerEarningsOffsetFromVidTimesAmountDivShareBal);
                 }
             }
         }
