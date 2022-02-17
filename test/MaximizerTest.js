@@ -790,6 +790,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const wantLockedTotalBeforeUser4FirstDeposit = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser4FirstDeposit)} CRYSTL tokens before user 4 deposits`)
             console.log(`WantLockedTotal is ${ethers.utils.formatEther(wantLockedTotalBeforeUser4FirstDeposit)} CRYSTL tokens before user 4 deposits`)
+            
+            totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             await vaultHealer.connect(user4)["deposit(uint256,uint256)"](crystl_compounder_strat_pid, user4InitialDeposit);
             const vaultSharesTotalAfterUser4FirstDeposit = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
@@ -803,18 +805,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid)
             totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
-            expect(user4InitialCrystlShares.sub(user4FinalCrystlShares)).to.equal(
-                (totalCrystlVaultSharesBefore.sub(totalCrystlVaultSharesAfter)))
-            
-            expect(user4FinalCrystlBalance.sub(user4InitialCrystlBalance)).to.be.closeTo(wantLockedTotalBeforeUser4FirstDeposit.sub(wantLockedTotalAfterUser4FirstDeposit)
-                .sub(withdrawFee
-                .mul(wantLockedTotalBeforeUser4FirstDeposit.sub(wantLockedTotalAfterUser4FirstDeposit))
-                .div(10000)),
-                "10000000000000000"
-                )
-
-            // expect(user4InitialDeposit).to.equal(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
-            expect(user4FinalCrystlShares.sub(user4InitialCrystlShares)).to.equal(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit))
+            expect(user4FinalCrystlShares.sub(user4InitialCrystlShares)).to.equal((totalCrystlVaultSharesAfter.sub(totalCrystlVaultSharesBefore)))
+            expect(user4FinalCrystlBalance.sub(user4InitialCrystlBalance)).to.be.closeTo(wantLockedTotalBeforeUser4FirstDeposit.sub(wantLockedTotalAfterUser4FirstDeposit), 1000000000000);
         })
 
         // Compound LPs (Call the earnSome function with this specific farm’s maximizer_strat_pid).
