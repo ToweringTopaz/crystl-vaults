@@ -63,6 +63,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
         IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
         _strat.initialize(abi.encodePacked(vid, data));
         vaultInfo[vid].want = _strat.wantToken();
+        console.log(vid, "WANT: ", address(_strat.wantToken()));
         vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
         emit AddVault(vid);
     }
