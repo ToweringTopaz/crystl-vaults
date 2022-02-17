@@ -83,15 +83,11 @@ library Tactics {
     function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
         bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsB.unwrap(tacticsB) >> offset), amount);
         address masterchef = address(uint160(TacticsA.unwrap(tacticsA) >> 96));
-        console.log("chef:", masterchef);
-        console.log(string(generatedCall));
         masterchef.functionCall(generatedCall, "Tactics: call failed");
         
     }
 
     function _generateCall(uint24 pid, uint64 encodedCall, uint amount) public view returns (bytes memory generatedCall) {
-        console.log(encodedCall);
-
         generatedCall = abi.encodePacked(bytes4(bytes8(encodedCall)));
 
         for (bytes4 params = bytes4(bytes8(encodedCall) << 32); params != 0; params <<= 4) {

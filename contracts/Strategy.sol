@@ -30,6 +30,7 @@ contract Strategy is BaseStrategy {
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
 
             if (earnedAmt > dust) {
+                console.log("made it past dust conditional");
                 success = true; //We have something worth compounding
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
                 if (pairStake) {
@@ -77,6 +78,7 @@ contract Strategy is BaseStrategy {
         IVaultHealer(msg.sender).executePendingDeposit(address(this), uint112(_wantAmt));
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
+        
         wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
         sharesAdded = wantAdded;
         if (_sharesTotal > 0) { 

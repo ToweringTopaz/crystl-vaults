@@ -32,15 +32,11 @@ library LibQuartz {
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
         (IERC20 want,,,,,) = vaultHealer.vaultInfo(_vid);
-        console.log(address(want));
         strat = vaultHealer.strat(_vid);
-        console.log(address(strat));
 
         pair = IUniPair(address(want));
-        console.log(address(pair));
         router = strat.router();
-        console.log(address(router));
-        // require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
+        require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
     }
     function getSwapAmount(IUniRouter router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
