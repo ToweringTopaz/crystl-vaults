@@ -73,23 +73,22 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
-        pendingDeposits[address(strat(_vid))] = PendingDeposit({
+        IStrategy vaultStrat = strat(_vid);
+
+        pendingDeposits[address(vaultStrat)] = PendingDeposit({
             token: vault.want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
             amount1: uint96(_wantAmt)
         });
         
-        IStrategy vaultStrat = strat(_vid);
+
         uint256 wantLockedBefore = vaultStrat.wantLockedTotal();
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
         console.log(_vid);
         console.log(totalSupply(_vid));
-        // if this is a maximizer vault, do these extra steps
-        if (_vid > 2**16 && wantLockedBefore > 0)
-            UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
 
         //we mint tokens for the user via the 1155 contract
         _mint(
@@ -185,29 +184,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
             bytes memory data
         ) internal virtual override {
             super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-            console.log("made it here");
-            console.log(from);
-            console.log(to);
-            if (from != address(0) && to != address(0)) {
-                console.log("made it here2");
-                for (uint i; i < ids.length; i++) {
-                    console.log("made it here3");
-                    uint vid = ids[i];
+            console.log("made it here", from, to);
 
-                    if (vid > 2**16) {
-                        _earn(vid);
-                        uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
-                        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, to, underlyingValue);
-                        console.log("got here just before updateOffsets");
-                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); 
-                    }
-
-                }
+            for (uint i; i < ids.length; i++) {
+                uint vid = ids[i];
+                if (vid < 2**16) continue;
+                    //_earn(vid); //I don't think earn is needed here. Either it's a same-block call after another earn, or it's an 1155 transfer unaffected by strategy internals
+                    console.log("got here just before updateOffsets");
+                    if (to != address(0)) updateOffsetsOnDeposit(vid, to, amounts[i]);
+                    if (from != address(0)) transferTargetSharesAndUpdateOffsetsOnWithdrawal(vid, from, amounts[i]);
             }
         }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
+    function updateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
         console.log("inside update");
         IStrategy vaultStrat = strat(_vid);
         uint256 targetVid = _vid >> 16;
@@ -224,7 +214,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, address _to, uint256 _vidSharesRemoved) internal {
+    function transferTargetSharesAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
         console.log("inside withdraw update");
         uint targetVid = _vid >> 16;
         VaultInfo storage target = vaultInfo[targetVid];
@@ -244,7 +234,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
             // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
 
-            _safeTransferFrom(_from, _to, targetVid, targetVidSharesToRemove, "");
+            _safeTransferFrom(targetStrat, _from, targetVid, targetVidSharesToRemove, "");
                         
             // update the offsets for user and for vid
             totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
