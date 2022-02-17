@@ -226,11 +226,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IStrategy targetStrat = strat(targetVid);
 
         // calculate the amount of targetVid token to be withdrawn
-        uint256 targetVidAmount = _vidSharesRemoved
-            * (targetStrat.wantLockedTotal() + totalMaximizerEarningsOffset[_vid])
+        uint256 targetVidShares = _vidSharesRemoved
+            * (totalSupply(targetVid) + totalMaximizerEarningsOffset[_vid])
             / totalSupply(_vid) 
             - maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid);
         
+        uint256 targetVidAmount = targetVidShares * targetStrat.wantLockedTotal() / totalSupply(targetVid);
+
         // withdraw proportional amount of target vault token from targetVault()
         if (targetVidAmount > 0) {
 

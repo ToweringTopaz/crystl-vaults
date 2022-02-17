@@ -774,10 +774,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should deposit 1500 CRYSTL tokens from user 4 directly into the crystl compounder vault, increasing vaultSharesTotal by the correct amount', async () => {
-            // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user3.address);
             user4InitialDeposit = ethers.utils.parseEther("1500");
             user4InitialCrystlBalance = await tokenOther.balanceOf(user4.address);
             user4InitialCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
+            totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             console.log("user4InitialCrystlBalance");
             console.log(ethers.utils.formatEther(user4InitialCrystlBalance));
@@ -798,8 +798,20 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`User 4 deposits ${ethers.utils.formatEther(user4InitialDeposit)} CRYSTL tokens`);
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4FirstDeposit)} CRYSTL tokens after user 4 deposits`)
             console.log(`WantLockedTotal is ${ethers.utils.formatEther(wantLockedTotalAfterUser4FirstDeposit)} CRYSTL tokens before user 4 deposits`)
-
+            
+            user4FinalCrystlBalance = await tokenOther.balanceOf(user4.address);
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid)
+            totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
+
+            expect(user4InitialCrystlShares.sub(user4FinalCrystlShares)).to.equal(
+                (totalCrystlVaultSharesBefore.sub(totalCrystlVaultSharesAfter)))
+            
+            expect(user4FinalCrystlBalance.sub(user4InitialCrystlBalance)).to.be.closeTo(wantLockedTotalBeforeUser4FirstDeposit.sub(wantLockedTotalAfterUser4FirstDeposit)
+                .sub(withdrawFee
+                .mul(wantLockedTotalBeforeUser4FirstDeposit.sub(wantLockedTotalAfterUser4FirstDeposit))
+                .div(10000)),
+                "10000000000000000"
+                )
 
             // expect(user4InitialDeposit).to.equal(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit)); //will this work for 2nd deposit? on normal masterchef?
             expect(user4FinalCrystlShares.sub(user4InitialCrystlShares)).to.equal(vaultSharesTotalAfterUser4FirstDeposit.sub(vaultSharesTotalBeforeUser4FirstDeposit))
@@ -1068,24 +1080,33 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(user4InitialCrystlBalance);
             console.log("user4InitialCrystlShares");
             console.log(user4InitialCrystlShares);
+            totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             await vaultHealer["earn(uint256)"](maximizer_strat_pid);
             await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
             const vaultSharesTotalBeforeUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            const wantLockedTotalBeforeUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
+
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser4Withdrawal)} CRYSTL tokens before user 4 withdraws`)
             await vaultHealer.connect(user4).withdrawAll(crystl_compounder_strat_pid);
 
             const vaultSharesTotalAfterUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
+            const wantLockedTotalAfterUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
+
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4Withdrawal)} CRYSTL tokens after user 4 withdraws`)
             user4FinalCrystlBalance = await tokenOther.balanceOf(user4.address);
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
+            totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             expect(user4InitialCrystlShares.sub(user4FinalCrystlShares)).to.equal(
-                (vaultSharesTotalBeforeUser4Withdrawal.sub(vaultSharesTotalAfterUser4Withdrawal)))
-                // .sub(withdrawFee
-                // .mul(vaultSharesTotalBeforeUser4Withdrawal.sub(vaultSharesTotalAfterUser4Withdrawal))
-                // .div(10000))
-                // )
+                (totalCrystlVaultSharesBefore.sub(totalCrystlVaultSharesAfter)))
+            
+            expect(user4FinalCrystlBalance.sub(user4InitialCrystlBalance)).to.be.closeTo(wantLockedTotalBeforeUser4Withdrawal.sub(wantLockedTotalAfterUser4Withdrawal)
+                .sub(withdrawFee
+                .mul(wantLockedTotalBeforeUser4Withdrawal.sub(wantLockedTotalAfterUser4Withdrawal))
+                .div(10000)),
+                "10000000000000000"
+                )
         })
 
         it('Should leave zero crystl in the crystl compounder once all 3 users have fully withdrawn their funds', async () => {
