@@ -226,7 +226,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
         console.log("inside withdraw update");
+        console.log(_vid);
         uint targetVid = _vid >> 16;
+        console.log(targetVid);
         VaultInfo storage target = vaultInfo[targetVid];
         
         IStrategy vaultStrat = strat(_vid);
