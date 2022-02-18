@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./VaultHealerGate.sol";
 import "./interfaces/IBoostPool.sol";
+import "hardhat/console.sol";
 
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
@@ -21,19 +22,33 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     function boostPool(uint _boostID) public view returns (IBoostPool) {
         return IBoostPool(Cavendish.computeAddress(bytes32(_boostID)));
     }
+    
+    function nextBoostPool(uint vid) public view returns (uint, IBoostPool) {
+        return boostPoolVid(vid, vaultInfo[vid].numBoosts + 1);
+    }
+
+    function boostPoolVid(uint vid, uint16 n) public view returns (uint, IBoostPool) {
+
+        uint _boostID = (uint(bytes32(bytes4(0xB0057000 + n))) | vid);
+        return (_boostID, boostPool(_boostID));
+    }
 
     function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) onlyRole(BOOST_ADMIN) {
         require(vid < 2**224, "VH: incompatible vid for boost pool");
         VaultInfo storage vault = vaultInfo[vid];
         uint16 nonce = vault.numBoosts;
         vault.numBoosts = nonce + 1;
+        console.log("nonce");
+        console.log(nonce);
+
         uint _boostID = (uint(bytes32(bytes4(0xB0057000 + nonce))) | vid);
 
         IBoostPool _boost = IBoostPool(Cavendish.clone(_implementation, bytes32(_boostID)));
 
         _boost.initialize(_msgSender(), _boostID, initdata);
         activeBoosts.set(_boostID);
-
+        console.log("boost made active");
+        console.log(_boostID);
         emit AddBoost(_boostID);
     }
 

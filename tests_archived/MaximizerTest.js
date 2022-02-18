@@ -981,7 +981,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
 
         // Withdraw 100%
-        it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
+        it('Should withdraw remaining user1 balance back to user1, minus withdrawal fee (0.1%)', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
             console.log(`User1 now has ${ethers.utils.formatEther(userBalanceOfStrategyTokensBeforeStaking)} tokens in the maximizer vault`)
 
@@ -1030,7 +1030,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
          // Withdraw 100%
-         it('Should withdraw remaining user3 balance back to user3, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
+         it('Should withdraw remaining user3 balance back to user3, minus withdrawal fee (0.1%)', async () => {
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user3.address, maximizer_strat_pid);
             console.log(`User1 now has ${ethers.utils.formatEther(userBalanceOfStrategyTokensBeforeStaking)} tokens in the maximizer vault`)
 
