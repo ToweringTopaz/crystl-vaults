@@ -53,8 +53,30 @@ contract VaultFeeManager is IVaultFeeManager {
         }
     }
 
+    function getEarnFees(uint[] calldata _vids) external view returns (Fee.Data[3][] memory _fees) {
+        _fees = new Fee.Data[3][](_vids.length);
+        Fee.Data[3] memory _default = defaultEarnFees;
+        for (uint i; i < _vids.length; i++) {
+            uint vid = _vids[i];
+            _fees[i] = _overrideDefaultEarnFees.get(vid) ? earnFees[vid] : _default;
+            for (uint k; k < 3; k++) {
+                if (_fees[k][i].receiver() == TX_ORIGIN)
+                    _fees[k][i] = Fee.create(tx.origin, _fees[k][i].rate());
+            }
+        }
+    }
+
     function getWithdrawFee(uint _vid) external view returns (address _receiver, uint16 _rate) {
         return _overrideDefaultWithdrawFee.get(_vid) ? withdrawFee[_vid].receiverAndRate() : defaultWithdrawFee.receiverAndRate();
+    }
+
+    function getWithdrawFees(uint[] calldata _vids) external view returns (Fee.Data[] memory _withdrawFees) {
+        _withdrawFees = new Fee.Data[](_vids.length);
+        Fee.Data _default = defaultWithdrawFee;
+        for (uint i; i < _vids.length; i++) {
+            uint vid = _vids[i];
+            _withdrawFees[i] = _overrideDefaultWithdrawFee.get(vid) ? withdrawFee[vid] : _default;
+        }
     }
 
      function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) external auth {

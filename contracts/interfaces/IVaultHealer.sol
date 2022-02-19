@@ -22,6 +22,8 @@ interface IVaultHealer is IAccessControl {
     event SetAutoEarn(uint indexed vid, bool earnBeforeDeposit, bool earnBeforeWithdraw);
     event FailedEarn(uint vid, string reason);
     event FailedEarnBytes(uint vid, bytes reason);
+    event FailedWithdrawFee(uint vid, string reason);
+    event FailedWithdrawFeeBytes(uint vid, bytes reason);
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
     //function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
     //function stratWithdraw(uint256 _vid, uint256 _wantAmt) external;
@@ -32,7 +34,7 @@ interface IVaultHealer is IAccessControl {
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;
     function deposit(uint256 _vid, uint256 _wantAmt) external;
     function strat(uint256 _vid) external view returns (IStrategy);
-
+    function maximizerDeposit(uint256 _vid, uint256 _wantAmt) external;
     struct VaultInfo {
         IERC20 want;
         uint8 noAutoEarn;
