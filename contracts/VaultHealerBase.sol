@@ -2,7 +2,7 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
-abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer, ReentrancyGuard {
+abstract contract VaultHealerBase is AccessControl, ERC1155, ERC2771Context, IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
@@ -22,7 +22,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
-	mapping(uint => uint) public panicLockExpiry;
+	mapping(uint => uint) private panicLockExpiry;
 
 
 

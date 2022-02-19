@@ -16,8 +16,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
         address from;
         uint96 amount1;
     }
-    mapping(address => mapping(uint256 => uint112)) public maximizerEarningsOffset;
-    mapping(uint256 => uint112) public totalMaximizerEarningsOffset;
+    mapping(address => mapping(uint256 => uint256)) public maximizerEarningsOffset;
+    mapping(uint256 => uint256) public totalMaximizerEarningsOffset;
+    mapping(uint256 => uint256) public totalSupply;
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
@@ -86,10 +87,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         });
         
         IStrategy vaultStrat = strat(_vid);
-        uint256 totalSupplyBefore = totalSupply(_vid);
+        uint256 totalSupplyBefore = totalSupply[_vid];
 
         // we make the deposit
-        (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
+        (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply[_vid]);
         console.log("wantAdded: ", wantAdded);
         console.log("vidSharesAdded: ", vidSharesAdded);
 
@@ -137,7 +138,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         IStrategy vaultStrat = strat(_vid);
 
-        (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply(_vid));
+        (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply[_vid]);
         
         if (_vid > 2**16) {
             withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
@@ -192,28 +193,41 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _beforeTokenTransfer(
-            address operator,
-            address from,
-            address to,
-            uint256[] memory ids,
-            uint256[] memory amounts,
-            bytes memory data
-        ) internal virtual override {
-            super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-            if (from != address(0) && to != address(0)) {
-                for (uint i; i < ids.length; i++) {
-                    uint vid = ids[i];
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-                    if (vid > 2**16) {
-                        _earn(vid);
-                        uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
-                        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
-                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); 
-                    }
-
-                }
+        if (from == address(0)) {
+            for (uint256 i; i < ids.length; ++i) {
+                totalSupply[ids[i]] += amounts[i];
             }
         }
+
+        if (from != address(0) && to != address(0)) {
+            for (uint i; i < ids.length; i++) {
+                uint vid = ids[i];
+
+                if (vid > 2**16) {
+                    _earn(vid);
+                    uint amount = amounts[i];
+                    withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, amount);
+                    UpdateOffsetsOnDeposit(vid, to, amount); 
+                }
+
+            }
+        }
+
+        if (to == address(0)) {
+            for (uint256 i; i < ids.length; ++i) {
+                totalSupply[ids[i]] -= amounts[i];
+            }
+        }
+    }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
@@ -222,7 +236,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         //calculate the offset for this particular deposit
         uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[_vid]; //balanceOf is looking at shares (1155) owned by the strat at _vid
-        uint112 targetVidTokenOffset = uint112(_vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply(_vid)); //but this is a token offset, not a shares offset?
+        uint256 targetVidTokenOffset = _vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply[_vid]; //but this is a token offset, not a shares offset?
 
         // increment the offsets for user and for vid
         maximizerEarningsOffset[_from][_vid] += targetVidTokenOffset;
@@ -238,13 +252,17 @@ abstract contract VaultHealerGate is VaultHealerBase {
         IStrategy vaultStrat = strat(_vid);
         IStrategy targetStrat = strat(targetVid);
 
+        uint fromBalance = balanceOf(_from, _vid);
+        uint offsetBefore = maximizerEarningsOffset[_from][_vid];
+
+
         // calculate the amount of targetVid token to be withdrawn
         uint256 targetVidShares = _vidSharesRemoved
-            * (totalSupply(targetVid) + totalMaximizerEarningsOffset[_vid])
-            / totalSupply(_vid) 
-            - maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid);
+            * (totalSupply[targetVid] + totalMaximizerEarningsOffset[_vid])
+            / totalSupply[_vid] 
+            - offsetBefore * _vidSharesRemoved / fromBalance;
         
-        uint256 targetVidAmount = targetVidShares * targetStrat.wantLockedTotal() / totalSupply(targetVid);
+        uint256 targetVidAmount = targetVidShares * targetStrat.wantLockedTotal() / totalSupply[targetVid];
 
         // withdraw proportional amount of target vault token from targetVault()
         if (targetVidAmount > 0) {
@@ -254,8 +272,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
             target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
                         
             // update the offsets for user and for vid
-            totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
-            maximizerEarningsOffset[_from][_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
-            }
+            totalMaximizerEarningsOffset[_vid] -= offsetBefore * _vidSharesRemoved / fromBalance; 
+            maximizerEarningsOffset[_from][_vid] -= offsetBefore * _vidSharesRemoved / fromBalance;
         }
+    }
 }
