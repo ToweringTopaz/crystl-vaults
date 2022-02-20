@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "hardhat/console.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
@@ -16,10 +17,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         address from;
         uint96 amount1;
     }
-    mapping(address => mapping(uint256 => uint256)) public maximizerEarningsOffset;
+    //mapping(address => mapping(uint256 => uint256)) public maximizerEarningsOffset;
     mapping(uint256 => uint256) public totalMaximizerEarningsOffset;
     mapping(uint256 => uint256) public totalSupply;
-
+    mapping(address => BitMaps.BitMap) userVaults;
     mapping(address => PendingDeposit) private pendingDeposits;
 
     function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
@@ -61,9 +62,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function maximizerDeposit(uint vid, uint _wantAmt) external whenNotPaused(vid) {
         require(address(strat(vid)) == _msgSender(), "VH: sender does not match vid");
         uint targetVid = vid >> 16;
-        uint targetBalance = balanceOf(_msgSender(), targetVid); //
-        _deposit(targetVid, _wantAmt, _msgSender(), _msgSender());
-        totalMaximizerEarningsOffset[vid] += balanceOf(_msgSender(), targetVid) - targetBalance;
+        address sender = _msgSender();
+        int targetBalance = _balances[targetVid][sender];
+        _deposit(targetVid, _wantAmt, sender, sender);
+        int targetBalanceAfter = _balances[targetVid][sender];
+        require(targetBalanceAfter >= targetBalance, "VH: maximizer deposit error");
+        totalMaximizerEarningsOffset[vid] += uint(targetBalanceAfter - targetBalance);
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
@@ -150,7 +154,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (feeReceiver != address(0) && feeRate <= 300 && !paused(vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
                 uint feeAmt = wantAmt * feeRate / 10000;
                 wantAmt -= feeAmt;
-                vault.want.safeTransferFrom(vaultStrat, feeReceiver, feeAmt);
+                vault.want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
             }
         } catch Error(string memory reason) {
             emit FailedWithdrawFee(vid, reason);
@@ -159,7 +163,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         }
 
         //this call transfers wantTokens from the strat to the user
-        vault.want.safeTransferFrom(vaultStrat, to, wantAmt);
+        vault.want.safeTransferFrom(address(vaultStrat), to, wantAmt);
 
         emit Withdraw(from, to, vid, wantAmt);
     }
@@ -202,27 +206,25 @@ abstract contract VaultHealerGate is VaultHealerBase {
             uint totalOffset;
             uint amount = amounts[i];
             if (targetVid > 0 && (totalOffset = totalMaximizerEarningsOffset[vid]) > 0) {
-                address vaultStrat = address(strat(vid));
                 uint _totalSupply = totalSupply[vid];
             
-
-                if (from != address(0)) {
-                    transferTargetSharesDue(from, vid);
-
-                    if (to == address(0)) {
-                        //Update total supply and total offset at the same time to maintain the ratio
-                        totalMaximizerEarningsOffset[vid] = totalOffset - amount * totalOffset / _totalSupply;
-                        totalSupply[vid] -= amount;
-                    }                 
+                
+                if (_totalSupply > 0) {
+                    if (from != address(0))  _balances[vid >> 16][from] += int(amounts[i] * totalMaximizerEarningsOffset[vid] / totalSupply[vid]); 
+                    if (to != address(0))     _balances[vid >> 16][to] -= int(Math.ceilDiv(amount * totalOffset, _totalSupply)); 
                 }
-                if (to != address(0)) {
-                    transferTargetSharesDue(to, vid);
-                    if (from == address(0)) {
-                        //Update total supply and total offset at the same time to maintain the ratio
-                        totalMaximizerEarningsOffset[vid] = totalOffset + amount * totalOffset / _totalSupply;
-                        totalSupply[vid] += amount;
-                    }
+                if (to == address(0)) {
+                    //Update total supply and total offset at the same time to maintain the ratio
+                    totalMaximizerEarningsOffset[vid] = _totalSupply == 0 ? 0 : totalOffset - amount * totalOffset / _totalSupply;
+                    totalSupply[vid] -= amount;
+                }                 
+                
+                if (from == address(0)) {
+                    //Update total supply and total offset at the same time to maintain the ratio
+                    totalMaximizerEarningsOffset[vid] = _totalSupply == 0 ? 0 : totalOffset + amount * totalOffset / _totalSupply;
+                    totalSupply[vid] += amount;
                 }
+                
             } else {
                 if (to == address(0)) {
                     totalSupply[vid] -= amount;
@@ -245,14 +247,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
             uint vid = ids[i];
             if (vid >> 16 > 0) {
                 //Update final offsets using final balances
-                uint totalOffset = totalMaximizerEarningsOffset[vid];
-                uint _totalSupply = totalSupply[vid];
-                if (from != address(0)) maximizerEarningsOffset[from][vid] = balanceOf(from, vid) * totalOffset / _totalSupply;
-                if (to != address(0)) maximizerEarningsOffset[to][vid] = balanceOf(to, vid) * totalOffset / _totalSupply;
+                if (from != address(0) && totalSupply[vid] > 0) {
+
+                }
             }
-        
+            if (balanceOf(from, vid) == 0) {
+                userVaults[from].unset(vid);
+            }
+            if (balanceOf(to, vid) > 0) {
+                userVaults[to].set(vid);
+            }
         }
     }
+    /*
     function transferTargetSharesDue(address account, uint vid) private {
         //Target vault tokens owned, before offset
         uint fullShareValue = balanceOf(account, vid) * totalMaximizerEarningsOffset[vid] / totalSupply[vid]; 
@@ -264,5 +271,22 @@ abstract contract VaultHealerGate is VaultHealerBase {
         
         //Calculate and pay any owed target shares
         if (fullShareValue > offset) _safeTransferFrom(address(strat(vid)), account, vid >> 16, fullShareValue - offset, '');
+    }*/
+
+
+    function balanceOf(address account, uint vid) public view override returns (uint256 amount) {
+        for (uint i = 1; i <= vaultInfo[vid].numMaximizers; i++) {
+            uint maximizerVid = vid << 16 | i;
+            if (userVaults[account].get(maximizerVid))
+                amount += totalMaximizerEarningsOffset[maximizerVid] * balanceOf(account, maximizerVid) / totalSupply[maximizerVid];
+        }
+        int balance = _balances[vid][account];
+        if (balance >= 0) {
+            return amount + uint(balance);
+        }
+        if (uint(-balance) < amount) {
+            return amount - uint(-balance);
+        }
+        return 0;
     }
 }
