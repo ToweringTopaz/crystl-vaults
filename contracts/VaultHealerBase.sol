@@ -7,9 +7,10 @@ import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
-abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer {
+abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
@@ -18,13 +19,11 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
     IVaultFeeManager public vaultFeeManager;
+    uint16 public numVaultsBase = 0; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 	mapping(uint => uint) public panicLockExpiry;
 
-
-    uint16 public numVaultsBase = 0; //number of non-maximizer vaults
-    uint internal _lock = type(uint).max;
 
 
     constructor(address _owner) {
@@ -41,14 +40,14 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     }
 
 
-    function createVault(address _implementation, bytes calldata data) external onlyRole(VAULT_ADDER) returns (uint16 vid) {
+    function createVault(address _implementation, bytes calldata data) external onlyRole(VAULT_ADDER) nonReentrant returns (uint16 vid) {
         vid = numVaultsBase + 1;
         numVaultsBase = vid;
         addVault(vid, _implementation, data);
     }
 
 
-    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) returns (uint vid) {
+    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) nonReentrant returns (uint vid) {
         require(targetVid < 2**208, "VH: maximizer too deep");
         VaultInfo storage targetVault = vaultInfo[targetVid];
         uint16 nonce = targetVault.numMaximizers + 1;
@@ -66,25 +65,6 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
         vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
         emit AddVault(vid);
     }
-
-
-    modifier nonReentrant() {
-        require(_lock == type(uint).max, "reentrancy");
-        _lock = 0;
-        _;
-        _lock = type(uint).max;
-    }
-
-    modifier reentrantOnlyByStrategy(uint vid) {
-        uint lock = _lock; //saves initial lock state
-
-        require(lock == type(uint).max || strat(lock) == IStrategy(msg.sender), "reentrancy/!strat"); //must either not be entered, or caller is the active strategy
-		
-        _lock = vid; //this vid's strategy may reenter
-        _;
-        _lock = lock; //restore initial state
-    }
-
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC1155) returns (bool) {
         return AccessControl.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
@@ -110,7 +90,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) { return ERC2771Context._msgData(); }
    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) { return ERC2771Context._msgSender(); }
 
-    //True values are the default behavior; call earn before deposit/withdraw?
+    //True values are the default behavior; call earn before deposit/withdraw
     function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
         uint8 setting = earnBeforeDeposit ? 0 : 1;
         if (!earnBeforeWithdraw) setting += 2;

@@ -22,26 +22,26 @@ abstract contract VaultHealerGate is VaultHealerBase {
     mapping(address => PendingDeposit) private pendingDeposits;
 
     function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
-        VaultInfo storage vault = vaultInfo[vid];
-        bool active = vault.active;
-        uint48 lastEarnBlock = vault.lastEarnBlock;
-        if (active && lastEarnBlock != block.number) _earn(vid);
+        if (vaultInfo[vid].lastEarnBlock != block.number) _earn(vid, vaultFeeManager.getEarnFees(vid));
     }
 
     function earn(uint256[] calldata vids) external nonReentrant {
+        Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
             VaultInfo storage vault = vaultInfo[vid];
             bool active = vault.active;
-            uint48 lastEarnBlock = vault.lastEarnBlock;
-            if (active && lastEarnBlock != block.number) _earn(vid);
+            uint lastEarnBlock = vault.lastEarnBlock;
+            if (active && lastEarnBlock != block.number) _earn(vid, fees[i]);
         }
     }
 
     function _earn(uint256 vid) internal {
-        uint lock = _lock;
-        _lock = vid; //permit reentrant calls by this vault only
-        try strat(vid).earn(vaultFeeManager.getEarnFees(vid)) returns (bool success, uint256 wantLockedTotal) {
+        _earn(vid, vaultFeeManager.getEarnFees(vid));
+    }
+
+    function _earn(uint256 vid, Fee.Data[3] memory fees) internal {
+        try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
             }
@@ -54,20 +54,25 @@ abstract contract VaultHealerGate is VaultHealerBase {
             console.log("earn failed");
             console.log(vid, string(reason));
         }
-        _lock = lock; //reset reentrancy state
+    }
+    
+    //Allows maximizers to make reentrant calls, only to deposit to their target
+    function maximizerDeposit(uint _vid, uint _wantAmt) external whenNotPaused(_vid) {
+        require(address(strat(_vid)) == _msgSender(), "VH: sender does not match vid");
+        _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) {
+    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
         _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) {
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
         _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private reentrantOnlyByStrategy(_vid) {
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         VaultInfo memory vault = vaultInfo[_vid];
         console.log("_wantAmt as _deposit starts ", _wantAmt);
         // If enabled, we call an earn on the vault before we action the _deposit
@@ -81,8 +86,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         });
         
         IStrategy vaultStrat = strat(_vid);
-        uint256 wantLockedBefore = vaultStrat.wantLockedTotal();
-        console.log("wantLockedBefore: ", wantLockedBefore);
+        uint256 totalSupplyBefore = totalSupply(_vid);
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
@@ -90,7 +94,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         console.log("vidSharesAdded: ", vidSharesAdded);
 
         // if this is a maximizer vault, do these extra steps
-        if (_vid > 2**16 && wantLockedBefore > 0)
+        if (_vid > 2**16 && totalSupplyBefore > 0)
             UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
 
         //we mint tokens for the user via the 1155 contract
@@ -105,16 +109,16 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _vid, uint256 _wantAmt) external {
+    function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
         _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external {
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
         _withdraw(_vid, _wantAmt, _msgSender(), _to);
     }
 
-    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external {
+    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
         require(
             _from == _msgSender() || isApprovedForAll(_from, _msgSender()),
             "ERC1155: caller is not owner nor approved"
@@ -122,7 +126,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _withdraw(_vid, _wantAmt, _from, _to);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private  { //reentrantOnlyByStrategy(_vid)
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
 		uint fromBalance = balanceOf(_from, _vid);
         require(fromBalance > 0, "User has 0 shares");
         
@@ -154,7 +158,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 wantAmt -= feeAmt;
                 vault.want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
             }
-        } catch {}
+        } catch Error(string memory reason) {
+            emit FailedWithdrawFee(_vid, reason);
+        } catch (bytes memory reason) {
+            emit FailedWithdrawFeeBytes(_vid, reason);
+        }
 
         //this call transfers wantTokens from the strat to the user
         vault.want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
@@ -163,16 +171,21 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // Withdraw everything from vault for yourself
-    function withdrawAll(uint256 _vid) external {
+    function withdrawAll(uint256 _vid) external nonReentrant {
         _withdraw(_vid, type(uint256).max, _msgSender(), _msgSender());
     }
     
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint112 _amount) external {
-        PendingDeposit storage pendingDeposit = pendingDeposits[msg.sender];
-        require(_amount <= uint(pendingDeposit.amount0) << 96 | uint(pendingDeposit.amount1), "VH: strategy requesting more tokens than authorized");
-        pendingDeposit.token.safeTransferFrom(
-            pendingDeposit.from,
+        IERC20 token = pendingDeposits[msg.sender].token;
+        uint amount0 = pendingDeposits[msg.sender].amount0;
+        address from = pendingDeposits[msg.sender].from;
+        uint amount1 = pendingDeposits[msg.sender].amount1;
+        require(_amount <= amount0 << 96 | amount1, "VH: strategy requesting more tokens than authorized");
+        delete pendingDeposits[msg.sender];
+
+        token.safeTransferFrom(
+            from,
             _to,
             _amount
         );

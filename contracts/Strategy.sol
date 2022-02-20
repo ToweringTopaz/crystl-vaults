@@ -56,7 +56,7 @@ contract Strategy is BaseStrategy {
             if (config.isMaximizer()) {
                 uint256 rewardAmt = targetWant.balanceOf(address(this));
                 if (_wantToken == targetWant) rewardAmt -= wantBalanceBefore;
-                IVaultHealer(msg.sender).deposit(config.targetVid(), rewardAmt);
+                IVaultHealer(msg.sender).maximizerDeposit(config.vid(), rewardAmt);
             } else {
                 _farm();
             }
