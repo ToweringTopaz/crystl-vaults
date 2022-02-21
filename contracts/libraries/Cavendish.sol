@@ -20,14 +20,21 @@ Proxy init bytecode:
     f3 return         : 
 
 */
-
+/// @title Cavendish clones
+/// @author ToweringTopaz
+/// @notice Creates ERC-1167 minimal proxies whose addresses depend only on the salt and deployer address
+/// @dev See _fallback for important instructions
 library Cavendish {
 
     bytes11 constant PROXY_INIT_CODE = hex'602d80343434335afa15f3';
                                               //keccak256(abi.encodePacked(PROXY_INIT_CODE));
     bytes32 constant PROXY_INIT_HASH = hex'577cbdbf32026552c0ae211272febcff3ea352b0c755f8f39b49856dcac71019';
 
-    //Creates an 1167-compliant minimal proxy whose address is purely a function of the deployer address and the salt
+
+    ///Creates an 1167-compliant minimal proxy whose address is purely a function of the deployer address and the salt
+    /// @param _implementation The contract to be cloned
+    /// @param salt Used to determine and calculate the proxy address
+    /// @return Address of the deployed proxy
     function clone(address _implementation, bytes32 salt) internal returns (address instance) {
 
         require(_implementation != address(0), "ERC1167: zero address");
@@ -40,12 +47,21 @@ library Cavendish {
         require(instance != address(0), "ERC1167: create2 failed");
     }
     
-    //Standard function to compute a create2 address deployed by this address, but not impacted by the target implemention
+
+    /// @notice Calculate the address of a proxy deployed by the calling contract
+    /// @dev Can be used before or after deploy; does not check for contract existence
+    /// @param salt Used to determine the address, along with deployer address and init code hash
+    /// @return Address of one possible proxy, based on the given salt
     function computeAddress(bytes32 salt) internal view returns (address) {
         return computeAddress(salt, address(this));
     }
 
-    //Standard function to compute a create2 address, but not impacted by the target implemention
+    
+    /// @notice Calculate the address of a proxy deployed by some contract
+    /// @dev Can be used before or after deploy; does not check for contract existence
+    /// @param salt Used to determine the address, along with deployer address and init code hash
+    /// @param deployer The contract which deployed, may deploy, or will deploy the proxy 
+    /// @return Address of one possible proxy, based on the given salt
     function computeAddress(
         bytes32 salt,
         address deployer
@@ -54,15 +70,24 @@ library Cavendish {
         return address(uint160(uint256(_data)));
     }
 
-    //Deploying contracts must call this in fallback(). Will return to the external caller if clone is in progress; otherwise returns internally doing nothing
+    
+    
+    /// @notice Called by the proxy constructor to provide the bytecode for the final proxy contract. 
+    /// @dev Deployer contracts must call Cavendish._fallback() in their own fallback functions.
+    ///     Generally compatible with 
+    /// @param salt Used to determine the address, along with deployer address and init code hash
+    /// @param deployer The contract which deployed, may deploy, or will deploy the proxy 
+    /// @return Address of one possible proxy, based on the given salt
     function _fallback() internal view {
         assembly {
-            let _implementation := sload(PROXY_INIT_HASH)
-            if gt(_implementation, 0) {
-                mstore(0x00, 0x363d3d373d3d3d363d7300000000000000000000000000000000000000000000)
-                mstore(0x0a, _implementation)
-                mstore(0x1e, 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
-                return(0x00, 0x2d)
+            if iszero(extcodesize(caller)) { //will be, for a contract under construction
+                let _implementation := sload(PROXY_INIT_HASH)
+                if gt(_implementation, 0) {
+                    mstore(0x00, 0x363d3d373d3d3d363d7300000000000000000000000000000000000000000000)
+                    mstore(0x0a, _implementation)
+                    mstore(0x1e, 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+                    return(0x00, 0x2d) //Retern to external caller, not to any internal function
+                }
             }
         }
     }
