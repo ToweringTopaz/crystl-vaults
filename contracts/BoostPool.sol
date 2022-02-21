@@ -177,7 +177,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
     //Used in place of deposit/withdraw because nothing is actually stored here
     function notifyOnTransfer(address _from, address _to, uint112 _amount) external onlyVaultHealer returns (uint status) {
         updatePool();
-
+        console.log("Made it into notifyOnTransfer");
         //User remains "active" unless rewards have expired and there are no unpaid pending amounts
         //4: pool done, 2: to done; 1: from done
         status = block.number >= bonusEndBlock ? 4 : 0; //if rewards have ended, mark pool done

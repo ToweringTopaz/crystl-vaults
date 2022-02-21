@@ -287,23 +287,25 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should accumulate rewards for the staked user over time', async () => {
             userRewardDebtAtStart = await boostPool.pendingReward(user1.address);
-            console.log(userRewardDebtAtStart);
+            console.log("userRewardDebtAtStart: ", ethers.utils.formatEther(userRewardDebtAtStart));
             for (i=0; i<1000;i++) { //minBlocksBetweenSwaps
                 await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
                 }
             
             userRewardDebtAfterTime = await boostPool.pendingReward(user1.address);;
-            console.log(userRewardDebtAfterTime);
+            console.log("userRewardDebtAfterTime: ", ethers.utils.formatEther(userRewardDebtAfterTime));
             expect(userRewardDebtAfterTime).to.be.gt(userRewardDebtAtStart); //will only be true on first deposit?
         })
 
         it('Should allow the user to harvest their boost pool rewards', async () => {
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             userRewardTokenBalanceBeforeWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceBeforeWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceBeforeWithdrawal));
 
             await vaultHealer.connect(user1)["harvestBoost(uint256)"](boostID);
             
             userRewardTokenBalanceAfterWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceAfterWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceAfterWithdrawal));
             expect(userRewardTokenBalanceAfterWithdrawal.sub(userRewardTokenBalanceBeforeWithdrawal)).to.be.gt(0); //eq(userRewardDebtAfterTime.add(1000000)); //adding one extra block of reward - this right?
 
         })
@@ -438,6 +440,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             wantTokensBeforeWithdrawal = await strat1.wantLockedTotal();
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
+            
+            userRewardTokenBalanceBeforeFinalWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceBeforeFinalWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceBeforeFinalWithdrawal));
 
             console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
@@ -457,7 +462,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             wantTokensAfterWithdrawal = await strat1.wantLockedTotal();
             
-            userBoostedWantTokensAfterWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid); //todo change to boosted tokens??
+            userStakedWantTokensAfterWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid); //todo change to boosted tokens??
+
+            userRewardTokenBalanceAfterFinalWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceAfterFinalWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceAfterFinalWithdrawal));
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.closeTo(
@@ -474,15 +482,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //ensure no funds left in the vault.
         it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
             // console.log(await crystlToken.balanceOf(strat1.address))
-            expect(UsersStakedTokensAfterFinalWithdrawal).to.equal(0);
+            expect(userStakedWantTokensAfterWithdrawal).to.equal(0);
         })
 
-        // it('Should leave zero user1 funds in boostPool after 100% withdrawal', async () => {
-        //     // console.log(await crystlToken.balanceOf(strat1.address))
-        //     user = await boostPool.userInfo(user1.address);
-        //     userBalanceOfBoostPoolAtEnd = user.amount;
-        //     expect(userBalanceOfBoostPoolAtEnd).to.equal(0);
-        // })
+        it('Should leave zero user1 funds in boostPool after 100% withdrawal', async () => {
+            // console.log(await crystlToken.balanceOf(strat1.address))
+            user = await boostPool.userInfo(user1.address);
+            userBalanceOfBoostPoolAtEnd = user.amount;
+            expect(userBalanceOfBoostPoolAtEnd).to.equal(0);
+        })
         
     })
 })

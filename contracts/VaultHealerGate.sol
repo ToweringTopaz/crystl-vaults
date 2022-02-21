@@ -142,13 +142,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
         if (_vid > 2**16) {
             withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
         }
-
+        console.log("About to burn tokens");
         //burn the tokens equal to vidSharesRemoved
         _burn(
             _from,
             _vid,
             vidSharesRemoved
         );
+        console.log("Have burned tokens");
         
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
