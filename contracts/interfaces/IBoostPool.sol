@@ -7,6 +7,6 @@ interface IBoostPool {
     function joinPool(address _user, uint112 _amount) external;
     function harvest(address) external;
     function emergencyWithdraw(address _user) external returns (bool success);
-    function notifyOnTransfer(address _from, address _to, uint112 _amount) external returns (uint status);
+    function notifyOnTransfer(address _from, address _to, uint256 _amount) external returns (bool poolDone);
     function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external;
 }
