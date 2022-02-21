@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./libraries/Ratios.sol";
 /**
  * @dev Implementation of the basic standard multi-token.
  * Customized for VaultHealer: Balances use signed integers, and negative values in a user's balance can be used to offset unearned portions of a pool
@@ -21,7 +22,7 @@ abstract contract VH1155 is ERC1155, ReentrancyGuard {
     using Address for address;
 
     // Mapping from token ID to account balances
-    mapping(uint256 => mapping(address => int256)) internal _balances;
+    mapping(uint256 => mapping(address => Ratios.Ratio)) internal _balances;
 
     /**
      * @dev See {IERC1155-balanceOf}.
@@ -32,8 +33,8 @@ abstract contract VH1155 is ERC1155, ReentrancyGuard {
      */
     function balanceOf(address account, uint256 id) public view virtual override returns (uint256) {
         require(account != address(0), "ERC1155: balance query for the zero address");
-        int balance = _balances[id][account];
-        return balance > 0 ? uint(balance) : 0;
+
+        return _balances[account].
     }
 
 
