@@ -26,7 +26,8 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         uint128 amount;     // How many LP tokens the user has provided.
         int128 rewardDebt; // Reward debt. See explanation below.
     }
-
+    console.log("hello");
+    console.log("hello again");
     // The vaultHealer where the staking / want tokens all reside
     IVaultHealer public immutable VAULTHEALER;
     // This is the vid + (a unique identifier << 224)
@@ -85,11 +86,11 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
 
         REWARD_TOKEN = IERC20(_rewardToken);
 
-        rewardPerBlock = uint112(_rewardPerBlock);
+        rewardPerBlock = _rewardPerBlock;
         
         startBlock = uint32(block.number + _delayBlocks);
         bonusEndBlock = uint32(block.number + _durationBlocks);
-        lastRewardBlock = uint32(startBlock);
+        lastRewardBlock = startBlock;
     }
 
     modifier onlyVaultHealer {
@@ -175,30 +176,29 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         updateRewardDebt(user, 0);
     }
     //Used in place of deposit/withdraw because nothing is actually stored here
-    function notifyOnTransfer(address _from, address _to, uint112 _amount) external onlyVaultHealer returns (uint status) {
+    function notifyOnTransfer(address _from, address _to, uint _amount) external onlyVaultHealer returns (bool poolDone) {
+        require(_amount < 2**112, "BoostPool: Amount too large");
         updatePool();
-
+        console.log("notify", _from, _to, _amount);
         //User remains "active" unless rewards have expired and there are no unpaid pending amounts
-        //4: pool done, 2: to done; 1: from done
-        status = block.number >= bonusEndBlock ? 4 : 0; //if rewards have ended, mark pool done
-
+        if (block.number >= bonusEndBlock) poolDone = true; //if rewards have ended, mark pool done
+        uint112 amount = uint112(_amount);
+        
         if (_to != address(0)) {
             User storage user = userInfo[_to];
             uint pending = _harvest(_to);
-            if (pending == 0 && status >= 4)
-                status |= 2;
-            totalStaked += _amount;
-            user.amount += _amount;
+            totalStaked += amount;
+            user.amount += amount;
             updateRewardDebt(user, pending);
-            emit Deposit(_to, _amount);
+            emit Deposit(_to, amount);
         }
         if (_from != address(0)) {
             User storage user = userInfo[_from];
             uint pending = _harvest(_from);
-            if (pending == 0 && status >= 4)
-                status |= 1;
-            totalStaked -= _amount;
-            user.amount -= _amount;
+            totalStaked -= amount;
+            console.log("withdrawing ", _amount);
+            user.amount -= amount;
+            console.log("user.amount ", user.amount);
             updateRewardDebt(user, pending);
             emit Withdraw(_from, _amount);
         }

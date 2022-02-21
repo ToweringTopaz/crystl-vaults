@@ -147,6 +147,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             vid,
             vidSharesRemoved
         );
+        console.log("Have burned tokens");
         
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(vid) returns (address feeReceiver, uint16 feeRate) {

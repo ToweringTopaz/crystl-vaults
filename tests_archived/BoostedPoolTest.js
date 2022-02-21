@@ -287,23 +287,25 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should accumulate rewards for the staked user over time', async () => {
             userRewardDebtAtStart = await boostPool.pendingReward(user1.address);
-            console.log(userRewardDebtAtStart);
+            console.log("userRewardDebtAtStart: ", ethers.utils.formatEther(userRewardDebtAtStart));
             for (i=0; i<1000;i++) { //minBlocksBetweenSwaps
                 await ethers.provider.send("evm_mine"); //creates a delay of minBlocksBetweenSwaps+1 blocks
                 }
             
             userRewardDebtAfterTime = await boostPool.pendingReward(user1.address);;
-            console.log(userRewardDebtAfterTime);
+            console.log("userRewardDebtAfterTime: ", ethers.utils.formatEther(userRewardDebtAfterTime));
             expect(userRewardDebtAfterTime).to.be.gt(userRewardDebtAtStart); //will only be true on first deposit?
         })
 
         it('Should allow the user to harvest their boost pool rewards', async () => {
             crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
             userRewardTokenBalanceBeforeWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceBeforeWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceBeforeWithdrawal));
 
             await vaultHealer.connect(user1)["harvestBoost(uint256)"](boostID);
             
             userRewardTokenBalanceAfterWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceAfterWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceAfterWithdrawal));
             expect(userRewardTokenBalanceAfterWithdrawal.sub(userRewardTokenBalanceBeforeWithdrawal)).to.be.gt(0); //eq(userRewardDebtAfterTime.add(1000000)); //adding one extra block of reward - this right?
 
         })
@@ -317,9 +319,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //     expect(userRewardTokenBalanceAfterWithdrawal).to.eq(userRewardDebtAfterTime);
         // })
 
-        // Compound LPs (Call the earnSome function with this specific farm’s strat1_pid).
+        // Compound LPs (Call the earn function with this specific farm’s strat1_pid).
         // Check balance to ensure it increased as expected
-        it('Should wait 10 blocks, then compound the LPs by calling earnSome(), so that vaultSharesTotal is greater after than before', async () => {
+        it('Should wait 10 blocks, then compound the LPs by calling earn(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarnSome = await strat1.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             maticToken = await ethers.getContractAt(token_abi, WMATIC);
 
@@ -332,7 +334,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer.earnSome([strat1_pid]);
+            await vaultHealer["earn(uint256)"](strat1_pid);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarnSome = await strat1.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -380,9 +382,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(LPtokenBalanceAfterFirstWithdrawal.sub(LPtokenBalanceBeforeFirstWithdrawal))
             .to.equal(
                 (UsersStakedTokensBeforeFirstWithdrawal.div(2))
-                    .sub((WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
+                    .sub(withdrawFee
                     .mul(UsersStakedTokensBeforeFirstWithdrawal.div(2))
-                    .div(WITHDRAW_FEE_FACTOR_MAX))
+                    .div(10000))
                 )
                 ;
         })
@@ -398,7 +400,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log("lp token approved by user 2")
             await vaultHealer.connect(user2)["deposit(uint256,uint256)"](strat1_pid, user2InitialDeposit);
             const vaultSharesTotalAfterUser2FirstDeposit = await strat1.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
-            const User2sStakedTokensAfterFirstDeposit = await vaultHealer.balanceOf(user2.address, strat1_pid);
+            const User2sSharesAfterFirstDeposit = await vaultHealer.balanceOf(user2.address, strat1_pid)
+            const totalSharesAfterUser2FirstDeposit = await vaultHealer.totalSupply(strat1_pid);
+            
+            User2sStakedTokensAfterFirstDeposit = User2sSharesAfterFirstDeposit.mul(vaultSharesTotalAfterUser2FirstDeposit).div(totalSharesAfterUser2FirstDeposit)
             console.log(`User2 has ${ethers.utils.formatEther(User2sStakedTokensAfterFirstDeposit)} after making their first deposit`)
 
             console.log(`User 2 deposits ${ethers.utils.formatEther(user2InitialDeposit)} LP tokens`)
@@ -433,10 +438,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user = await boostPool.userInfo(user1.address);
             userBalanceOfBoostPool = user.amount;
 
-            userWantTokensBeforeWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid);
+            wantTokensBeforeWithdrawal = await strat1.wantLockedTotal();
             const LPtokenBalanceBeforeFinalWithdrawal = await LPtoken.balanceOf(user1.address)
-            console.log("userWantTokensBeforeWithdrawal");
-            console.log(userWantTokensBeforeWithdrawal);
+            
+            userRewardTokenBalanceBeforeFinalWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceBeforeFinalWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceBeforeFinalWithdrawal));
 
             console.log("LPtokenBalanceBeforeFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFinalWithdrawal))
@@ -454,21 +460,20 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log("LPtokenBalanceAfterFinalWithdrawal - user1")
             console.log(ethers.utils.formatEther(LPtokenBalanceAfterFinalWithdrawal))
 
-            UsersStakedTokensAfterFinalWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid);
-            console.log("UsersStakedTokensAfterFinalWithdrawal - user1")
-            console.log(ethers.utils.formatEther(UsersStakedTokensAfterFinalWithdrawal))
+            wantTokensAfterWithdrawal = await strat1.wantLockedTotal();
             
-            userBoostedWantTokensAfterWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid); //todo change to boosted tokens??
-            console.log(withdrawFeeFactor);
-            console.log(WITHDRAW_FEE_FACTOR_MAX);
+            userStakedWantTokensAfterWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid); //todo change to boosted tokens??
+
+            userRewardTokenBalanceAfterFinalWithdrawal = await crystlToken.balanceOf(user1.address);
+            console.log("userRewardTokenBalanceAfterFinalWithdrawal", ethers.utils.formatEther(userRewardTokenBalanceAfterFinalWithdrawal));
 
             expect(LPtokenBalanceAfterFinalWithdrawal.sub(LPtokenBalanceBeforeFinalWithdrawal))
             .to.closeTo(
-                (UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
+                (wantTokensBeforeWithdrawal.sub(wantTokensAfterWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
                 .sub(
-                    (WITHDRAW_FEE_FACTOR_MAX.sub(withdrawFeeFactor))
-                    .mul(UsersStakedTokensBeforeFinalWithdrawal.sub(UsersStakedTokensAfterFinalWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
-                    .div(WITHDRAW_FEE_FACTOR_MAX),
+                    (withdrawFee)
+                    .mul(wantTokensBeforeWithdrawal.sub(wantTokensAfterWithdrawal)) //.add(userBoostedWantTokensBeforeWithdrawal).sub(userBoostedWantTokensAfterWithdrawal))
+                    .div(10000),
                 ),
 				ethers.BigNumber.from(1000000000000000)
                 );
@@ -477,7 +482,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //ensure no funds left in the vault.
         it('Should leave zero user1 funds in vault after 100% withdrawal', async () => {
             // console.log(await crystlToken.balanceOf(strat1.address))
-            expect(UsersStakedTokensAfterFinalWithdrawal).to.equal(0);
+            expect(userStakedWantTokensAfterWithdrawal).to.equal(0);
         })
 
         it('Should leave zero user1 funds in boostPool after 100% withdrawal', async () => {

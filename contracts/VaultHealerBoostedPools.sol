@@ -95,34 +95,23 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
-
+        console.log("Made it into before function");
         for (uint i; i < ids.length; i++) {
-            uint numBoosts = vaultInfo[ids[i]].numBoosts;
-            for (uint k; k < numBoosts; k++) {
-                bool fromBoosted = from != address(0) && userBoosts[from].get(k);
-                bool toBoosted = to != address(0) && userBoosts[to].get(k);
+            uint vid = ids[i];
+            uint numBoosts = vaultInfo[vid].numBoosts;
+            for (uint k; k < numBoosts; k++) { //Loop through all of the transferred token's boostpools (if any)
+                (uint boostID, IBoostPool pool) = boostPoolVid(vid, uint16(k)); //calculate address and ID for pool
+                address _from = userBoosts[from].get(boostID) ? from : address(0); //Ignore from and to users if they didn't join the pool
+                address _to = userBoosts[to].get(boostID) ? to : address(0);
 
-                if (!fromBoosted && !toBoosted) continue;
-
-                uint status = boostPool(uint(bytes32(bytes4(0xB0057000 + uint16(k)))) | ids[i]).notifyOnTransfer(
-                    fromBoosted ? from : address(0),
-                    toBoosted ? to : address(0),
-                    uint112(amounts[i])
-                );
-
-                if (status & 1 > 0) { //pool finished for "from"
-                    userBoosts[from].unset(k);
-                }
-                if (status & 2 > 0) { //pool finished for "to"
-                    userBoosts[to].unset(k);
-                }
-                if (status & 4 > 0) { //close finished pool
-                    activeBoosts.unset(k);
+            //Send addresses of any users and transfer amounts, but only if they are in the pool
+                if (pool.notifyOnTransfer(_from, _to, amounts[i])) {// Is the pool closed?
+                    activeBoosts.unset(boostID); //close finished pool
+                    userBoosts[_to].unset(boostID); //pool finished for "to"
+                    userBoosts[_from].unset(boostID); //pool finished for "from"
                 }
             }
         }
     }
-
-
 }
 
