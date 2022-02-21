@@ -180,7 +180,6 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         updatePool();
         console.log("notify", _from, _to, _amount);
         //User remains "active" unless rewards have expired and there are no unpaid pending amounts
-        //4: pool done, 2: to done; 1: from done
         if (block.number >= bonusEndBlock) poolDone = true; //if rewards have ended, mark pool done
         uint112 amount = uint112(_amount);
         
