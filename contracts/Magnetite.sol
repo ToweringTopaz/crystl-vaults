@@ -42,11 +42,8 @@ contract Magnetite is Ownable, IMagnetite {
         path = getPathFromStorage(_router, a, b); // [A C E D B]
 
         if (path.length == 0) {
-
             path = generatePath(router, a, b);
-            if (pathAuth()) {
-                _setPath(_router, path, AutoPath.AUTO);
-            }
+            _setPath(_router, path, AutoPath.AUTO);
         }
     }
 
@@ -64,11 +61,6 @@ contract Magnetite is Ownable, IMagnetite {
             return path;
         }
         path = _paths[keccak256(abi.encodePacked(router, a, b))];
-    }
-
-    function pathAuth() internal virtual view returns (bool) {
-        return true;
-        // return msg.sender == tx.origin || msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("STRATEGY"), msg.sender);
     }
 
     function _setPath(address router, IERC20[] memory _path, AutoPath _auto) internal { 

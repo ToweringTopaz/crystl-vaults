@@ -141,7 +141,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             _vid,
             vidSharesRemoved
         );
-        
+
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
             //hardcoded 3% max fee rate

@@ -353,6 +353,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Unstake 50% of LPs. 
         // Check transaction to ensure withdraw fee amount is as expected and amount withdrawn in as expected
         it('Should withdraw 50% of LPs with correct withdraw fee amount (0.1%) and decrease users stakedWantTokens balance correctly', async () => {
+            await vaultHealer["earn(uint256)"](strat1_pid);
             const LPtokenBalanceBeforeFirstWithdrawal = await LPtoken.balanceOf(user1.address);
             const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.balanceOf(user1.address, strat1_pid);
             console.log(ethers.utils.formatEther(LPtokenBalanceBeforeFirstWithdrawal));
@@ -392,6 +393,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit 1500 of user2\'s LP tokens into the vault, increasing users stakedWantTokens by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
+            await vaultHealer["earn(uint256)"](strat1_pid);
             user2InitialDeposit = ethers.utils.parseEther("1500");
             const vaultSharesTotalBeforeUser2FirstDeposit = await strat1.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser2FirstDeposit)} LP tokens before user 2 deposits`)
@@ -429,6 +431,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // Withdraw 100%
         it('Should withdraw remaining user1 balance back to user1, with all of it staked in boosting pool, minus withdrawal fee (0.1%)', async () => {
+            await vaultHealer["earn(uint256)"](strat1_pid);
             userBalanceOfStrategyTokensBeforeStaking = await vaultHealer.balanceOf(user1.address, strat1_pid);
 
             //Should not use approval in this manner ever
