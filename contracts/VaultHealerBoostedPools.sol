@@ -95,29 +95,34 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
-
+        console.log("Made it into before function");
         for (uint i; i < ids.length; i++) {
+            console.log("made it here ", i);
             uint numBoosts = vaultInfo[ids[i]].numBoosts;
             for (uint k; k < numBoosts; k++) {
+                console.log("and then made it here ", k);
                 bool fromBoosted = from != address(0) && userBoosts[from].get(k);
                 bool toBoosted = to != address(0) && userBoosts[to].get(k);
 
-                if (!fromBoosted && !toBoosted) continue;
-
+                if (!fromBoosted && !toBoosted) continue; //what cases are we trying to separate out here?
+                console.log("Made it to just before notifyOnTransfer");
                 uint status = boostPool(uint(bytes32(bytes4(0xB0057000 + uint16(k)))) | ids[i]).notifyOnTransfer(
                     fromBoosted ? from : address(0),
                     toBoosted ? to : address(0),
                     uint112(amounts[i])
                 );
-
+                console.log("made it to just after");
                 if (status & 1 > 0) { //pool finished for "from"
                     userBoosts[from].unset(k);
+                    console.log("made it to just after1");
                 }
                 if (status & 2 > 0) { //pool finished for "to"
                     userBoosts[to].unset(k);
+                    console.log("made it to just after2");
                 }
                 if (status & 4 > 0) { //close finished pool
                     activeBoosts.unset(k);
+                    console.log("made it to just after3");
                 }
             }
         }
