@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "hardhat/console.sol";
+
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -30,7 +30,7 @@ contract Strategy is BaseStrategy {
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
 
             if (earnedAmt > dust) {
-                console.log("made it past dust conditional");
+                
                 success = true; //We have something worth compounding
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
                 if (pairStake) {

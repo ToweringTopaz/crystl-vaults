@@ -8,7 +8,6 @@ import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "hardhat/console.sol";
 
 abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer, ReentrancyGuard {
 

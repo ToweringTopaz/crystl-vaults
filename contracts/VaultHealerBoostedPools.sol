@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./VaultHealerGate.sol";
 import "./interfaces/IBoostPool.sol";
-import "hardhat/console.sol";
 
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
@@ -38,8 +37,6 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         VaultInfo storage vault = vaultInfo[vid];
         uint16 nonce = vault.numBoosts;
         vault.numBoosts = nonce + 1;
-        console.log("nonce");
-        console.log(nonce);
 
         uint _boostID = (uint(bytes32(bytes4(0xB0057000 + nonce))) | vid);
 
@@ -47,8 +44,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
         _boost.initialize(_msgSender(), _boostID, initdata);
         activeBoosts.set(_boostID);
-        console.log("boost made active");
-        console.log(_boostID);
+
         emit AddBoost(_boostID);
     }
 
@@ -95,7 +91,6 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
-        console.log("Made it into before function");
         for (uint i; i < ids.length; i++) {
             uint vid = ids[i];
             uint numBoosts = vaultInfo[vid].numBoosts;

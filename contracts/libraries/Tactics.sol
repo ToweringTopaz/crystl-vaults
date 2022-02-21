@@ -3,7 +3,6 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "hardhat/console.sol";
 
 library Tactics {
     using Address for address;

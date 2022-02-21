@@ -5,13 +5,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
-import "hardhat/console.sol";
+
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
 
-
-    uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
     address public immutable vaultHealer;
     address public immutable implementation;
@@ -162,7 +160,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
         
         if (feeTotalRate > 0) {
-            uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
+            uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / 10000;
             earnedAmt -= feeEarnedAmt;
             
             IWETH weth = _router.WETH();

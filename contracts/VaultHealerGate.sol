@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
-import "hardhat/console.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
@@ -16,8 +15,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         address from;
         uint96 amount1;
     }
-    mapping(address => mapping(uint256 => uint112)) public maximizerEarningsOffset;
-    mapping(uint256 => uint112) public totalMaximizerEarningsOffset;
+    mapping(address => mapping(uint256 => uint256)) public maximizerEarningsOffset;
+    mapping(uint256 => uint256) public totalMaximizerEarningsOffset;
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
@@ -47,19 +46,17 @@ abstract contract VaultHealerGate is VaultHealerBase {
             }
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
-            console.log("earn failed");
-            console.log(vid, reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
-            console.log("earn failed");
-            console.log(vid, string(reason));
         }
     }
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
     function maximizerDeposit(uint _vid, uint _wantAmt) external whenNotPaused(_vid) {
-        require(address(strat(_vid)) == _msgSender(), "VH: sender does not match vid");
-        _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
+        address sender = _msgSender();
+        require(address(strat(_vid)) == sender, "VH: sender does not match vid");
+        uint targetSharesEarned = _deposit(_vid >> 16, _wantAmt, sender, sender);
+        totalMaximizerEarningsOffset[_vid] += targetSharesEarned;
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
@@ -72,9 +69,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private returns (vidSharesAdded) {
         VaultInfo memory vault = vaultInfo[_vid];
-        console.log("_wantAmt as _deposit starts ", _wantAmt);
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
@@ -86,16 +82,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
         });
         
         IStrategy vaultStrat = strat(_vid);
-        uint256 totalSupplyBefore = totalSupply(_vid);
 
         // we make the deposit
-        (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
-        console.log("wantAdded: ", wantAdded);
-        console.log("vidSharesAdded: ", vidSharesAdded);
+        uint256 wantAdded;
+        (wantAdded, vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
 
         // if this is a maximizer vault, do these extra steps
-        if (_vid > 2**16 && totalSupplyBefore > 0)
-            UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
+        UpdateOffsetsOnDeposit(_vid, _to, vidSharesAdded);
 
         //we mint tokens for the user via the 1155 contract
         _mint(
@@ -139,17 +132,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply(_vid));
         
-        if (_vid > 2**16) {
-            withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
-        }
-        console.log("About to burn tokens");
+        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
+
         //burn the tokens equal to vidSharesRemoved
         _burn(
             _from,
             _vid,
             vidSharesRemoved
         );
-        console.log("Have burned tokens");
         
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
@@ -204,13 +194,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (from != address(0) && to != address(0)) {
                 for (uint i; i < ids.length; i++) {
                     uint vid = ids[i];
-
-                    if (vid > 2**16) {
-                        _earn(vid);
-                        uint128 underlyingValue = uint128(amounts[i] * strat(vid).wantLockedTotal() / totalSupply(vid));
-                        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, underlyingValue);
-                        UpdateOffsetsOnDeposit(vid, to, underlyingValue); 
-                    }
+                    uint amount = amounts[i];
+                    withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, amount);
+                    UpdateOffsetsOnDeposit(vid, to, amount); 
 
                 }
             }
@@ -220,6 +206,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
         IStrategy vaultStrat = strat(_vid);
         uint256 targetVid = _vid >> 16;
+
+        if (targetVid == 0 || totalSupply(_vid) == 0) return;
 
         //calculate the offset for this particular deposit
         uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(vaultStrat), targetVid) + totalMaximizerEarningsOffset[_vid]; //balanceOf is looking at shares (1155) owned by the strat at _vid
@@ -232,31 +220,23 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
+    function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint _vidSharesRemoved) internal {
         uint targetVid = _vid >> 16;
-        VaultInfo storage target = vaultInfo[targetVid];
-        
-        IStrategy vaultStrat = strat(_vid);
-        IStrategy targetStrat = strat(targetVid);
+        if (targetVid == 0 || totalSupply(_vid) == 0) return;
+        address vaultStrat = address(strat(_vid));
+        uint fromBalance = balanceOf(_from, _vid);
 
         // calculate the amount of targetVid token to be withdrawn
-        uint256 targetVidShares = _vidSharesRemoved
-            * (totalSupply(targetVid) + totalMaximizerEarningsOffset[_vid])
-            / totalSupply(_vid) 
-            - maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid);
+        uint256 targetVidShares = fromBalance * totalMaximizerEarningsOffset[_vid] / totalSupply(_vid) - maximizerEarningsOffset[_from][_vid];
         
-        uint256 targetVidAmount = targetVidShares * targetStrat.wantLockedTotal() / totalSupply(targetVid);
-
         // withdraw proportional amount of target vault token from targetVault()
-        if (targetVidAmount > 0) {
+        if (targetVidShares > 0) {
 
-            // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-            _withdraw(targetVid, targetVidAmount, address(vaultStrat), _from);
-            target.want.safeTransferFrom(address(vaultStrat), _from, target.want.balanceOf(address(vaultStrat)));
+            // transfers an amount of reward token from the target vault proportional to the users withdrawal from the main vault
+            _safeTransferFrom(vaultStrat, _from, targetVid, targetVidShares, "");
                         
             // update the offsets for user and for vid
-            totalMaximizerEarningsOffset[_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
-            maximizerEarningsOffset[_from][_vid] -= uint112(maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / balanceOf(_from, _vid)); 
+            maximizerEarningsOffset[_from][_vid] -= maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / fromBalance); 
             }
         }
 }
