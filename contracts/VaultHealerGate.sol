@@ -69,7 +69,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private returns (vidSharesAdded) {
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private returns (uint vidSharesAdded) {
         VaultInfo memory vault = vaultInfo[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
@@ -236,7 +236,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             _safeTransferFrom(vaultStrat, _from, targetVid, targetVidShares, "");
                         
             // update the offsets for user and for vid
-            maximizerEarningsOffset[_from][_vid] -= maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / fromBalance); 
+            maximizerEarningsOffset[_from][_vid] -= maximizerEarningsOffset[_from][_vid] * _vidSharesRemoved / fromBalance; 
             }
         }
 }
