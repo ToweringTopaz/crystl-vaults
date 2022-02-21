@@ -54,7 +54,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
     //Allows maximizers to make reentrant calls, only to deposit to their target
     function maximizerDeposit(uint _vid, uint _wantAmt) external whenNotPaused(_vid) {
         require(address(strat(_vid)) == _msgSender(), "VH: sender does not match vid");
-        totalMaximizerEarningsOffset[_vid] += _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
+        //totalMaximizerEarningsOffset[_vid] += 
+        _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
@@ -141,7 +142,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             _vid,
             vidSharesRemoved
         );
-
+        
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
             //hardcoded 3% max fee rate
@@ -197,7 +198,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
                     uint vid = ids[i];
 
                     if (vid > 2**16) {
-                        //_earn(vid);
+                        _earn(vid);
                         uint amount = amounts[i];
                         withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, amount);
                         UpdateOffsetsOnDeposit(vid, to, amount); 
@@ -232,7 +233,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint totalOffset = totalMaximizerEarningsOffset[_vid];
 
         // calculate the amount of targetVid token to be withdrawn
-        uint256 targetVidShares = _vidSharesRemoved * totalOffset / totalSupply(_vid) 
+        uint256 targetVidShares = _vidSharesRemoved * (totalSupply(targetVid) + totalOffset) / totalSupply(_vid) 
             - fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
         
         uint256 targetVidAmount = targetVidShares * targetStrat.wantLockedTotal() / totalSupply(targetVid);
