@@ -178,7 +178,6 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
     function notifyOnTransfer(address _from, address _to, uint _amount) external onlyVaultHealer returns (bool poolDone) {
         require(_amount < 2**112, "BoostPool: Amount too large");
         updatePool();
-        console.log("notify", _from, _to, _amount);
         //User remains "active" unless rewards have expired and there are no unpaid pending amounts
         if (block.number >= bonusEndBlock) poolDone = true; //if rewards have ended, mark pool done
         uint112 amount = uint112(_amount);
@@ -195,9 +194,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
             User storage user = userInfo[_from];
             uint pending = _harvest(_from);
             totalStaked -= amount;
-            console.log("withdrawing ", _amount);
             user.amount -= amount;
-            console.log("user.amount ", user.amount);
             updateRewardDebt(user, pending);
             emit Withdraw(_from, _amount);
         }

@@ -24,7 +24,7 @@ Proxy init bytecode:
 library Cavendish {
 
     bytes11 constant PROXY_INIT_CODE = hex'602d80343434335afa15f3';
-                                              //keccak256(abi.encodePacked(PROXY_INIT_CODE));
+                                              // literal in line below = keccak256(abi.encodePacked(PROXY_INIT_CODE));
     bytes32 constant PROXY_INIT_HASH = hex'577cbdbf32026552c0ae211272febcff3ea352b0c755f8f39b49856dcac71019';
 
     //Creates an 1167-compliant minimal proxy whose address is purely a function of the deployer address and the salt

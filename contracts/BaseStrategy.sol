@@ -42,7 +42,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         address configAddr = configAddress();
         assembly {
         //  if gt(mload(0x40), 0x80) { // asserting that this function is only called once at the beginning of every incoming call
-        //           revert(0,0)
+        //           revert(0,0)        // we keep these 3 lines in, commented, as they're useful for building and testing
         //    }
             let len := sub(extcodesize(configAddr), 1) //get length, subtracting 1 for the invalid opcode
             mstore(0x40, add(0x80, len)) //update free memory pointer

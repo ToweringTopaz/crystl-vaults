@@ -47,12 +47,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
             }
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
-            console.log("earn failed");
-            console.log(vid, reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
-            console.log("earn failed");
-            console.log(vid, string(reason));
         }
     }
     
@@ -74,7 +70,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
         VaultInfo memory vault = vaultInfo[_vid];
-        console.log("_wantAmt as _deposit starts ", _wantAmt);
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
@@ -90,8 +85,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         // we make the deposit
         (uint256 wantAdded, uint256 vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
-        console.log("wantAdded: ", wantAdded);
-        console.log("vidSharesAdded: ", vidSharesAdded);
 
         // if this is a maximizer vault, do these extra steps
         if (_vid > 2**16 && totalSupplyBefore > 0)
@@ -142,15 +135,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
         if (_vid > 2**16) {
             withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
         }
-        console.log("About to burn tokens");
         //burn the tokens equal to vidSharesRemoved
         _burn(
             _from,
             _vid,
             vidSharesRemoved
         );
-        console.log("Have burned tokens");
-        
+
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
             //hardcoded 3% max fee rate
