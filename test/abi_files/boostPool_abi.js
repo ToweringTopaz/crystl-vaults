@@ -1,3 +1,5 @@
+const { BUIDLEREVM_SUPPORTED_HARDFORKS } = require("@nomiclabs/buidler/internal/constants")
+
 const boostPool_abi = [
     {
       "inputs": [

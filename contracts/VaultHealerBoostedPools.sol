@@ -95,7 +95,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
         //If boosted pools are affected, update them
-
+        console.log("Made it into before function");
         for (uint i; i < ids.length; i++) {
             uint vid = ids[i];
             uint numBoosts = vaultInfo[vid].numBoosts;

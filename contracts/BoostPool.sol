@@ -26,7 +26,8 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         uint128 amount;     // How many LP tokens the user has provided.
         int128 rewardDebt; // Reward debt. See explanation below.
     }
-
+    console.log("hello");
+    console.log("hello again");
     // The vaultHealer where the staking / want tokens all reside
     IVaultHealer public immutable VAULTHEALER;
     // This is the vid + (a unique identifier << 224)
