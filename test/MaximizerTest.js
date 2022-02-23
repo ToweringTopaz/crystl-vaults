@@ -17,16 +17,15 @@ const { getContractAddress } = require('@ethersproject/address')
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
 const { vaultSettings } = require('../configs/vaultSettings');
-const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
+const { quickVaults } = require('../configs/quickVaults'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
+const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = apeSwapVaults[1].masterchef;
-const TACTIC = apeSwapVaults[1].tactic;
-const VAULT_HEALER = apeSwapVaults[1].vaulthealer;
-const WANT = apeSwapVaults[1].want;
-const EARNED = apeSwapVaults[1].earned;
-const PATHS = apeSwapVaults[1].paths;
-const PID = apeSwapVaults[1].PID;
+const MASTERCHEF = quickVaults[0].masterchef;
+const VAULT_HEALER = quickVaults[0].vaulthealer;
+const WANT = quickVaults[0].want;
+const EARNED = quickVaults[0].earned;
+const PATHS = quickVaults[0].paths;
+const PID = quickVaults[0].PID;
 const ROUTER = vaultSettings.standard[0];
 
 const TOLERANCE = vaultSettings.standard[2];
@@ -59,14 +58,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         VaultHealer = await ethers.getContractFactory("VaultHealer");
         vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address, vaultFeeManager.address);
 
+        //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory('Strategy');
+        //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 
+        //create the factory for the tactics implementation contract
         Tactics = await ethers.getContractFactory("Tactics");
+        //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['PID'],
+			quickVaults[0]['masterchef'],
+            quickVaults[0]['PID'],
             0, //have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
@@ -75,23 +78,26 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
 
+        //create factory and deploy strategyConfig contract
         StrategyConfig = await ethers.getContractFactory("StrategyConfig");
         strategyConfig = await StrategyConfig.deploy()
+        console.log("strategyConfig deployed");
 
         DEPLOYMENT_DATA = await strategyConfig.generateConfig(
 			vaultHealer.address,
             tacticsA,
 			tacticsB,
-			apeSwapVaults[1]['want'],
-			40,
-			routers.polygon.APESWAP_ROUTER,
+			quickVaults[0]['want'],
+			40, //wantDust
+			routers.polygon.QUICKSWAP_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
-			240,
-			false,
-			apeSwapVaults[1]['earned'],
-			[40, 40],
-			0
+			240, //slippageFactor
+			false, //feeOnTransfer
+			quickVaults[0]['earned'],
+			[40], //earnedDust
+			0 //targetVid - is this always 0?
 		);
+        console.log("generateConfig called successfully");
 
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
@@ -114,16 +120,17 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			crystlTacticsA,
 			crystlTacticsB,
 			crystlVault[0]['want'],
-			40,
+			40, //wantDust
 			routers.polygon.APESWAP_ROUTER,
 			magnetite.address,
-			240,
-			false,
+			240, //slippageFactor
+			false, //feeOnTransfer
 			crystlVault[0]['earned'],
-			[40],
+			[40], //earnDust
 			0
 		)
-		
+		console.log("cc stratconfig generated");
+
         vaultHealerOwnerSigner = user1
         
         zapAddress = await vaultHealer.zap()
@@ -139,8 +146,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		
 		let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
-			apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['PID'],
+			quickVaults[0]['masterchef'],
+            quickVaults[0]['PID'],
             0, //have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
@@ -148,21 +155,23 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
+		console.log("maxi tactics generated");
 
 		MAXIMIZER_DATA = await strategyConfig.generateConfig(
             vaultHealer.address,
 			maxiTacticsA,
 			maxiTacticsB,
-			apeSwapVaults[1]['want'],
-			40,
-			routers.polygon.APESWAP_ROUTER,
+			quickVaults[0]['want'],
+			40, //wantDust
+			routers.polygon.QUICKSWAP_ROUTER,
 			magnetite.address,
-			240,
-			false,
-			apeSwapVaults[1]['earned'],
-			[40, 40],
+			240, //slippageFactor
+			false, //feeOnTransfer
+			quickVaults[0]['earned'],
+			[40], //earnedDust
 			crystl_compounder_strat_pid
 		)
+		console.log("maxi config generated");
 
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
 

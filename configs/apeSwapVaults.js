@@ -7,7 +7,6 @@ const apeSwapVaults = [
         want: lps.polygon.MATIC_CRYSTL_APE_LP, // Want
         vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
         masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
-		tactic: '0x6873808DBc09Aa85A3ebB996Adf91c41AeD4aCbf', //TacticMiniApe
         PID: 7,
         earned: [ BANANA, CRYSTL ],
     },
@@ -15,7 +14,6 @@ const apeSwapVaults = [
         want: lps.polygon.MATIC_BANANA_APE_LP, // Want
         vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
         masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
-		tactic: '0x6873808DBc09Aa85A3ebB996Adf91c41AeD4aCbf', //TacticMiniApe
         PID: 0,
         earned: [ BANANA, WMATIC ],
     },
