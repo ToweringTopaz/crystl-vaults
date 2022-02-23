@@ -70,12 +70,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
 			quickVaults[0]['masterchef'],
             quickVaults[0]['PID'],
-            0, //have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x18fccc7624000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c7020000000") //includes selector and encoded call format
+            0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
+            ethers.BigNumber.from("0x93f1a40b00000000"), //vaultSharesTotal - includes selector and encoded call format
+            ethers.BigNumber.from("0x8dbdbe6d24000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0x0ad58d2f24000000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x18fccc7624000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0x2f940c702f000000") //emergencyWithdraw - includes selector and encoded call format
         );
 
         //create factory and deploy strategyConfig contract
@@ -149,11 +149,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			quickVaults[0]['masterchef'],
             quickVaults[0]['PID'],
             0, //have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x93f1a40b00000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x8dbdbe6d24000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x0ad58d2f24000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x18fccc7624000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x2f940c702f000000") //includes selector and encoded call format
         );
 		console.log("maxi tactics generated");
 
