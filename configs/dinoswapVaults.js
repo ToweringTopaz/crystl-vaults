@@ -1,13 +1,16 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const { DINO } = tokens.polygon;
+const { DINO, WMATIC, CRYSTL, DAI, USDC, WETH } = tokens.polygon;
 
 const dinoswapVaults = [
     {
-        want: lps.polygon.ETH_SX_SUSHI_LP, // Want
-        vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
-        masterchef: masterChefs.polygon.DINOSWAP_MASTERCHEF, // Masterchef
-        PID: 4,
-        earned: [ DINO ],
+        addresses: [
+            accounts.polygon.NEW_TEST_VAULT_HEALER, // Vault Healer
+            masterChefs.polygon.DINOSWAP_MASTERCHEF, // Masterchef
+            routers.polygon.DINO_ROUTER, // UniRouter
+            lps.polygon.WMATIC_WETH_DINOV2_LP, // Want
+            DINO, // Earned
+            29, // uint256 _pid 
+        ],
     }
 ]
 
