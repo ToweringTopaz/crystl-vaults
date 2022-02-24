@@ -52,6 +52,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		vaultFeeManager = await VaultFeeManager.deploy(await getContractAddress({from, nonce}), FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
         VaultHealer = await ethers.getContractFactory("VaultHealer");
         vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address, vaultFeeManager.address);
+		vaultHealer.on("FailedEarn", (vid, reason) => {
+			console.log("FailedEarn: ", vid, reason);
+		});
+		vaultHealer.on("FailedEarnBytes", (vid, reason) => {
+			console.log("FailedEarnBytes: ", vid, reason);
+		});
 
         //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory('Strategy');
