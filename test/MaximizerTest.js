@@ -25,7 +25,7 @@ const WANT = dinoswapVaults[0].want;
 const EARNED = dinoswapVaults[0].earned;
 const PID = dinoswapVaults[0].PID;
 const CRYSTL_ROUTER = routers.polygon.APESWAP_ROUTER;
-const LP_AND_EARN_ROUTER = routers.polygon.DINO_ROUTER;
+const LP_AND_EARN_ROUTER = dinoswapVaults[0].router;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
@@ -67,7 +67,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             dinoswapVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //vaultSharesTotal - includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0xe2bbb15824000000"), //deposit - includes selector and encoded call format
             ethers.BigNumber.from("0x0ad58d2f24000000"), //withdraw - includes selector and encoded call format
             ethers.BigNumber.from("0x0ad58d2f24000000"), //harvest - includes selector and encoded call format
             ethers.BigNumber.from("0x2f940c702f000000") //emergencyWithdraw - includes selector and encoded call format
@@ -93,7 +93,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			0 //targetVid - is this always 0?
 		);
         console.log("generateConfig called successfully");
-
+        
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
         TOKEN1ADDRESS = await LPtoken.token1()
@@ -145,7 +145,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             dinoswapVaults[0]['PID'],
             0, //have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //vaultSharesTotal - includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0xe2bbb15824000000"), //deposit - includes selector and encoded call format
             ethers.BigNumber.from("0x0ad58d2f24000000"), //withdraw - includes selector and encoded call format
             ethers.BigNumber.from("0x0ad58d2f24000000"), //harvest - includes selector and encoded call format
             ethers.BigNumber.from("0x2f940c702f000000") //includes selector and encoded call format
