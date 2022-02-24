@@ -5,6 +5,9 @@ import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./interfaces/IVaultFeeManager.sol";
 
+/// @title Vault Fee Manager
+/// @author ToweringTopaz
+/// @notice A contract that allows setting a default fee on earnings and a default fee on withdrawals. These may be overridden on an individual vault basis.
 contract VaultFeeManager is IVaultFeeManager {
     using BitMaps for BitMaps.BitMap;
     using Fee for *;

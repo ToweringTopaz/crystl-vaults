@@ -10,6 +10,9 @@ import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
+/// @title Crystl VaultHealerBase v3
+/// @author ToweringTopaz, RichJamo, with some traces of residual code from Polycat
+/// @notice Holds most of the functions for deploying and administering vaults
 abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
@@ -18,7 +21,10 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
+    /// @notice Returns the address of the VaultFeeManager contract, where fee receivers and rates are managed
     IVaultFeeManager public vaultFeeManager;
+
+    /// @notice Returns the number of autocompounding vaults. Maximizers are not included in this.
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
