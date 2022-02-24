@@ -152,20 +152,28 @@ library StrategyConfig {
         uint8[] memory _earnedDust,
         uint _targetVid
     ) external view returns (bytes memory configData) {
+        console.log("made it into generateConfig");
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
+                console.log("1");
+
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
+                console.log("1");
 
         uint8 vaultType = uint8(_earned.length);
+                        console.log("1");
+
         if (_feeOnTransfer) vaultType += 0x80;
-        
+                        console.log("1");
+
         configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
-        
+                        console.log("1");
+
 		
 		IERC20 _targetWant = IERC20(_wantToken);
         if (_targetVid > 0) {
             (_targetWant,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
         }
-		
+
         //Look for LP tokens. If not, want must be a single-stake
         try IUniPair(address(_targetWant)).token0() returns (IERC20 _token0) {
             vaultType += 0x20;
@@ -178,6 +186,7 @@ library StrategyConfig {
         for (uint i; i < _earned.length; i++) {
             configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
         }
+
 		if (_targetVid > 0) 
 			configData = abi.encodePacked(configData, _targetWant);
     }
