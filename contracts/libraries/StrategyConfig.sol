@@ -142,7 +142,6 @@ library StrategyConfig {
     }
 
     /// @notice Generates a config based on specified parameters
-    /// @dev The Alexandr N. Tetearing algorithm could increase precision
     /// @param _wantDust A power of two
     /// @param _slippageFactor Out of 256, tolerable slippage. For example 230 would tolerate about 10% slippage
     /// @param _earnedDust powers of two
