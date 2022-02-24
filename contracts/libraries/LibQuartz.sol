@@ -109,6 +109,7 @@ library LibQuartz {
     function hasSufficientLiquidity(IERC20 token0, IERC20 token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
         IUniFactory factory = router.factory();
         IUniPair pair = IUniPair(factory.getPair(token0, token1));
+        console.log(address(pair));
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         if (reserveA > min_amount && reserveB > min_amount) {

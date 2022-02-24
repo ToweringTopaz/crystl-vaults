@@ -5,6 +5,9 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "hardhat/console.sol";
 
+/// @title Tactics
+/// @author ToweringTopaz
+/// @notice Provides a generic method which vault strategies can use to call deposit/withdraw/balance on stakingpool or masterchef-like contracts
 library Tactics {
     using Address for address;
 
