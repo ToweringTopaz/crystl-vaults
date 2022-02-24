@@ -146,9 +146,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             0, //have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0xe2bbb15824000000"), //deposit - includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24000000"), //withdraw - includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24000000"), //harvest - includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c702f000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x441a3e7024000000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x441a3e702f000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
         );
 		console.log("maxi tactics generated");
 
