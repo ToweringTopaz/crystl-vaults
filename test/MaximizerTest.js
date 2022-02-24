@@ -16,16 +16,17 @@ const { getContractAddress } = require('@ethersproject/address')
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
-const { dinoswapVaults } = require('../configs/dinoswapVaults'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
-const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
+const { quickVaults } = require('../configs/quickVaults'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
+const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = dinoswapVaults[0].masterchef;
-const VAULT_HEALER = dinoswapVaults[0].vaulthealer;
-const WANT = dinoswapVaults[0].want;
-const EARNED = dinoswapVaults[0].earned;
-const PID = dinoswapVaults[0].PID;
+const MASTERCHEF = quickVaults[0].masterchef;
+const VAULT_HEALER = quickVaults[0].vaulthealer;
+const WANT = quickVaults[0].want;
+const EARNED = quickVaults[0].earned;
+const PID = quickVaults[0].PID;
+const LP_AND_EARN_ROUTER = quickVaults[0].router;
+
 const CRYSTL_ROUTER = routers.polygon.APESWAP_ROUTER;
-const LP_AND_EARN_ROUTER = dinoswapVaults[0].router;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
@@ -63,8 +64,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			dinoswapVaults[0]['masterchef'],
-            dinoswapVaults[0]['PID'],
+			quickVaults[0]['masterchef'],
+            quickVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0x694fc3a940000000"), //deposit - includes selector and encoded call format
@@ -82,13 +83,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			vaultHealer.address,
             tacticsA,
 			tacticsB,
-			dinoswapVaults[0]['want'],
+			quickVaults[0]['want'],
 			0, //wantDust
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			dinoswapVaults[0]['earned'],
+			quickVaults[0]['earned'],
 			[0], //earnedDust
 			0 //targetVid - is this always 0?
 		);
@@ -144,8 +145,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		
 		let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
-			dinoswapVaults[0]['masterchef'],
-            dinoswapVaults[0]['PID'],
+			quickVaults[0]['masterchef'],
+            quickVaults[0]['PID'],
             0, //have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0x694fc3a940000000"), //deposit - includes selector and encoded call format
@@ -159,13 +160,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             vaultHealer.address,
 			maxiTacticsA,
 			maxiTacticsB,
-			dinoswapVaults[0]['want'],
+			quickVaults[0]['want'],
 			40, //wantDust
 			LP_AND_EARN_ROUTER,
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			dinoswapVaults[0]['earned'],
+			quickVaults[0]['earned'],
 			[40], //earnedDust
 			crystl_compounder_strat_pid
 		)
