@@ -83,20 +83,23 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             tacticsA,
 			tacticsB,
 			dinoswapVaults[0]['want'],
-			40, //wantDust
+			0, //wantDust
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
 			dinoswapVaults[0]['earned'],
-			[40], //earnedDust
+			[0], //earnedDust
 			0 //targetVid - is this always 0?
 		);
         console.log("generateConfig called successfully");
         
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
+        console.log(TOKEN0ADDRESS)
         TOKEN1ADDRESS = await LPtoken.token1()
+        console.log(TOKEN1ADDRESS)
+
         TOKEN_OTHER = CRYSTL;
 
         let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
@@ -115,13 +118,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			crystlTacticsA,
 			crystlTacticsB,
 			crystlVault[0]['want'],
-			40, //wantDust
+			0, //wantDust
 			CRYSTL_ROUTER,
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
 			crystlVault[0]['earned'],
-			[40], //earnDust
+			[0], //earnDust
 			0
 		)
 		console.log("cc stratconfig generated");
@@ -201,89 +204,95 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			BOOST_POOL_DATA
 		);
 		
+        // send 2560000 MATIC to user1
         await network.provider.send("hardhat_setBalance", [
             user1.address,
-            "0x21E19E0C9BAB240000000", //amount of 1000 in hex
+            "0x21E19E0C9BAB240000000", //amount of 2560000*10^18 in hex
         ]);
-
+        
+        // send 2560000 MATIC to user2
         await network.provider.send("hardhat_setBalance", [
             user2.address,
-            "0x21E19E0C9BAB240000000", //amount of 1000 in hex
+            "0x21E19E0C9BAB240000000", //amount of 2560000*10^18 in hex
         ]);
 
+        // send 2560000 MATIC to user3
         await network.provider.send("hardhat_setBalance", [
             user3.address,
-            "0x21E19E0C9BAB240000000", //amount of 1000 in hex
+            "0x21E19E0C9BAB240000000", //amount of 2560000*10^18 in hex
         ]);
-
+       
+        // send 2560000 MATIC to user4
         await network.provider.send("hardhat_setBalance", [
             user4.address,
-            "0x21E19E0C9BAB240000000", //amount of 1000 in hex
+            "0x21E19E0C9BAB240000000", //amount of 2560000*10^18 in hex
         ]);
 	
+        //create a router to swap into the underlying tokens for the LP and then add liquidity
         LPandEarnRouter = await ethers.getContractAt(IUniRouter02_abi, LP_AND_EARN_ROUTER);
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("100000") });
         } else {
-            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("100000") })
         }
         console.log("first swap done")
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
-            await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.deposit({ value: ethers.utils.parseEther("100000") });
         } else {
-            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("100000") })
         }
         console.log("second swap done")
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
-            await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("100000") });
         } else {
-            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("100000") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
-            await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("100000") });
         } else {
-            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("100000") })
         }
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
-            await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("100000") });
         } else {
-            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("100000") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
-            await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("4500") });
+            await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("100000") });
         } else {
-            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("100000") })
         }
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
-            await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("3000") });
+            await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("50000") });
         } else {
-            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
+            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
-            await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("3000") });
+            await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("50000") });
         } else {
-            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
+            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") })
         }
 
-        await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
+        await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") })
 
 
         //create instances of token0 and token1
         token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
         token1 = await ethers.getContractAt(token_abi, TOKEN1ADDRESS);
         console.log("created token instances")
+
         //user 1 adds liquidity to get LP tokens
         var token0BalanceUser1 = await token0.balanceOf(user1.address);
         await token0.approve(LPandEarnRouter.address, token0BalanceUser1);
@@ -443,13 +452,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit user1\'s 5000 LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
-            user1InitialDeposit = ethers.utils.parseEther("5000");
+            user1InitialDeposit = await LPtoken.balanceOf(user1.address) //ethers.utils.parseEther("100");
 			
             // await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
 			// token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
             // await crystlToken.approve(vaultHealer.address, user1InitialDeposit);
             
             await LPtoken.approve(vaultHealer.address, user1InitialDeposit);
+            const vaultSharesTotalBeforeFirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
             LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
 			console.log(LPtokenBalanceBeforeFirstDeposit);
@@ -458,7 +468,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`User1 deposits ${ethers.utils.formatEther(user1InitialDeposit)} LP tokens`)
             console.log(`Vault Shares Total went up by ${ethers.utils.formatEther(vaultSharesTotalAfterFirstDeposit)} LP tokens`)
 
-            expect(user1InitialDeposit).to.equal(vaultSharesTotalAfterFirstDeposit);
+            expect(user1InitialDeposit).to.equal(vaultSharesTotalAfterFirstDeposit.sub(vaultSharesTotalBeforeFirstDeposit));
         })
         
         it('Should mint ERC1155 tokens for this user, with the maximizer_strat_pid of the strategy and equal to LP tokens deposited', async () => {
@@ -482,7 +492,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarn: ${vaultSharesTotalBeforeCallingEarn}`)
 
-            for (i=0; i<500;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -513,7 +523,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             console.log(`vaultSharesTotalBeforeCallingEarn: ${vaultSharesTotalBeforeCallingEarn}`)
 
-            for (i=0; i<500;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -591,7 +601,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit 1500 of user2\'s LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
-            user2InitialDeposit = ethers.utils.parseEther("1500");
+            user2InitialDeposit = ethers.utils.parseEther("15");
             const vaultSharesTotalBeforeUser2FirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser2FirstDeposit)} LP tokens before user 2 deposits`)
 
@@ -625,7 +635,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -657,7 +667,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -764,7 +774,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit 1500 LP tokens from user into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user3.address);
-            user3InitialDeposit = ethers.utils.parseEther("1500");
+            user3InitialDeposit = ethers.utils.parseEther("15");
             const vaultSharesTotalBeforeUser3FirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser3FirstDeposit)} LP tokens before user 3 deposits`)
 
@@ -834,7 +844,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -866,7 +876,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<100;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -975,7 +985,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 */
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
         it('Should accurately increase vaultSharesTotal upon second deposit of 200 LP tokens by user1', async () => {
-            user1SecondDepositAmount = ethers.utils.parseEther("200");
+            user1SecondDepositAmount = ethers.utils.parseEther("2");
             await LPtoken.approve(vaultHealer.address, user1SecondDepositAmount);
 
             const vaultSharesTotalBeforeSecondDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
