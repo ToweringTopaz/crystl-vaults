@@ -194,6 +194,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         IERC20 _tokenB,
         address _to
     ) internal {
+        console.log("swap A to B:", address(_tokenA), address(_tokenB));
         //Handle one-token paths which are simply a transfer
         if (_tokenA == _tokenB) {
             if (_to != address(this)) //skip transfers to self
