@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity ^0.8.9;
 
+/// @title Fee library
+/// @author ToweringTopaz
+/// @notice Implements a method of representing fees which may be charged by various contracts
+/// @dev The Fee.Data custom value type contains a receiver address and a uint16 rate, in basis points
 library Fee {
     using Fee for Data;
 

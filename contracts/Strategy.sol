@@ -5,7 +5,11 @@ import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "hardhat/console.sol";
-//This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
+
+/// @title Crystl Vault v3 Strategy
+/// @author ToweringTopaz, RichJamo, with some traces of residual code from Polycat
+/// @notice A strategy contract supporting most pools. May autocompound or function as a maximizer.
+/// @dev Must be used via a proxy, with a compatible VaultHealer.
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;

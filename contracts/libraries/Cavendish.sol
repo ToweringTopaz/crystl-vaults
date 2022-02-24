@@ -47,12 +47,17 @@ library Cavendish {
         return instance;
     }
     
-    //Standard function to compute a create2 address deployed by this address, but not impacted by the target implemention
+    /// @notice Computes the address of a proxy deployed by this contract via the clone function
+    /// @param salt Used in determining a proxy address
+    /// @return Address of the proxy
     function computeAddress(bytes32 salt) internal view returns (address) {
         return computeAddress(salt, address(this));
     }
 
-    //Standard function to compute a create2 address, but not impacted by the target implemention
+    /// @notice Computes the address of a proxy deployed by some contract using this library's clone function
+    /// @param salt Used in determining a proxy address
+    /// @param deployer The address deploying a proxy, used in determining the proxy's address
+    /// @return Address of the proxy
     function computeAddress(
         bytes32 salt,
         address deployer

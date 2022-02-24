@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 
-// @author Wivern for Beefy.Finance, ToweringTopaz for Crystl.Finance
+// @author Wivern for Beefy.Finance, ToweringTopaz and RichJamo for Crystl.Finance
 // @notice This contract adds liquidity to Uniswap V2 compatible liquidity pair pools and stake.
 
 pragma solidity ^0.8.0;
