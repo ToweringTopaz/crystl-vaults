@@ -171,9 +171,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint112 _amount) external {
         IERC20 token = pendingDeposits[msg.sender].token;
+        console.log("xpd: ", address(token));
         uint amount0 = pendingDeposits[msg.sender].amount0;
         address from = pendingDeposits[msg.sender].from;
+        console.log("from: ", from);
         uint amount1 = pendingDeposits[msg.sender].amount1;
+        console.log("amount: ", amount0 << 96 | amount1);
+        console.log("balance: ", token.balanceOf(from));
         require(_amount <= amount0 << 96 | amount1, "VH: strategy requesting more tokens than authorized");
         delete pendingDeposits[msg.sender];
 
@@ -226,30 +230,33 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
         uint targetVid = _vid >> 16;
         VaultInfo storage target = vaultInfo[targetVid];
-    
-        IStrategy targetStrat = strat(targetVid);
+
+        uint targetTotalSupply = totalSupply(targetVid);
+        if (targetTotalSupply == 0) return;
 
         uint fromOffset = maximizerEarningsOffset[_from][_vid];
         uint totalOffset = totalMaximizerEarningsOffset[_vid];
 
+        address vaultStrat = address(strat(_vid));
+
         // calculate the amount of targetVid token to be withdrawn
-        uint256 targetVidShares = _vidSharesRemoved * (totalSupply(targetVid) + totalOffset) / totalSupply(_vid) 
+        uint256 targetVidShares = _vidSharesRemoved * (balanceOf(vaultStrat, targetVid) + totalOffset) / totalSupply(_vid) 
             - fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
         
-        uint256 targetVidAmount = targetVidShares * targetStrat.wantLockedTotal() / totalSupply(targetVid);
+        if (targetVidShares == 0) return;
+        uint targetWantLocked = strat(targetVid).wantLockedTotal();
+        if (targetWantLocked == 0) return;
+        uint256 targetVidAmount = targetVidShares * targetWantLocked / targetTotalSupply;
+        if (targetVidAmount == 0) return;
 
-        // withdraw proportional amount of target vault token from targetVault()
-        if (targetVidAmount > 0) {
-            address vaultStrat = address(strat(_vid));
-            // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-            _withdraw(targetVid, targetVidAmount, vaultStrat, _from);
-            target.want.safeTransferFrom(vaultStrat, _from, target.want.balanceOf(vaultStrat));
-            
-            uint removedPortionOfOffset = fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
+        // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
+        _withdraw(targetVid, targetVidAmount, vaultStrat, _from);
+        target.want.safeTransferFrom(vaultStrat, _from, target.want.balanceOf(vaultStrat));
+        
+        uint removedPortionOfOffset = fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
 
-            // update the offsets for user and for vid
-            totalMaximizerEarningsOffset[_vid] -= removedPortionOfOffset;
-            maximizerEarningsOffset[_from][_vid] -= removedPortionOfOffset;
-            }
-        }
+        // update the offsets for user and for vid
+        totalMaximizerEarningsOffset[_vid] -= removedPortionOfOffset;
+        maximizerEarningsOffset[_from][_vid] -= removedPortionOfOffset;
+    }
 }
