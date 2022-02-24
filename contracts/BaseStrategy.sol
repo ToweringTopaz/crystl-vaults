@@ -5,7 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
-import "hardhat/console.sol";
+
+/// @title Crystl Vaults v3 BaseStrategy
+/// @author ToweringTopaz, RichJamo, with some traces of residual code from Polycat
+/// @notice Provides the low-level implementation supporting the generic strategy contract, which interfaces with yield farms
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
@@ -13,7 +16,12 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
+    
+    /// @notice The address of the associated VaultHealer contract. Most functions are only accessible with the VaultHealer acting as an intermediary.
     address public immutable vaultHealer;
+
+    /// @notice The address of this contract's implementation.
+    /// @dev Can be used to check whether the active contract is a proxy. If so, implementation != address(this)
     address public immutable implementation;
 
     constructor(address _vaultHealer) { 
@@ -21,7 +29,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         implementation = address(this);
     }
 
-
+    /// @notice Generally ether (or other native gas token) should not be sent to this address. Prevents anything that isn't a contract from doing so.
     receive() external payable virtual { require(Address.isContract(msg.sender), "Strategy: invalid deposit"); }
 
 
@@ -50,6 +58,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
     }
 
+    /// @notice Used when creating a new vault
+    /// @dev Called once by VaultHealer after a new strategy proxy is deployed
     function initialize(bytes memory _config) external onlyVaultHealer {
         require(address(this) != implementation, "Strategy: This contract must be used by proxy");
         assembly {
@@ -69,37 +79,39 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 		if (_wantToken != _targetWant) _targetWant.safeIncreaseAllowance(msg.sender, type(uint256).max);
     }
 
-    //should only happen when this contract deposits as a maximizer
+    /// @notice Allows a maximizer strategy to receive ERC1155 tokens representing shares of its target vault
     function onERC1155Received(
         address operator, address from, uint256 id, uint256, bytes calldata) external view onlyVaultHealer getConfig returns (bytes4) {
         require (operator == address(this) && from == address(0) && id == config.vid() >> 16, "Strategy: Improper ERC1155 deposit");
         return 0xf23a6e61;
     }
 
-    //no batch transfer
+    /// @notice Reverts, because there is currently no support for strategies to hold more than one ERC1155 token ID.
     function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
         revert("Strategy: Batch transfers not supported here");
     }
 
+    // @notice If there is an unforeseen threat to user funds, VaultHealer administrators may order the strategy to panic, emergency-withdrawing all deposited funds
     function panic() external getConfig onlyVaultHealer {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.emergencyVaultWithdraw(tacticsA, tacticsB);
     }
+    // @notice Returns to normal behavior, following a panic
     function unpanic() external getConfig onlyVaultHealer { 
         _farm();
     }
 
-
+    // @notice The uniswapv2 compatible router this strategy uses for performing token swaps
     function router() external view getConfig returns (IUniRouter _router) {
         return config.router();
     }
 
-
+    // @notice The token this strategy invests as its principal
     function wantToken() external view getConfig returns (IERC20 _token) {
         (_token,) = config.wantToken();
     }
 
-
+    // @notice The address of a pseudo-contract which, rather than code, contains all configuration data for this strategy
     function configAddress() public view returns (address configAddr) {
         assembly {
             mstore(0, or(0xd694000000000000000000000000000000000000000001000000000000000000, shl(80,address())))
@@ -107,6 +119,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
     }
 
+    // @notice The amount of tokens currently invested by this vault
     function vaultSharesTotal() external view getConfig returns (uint256) {
         return _vaultSharesTotal();
     }
@@ -114,7 +127,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         return Tactics.vaultSharesTotal(config.tacticsA());
     }
 
-
+    // @notice The amount of tokens currently invested by this vault, plus any uninvested tokens it holds
     function wantLockedTotal() external view getConfig returns (uint256) {
         return _wantLockedTotal();
     }
@@ -146,11 +159,12 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         
         //including dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        require(sharesAfter + _wantToken.balanceOf(address(this)) + dust >= (sharesBefore + wantAmt) * config.slippageFactor() / 10000,
+        require(sharesAfter + _wantToken.balanceOf(address(this)) + dust >= (sharesBefore + wantAmt) * config.slippageFactor() / 256,
             "High vault deposit slippage");
         return;
     }
 
+    /// @notice Used by the earn function to collect and pay out fees
     function distribute(Fee.Data[3] calldata fees, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
 
         earnedAmt = _earnedAmt;
