@@ -10,6 +10,9 @@ contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
 
+    address public constant dQuick = 0xf28164A485B0B2C90639E47b0f377b4a438a16B1;
+    address public constant Quick = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13;
+
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
     function earn(Fee.Data[3] calldata fees) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
@@ -20,6 +23,12 @@ contract Strategy is BaseStrategy {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
         console.log("made it past harvest");
+        
+        //extra piece of code for Quickswap
+        (IERC20 earnedToken, uint dust) = config.earned(i);
+        if (address(earnedToken) == Quick) {
+            IDragonLair(dQuick).leave(IERC20(dQuick).balanceOf(address(this)));
+        }
 
         uint earnedLength = config.earnedLength();
         console.log("earnedLength: ", earnedLength);
@@ -27,7 +36,7 @@ contract Strategy is BaseStrategy {
 
         for (uint i; i < earnedLength; i++) { //Process each earned token
             console.log("made it into the for loop");
-            (IERC20 earnedToken, uint dust) = config.earned(i);
+            // (IERC20 earnedToken, uint dust) = config.earned(i);
             console.log("dust amount: ", dust);
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             console.log("earnedAmt: ", earnedAmt);
