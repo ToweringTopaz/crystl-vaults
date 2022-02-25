@@ -6,7 +6,7 @@ let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
     ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
     ethers.BigNumber.from("0xe2bbb15824000000"), //includes selector and encoded call format
     ethers.BigNumber.from("0x441a3e7024000000"), //includes selector and encoded call format
-    ethers.BigNumber.from("0xe2bbb1582f000000"), //includes selector and encoded call format
+    ethers.BigNumber.from("0xe2bbb1582f000000"), //harvest - includes selector and encoded call format
     ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
 );
 

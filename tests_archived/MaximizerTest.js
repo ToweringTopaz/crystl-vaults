@@ -16,15 +16,15 @@ const { getContractAddress } = require('@ethersproject/address')
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
-const { quickVaults } = require('../configs/quickVaults'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
-const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
+const { dfynVaults } = require('../configs/dfynVaults'); //<-- replace all references to 'dfynVaults' (for example), with the right '...Vaults' name
+const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'dfynVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = quickVaults[0].masterchef;
-const VAULT_HEALER = quickVaults[0].vaulthealer;
-const WANT = quickVaults[0].want;
-const EARNED = quickVaults[0].earned;
-const PID = quickVaults[0].PID;
-const LP_AND_EARN_ROUTER = quickVaults[0].router;
+const MASTERCHEF = dfynVaults[0].masterchef;
+const VAULT_HEALER = dfynVaults[0].vaulthealer;
+const WANT = dfynVaults[0].want;
+const EARNED = dfynVaults[0].earned;
+const PID = dfynVaults[0].PID;
+const LP_AND_EARN_ROUTER = dfynVaults[0].router;
 
 const CRYSTL_ROUTER = routers.polygon.APESWAP_ROUTER;
 
@@ -64,8 +64,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			quickVaults[0]['masterchef'],
-            quickVaults[0]['PID'],
+			dfynVaults[0]['masterchef'],
+            dfynVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
@@ -83,13 +83,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			vaultHealer.address,
             tacticsA,
 			tacticsB,
-			quickVaults[0]['want'],
+			dfynVaults[0]['want'],
 			0, //wantDust
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			quickVaults[0]['earned'],
+			dfynVaults[0]['earned'],
 			[0], //earnedDust
 			0 //targetVid - is this always 0?
 		);
@@ -145,8 +145,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		
 		let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
-			quickVaults[0]['masterchef'],
-            quickVaults[0]['PID'],
+			dfynVaults[0]['masterchef'],
+            dfynVaults[0]['PID'],
             0, //have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
@@ -160,13 +160,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             vaultHealer.address,
 			maxiTacticsA,
 			maxiTacticsB,
-			quickVaults[0]['want'],
+			dfynVaults[0]['want'],
 			0, //wantDust
 			LP_AND_EARN_ROUTER,
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			quickVaults[0]['earned'],
+			dfynVaults[0]['earned'],
 			[0], //earnedDust
 			crystl_compounder_strat_pid
 		)

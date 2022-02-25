@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./libraries/IDragonLair.sol";
 import "hardhat/console.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
@@ -23,12 +24,6 @@ contract Strategy is BaseStrategy {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
         console.log("made it past harvest");
-        
-        //extra piece of code for Quickswap
-        (IERC20 earnedToken, uint dust) = config.earned(i);
-        if (address(earnedToken) == Quick) {
-            IDragonLair(dQuick).leave(IERC20(dQuick).balanceOf(address(this)));
-        }
 
         uint earnedLength = config.earnedLength();
         console.log("earnedLength: ", earnedLength);
@@ -36,7 +31,14 @@ contract Strategy is BaseStrategy {
 
         for (uint i; i < earnedLength; i++) { //Process each earned token
             console.log("made it into the for loop");
-            // (IERC20 earnedToken, uint dust) = config.earned(i);
+            (IERC20 earnedToken, uint dust) = config.earned(i);
+            
+            //extra piece of code for Quickswap
+            if (address(earnedToken) == Quick) {
+                console.log("made it into Quick conditional");
+                IDragonLair(dQuick).leave(IERC20(dQuick).balanceOf(address(this)));
+            }     
+
             console.log("dust amount: ", dust);
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             console.log("earnedAmt: ", earnedAmt);
