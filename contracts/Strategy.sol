@@ -13,23 +13,30 @@ contract Strategy is BaseStrategy {
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
     function earn(Fee.Data[3] calldata fees) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
-
+        console.log("made it into strat.earn");
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
 
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
-        
+        console.log("made it past harvest");
+
         uint earnedLength = config.earnedLength();
+        console.log("earnedLength: ", earnedLength);
         bool pairStake = config.isPairStake();
 
         for (uint i; i < earnedLength; i++) { //Process each earned token
+            console.log("made it into the for loop");
             (IERC20 earnedToken, uint dust) = config.earned(i);
+            console.log("dust amount: ", dust);
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
+            console.log("earnedAmt: ", earnedAmt);
+            console.log("earned Token address:", address(earnedToken));
             if (earnedToken == _wantToken)
                 earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
 
             if (earnedAmt > dust) {
+                console.log("made it past dust conditional");
                 success = true; //We have something worth compounding
                 earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
                 if (pairStake) {

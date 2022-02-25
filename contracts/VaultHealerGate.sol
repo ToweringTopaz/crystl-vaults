@@ -40,11 +40,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _earn(uint256 vid, Fee.Data[3] memory fees) internal {
+        console.log("made it into the _earn function");
         try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
-            if (success) {                
+            if (success) {      
+                console.log("earn success");          
                 emit Earned(vid, wantLockedTotal);
             }
         } catch Error(string memory reason) {
+            console.log("earn fail: ", reason);
             emit FailedEarn(vid, reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
