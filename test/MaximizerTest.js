@@ -43,6 +43,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
+		
         const from = user1.address;
         const nonce = 1 + await user1.getTransactionCount();
 		// vaultHealer = await getContractAddress({from, nonce});
@@ -58,6 +59,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		vaultHealer.on("FailedEarnBytes", (vid, reason) => {
 			console.log("FailedEarnBytes: ", vid, reason);
 		});
+		
+		//DINO to MATIC
+		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
+		//DINO to WETH
+		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
+
 
         //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory('Strategy');
