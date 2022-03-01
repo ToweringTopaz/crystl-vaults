@@ -52,19 +52,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
-    function maximizerDeposit(uint _vid, uint _wantAmt) external whenNotPaused(_vid) {
+    function maximizerDeposit(uint _vid, uint _wantAmt) external payable whenNotPaused(_vid) {
         require(address(strat(_vid)) == _msgSender(), "VH: sender does not match vid");
         //totalMaximizerEarningsOffset[_vid] += 
         _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
+    function deposit(uint256 _vid, uint256 _wantAmt) external payable whenNotPaused(_vid) nonReentrant {
         _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external payable whenNotPaused(_vid) nonReentrant {
         _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
@@ -73,7 +73,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
-        pendingDeposits[address(strat(_vid))] = PendingDeposit({
+        if (_wantAmt > 0) pendingDeposits[address(strat(_vid))] = PendingDeposit({
             token: vault.want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
@@ -85,7 +85,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         // we make the deposit
         uint256 wantAdded;
-        (wantAdded, vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
+        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupply(_vid));
 
         // if this is a maximizer vault, do these extra steps
         if (_vid > 2**16 && totalSupplyBefore > 0)
