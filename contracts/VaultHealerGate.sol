@@ -3,11 +3,9 @@ pragma solidity ^0.8.9;
 
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
-    using BitMaps for BitMaps.BitMap;
 
     struct PendingDeposit {
         IERC20 token;
@@ -20,18 +18,25 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
-    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
-        if (vaultInfo[vid].lastEarnBlock != block.number) _earn(vid, vaultFeeManager.getEarnFees(vid));
+    //For front-end and general purpose external compounding. Returned amount is zero on failure, or the gas cost on success
+    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) returns (uint successGas) {
+        if (vaultInfo[vid].lastEarnBlock == block.number) return 0;
+        Fee.Data[3] memory fees = vaultFeeManager.getEarnFees(vid);
+        uint gasBefore = gasleft();
+        if (_earn(vid, fees)) return gasBefore - gasleft();
     }
 
-    function earn(uint256[] calldata vids) external nonReentrant {
+    //For front-end and general purpose external compounding. Returned amounts are zero on failure, or the gas cost on success
+    function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
+        successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
             VaultInfo storage vault = vaultInfo[vid];
-            bool active = vault.active;
-            uint lastEarnBlock = vault.lastEarnBlock;
-            if (active && lastEarnBlock != block.number) _earn(vid, fees[i]);
+            if (vault.active && vault.lastEarnBlock != block.number) {
+                uint gasBefore = gasleft();
+                if (_earn(vid, fees[i])) successGas[i] = gasBefore - gasleft();
+            }
         }
     }
 
@@ -39,32 +44,36 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _earn(vid, vaultFeeManager.getEarnFees(vid));
     }
 
-    function _earn(uint256 vid, Fee.Data[3] memory fees) internal {
+    function _earn(uint256 vid, Fee.Data[3] memory fees) internal returns (bool) {
+        vaultInfo[vid].lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
+                return true;
             }
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
         }
+        return false;
     }
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
-    function maximizerDeposit(uint _vid, uint _wantAmt) external whenNotPaused(_vid) {
-        require(address(strat(_vid)) == _msgSender(), "VH: sender does not match vid");
+    function maximizerDeposit(uint _vid, uint _wantAmt) external payable whenNotPaused(_vid) {
+        address sender = _msgSender();
+        require(address(strat(_vid)) == sender, "VH: sender does not match vid");
         //totalMaximizerEarningsOffset[_vid] += 
-        _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
+        _deposit(_vid >> 16, _wantAmt, sender, sender);
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external whenNotPaused(_vid) nonReentrant {
+    function deposit(uint256 _vid, uint256 _wantAmt) external payable whenNotPaused(_vid) nonReentrant {
         _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external whenNotPaused(_vid) nonReentrant {
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external payable whenNotPaused(_vid) nonReentrant {
         _deposit(_vid, _wantAmt, _msgSender(), _to);
     }
 
@@ -73,19 +82,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
-        pendingDeposits[address(strat(_vid))] = PendingDeposit({
+        IStrategy vaultStrat = strat(_vid);
+
+        if (_wantAmt > 0) pendingDeposits[address(vaultStrat)] = PendingDeposit({
             token: vault.want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
             amount1: uint96(_wantAmt)
         });
         
-        IStrategy vaultStrat = strat(_vid);
         uint256 totalSupplyBefore = totalSupply(_vid);
 
         // we make the deposit
         uint256 wantAdded;
-        (wantAdded, vidSharesAdded) = vaultStrat.deposit(_wantAmt, totalSupply(_vid));
+        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupplyBefore);
 
         // if this is a maximizer vault, do these extra steps
         if (_vid > 2**16 && totalSupplyBefore > 0)
@@ -169,15 +179,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
     
     //called by strategy, cannot be nonReentrant
-    function executePendingDeposit(address _to, uint112 _amount) external {
+    function executePendingDeposit(address _to, uint192 _amount) external {
         IERC20 token = pendingDeposits[msg.sender].token;
-        console.log("xpd: ", address(token));
         uint amount0 = pendingDeposits[msg.sender].amount0;
         address from = pendingDeposits[msg.sender].from;
-        console.log("from: ", from);
         uint amount1 = pendingDeposits[msg.sender].amount1;
-        console.log("amount: ", amount0 << 96 | amount1);
-        console.log("balance: ", token.balanceOf(from));
         require(_amount <= amount0 << 96 | amount1, "VH: strategy requesting more tokens than authorized");
         delete pendingDeposits[msg.sender];
 
@@ -216,13 +222,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
         uint256 targetVid = _vid >> 16;
 
+        uint totalOffset = totalMaximizerEarningsOffset[_vid];
+
         //calculate the offset for this particular deposit
-        uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(strat(_vid)), targetVid) + totalMaximizerEarningsOffset[_vid]; //balanceOf is looking at shares (1155) owned by the strat at _vid
-        uint112 targetVidTokenOffset = uint112(_vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply(_vid)); //but this is a token offset, not a shares offset?
+        uint256 targetVidSharesOwnedByMaxiBefore = balanceOf(address(strat(_vid)), targetVid) + totalOffset; //balanceOf is looking at shares (1155) owned by the strat at _vid
+        uint256 targetVidTokenOffset = _vidSharesAdded * targetVidSharesOwnedByMaxiBefore / totalSupply(_vid);
 
         // increment the offsets for user and for vid
         maximizerEarningsOffset[_from][_vid] += targetVidTokenOffset;
-        totalMaximizerEarningsOffset[_vid] += targetVidTokenOffset; 
+        totalMaximizerEarningsOffset[_vid] = totalOffset + targetVidTokenOffset; 
 
     }
 
@@ -242,11 +250,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // calculate the amount of targetVid token to be withdrawn
         uint256 targetVidShares = _vidSharesRemoved * (balanceOf(vaultStrat, targetVid) + totalOffset) / totalSupply(_vid) 
             - fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
-        
-        if (targetVidShares == 0) return;
-        uint targetWantLocked = strat(targetVid).wantLockedTotal();
-        if (targetWantLocked == 0) return;
-        uint256 targetVidAmount = targetVidShares * targetWantLocked / targetTotalSupply;
+
+        uint256 targetVidAmount = targetVidShares * strat(targetVid).wantLockedTotal() / targetTotalSupply;
         if (targetVidAmount == 0) return;
 
         // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
@@ -256,7 +261,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint removedPortionOfOffset = fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
 
         // update the offsets for user and for vid
-        totalMaximizerEarningsOffset[_vid] -= removedPortionOfOffset;
-        maximizerEarningsOffset[_from][_vid] -= removedPortionOfOffset;
+        totalMaximizerEarningsOffset[_vid] = totalOffset - removedPortionOfOffset;
+        maximizerEarningsOffset[_from][_vid] = fromOffset - removedPortionOfOffset;
+
+        emit MaximizerWithdraw(_from, _vid, targetVidShares);
     }
 }

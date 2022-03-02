@@ -64,17 +64,29 @@ contract Strategy is BaseStrategy {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
 
-        if (_wantAmt < dust) return (0, 0); //do nothing if nothing is requested
+        if (msg.value > 0) {
+            IWETH weth = config.router().WETH();
+            weth.deposit{value: msg.value}();
+            if (config.isPairStake()) {
+                require(!config.isMaximizer(), "pairstake issue"); //todo: fix this and remove this require
+                (IERC20 token0, IERC20 token1) = config.token0And1();
+                safeSwap(msg.value / 2, weth, token0, address(this));
+                safeSwap(msg.value / 2, weth, token1, address(this));
+                LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
+            } else {
+                safeSwap(msg.value, weth, _wantToken, address(this));
+            }
+        } else if (_wantAmt < dust) return (0, 0); //do nothing if nothing is requested
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
-        IVaultHealer(msg.sender).executePendingDeposit(address(this), uint112(_wantAmt));
+        if (_wantAmt > 0) IVaultHealer(msg.sender).executePendingDeposit(address(this), uint192(_wantAmt));
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
 
