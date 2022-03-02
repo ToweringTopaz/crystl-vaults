@@ -20,35 +20,39 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
-    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) {
-        if (vaultInfo[vid].lastEarnBlock != block.number) _earn(vid, vaultFeeManager.getEarnFees(vid));
+    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) returns (bool success) {
+        if (vaultInfo[vid].lastEarnBlock == block.number) return false;
+        return _earn(vid, vaultFeeManager.getEarnFees(vid));
     }
 
-    function earn(uint256[] calldata vids) external nonReentrant {
+    function earn(uint256[] calldata vids) external nonReentrant returns (bool[] memory success) {
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
+        success = new bool[](vids.length);
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
             VaultInfo storage vault = vaultInfo[vid];
             bool active = vault.active;
             uint lastEarnBlock = vault.lastEarnBlock;
-            if (active && lastEarnBlock != block.number) _earn(vid, fees[i]);
+            if (active && lastEarnBlock != block.number) success[i] = _earn(vid, fees[i]);
         }
     }
 
-    function _earn(uint256 vid) internal {
+    function _earn(uint256 vid) internal returns (bool success) {
         _earn(vid, vaultFeeManager.getEarnFees(vid));
     }
 
-    function _earn(uint256 vid, Fee.Data[3] memory fees) internal {
+    function _earn(uint256 vid, Fee.Data[3] memory fees) internal returns (bool) {
         try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
+                return true;
             }
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
         }
+        return false;
     }
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
@@ -258,5 +262,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // update the offsets for user and for vid
         totalMaximizerEarningsOffset[_vid] -= removedPortionOfOffset;
         maximizerEarningsOffset[_from][_vid] -= removedPortionOfOffset;
+
+        emit MaximizerWithdraw(_from, _vid, targetVidShares);
     }
 }

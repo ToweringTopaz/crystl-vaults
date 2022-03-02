@@ -24,6 +24,7 @@ interface IVaultHealer is IAccessControl {
     event FailedEarnBytes(uint vid, bytes reason);
     event FailedWithdrawFee(uint vid, string reason);
     event FailedWithdrawFeeBytes(uint vid, bytes reason);
+    event MaximizerWithdraw(address indexed account, uint indexed vid, uint targetShares);
     //function vaultInfo(uint vid) external view returns (IERC20 want, IStrategy _strat);
     //function stratDeposit(uint256 _vid, uint256 _wantAmt) external;
     //function stratWithdraw(uint256 _vid, uint256 _wantAmt) external;
@@ -31,10 +32,10 @@ interface IVaultHealer is IAccessControl {
     //function findVid(address) external view returns (uint32);
     function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external;
     function withdraw(uint256 _vid, uint256 _wantAmt) external;
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external;
-    function deposit(uint256 _vid, uint256 _wantAmt) external;
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external payable;
+    function deposit(uint256 _vid, uint256 _wantAmt) external payable;
     function strat(uint256 _vid) external view returns (IStrategy);
-    function maximizerDeposit(uint256 _vid, uint256 _wantAmt) external;
+    function maximizerDeposit(uint256 _vid, uint256 _wantAmt) external payable;
     struct VaultInfo {
         IERC20 want;
         uint8 noAutoEarn;
