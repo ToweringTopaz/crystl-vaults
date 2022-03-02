@@ -256,11 +256,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // calculate the amount of targetVid token to be withdrawn
         uint256 targetVidShares = _vidSharesRemoved * (balanceOf(vaultStrat, targetVid) + totalOffset) / totalSupply(_vid) 
             - fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
-        
-        if (targetVidShares == 0) return;
-        uint targetWantLocked = strat(targetVid).wantLockedTotal();
-        if (targetWantLocked == 0) return;
-        uint256 targetVidAmount = targetVidShares * targetWantLocked / targetTotalSupply;
+
+        uint256 targetVidAmount = targetVidShares * strat(targetVid).wantLockedTotal() / targetTotalSupply;
         if (targetVidAmount == 0) return;
 
         // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
