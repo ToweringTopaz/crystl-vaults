@@ -20,28 +20,36 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
-    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) returns (bool success) {
-        if (vaultInfo[vid].lastEarnBlock == block.number) return false;
-        return _earn(vid, vaultFeeManager.getEarnFees(vid));
+    //For front-end and general purpose external compounding. Returned amount is zero on failure, or the gas cost on success
+    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) returns (uint successGas) {
+        if (vaultInfo[vid].lastEarnBlock == block.number) return 0;
+        Fee.Data[3] memory fees = vaultFeeManager.getEarnFees(vid);
+
+        uint gasBefore = gasleft();
+        if (_earn(vid, fees)) return gasBefore - gasleft();
+        else return 0;
     }
 
-    function earn(uint256[] calldata vids) external nonReentrant returns (bool[] memory success) {
+    //For front-end and general purpose external compounding. Returned amounts are zero on failure, or the gas cost on success
+    function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
-        success = new bool[](vids.length);
+        successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
             uint vid = vids[i];
             VaultInfo storage vault = vaultInfo[vid];
-            bool active = vault.active;
-            uint lastEarnBlock = vault.lastEarnBlock;
-            if (active && lastEarnBlock != block.number) success[i] = _earn(vid, fees[i]);
+            if (vault.active && vault.lastEarnBlock != block.number) {
+                uint gasBefore = gasleft();
+                if (_earn(vid, fees[i])) successGas[i] = gasBefore - gasleft();
+            }
         }
     }
 
-    function _earn(uint256 vid) internal returns (bool success) {
+    function _earn(uint256 vid) internal {
         _earn(vid, vaultFeeManager.getEarnFees(vid));
     }
 
     function _earn(uint256 vid, Fee.Data[3] memory fees) internal returns (bool) {
+        vaultInfo[vid].lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
@@ -57,9 +65,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
     function maximizerDeposit(uint _vid, uint _wantAmt) external payable whenNotPaused(_vid) {
-        require(address(strat(_vid)) == _msgSender(), "VH: sender does not match vid");
+        address sender = _msgSender();
+        require(address(strat(_vid)) == sender, "VH: sender does not match vid");
         //totalMaximizerEarningsOffset[_vid] += 
-        _deposit(_vid >> 16, _wantAmt, _msgSender(), _msgSender());
+        _deposit(_vid >> 16, _wantAmt, sender, sender);
     }
 
     // Want tokens moved from user -> this -> Strat (compounding)
@@ -77,19 +86,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
 
-        if (_wantAmt > 0) pendingDeposits[address(strat(_vid))] = PendingDeposit({
+        IStrategy vaultStrat = strat(_vid);
+
+        if (_wantAmt > 0) pendingDeposits[address(vaultStrat)] = PendingDeposit({
             token: vault.want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
             amount1: uint96(_wantAmt)
         });
         
-        IStrategy vaultStrat = strat(_vid);
         uint256 totalSupplyBefore = totalSupply(_vid);
 
         // we make the deposit
         uint256 wantAdded;
-        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupply(_vid));
+        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupplyBefore);
 
         // if this is a maximizer vault, do these extra steps
         if (_vid > 2**16 && totalSupplyBefore > 0)
