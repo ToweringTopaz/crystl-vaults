@@ -90,7 +90,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			240, //slippageFactor
 			false, //feeOnTransfer
 			dfynVaults[0]['earned'],
-			[0], //earnedDust
+			[0, 0], //earnedDust
 			0 //targetVid - is this always 0?
 		);
         console.log("generateConfig called successfully");
@@ -167,7 +167,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			240, //slippageFactor
 			false, //feeOnTransfer
 			dfynVaults[0]['earned'],
-			[0], //earnedDust
+			[0, 0], //earnedDust
 			crystl_compounder_strat_pid
 		)
 		console.log("maxi config generated");
@@ -232,58 +232,62 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //create a router to swap into the underlying tokens for the LP and then add liquidity
         LPandEarnRouter = await ethers.getContractAt(IUniRouter02_abi, LP_AND_EARN_ROUTER);
 
-        if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        WNATIVE = await LPandEarnRouter.WETH();
+        if (ethers.utils.getAddress(TOKEN0ADDRESS) == ethers.utils.getAddress(WNATIVE) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.swapExactETHForTokens(0, [WNATIVE, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
-        console.log("first swap done")
-        if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
+
+        console.log("token0 swap done");
+        console.log(TOKEN1ADDRESS);
+
+        if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.swapExactETHForTokens(0, [WNATIVE, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
         console.log("second swap done")
 
-        if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        if (TOKEN0ADDRESS == ethers.utils.getAddress(WNATIVE) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WNATIVE, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
-        if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
+        if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WNATIVE, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
 
-        if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        if (TOKEN0ADDRESS == ethers.utils.getAddress(WNATIVE) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WNATIVE, TOKEN0ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
-        if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
+        if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WNATIVE, TOKEN1ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
 
-        if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+        if (TOKEN0ADDRESS == ethers.utils.getAddress(WNATIVE) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WNATIVE, TOKEN0ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
-        if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
+        if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("1000") });
         } else {
-            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WNATIVE, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
         }
 
         await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
@@ -382,13 +386,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             var token1BalanceBeforeZapOut;
             var token1BalanceAfterZapOut;
 
-            if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            if (TOKEN0ADDRESS == ethers.utils.getAddress(WNATIVE) ){
                 token0BalanceBeforeZapOut = await ethers.provider.getBalance(user4.address);
             } else {
                 token0BalanceBeforeZapOut = await token0.balanceOf(user4.address); 
             }
 
-            if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE) ){
                 token1BalanceBeforeZapOut = await ethers.provider.getBalance(user4.address);
             } else {
                 token1BalanceBeforeZapOut = await token1.balanceOf(user4.address); 
@@ -396,13 +400,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             await quartzUniV2Zap.connect(user4).quartzOut(maximizer_strat_pid, vaultSharesTotalBeforeZapOut); 
                         
-            if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            if (TOKEN0ADDRESS == ethers.utils.getAddress(WNATIVE) ){
                 token0BalanceAfterZapOut = await ethers.provider.getBalance(user4.address);
             } else {
                 token0BalanceAfterZapOut = await token0.balanceOf(user4.address); 
             }
 
-            if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE) ){
                 token1BalanceAfterZapOut = await ethers.provider.getBalance(user4.address);
             } else {
                 token1BalanceAfterZapOut = await token1.balanceOf(user4.address); 
@@ -417,7 +421,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should leave user with positive balance of token0', async () => {
             var token0Balance;
 
-            if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            if (TOKEN0ADDRESS == ethers.utils.getAddress(WNATIVE) ){
                 token0Balance = await ethers.provider.getBalance(user4.address);
             } else {
                 token0Balance = await token0.balanceOf(user4.address); 
@@ -430,7 +434,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should leave user with positive balance of token1', async () => {
             var token1Balance;
 
-            if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC) ){
+            if (TOKEN1ADDRESS == ethers.utils.getAddress(WNATIVE) ){
                 token1Balance = await ethers.provider.getBalance(user4.address);
             } else {
                 token1Balance = await token1.balanceOf(user4.address); 
@@ -455,7 +459,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
             user1InitialDeposit = await LPtoken.balanceOf(user1.address) //ethers.utils.parseEther("100");
 			
-            // await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            // await LPandEarnRouter.swapExactETHForTokens(0, [WNATIVE, CRYSTL], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
 			// token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
             // await crystlToken.approve(vaultHealer.address, user1InitialDeposit);
             
@@ -485,8 +489,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const vaultSharesTotalBeforeCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`We start with ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarn)} crystl tokens in the crystl compounder`)
             console.log(`We let 100 blocks pass, and then call earn...`)
-
-            maticToken = await ethers.getContractAt(token_abi, WMATIC);
 
             balanceMaticAtFeeAddressBeforeEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
 
@@ -628,8 +630,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const vaultSharesTotalBeforeCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`We start with ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarnSome)} crystl tokens in the crystl compounder`)
             console.log(`We let 100 blocks pass, and then call earn...`)
-
-            maticToken = await ethers.getContractAt(token_abi, WMATIC);
 
             balanceMaticAtFeeAddressBeforeEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
 
@@ -837,8 +837,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const vaultSharesTotalBeforeCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`We start with ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarnSome)} crystl tokens in the crystl compounder`)
             console.log(`We let 100 blocks pass, and then call earn...`)
-
-            maticToken = await ethers.getContractAt(token_abi, WMATIC);
 
             balanceMaticAtFeeAddressBeforeEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
 

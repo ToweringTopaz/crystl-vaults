@@ -1,5 +1,5 @@
 const { accounts, tokens, masterChefs, lps, routers } = require('./addresses.js');
-const {  WMATIC, DFYN  } = tokens.polygon;
+const {  DFYN_WMATIC, DFYN  } = tokens.polygon;
 
 const dfynVaults = [
     {
@@ -8,7 +8,7 @@ const dfynVaults = [
         masterchef: masterChefs.polygon.DFYN_STAKING_DFYN_WMATIC, // Masterchef
         router: routers.polygon.DFYN_ROUTER,
         PID: 999,
-        earned: [ DFYN, WMATIC ]
+        earned: [ DFYN, DFYN_WMATIC ]
     }
 ]
 
