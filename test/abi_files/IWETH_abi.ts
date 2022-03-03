@@ -1,4 +1,4 @@
-IWETH_abi = [
+export const IWETH_abi = [
     {
       "inputs": [],
       "name": "deposit",
@@ -44,7 +44,3 @@ IWETH_abi = [
       "type": "function"
     }
   ]
-
-  module.exports = {
-      IWETH_abi
-  }

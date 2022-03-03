@@ -1,4 +1,5 @@
-import hre, { ethers } from "hardhat";
+import hre from "hardhat";
+const { ethers } = require("hardhat");
 import { ERC20 } from "../typechain";
 
 
@@ -69,4 +70,19 @@ export async function setTokenBalanceInStorage(token: ERC20, account: string, am
           .padStart(64, "0"),
     );
   }
+}
+
+export const advanceBlock = async () => {
+  return await ethers.provider.send("evm_mine", [])
+}
+
+export const advanceBlockTo = async (blockNumber: number) => {
+  for (let i = await ethers.provider.getBlockNumber(); i < blockNumber; i++) {
+    await advanceBlock()
+  }
+}
+
+export const advanceBlockNumber = async (blockNumber: number) => {
+  for (let i = 0; i < blockNumber; i++) 
+    await advanceBlock()
 }

@@ -1,4 +1,4 @@
-const token_abi = [
+export const token_abi = [
     {
         "constant": true,
         "inputs": [],
@@ -220,7 +220,3 @@ const token_abi = [
         "type": "event"
     }
 ]
-
-module.exports = {
-    token_abi
-}

@@ -1,4 +1,4 @@
-const IUniRouter02_abi = [
+export const IUniRouter02_abi = [
     {
       "inputs": [],
       "name": "WETH",
@@ -951,6 +951,3 @@ const IUniRouter02_abi = [
       "type": "function"
     }
   ]
-  module.exports = {
-    IUniRouter02_abi
-  }

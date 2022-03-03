@@ -1,4 +1,4 @@
-const accounts = {
+export const accounts = {
         polygon: {
                 ADMIN_ADDRESS: "0xCE34Ccb6481fdc85953fd870343b24816A325351",
                 FEE_ADDRESS: "0x5386881b46C37CdD30A748f7771CF95D7B213637",
@@ -10,7 +10,7 @@ const accounts = {
         }
 }
  
-const tokens = {
+export const tokens = {
         polygon: {
                 CRYSTL: '0x76bf0c28e604cc3fe9967c83b3c3f31c213cfe64',
                 WMATIC: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
@@ -36,7 +36,7 @@ const tokens = {
         }
 }
  
- const masterChefs = {
+export const masterChefs = {
          polygon: {
                 BARBER_MASTERCHEF: '0xC6Ae34172bB4fC40c49C3f53badEbcE3Bb8E6430',
                 DINOSWAP_MASTERCHEF: '0x1948abc5400aa1d72223882958da3bec643fb4e5',
@@ -51,7 +51,7 @@ const tokens = {
          }
 }
 
-const lps = {
+export const lps = {
         polygon: {
                 HAIR_USDC_APE_LP: '0xb394009787c2d0cb5b45d06e401a39648e21d681', // pid: 8
                 MATIC_SING_APE_LP: '0x854d3639f38f65c091664062230091858955ddc2', // barber pid: 10
@@ -71,7 +71,7 @@ const lps = {
         }
 }
 
-const routers = {
+export const routers = {
         polygon: {
                 SUSHISWAP_ROUTER: '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506',
                 APESWAP_ROUTER: '0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607',
@@ -81,7 +81,7 @@ const routers = {
         }
 }
 
-const tactics = {
+export const tactics = {
         polygon: {
                 TACTIC_MASTERHEALER: '0xEF402F090975700830635D28B9a6829bfBBdcfa8', //updated this one
                 TACTIC_MASTERHEALER_REFERRAL: '0xAfdA790471f2c26cEf82568E22a0feACfA031cD3', //possibly out of date
@@ -89,12 +89,4 @@ const tactics = {
         }
 }
 
-module.exports = {
-        accounts,
-        tokens,
-        masterChefs,
-        lps,
-        routers,
-        tactics
-}
 
