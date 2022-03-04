@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPLv2
 pragma solidity ^0.8.9;
 
+import "../interfaces/IWETH.sol";
+
 library Fee {
     using Fee for Data;
 
@@ -22,6 +24,55 @@ library Fee {
         return Data.wrap((uint256(uint160(_receiver)) << 16) | _rate);
     }
 
+    function totalRate(Data[3] calldata _fees) internal pure returns (uint16 total) {
+        unchecked { //overflow is impossible if Fee.Data are valid
+            total = uint16(Data.unwrap(_fees[0]) + Data.unwrap(_fees[1]) + Data.unwrap(_fees[2]));
+            require(total <= FEE_MAX, "Max total fee of 30%");
+        }
+    }
+    function check(Data[3] memory _fees, uint maxTotal) internal pure returns (uint16 total) {
+        unchecked { //overflow is impossible if Fee.Data are valid
+            total = uint16(Data.unwrap(_fees[0]) + Data.unwrap(_fees[1]) + Data.unwrap(_fees[2]));
+            require(total <= maxTotal, "Max total fee exceeded");
+        }
+    }
+
+    //Use this if ethAmt is all fees
+    function payEthAll(Data[3] calldata _fees, uint _ethAmt) internal {
+        uint feeTotalRate = totalRate(_fees);
+        for (uint i; i < 3; i++) {
+            (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
+            if (_receiver == address(0) || _rate == 0) break;
+            (bool success,) = _receiver.call{value: _ethAmt * _rate / feeTotalRate, gas: 0x40000}("");
+            require(success, "Fee: Transfer failed");
+        }
+    }
+    //Use this if ethAmt includes both fee and non-fee portions
+    function payEthPortion(Data[3] calldata _fees, uint _ethAmt) internal returns (uint ethAfter) {
+        ethAfter = _ethAmt;
+        for (uint i; i < 3; i++) {
+            (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
+            if (_receiver == address(0) || _rate == 0) break;
+            uint amount = _ethAmt * _rate / 10000;
+            (bool success,) = _receiver.call{value: amount, gas: 0x40000}("");
+            require(success, "Fee: Transfer failed");
+            ethAfter -= amount;
+        }
+    }
+    function payWethPortion(Data[3] calldata _fees, IWETH weth, uint _wethAmt) internal returns (uint wethAfter) {
+        uint feeTotalRate = totalRate(_fees);
+        uint feeTotalAmt = feeTotalRate * _wethAmt / 10000;
+        weth.withdraw(feeTotalAmt);
+        for (uint i; i < 3; i++) {
+            (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
+            if (_receiver == address(0) || _rate == 0) break;
+            uint amount = _wethAmt * _rate / 10000;
+            (bool success,) = _receiver.call{value: amount, gas: 0x40000}("");
+            require(success, "Fee: Transfer failed");
+        }
+        return _wethAmt - feeTotalAmt;
+    }
+
     function set(Data[3] storage _fees, address[3] memory _receivers, uint16[3] memory _rates) internal {
 
         uint feeTotal;
@@ -33,23 +84,14 @@ library Fee {
             uint256 _fee = uint256(uint160(_receiver)) << 16 | _rate;
             _fees[i] = Data.wrap(_fee);
         }
-        require(feeTotal <= FEE_MAX, "Max total fee of 30%");
-    }
-    function check(Data[3] memory _fees) internal pure { 
-        uint totalRate;
-        for (uint i; i < 3; i++) {
-            (address _receiver, uint _rate) = _fees[i].receiverAndRate();
-            require(_receiver != address(0) || _rate == 0, "Invalid treasury address");
-            totalRate += _rate;
-        }
-        require(totalRate <= FEE_MAX, "Max total fee of 30%");
+        require(feeTotal <= 3000, "Max total fee of 30%");
     }
 
-    function check(Data _fee) internal pure { 
+    function check(Data _fee, uint maxRate) internal pure { 
         (address _receiver, uint _rate) = _fee.receiverAndRate();
         if (_rate > 0) {
             require(_receiver != address(0), "Invalid treasury address");
-            require(_rate <= FEE_MAX, "Max fee of 30%");
+            require(_rate <= maxRate, "Max withdraw fee exceeded");
         }
     }
 

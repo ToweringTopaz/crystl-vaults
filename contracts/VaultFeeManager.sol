@@ -34,8 +34,8 @@ contract VaultFeeManager is IVaultFeeManager {
 
         defaultEarnFees.set(earnReceivers, earnRates);
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
-        Fee.check(defaultEarnFees);
-        Fee.check(defaultWithdrawFee);
+        Fee.check(defaultEarnFees, 3000);
+        Fee.check(defaultWithdrawFee, 300);
         emit SetDefaultEarnFees(defaultEarnFees);
         emit SetDefaultWithdrawFee(defaultWithdrawFee);
     }
@@ -81,8 +81,8 @@ contract VaultFeeManager is IVaultFeeManager {
 
      function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) external auth {
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
-        Fee.check(defaultEarnFees);
-        Fee.check(defaultWithdrawFee);
+        Fee.check(defaultEarnFees, 3000);
+        Fee.check(defaultWithdrawFee, 300);
         emit SetDefaultEarnFees(defaultEarnFees);
         emit SetDefaultWithdrawFee(defaultWithdrawFee);
     }   

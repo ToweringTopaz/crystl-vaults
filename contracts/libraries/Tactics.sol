@@ -45,7 +45,7 @@ library Tactics {
     type TacticsB is uint256;
 
     function generateTactics(
-        address masterchef,
+        address _masterchef,
         uint24 pid, 
         uint8 vstReturnPosition, 
         uint64 vstCode, //includes selector and encoded call format
@@ -55,19 +55,22 @@ library Tactics {
         uint64 emergencyCode//includes selector and encoded call format
     ) external pure returns (TacticsA tacticsA, TacticsB tacticsB) {
         assembly {
-            tacticsA := or(or(shl(96, masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
+            tacticsA := or(or(shl(96, _masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
             tacticsB := or(or(shl(192, depositCode), shl(128, withdrawCode)), or(shl(64, harvestCode), emergencyCode))
         }
     }
 
+    function masterchef(TacticsA tacticsA) internal pure returns (address) {
+        return address(uint160(TacticsA.unwrap(tacticsA) >> 96));
+    }  
+
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
         uint returnvarPosition = (TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
-        bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
+        bytes memory data = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
 
-        address masterchef = address(uint160(TacticsA.unwrap(tacticsA) >> 96));
-        bytes memory returndata = masterchef.functionStaticCall(generatedCall, "Tactics: staticcall failed");
+        data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
         assembly {
-            amountStaked := mload(add(returndata, add(0x20,returnvarPosition)))
+            amountStaked := mload(add(data, add(0x20,returnvarPosition)))
         }
     }
 
@@ -85,8 +88,7 @@ library Tactics {
     }
     function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
         bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsB.unwrap(tacticsB) >> offset), amount);
-        address masterchef = address(uint160(TacticsA.unwrap(tacticsA) >> 96));
-        masterchef.functionCall(generatedCall, "Tactics: call failed");
+        masterchef(tacticsA).functionCall(generatedCall, "Tactics: call failed");
         
     }
 
