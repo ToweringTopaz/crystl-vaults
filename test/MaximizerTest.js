@@ -776,6 +776,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit 1500 LP tokens from user into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user3.address);
+			
+			await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid); //call earn so there's not a large amount added from compounding
+			
             user3InitialDeposit = ethers.utils.parseEther("15");
             const vaultSharesTotalBeforeUser3FirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser3FirstDeposit)} LP tokens before user 3 deposits`)
@@ -829,7 +832,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             expect(user4FinalCrystlShares.sub(user4InitialCrystlShares)).to.equal((totalCrystlVaultSharesAfter.sub(totalCrystlVaultSharesBefore)))
-            expect(user4FinalCrystlBalance.sub(user4InitialCrystlBalance)).to.be.closeTo(wantLockedTotalBeforeUser4FirstDeposit.sub(wantLockedTotalAfterUser4FirstDeposit), 1000000000000);
+			console.log("user4InitialCrystlBalance", ethers.utils.formatEther(user4InitialCrystlBalance))
+			console.log("user4FinalCrystlBalance", ethers.utils.formatEther(user4FinalCrystlBalance))
+			console.log("wantLockedTotalBeforeUser4FirstDeposit", ethers.utils.formatEther(wantLockedTotalBeforeUser4FirstDeposit))
+			console.log("wantLockedTotalAfterUser4FirstDeposit", ethers.utils.formatEther(wantLockedTotalAfterUser4FirstDeposit))
+            expect(user4InitialCrystlBalance.sub(user4FinalCrystlBalance)).to.be.closeTo(wantLockedTotalAfterUser4FirstDeposit.sub(wantLockedTotalBeforeUser4FirstDeposit), 1000000000000);
         })
 
         // Compound LPs (Call the earnSome function with this specific farm’s maximizer_strat_pid).
