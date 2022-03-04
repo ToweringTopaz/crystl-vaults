@@ -19,7 +19,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     mapping(address => PendingDeposit) private pendingDeposits;
 
     //For front-end and general purpose external compounding. Returned amount is zero on failure, or the gas cost on success
-    function earn(uint256 vid) external nonReentrant whenNotPaused(vid) returns (uint successGas) {
+    function earn(uint256 vid) external nonReentrant returns (uint successGas) {
         if (vaultInfo[vid].lastEarnBlock == block.number) return 0;
         Fee.Data[3] memory fees = vaultFeeManager.getEarnFees(vid);
         uint gasBefore = gasleft();
@@ -31,12 +31,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
-            uint vid = vids[i];
-            VaultInfo storage vault = vaultInfo[vid];
-            if (vault.active && vault.lastEarnBlock != block.number) {
-                uint gasBefore = gasleft();
-                if (_earn(vid, fees[i])) successGas[i] = gasBefore - gasleft();
-            }
+            uint gasBefore = gasleft();
+            if (_earn(vids[i], fees[i])) successGas[i] = gasBefore - gasleft();
         }
     }
 
@@ -45,7 +41,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _earn(uint256 vid, Fee.Data[3] memory fees) internal returns (bool) {
-        vaultInfo[vid].lastEarnBlock = uint48(block.number);
+        console.log("earn blocknum", block.number);
+        VaultInfo storage vault = vaultInfo[vid];
+        if (!vault.active || vault.lastEarnBlock == block.number) return false;
+
+        vault.lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
@@ -78,6 +78,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private returns (uint256 vidSharesAdded) {
+        console.log("deposit blocknum", block.number);
         VaultInfo memory vault = vaultInfo[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
