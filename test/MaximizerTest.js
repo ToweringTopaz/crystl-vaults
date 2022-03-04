@@ -836,7 +836,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			console.log("user4FinalCrystlBalance", ethers.utils.formatEther(user4FinalCrystlBalance))
 			console.log("wantLockedTotalBeforeUser4FirstDeposit", ethers.utils.formatEther(wantLockedTotalBeforeUser4FirstDeposit))
 			console.log("wantLockedTotalAfterUser4FirstDeposit", ethers.utils.formatEther(wantLockedTotalAfterUser4FirstDeposit))
-            expect(user4InitialCrystlBalance.sub(user4FinalCrystlBalance)).to.be.closeTo(wantLockedTotalAfterUser4FirstDeposit.sub(wantLockedTotalBeforeUser4FirstDeposit), 1000000000000);
+            expect(user4InitialCrystlBalance.sub(user4FinalCrystlBalance)).to.be.closeTo(wantLockedTotalAfterUser4FirstDeposit.sub(wantLockedTotalBeforeUser4FirstDeposit), 10000000000000);
         })
 
         // Compound LPs (Call the earnSome function with this specific farm’s maximizer_strat_pid).
