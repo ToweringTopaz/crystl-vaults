@@ -369,7 +369,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //user zaps in their whole balance of token_other
         it('Should zap a token that is neither token0 nor token1 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
             // assume(TOKEN_OTHER != TOKEN0 && TOKEN_OTHER != TOKEN1);
-            user4TokenOtherDepositAmount = ethers.utils.parseUnits("1000", "mwei"); //USDC is 6 decimals
+            user4TokenOtherDepositAmount = ethers.utils.parseUnits("100", "mwei"); //USDC is 6 decimals
 
             await tokenOther.connect(user4).approve(quartzUniV2Zap.address, user4TokenOtherDepositAmount);
             
@@ -543,9 +543,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`After calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarn)} CRYSTL tokens in it`)
             // console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
 
-            const differenceInVaultSharesTotal = vaultSharesTotalInCrystalCompounderAfterCallingEarn.sub(vaultSharesTotalBeforeCallingEarn);
-
-            expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
+            expect(vaultSharesTotalInCrystalCompounderAfterCallingEarn).to.be.gt(vaultSharesTotalBeforeCallingEarn); //.toNumber()
         }) 
         
         // Unstake 50% of LPs. 
@@ -653,9 +651,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             vaultSharesTotalAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`After the earn call we have ${ethers.utils.formatEther(vaultSharesTotalAfterCallingEarnSome)} crystl tokens in the crystl compounder`)
 
-            const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
-
-            expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
+            expect(vaultSharesTotalAfterCallingEarnSome).to.be.gt(vaultSharesTotalBeforeCallingEarnSome); //.toNumber()
         }) 
 
         it('Should pay 5% of earnedAmt to the feeAddress with each earn, in WMATIC', async () => {
@@ -687,9 +683,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`After calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarnSome)} CRYSTL tokens in it`)
             const wantLockedTotalAfterCallingEarnSome = await strategyCrystlCompounder.wantLockedTotal() //.connect(vaultHealerOwnerSigner)
 
-            const differenceInVaultSharesTotal = vaultSharesTotalInCrystalCompounderAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
-
-            expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
+            expect(vaultSharesTotalInCrystalCompounderAfterCallingEarnSome).to.be.gt(vaultSharesTotalBeforeCallingEarnSome); //.toNumber()
         }) 
         
         // Unstake 50% of LPs. 
@@ -862,9 +856,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             vaultSharesTotalAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`After the earn call we have ${ethers.utils.formatEther(vaultSharesTotalAfterCallingEarnSome)} crystl tokens in the crystl compounder`)
 
-            const differenceInVaultSharesTotal = vaultSharesTotalAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
-
-            expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
+            expect(vaultSharesTotalAfterCallingEarnSome).to.be.gt(vaultSharesTotalBeforeCallingEarnSome); //.toNumber()
         }) 
 
         it('Should pay 5% of earnedAmt to the feeAddress with each earn, in WMATIC', async () => {
@@ -896,9 +888,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`After calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarnSome)} CRYSTL tokens in it`)
             const wantLockedTotalAfterCallingEarnSome = await strategyCrystlCompounder.wantLockedTotal() //.connect(vaultHealerOwnerSigner)
 
-            const differenceInVaultSharesTotal = vaultSharesTotalInCrystalCompounderAfterCallingEarnSome.sub(vaultSharesTotalBeforeCallingEarnSome);
-
-            expect(differenceInVaultSharesTotal).to.be.gt(0); //.toNumber()
+            expect(vaultSharesTotalInCrystalCompounderAfterCallingEarnSome).to.be.gt(vaultSharesTotalBeforeCallingEarnSome); //.toNumber()
         }) 
         
         // Unstake 50% of LPs. 
