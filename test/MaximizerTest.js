@@ -292,8 +292,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") })
         }
 
-        await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") })
-
+        await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") }) //USDC 6 decimals
+        await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, CRYSTL], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") })
 
         //create instances of token0 and token1
         token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
@@ -375,7 +375,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             
             const vaultSharesTotalBeforeThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, TOKEN_OTHER, user4TokenOtherDepositAmount); //To Do - change min in amount from 0
+            await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, tokenOther.address, user4TokenOtherDepositAmount); //To Do - change min in amount from 0
             
             const vaultSharesTotalAfterThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
