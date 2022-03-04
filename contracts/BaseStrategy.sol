@@ -11,6 +11,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     using StrategyConfig for StrategyConfig.MemPointer;
 
 
+
     uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
     address public immutable vaultHealer;
@@ -64,9 +65,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 		_getConfig();
 		(IERC20 _wantToken,) = config.wantToken();
 		_wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
-		IERC20 _targetWant = config.targetWant();
 
-		if (_wantToken != _targetWant) _targetWant.safeIncreaseAllowance(msg.sender, type(uint256).max);
     }
 
     //should only happen when this contract deposits as a maximizer
@@ -151,80 +150,40 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         return;
     }
 
-    function distribute(Fee.Data[3] calldata fees, IERC20 _earnedToken, uint256 _earnedAmt) internal returns (uint earnedAmt) {
-
-        earnedAmt = _earnedAmt;
-        IUniRouter _router = config.router();
-
-        uint feeTotalRate;
-        for (uint i; i < 3; i++) {
-            feeTotalRate += Fee.rate(fees[i]);
-        }
-        
-        if (feeTotalRate > 0) {
-            uint256 feeEarnedAmt = _earnedAmt * feeTotalRate / FEE_MAX;
-            earnedAmt -= feeEarnedAmt;
-            
-            IWETH weth = _router.WETH();
-            
-            if (_earnedToken == weth) {
-                weth.withdraw(feeEarnedAmt);    
-            } else {
-                uint wethBefore = weth.balanceOf(address(this));
-                safeSwap(feeEarnedAmt, _earnedToken, weth, address(this));
-                weth.withdraw(weth.balanceOf(address(this)) - wethBefore);
-            }
-            
-            //This contract should not hold native between transactions but it could happen theoretically. Pay it out with the fees
-            if (address(this).balance > 0) {
-                uint feeNativeAmt = address(this).balance;
-                for (uint i; i < 3; i++) {
-                    (address receiver, uint rate) = Fee.receiverAndRate(fees[i]);
-                    if (receiver == address(0) || rate == 0) break;
-                    (bool success,) = receiver.call{value: feeNativeAmt * rate / feeTotalRate, gas: 0x40000}("");
-                    require(success, "Strategy: Transfer failed");
-                }
-            }
-        }
+    function safeSwap(
+        uint256 _amountIn,
+        IERC20 _tokenA,
+        IERC20 _tokenB
+    ) internal {
+        console.log("swap A to B:", address(_tokenA), address(_tokenB));
+        if (_tokenA == _tokenB) return; //Do nothing for one-token paths
+        IERC20[] memory path = config.magnetite().findAndSavePath(address(config.router()), _tokenA, _tokenB);
+        require(path[0] == _tokenA && path[path.length - 1] == _tokenB, "Strategy: received invalid path for swap");
+        safeSwap(_amountIn, path);
     }
 
     function safeSwap(
         uint256 _amountIn,
-        IERC20 _tokenA,
-        IERC20 _tokenB,
-        address _to
+        IERC20[] memory path
     ) internal {
-        console.log("swap A to B:", address(_tokenA), address(_tokenB));
-        //Handle one-token paths which are simply a transfer
-        if (_tokenA == _tokenB) {
-            if (_to != address(this)) //skip transfers to self
-                _tokenA.safeTransfer(_to, _amountIn);
-            return;
-        }
         IUniRouter _router = config.router();
-        IERC20[] memory path = config.magnetite().findAndSavePath(address(_router), _tokenA, _tokenB);
 
-        //allow swap._router to pull the correct amount in
-        IERC20(_tokenA).safeIncreaseAllowance(address(_router), _amountIn);
+        //allow router to pull the correct amount in
+        path[0].safeIncreaseAllowance(address(_router), _amountIn);
 
-        if (config.feeOnTransfer()) {
-            _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                _amountIn, 
-                _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256,
-                path,
-                _to, 
-                block.timestamp
-            );
-        } else {
-            _router.swapExactTokensForTokens(_amountIn, 0, path, _to, block.timestamp);
-        }
+        _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            _amountIn, 
+            config.feeOnTransfer() ? _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256 : 0,
+            path,
+            address(this), 
+            block.timestamp
+        );
     }
 
     function configInfo() external view getConfig returns (
         uint256 vid,
         IERC20 want,
         uint256 wantDust,
-        IERC20 rewardToken,
         address masterchef,
         uint pid, 
         IUniRouter _router, 
@@ -236,7 +195,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     ) {
         vid = config.vid();
         (want, wantDust) = config.wantToken();
-        rewardToken = config.targetWant();
         uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
         masterchef = address(uint160(_tacticsA >> 96));
         pid = uint24(_tacticsA >> 64);

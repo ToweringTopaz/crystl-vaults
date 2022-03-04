@@ -9,6 +9,9 @@ import "hardhat/console.sol";
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
+    using Fee for Fee.Data[3];
+
+    uint256 wantBalance;
 
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
@@ -19,47 +22,42 @@ contract Strategy is BaseStrategy {
 
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
-        
+        IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
-        bool pairStake = config.isPairStake();
 
-        for (uint i; i < earnedLength; i++) { //Process each earned token
+        for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
-            if (earnedToken == _wantToken)
-                earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
-
-            if (earnedAmt > dust) {
-                success = true; //We have something worth compounding
-                earnedAmt = distribute(fees, earnedToken, earnedAmt); // handles all fees for this earned token
-                if (pairStake) {
-                    (IERC20 token0, IERC20 token1) = config.token0And1();
-                    safeSwap(earnedAmt / 2, earnedToken, token0, address(this));
-                    safeSwap(earnedAmt / 2, earnedToken, token1, address(this));
-                } else {
-                    safeSwap(earnedAmt, earnedToken, config.targetWant(), address(this));
-                }
-            }
-        }
-
-        //lpTokenLength == 1 means single-stake, not LP
-        if (success) {            
-            IERC20 targetWant = config.targetWant();
+            if (earnedToken == _wantToken) earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
+            if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
             
-            if (pairStake) {
-                // Get want tokens, ie. add liquidity
-                (IERC20 token0, IERC20 token1) = config.token0And1();
-                LibQuartz.optimalMint(IUniPair(address(targetWant)), token0, token1);
-            }
-
-            if (config.isMaximizer()) {
-                uint256 rewardAmt = targetWant.balanceOf(address(this));
-                if (_wantToken == targetWant) rewardAmt -= wantBalanceBefore;
-                IVaultHealer(msg.sender).maximizerDeposit(config.vid(), rewardAmt);
-            } else {
-                _farm();
-            }
+            success = true; //We have something worth compounding
+            safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
         }
+        if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
+
+        uint wethAdded = weth.balanceOf(address(this));
+        if (_wantToken == weth) wethAdded -= wantBalanceBefore; //ignore pre-existing want tokens
+
+        if (config.isMaximizer()) {
+            weth.withdraw(wethAdded); //unwrap wnative token
+            uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
+            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0); //deposit the rest
+
+        } else {
+            wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
+
+            if (config.isPairStake()) {
+                (IERC20 token0, IERC20 token1) = config.token0And1();
+                safeSwap(wethAdded / 2, weth, token0);
+                safeSwap(wethAdded / 2, weth, token1);
+                LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
+            } else {
+                safeSwap(wethAdded, weth, _wantToken);
+            }
+            _farm();
+        }
+
         __wantLockedTotal = _wantLockedTotal();
     }
 
@@ -70,18 +68,17 @@ contract Strategy is BaseStrategy {
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
 
         if (msg.value > 0) {
-            IWETH weth = config.router().WETH();
+            IWETH weth = config.weth();
             weth.deposit{value: msg.value}();
             if (config.isPairStake()) {
-                require(!config.isMaximizer(), "pairstake issue"); //todo: fix this and remove this require
                 (IERC20 token0, IERC20 token1) = config.token0And1();
-                safeSwap(msg.value / 2, weth, token0, address(this));
-                safeSwap(msg.value / 2, weth, token1, address(this));
+                safeSwap(msg.value / 2, weth, token0);
+                safeSwap(msg.value / 2, weth, token1);
                 LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
             } else {
-                safeSwap(msg.value, weth, _wantToken, address(this));
+                safeSwap(msg.value, weth, _wantToken);
             }
-        } else if (_wantAmt < dust) return (0, 0); //do nothing if nothing is requested
+        }
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
@@ -95,7 +92,7 @@ contract Strategy is BaseStrategy {
         if (_sharesTotal > 0) { 
             sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
         }
-        require(sharesAdded > dust, "deposit: no/dust shares added");
+        require(wantAdded > dust, "deposit: no/dust shares added");
     }
 
 

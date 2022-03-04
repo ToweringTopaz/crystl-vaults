@@ -1,7 +1,7 @@
 // import hre from "hardhat";
 
 const { tokens, accounts, routers } = require('../configs/addresses.js');
-const { WMATIC, CRYSTL, DAI } = tokens.polygon;
+const { WMATIC, CRYSTL, DAI, USDC } = tokens.polygon;
 const { FEE_ADDRESS, BURN_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
@@ -92,7 +92,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         console.log("strategyConfig deployed");
 
         DEPLOYMENT_DATA = await strategyConfig.generateConfig(
-			vaultHealer.address,
             tacticsA,
 			tacticsB,
 			dinoswapVaults[0]['want'],
@@ -102,8 +101,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			240, //slippageFactor
 			false, //feeOnTransfer
 			dinoswapVaults[0]['earned'],
-			[0], //earnedDust
-			0 //targetVid - is this always 0?
+			[0] //earnedDust
 		);
         console.log("generateConfig called successfully");
         
@@ -113,7 +111,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN1ADDRESS = await LPtoken.token1()
         console.log(TOKEN1ADDRESS)
 
-        TOKEN_OTHER = CRYSTL;
+        TOKEN_OTHER = USDC;
 
         let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
 			crystlVault[0]['masterchef'],
@@ -127,7 +125,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         );
 
 		CRYSTL_COMPOUNDER_DATA = await strategyConfig.generateConfig(
-            vaultHealer.address,
 			crystlTacticsA,
 			crystlTacticsB,
 			crystlVault[0]['want'],
@@ -137,8 +134,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			240, //slippageFactor
 			false, //feeOnTransfer
 			crystlVault[0]['earned'],
-			[0], //earnDust
-			0
+			[0] //earnDust
 		)
 		console.log("cc stratconfig generated");
 
@@ -169,7 +165,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		console.log("maxi tactics generated");
 
 		MAXIMIZER_DATA = await strategyConfig.generateConfig(
-            vaultHealer.address,
 			maxiTacticsA,
 			maxiTacticsB,
 			dinoswapVaults[0]['want'],
@@ -179,8 +174,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			240, //slippageFactor
 			false, //feeOnTransfer
 			dinoswapVaults[0]['earned'],
-			[40], //earnedDust
-			crystl_compounder_strat_pid
+			[40] //earnedDust
 		)
 		console.log("maxi config generated");
 
@@ -336,6 +330,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         await LPandEarnRouter.connect(user3).addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser3, token1BalanceUser3, 0, 0, user3.address, Date.now() + 900)
         
         tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
+        crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
 
     });
 	
@@ -374,13 +369,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //user zaps in their whole balance of token_other
         it('Should zap a token that is neither token0 nor token1 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
             // assume(TOKEN_OTHER != TOKEN0 && TOKEN_OTHER != TOKEN1);
-            user4TokenOtherDepositAmount = ethers.utils.parseEther("1000");
+            user4TokenOtherDepositAmount = ethers.utils.parseUnits("1000", "mwei"); //USDC is 6 decimals
 
             await tokenOther.connect(user4).approve(quartzUniV2Zap.address, user4TokenOtherDepositAmount);
             
             const vaultSharesTotalBeforeThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
-            await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, tokenOther.address, user4TokenOtherDepositAmount); //To Do - change min in amount from 0
+            await quartzUniV2Zap.connect(user4).quartzIn(maximizer_strat_pid, 0, TOKEN_OTHER, user4TokenOtherDepositAmount); //To Do - change min in amount from 0
             
             const vaultSharesTotalAfterThirdZap = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
 
@@ -809,13 +804,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit 1500 CRYSTL tokens from user 4 directly into the crystl compounder vault, increasing vaultSharesTotal by the correct amount', async () => {
             user4InitialDeposit = ethers.utils.parseEther("1500");
-            user4InitialCrystlBalance = await tokenOther.balanceOf(user4.address);
+            user4InitialCrystlBalance = await crystlToken.balanceOf(user4.address);
             user4InitialCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             console.log("user4InitialCrystlBalance");
             console.log(ethers.utils.formatEther(user4InitialCrystlBalance));
-            await tokenOther.connect(user4).approve(vaultHealer.address, user4InitialDeposit); //no, I have to approve the vaulthealer surely?
+            await crystlToken.connect(user4).approve(vaultHealer.address, user4InitialDeposit); //no, I have to approve the vaulthealer surely?
 
             await vaultHealer["earn(uint256)"](maximizer_strat_pid);
             await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
@@ -835,7 +830,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4FirstDeposit)} CRYSTL tokens after user 4 deposits`)
             console.log(`WantLockedTotal is ${ethers.utils.formatEther(wantLockedTotalAfterUser4FirstDeposit)} CRYSTL tokens before user 4 deposits`)
             
-            user4FinalCrystlBalance = await tokenOther.balanceOf(user4.address);
+            user4FinalCrystlBalance = await crystlToken.balanceOf(user4.address);
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid)
             totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
@@ -1100,7 +1095,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should withdraw all of user4s CRYSTL tokens directly from the crystl compounder vault, resulting in what?', async () => {
-            user4InitialCrystlBalance = await tokenOther.balanceOf(user4.address);
+            user4InitialCrystlBalance = await crystlToken.balanceOf(user4.address);
             user4InitialCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             console.log("user4InitialCrystlBalance");
             console.log(user4InitialCrystlBalance);
@@ -1120,7 +1115,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const wantLockedTotalAfterUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
 
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4Withdrawal)} CRYSTL tokens after user 4 withdraws`)
-            user4FinalCrystlBalance = await tokenOther.balanceOf(user4.address);
+            user4FinalCrystlBalance = await crystlToken.balanceOf(user4.address);
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 

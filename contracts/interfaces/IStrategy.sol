@@ -17,8 +17,7 @@ interface IStrategy is IERC165 {
     function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
     function panic() external;
     function unpanic() external;
-        // Univ2 router used by this strategy
-    function router() external view returns (IUniRouter);
+    function router() external view returns (IUniRouter); // Univ2 router used by this strategy
 
     function isMaximizer() external view returns (bool);
     function getMaximizerImplementation() external view returns (address);
@@ -26,7 +25,6 @@ interface IStrategy is IERC165 {
         uint256 vid,
         IERC20 want,
         uint256 wantDust,
-        IERC20 rewardToken,
         address masterchef,
         uint pid, 
         IUniRouter _router, 

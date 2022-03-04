@@ -98,18 +98,14 @@ library StrategyConfig {
             dust := shl(and(mload(add(offset,1)), 0xff) , 1)
         }
     }
-    function targetWant(MemPointer config) internal pure returns (IERC20 _targetWant) {
-        if (isMaximizer(config)) {
-            unchecked {
-                uint offset = 0x93 + earnedLength(config) * 0x15;
-                if (isPairStake(config)) offset += 0x28;
-            
-                assembly {
-                    _targetWant := and(mload(add(config,offset)), MASK_160)
-                }
+    function weth(MemPointer config) internal pure returns (IWETH _weth) {
+        unchecked {
+            uint offset = 0x93 + earnedLength(config) * 0x15;
+            if (isPairStake(config)) offset += 0x28;
+        
+            assembly {
+                _weth := and(mload(add(config,offset)), MASK_160)
             }
-        } else {
-            (_targetWant,) = wantToken(config);
         }
     }
 
@@ -139,7 +135,6 @@ library StrategyConfig {
     }
 
     function generateConfig(
-        address vaultHealer,
         Tactics.TacticsA _tacticsA,
         Tactics.TacticsB _tacticsB,
         address _wantToken,
@@ -149,8 +144,7 @@ library StrategyConfig {
         uint8 _slippageFactor,
         bool _feeOnTransfer,
         address[] memory _earned,
-        uint8[] memory _earnedDust,
-        uint _targetVid
+        uint8[] memory _earnedDust
     ) external view returns (bytes memory configData) {
         console.log("made it into generateConfig");
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
@@ -170,9 +164,6 @@ library StrategyConfig {
 
 		
 		IERC20 _targetWant = IERC20(_wantToken);
-        if (_targetVid > 0) {
-            (_targetWant,,,,,) = IVaultHealer(vaultHealer).vaultInfo(_targetVid);
-        }
 
         //Look for LP tokens. If not, want must be a single-stake
         try IUniPair(address(_targetWant)).token0() returns (IERC20 _token0) {
@@ -187,7 +178,6 @@ library StrategyConfig {
             configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
         }
 
-		if (_targetVid > 0) 
-			configData = abi.encodePacked(configData, _targetWant);
+        configData = abi.encodePacked(configData, IUniRouter(_router).WETH());
     }
 }
