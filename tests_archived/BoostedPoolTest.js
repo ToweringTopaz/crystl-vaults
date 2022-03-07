@@ -10,7 +10,6 @@ const { token_abi } = require('./abi_files/token_abi.js');
 const { IWETH_abi } = require('./abi_files/IWETH_abi.js');
 const { IUniswapV2Pair_abi } = require('./abi_files/IUniswapV2Pair_abi.js');
 const { boostPool_abi } = require('./abi_files/boostPool_abi.js');
-
 const { getContractAddress } = require('@ethersproject/address')
 
 //////////////////////////////////////////////////////////////////////////
@@ -18,25 +17,20 @@ const { getContractAddress } = require('@ethersproject/address')
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
-const { vaultSettings } = require('../configs/vaultSettings');
-const { apeSwapVaults } = require('../configs/apeSwapVaults'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
-const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'apeSwapVaults' (for example), with the right '...Vaults' name
+const { dinoswapVaults } = require('../configs/dinoswapVaults'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
+const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = apeSwapVaults[1].masterchef;
-const TACTIC = apeSwapVaults[1].tactic;
-const VAULT_HEALER = apeSwapVaults[1].vaulthealer;
-const WANT = apeSwapVaults[1].want;
-const EARNED = apeSwapVaults[1].earned;
-const PATHS = apeSwapVaults[1].paths;
-const PID = apeSwapVaults[1].PID;
-const ROUTER = vaultSettings.standard[0];
-
-const TOLERANCE = vaultSettings.standard[2];
+const MASTERCHEF = dinoswapVaults[0].masterchef;
+const VAULT_HEALER = dinoswapVaults[0].vaulthealer;
+const WANT = dinoswapVaults[0].want;
+const EARNED = dinoswapVaults[0].earned;
+const PID = dinoswapVaults[0].PID;
+const CRYSTL_ROUTER = routers.polygon.APESWAP_ROUTER;
+const LP_AND_EARN_ROUTER = dinoswapVaults[0].router;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
-const minBlocksBetweenSwaps = vaultSettings.standard[12];
-var userRewardDebtAfterTime;
+//const minBlocksBetweenSwaps = 100;
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
@@ -44,13 +38,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     into Masterchef:            ${MASTERCHEF} 
     with earned token:          ${EARNED_TOKEN_1}
     with earned2 token:         ${EARNED_TOKEN_2}
-    Tolerance:                  ${TOLERANCE}
     `, () => {
     before(async () => {
         [user1, user2, user3, user4, _] = await ethers.getSigners();
 		
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
+        
         const from = user1.address;
         const nonce = 1 + await user1.getTransactionCount();
 		// vaultHealer = await getContractAddress({from, nonce});
@@ -61,14 +55,30 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         VaultHealer = await ethers.getContractFactory("VaultHealer");
         vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address, vaultFeeManager.address);
 
+        vaultHealer.on("FailedEarn", (vid, reason) => {
+			console.log("FailedEarn: ", vid, reason);
+		});
+		vaultHealer.on("FailedEarnBytes", (vid, reason) => {
+			console.log("FailedEarnBytes: ", vid, reason);
+		});
+		
+		//DINO to MATIC
+		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
+		//DINO to WETH
+		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
+
+        //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory('Strategy');
+        //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 
+        //create the factory for the tactics implementation contract
         Tactics = await ethers.getContractFactory("Tactics");
+        //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['PID'],
+			dinoswapVaults[0]['masterchef'],
+            dinoswapVaults[0]['PID'],
             0, //have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
@@ -77,22 +87,21 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
 
+        //create factory and deploy strategyConfig contract
         StrategyConfig = await ethers.getContractFactory("StrategyConfig");
         strategyConfig = await StrategyConfig.deploy()
 
         DEPLOYMENT_DATA = await strategyConfig.generateConfig(
-			vaultHealer.address,
             tacticsA,
 			tacticsB,
-			apeSwapVaults[1]['want'],
+			dinoswapVaults[0]['want'],
 			40,
-			routers.polygon.APESWAP_ROUTER,
+			LP_AND_EARN_ROUTER,
 			magnetite.address,
 			240,
 			false,
-			apeSwapVaults[1]['earned'],
-			[40, 40],
-			0
+			dinoswapVaults[0]['earned'],
+			[40]
 		);
 
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
@@ -127,9 +136,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		boostPoolAddress = await vaultHealer.boostPool(boostID);
         console.log(boostPoolAddress);
 
-		uniswapRouter = await ethers.getContractAt(IUniRouter02_abi, ROUTER);
-		
-        await uniswapRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], boostPoolAddress, Date.now() + 900, { value: ethers.utils.parseEther("45") })
+        crystlRouter = await ethers.getContractAt(IUniRouter02_abi, CRYSTL_ROUTER);
+
+        await crystlRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], boostPoolAddress, Date.now() + 900, { value: ethers.utils.parseEther("45") })
 
 		await vaultHealer.createBoost(
 		    strat1_pid,
@@ -158,59 +167,62 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             "0x21E19E0C9BAB240000000", //amount of 1000 in hex
         ]);
 	
+        LPandEarnRouter = await ethers.getContractAt(IUniRouter02_abi, LP_AND_EARN_ROUTER);
+
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user2).deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user2).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user2.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user3).deposit({ value: ethers.utils.parseEther("4500") });
         } else {
-            await uniswapRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
+            await LPandEarnRouter.connect(user3).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user3.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
         }
 
         if (TOKEN0ADDRESS == ethers.utils.getAddress(WMATIC) ){
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN0ADDRESS); 
             await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("3000") });
         } else {
-            await uniswapRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
+            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN0ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
         }
         if (TOKEN1ADDRESS == ethers.utils.getAddress(WMATIC)) {
             wmatic_token = await ethers.getContractAt(IWETH_abi, TOKEN1ADDRESS); 
             await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("3000") });
         } else {
-            await uniswapRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
+            await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN1ADDRESS], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
         }
+		
 
-        await uniswapRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
+        await crystlRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("3000") })
 
 
         //create instances of token0 and token1
@@ -219,30 +231,30 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         //user 1 adds liquidity to get LP tokens
         var token0BalanceUser1 = await token0.balanceOf(user1.address);
-        await token0.approve(uniswapRouter.address, token0BalanceUser1);
+        await token0.approve(LPandEarnRouter.address, token0BalanceUser1);
 		
         var token1BalanceUser1 = await token1.balanceOf(user1.address);
-        await token1.approve(uniswapRouter.address, token1BalanceUser1);
+        await token1.approve(LPandEarnRouter.address, token1BalanceUser1);
 		
-        await uniswapRouter.addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser1, token1BalanceUser1, 0, 0, user1.address, Date.now() + 900)
+        await LPandEarnRouter.addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser1, token1BalanceUser1, 0, 0, user1.address, Date.now() + 900)
 
         //user 2 adds liquidity to get LP tokens
         var token0BalanceUser2 = await token0.balanceOf(user2.address);
-        await token0.connect(user2).approve(uniswapRouter.address, token0BalanceUser2);
+        await token0.connect(user2).approve(LPandEarnRouter.address, token0BalanceUser2);
         
         var token1BalanceUser2 = await token1.balanceOf(user2.address);
-        await token1.connect(user2).approve(uniswapRouter.address, token1BalanceUser2);
+        await token1.connect(user2).approve(LPandEarnRouter.address, token1BalanceUser2);
 
-        await uniswapRouter.connect(user2).addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser2, token1BalanceUser2, 0, 0, user2.address, Date.now() + 900)
+        await LPandEarnRouter.connect(user2).addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser2, token1BalanceUser2, 0, 0, user2.address, Date.now() + 900)
         
         //user 3 adds liquidity to get LP tokens
         var token0BalanceUser3 = await token0.balanceOf(user3.address);
-        await token0.connect(user3).approve(uniswapRouter.address, token0BalanceUser3);
+        await token0.connect(user3).approve(LPandEarnRouter.address, token0BalanceUser3);
         
         var token1BalanceUser3 = await token1.balanceOf(user3.address);
-        await token1.connect(user3).approve(uniswapRouter.address, token1BalanceUser3);
+        await token1.connect(user3).approve(LPandEarnRouter.address, token1BalanceUser3);
 
-        await uniswapRouter.connect(user3).addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser3, token1BalanceUser3, 0, 0, user3.address, Date.now() + 900)
+        await LPandEarnRouter.connect(user3).addLiquidity(TOKEN0ADDRESS, TOKEN1ADDRESS, token0BalanceUser3, token1BalanceUser3, 0, 0, user3.address, Date.now() + 900)
         
         tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
 
@@ -253,7 +265,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit user1\'s 100 LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
-            user1InitialDeposit = ethers.utils.parseEther("5000");
+            user1InitialDeposit = await LPtoken.balanceOf(user1.address); //ethers.utils.parseEther("5000");
 
             await LPtoken.connect(user1).approve(vaultHealer.address, user1InitialDeposit);
             LPtokenBalanceBeforeFirstDeposit = await LPtoken.balanceOf(user1.address);
