@@ -66,7 +66,7 @@ contract VaultFeeManager is IVaultFeeManager {
         }
     }
 
-    function getWithdrawFee(uint _vid) external view returns (address _receiver, uint16 _rate) {
+    function getWithdrawFee(uint _vid, address, address, address) external view returns (address _receiver, uint16 _rate) {
         return _overrideDefaultWithdrawFee.get(_vid) ? withdrawFee[_vid].receiverAndRate() : defaultWithdrawFee.receiverAndRate();
     }
 
