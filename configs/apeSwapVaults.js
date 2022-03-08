@@ -7,6 +7,7 @@ const apeSwapVaults = [
         want: lps.polygon.MATIC_CRYSTL_APE_LP, // Want
         vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
         masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+        router: routers.polygon.APESWAP_ROUTER,
         PID: 7,
         earned: [ BANANA, CRYSTL ],
     },
@@ -14,6 +15,7 @@ const apeSwapVaults = [
         want: lps.polygon.MATIC_BANANA_APE_LP, // Want
         vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
         masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+        router: routers.polygon.APESWAP_ROUTER,
         PID: 0,
         earned: [ BANANA, WMATIC ],
     },

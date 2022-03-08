@@ -16,16 +16,16 @@ const { getContractAddress } = require('@ethersproject/address')
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
-const { dinoswapVaults } = require('../configs/dinoswapVaults'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
-const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
+const { quickVaults } = require('../configs/quickVaults'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
+const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'quickVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = apeSwapVaults[1].masterchef;
-const VAULT_HEALER = apeSwapVaults[1].vaulthealer;
-const WANT = apeSwapVaults[1].want;
-const EARNED = apeSwapVaults[1].earned;
-const PID = apeSwapVaults[1].PID;
+const MASTERCHEF = quickVaults[0].masterchef;
+const VAULT_HEALER = quickVaults[0].vaulthealer;
+const WANT = quickVaults[0].want;
+const EARNED = quickVaults[0].earned;
+const PID = quickVaults[0].PID;
 const CRYSTL_ROUTER = routers.polygon.APESWAP_ROUTER;
-const LP_AND_EARN_ROUTER = apeSwapVaults[1].router;
+const LP_AND_EARN_ROUTER = quickVaults[0].router;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
@@ -61,11 +61,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			console.log("FailedEarnBytes: ", vid, reason);
 		});
 		
-		//DINO to MATIC
-		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
-		//DINO to WETH
-		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
+		// earned to token0, e.g. DINO to MATIC
+		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
+		// earned to token1, e.g. DINO to WETH
+		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
 
+        // // earned to token0, e.g. QUICK to RELAY
+		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0x831753dd7087cac61ab5644b308642cc1c33dc13', '0x904371845bc56dcbbcf0225ef84a669b2fd6bd0d' ]);
+		// // earned to token1, e.g. QUICK to QUICK?
+		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0x831753dd7087cac61ab5644b308642cc1c33dc13' ]);
 
         //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory('Strategy');
@@ -77,14 +81,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['PID'],
+			quickVaults[0]['masterchef'],
+            quickVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
+            ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
         );
 
         //create factory and deploy strategyConfig contract
@@ -95,16 +99,17 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         DEPLOYMENT_DATA = await strategyConfig.generateConfig(
             tacticsA,
 			tacticsB,
-			apeSwapVaults[1]['want'],
+			quickVaults[0]['want'],
 			0, //wantDust
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			apeSwapVaults[1]['earned'],
+			quickVaults[0]['earned'],
 			[0] //earnedDust
 		);
-        
+        console.log("generated config");
+
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
         console.log(TOKEN0ADDRESS)
@@ -153,28 +158,28 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		
 		let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
-			apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['PID'],
+			quickVaults[0]['masterchef'],
+            quickVaults[0]['PID'],
             0, //have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //vaultSharesTotal - includes selector and encoded call format
-            ethers.BigNumber.from("0xe2bbb15824000000"), //deposit - includes selector and encoded call format
-            ethers.BigNumber.from("0x441a3e7024000000"), //withdraw - includes selector and encoded call format
-            ethers.BigNumber.from("0x441a3e702f000000"), //harvest - includes selector and encoded call format
-            ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
+            ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
         );
 		console.log("maxi tactics generated");
 
 		MAXIMIZER_DATA = await strategyConfig.generateConfig(
 			maxiTacticsA,
 			maxiTacticsB,
-			apeSwapVaults[1]['want'],
-			40, //wantDust
+			quickVaults[0]['want'],
+			0, //wantDust
 			LP_AND_EARN_ROUTER,
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			apeSwapVaults[1]['earned'],
-			[40] //earnedDust
+			quickVaults[0]['earned'],
+			[0] //earnedDust
 		)
 		console.log("maxi config generated");
 
@@ -460,7 +465,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit user1\'s 5000 LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // initialLPtokenBalance = await LPtoken.balanceOf(user1.address);
-            user1InitialDeposit = await LPtoken.balanceOf(user1.address) //ethers.utils.parseEther("100");
+            user1InitialDeposit = (await LPtoken.balanceOf(user1.address)).div(2); //ethers.utils.parseEther("100");
 			
             // await LPandEarnRouter.swapExactETHForTokens(0, [WMATIC, CRYSTL], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
 			// token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
@@ -607,7 +612,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
         it('Should deposit 1500 of user2\'s LP tokens into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
-            user2InitialDeposit = ethers.utils.parseEther("15");
+            user2InitialDeposit = await LPtoken.balanceOf(user2.address); //ethers.utils.parseEther("15");
             const vaultSharesTotalBeforeUser2FirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser2FirstDeposit)} LP tokens before user 2 deposits`)
 
@@ -779,7 +784,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			
 			await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid); //call earn so there's not a large amount added from compounding
 			
-            user3InitialDeposit = ethers.utils.parseEther("15");
+            user3InitialDeposit = await LPtoken.balanceOf(user3.address); //ethers.utils.parseEther("15");
             const vaultSharesTotalBeforeUser3FirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser3FirstDeposit)} LP tokens before user 3 deposits`)
 
@@ -990,7 +995,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 */
         // Deposit 100% of users LP tokens into vault, ensure balance increases as expected.
         it('Should accurately increase vaultSharesTotal upon second deposit of 200 LP tokens by user1', async () => {
-            user1SecondDepositAmount = ethers.utils.parseEther("2");
+            user1SecondDepositAmount = await LPtoken.balanceOf(user1.address); //ethers.utils.parseEther("2");
             await LPtoken.approve(vaultHealer.address, user1SecondDepositAmount);
 
             const vaultSharesTotalBeforeSecondDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
