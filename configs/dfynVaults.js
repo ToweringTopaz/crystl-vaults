@@ -6,6 +6,7 @@ const dfynVaults = [
         want: lps.polygon.DFYN_WMATIC_DFYN_LP, // Want
         vaulthealer: accounts.polygon.PRODUCTION_VAULT_HEALER,
         masterchef: masterChefs.polygon.DFYN_STAKING_DFYN_WMATIC, // Masterchef
+        router: routers.polygon.DFYN_ROUTER,
         PID: 999,
         earned: [ DFYN, WMATIC ]
     }
