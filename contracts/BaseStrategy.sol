@@ -10,12 +10,11 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
 
-
-
     uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
     address public immutable vaultHealer;
     address public immutable implementation;
+
 
     constructor(address _vaultHealer) { 
         vaultHealer = _vaultHealer;
@@ -126,10 +125,12 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function _vaultDeposit(uint256 _amount) internal virtual {   
         //token allowance for the pool to pull the correct amount of funds only
+        _beforeDeposit();
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         (IERC20 _wantToken,) = config.wantToken();
         _wantToken.safeIncreaseAllowance(address(uint160(Tactics.TacticsA.unwrap(tacticsA) >> 96)), _amount); //address(tacticsA >> 96) is masterchef        
         Tactics.deposit(tacticsA, tacticsB, _amount);
+        _afterDeposit();
     }
 
 
@@ -140,9 +141,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         if (wantAmt == 0) return;
         
         uint256 sharesBefore = _vaultSharesTotal();
-        _beforeDeposit();
         _vaultDeposit(wantAmt); //approves the transfer then calls the pool contract to deposit
-        _afterDeposit();
         uint256 sharesAfter = _vaultSharesTotal();
         
         //including dust to reduce the chance of false positives
