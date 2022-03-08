@@ -49,28 +49,38 @@ contract Strategy is BaseStrategy {
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
             console.log("earnm2");
-            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0); //deposit the rest
+            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0) {} //deposit the rest
+            catch {
+                //If maximizer functionality doesn't work, for example due to a paused target vault, compound want instead
+                weth.deposit{value: wethAdded}();
+                swapWethToWant(wethAdded);
+            }
             console.log("earnm3");
         } else {
             console.log("earnc1");
             wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
 
-            if (config.isPairStake()) {
-                (IERC20 token0, IERC20 token1) = config.token0And1();
-                safeSwap(wethAdded / 2, weth, token0);
-                safeSwap(wethAdded / 2, weth, token1);
-                LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-                console.log("earnc1a");
-            } else {
-                safeSwap(wethAdded, weth, _wantToken);
-                console.log("earnc1b");
-            }
+            swapWethToWant(wethAdded);
             console.log("earn7");
             _farm();
             console.log("earn8");
         }
 
-        __wantLockedTotal = _wantLockedTotal();
+        return (true, _wantLockedTotal());
+    }
+
+    //Converts wrapped gas token to want token
+    function swapWethToWant(uint wethAmt) internal {
+        (IERC20 _wantToken,) = config.wantToken();
+        IWETH weth = config.weth();
+        if (config.isPairStake()) {
+            (IERC20 token0, IERC20 token1) = config.token0And1();
+            safeSwap(wethAmt / 2, weth, token0);
+            safeSwap(wethAmt / 2, weth, token1);
+            LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
+        } else {
+            safeSwap(wethAmt, weth, _wantToken);
+        }
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
@@ -82,14 +92,7 @@ contract Strategy is BaseStrategy {
         if (msg.value > 0) {
             IWETH weth = config.weth();
             weth.deposit{value: msg.value}();
-            if (config.isPairStake()) {
-                (IERC20 token0, IERC20 token1) = config.token0And1();
-                safeSwap(msg.value / 2, weth, token0);
-                safeSwap(msg.value / 2, weth, token1);
-                LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-            } else {
-                safeSwap(msg.value, weth, _wantToken);
-            }
+            swapWethToWant(msg.value);
         }
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
