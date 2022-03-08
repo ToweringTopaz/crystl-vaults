@@ -109,6 +109,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function vaultSharesTotal() external view getConfig returns (uint256) {
         return _vaultSharesTotal();
     }
+    
     function _vaultSharesTotal() internal view virtual returns (uint256) {
         return Tactics.vaultSharesTotal(config.tacticsA());
     }
