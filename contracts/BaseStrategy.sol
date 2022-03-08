@@ -51,7 +51,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
     }
 
-    function initialize(bytes memory _config) external onlyVaultHealer {
+    function initialize(bytes memory _config) public virtual onlyVaultHealer {
         require(address(this) != implementation, "Strategy: This contract must be used by proxy");
         assembly {
             let len := mload(_config) //get length of config
@@ -139,8 +139,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         if (wantAmt == 0) return;
         
         uint256 sharesBefore = _vaultSharesTotal();
-        
+        _beforeDeposit();
         _vaultDeposit(wantAmt); //approves the transfer then calls the pool contract to deposit
+        _afterDeposit();
         uint256 sharesAfter = _vaultSharesTotal();
         
         //including dust to reduce the chance of false positives
@@ -229,4 +230,11 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return super.supportsInterface(interfaceId) || interfaceId == type(IStrategy).interfaceId;
     }
+
+    function _beforeDeposit() internal virtual {}
+    function _beforeWithdraw() internal virtual {}
+    function _beforeHarvest() internal virtual {}
+    function _afterDeposit() internal virtual {}
+    function _afterWithdraw() internal virtual {}
+    function _afterHarvest() internal virtual {}
 }

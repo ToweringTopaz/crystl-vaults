@@ -74,7 +74,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0x831753dd7087cac61ab5644b308642cc1c33dc13' ]);
 
         //create the factory for the strategy implementation contract
-        Strategy = await ethers.getContractFactory('Strategy');
+        Strategy = await ethers.getContractFactory('StrategyQuick');
         //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 
