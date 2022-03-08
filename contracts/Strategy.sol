@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./interfaces/IDragonLair.sol";
 import "hardhat/console.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
@@ -12,6 +13,9 @@ contract Strategy is BaseStrategy {
     using Fee for Fee.Data[3];
 
     uint256 wantBalance;
+
+    address public constant dQuick = 0xf28164A485B0B2C90639E47b0f377b4a438a16B1;
+    address public constant Quick = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13;
 
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
@@ -28,6 +32,12 @@ contract Strategy is BaseStrategy {
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
             console.log("earnedToken: ", address(earnedToken));
+
+            if (address(earnedToken) == Quick) {
+                console.log("made it into Quick conditional");
+                IDragonLair(dQuick).leave(IERC20(dQuick).balanceOf(address(this)));
+            } 
+
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
             console.log("earnedAmt: ", earnedAmt);
             if (earnedToken == _wantToken) earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
