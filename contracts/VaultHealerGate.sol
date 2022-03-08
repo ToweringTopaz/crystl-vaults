@@ -50,9 +50,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
                 return true;
-            }
+            } else console.log("earn !success");
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
+            console.log("failed earn:", reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
         }

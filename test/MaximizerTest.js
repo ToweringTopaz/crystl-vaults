@@ -61,6 +61,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			console.log("FailedEarnBytes: ", vid, reason);
 		});
 		
+        magnetite.overridePath(CRYSTL_ROUTER, [CRYSTL, WMATIC]);
+
 		// earned to token0, e.g. DINO to MATIC
 		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
 		// earned to token1, e.g. DINO to WETH
