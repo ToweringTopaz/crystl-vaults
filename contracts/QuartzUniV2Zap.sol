@@ -59,7 +59,7 @@ contract QuartzUniV2Zap {
 
     function quartzOut (uint vid, uint256 withdrawAmount) external {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
-        vaultHealer.withdrawFrom(vid, withdrawAmount, msg.sender, address(this));
+        vaultHealer.withdrawFrom(vid, withdrawAmount, msg.sender, address(this), "");
 
         IWETH weth = router.WETH();
 
@@ -121,7 +121,7 @@ contract QuartzUniV2Zap {
         uint256 amountLiquidity = pair.balanceOf(address(this));
 
         _approveTokenIfNeeded(pair);
-        vaultHealer.deposit(vid, amountLiquidity, msg.sender);
+        vaultHealer.deposit(vid, amountLiquidity, msg.sender, "");
 
         IERC20[] memory tokens = new IERC20[](3);
         tokens[0] = token0;

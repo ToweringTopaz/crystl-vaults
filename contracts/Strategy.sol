@@ -13,7 +13,7 @@ contract Strategy is BaseStrategy {
 
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
-    function earn(Fee.Data[3] calldata fees) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
+    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
         console.log("earn1");
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
@@ -51,7 +51,7 @@ contract Strategy is BaseStrategy {
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
             console.log("earnm2");
-            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0); //deposit the rest
+            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, ""); //deposit the rest
             console.log("earnm3");
         } else {
             console.log("earnc1");
@@ -76,7 +76,7 @@ contract Strategy is BaseStrategy {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
@@ -111,32 +111,40 @@ contract Strategy is BaseStrategy {
 
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
-    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
+    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) external virtual getConfig onlyVaultHealer returns (uint /*sharesRemoved*/, uint /*wantAmt*/) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
-        //User's balance, in want tokens
+
         uint wantBal = _wantToken.balanceOf(address(this)); 
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
-        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
+        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;         //User's balance, in want tokens
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         unchecked { //overflow is caught and handled in the second condition
                 if (_wantAmt + dust > userWant || _wantAmt + dust < _wantAmt) {
-                _wantAmt = userWant;
+                _wantAmt  = userWant;
             }
         }
-        
+
+        wantBal = _vaultWithdraw(_wantToken, _wantAmt, wantBal);
+
+        return calculateFinalWithdrawAmounts(_wantAmt, _userShares, _sharesTotal, wantLockedBefore, _wantLockedTotal(), wantBal);
+    }
+
+    function _vaultWithdraw(IERC20 _wantToken, uint _wantAmt, uint _wantBal) private returns (uint256 wantBal) {
         // Check if strategy has tokens from panic
-        if (_wantAmt > wantBal) {
+        if (_wantAmt > _wantBal) {
             _beforeWithdraw();
             (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
             Tactics.withdraw(tacticsA, tacticsB, _wantAmt - wantBal);
             _afterWithdraw();
 
-            wantBal = _wantToken.balanceOf(address(this));
+            return _wantToken.balanceOf(address(this));
         }
+        return _wantBal;
+    }
 
+    function calculateFinalWithdrawAmounts(uint _wantAmt, uint _userShares, uint _sharesTotal, uint wantLockedBefore, uint wantLockedAfter, uint wantBal) private pure returns (uint256 sharesRemoved, uint256 wantAmt) {
         //Account for reflect, pool withdraw fee, etc; charge these to user
-        uint wantLockedAfter = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
 
         //Calculate shares to remove
@@ -144,18 +152,17 @@ contract Strategy is BaseStrategy {
             (_wantAmt + withdrawSlippage) * _sharesTotal,
             wantLockedBefore
         );
-
+   
         //Get final withdrawal amount
         if (sharesRemoved > _userShares) {
             sharesRemoved = _userShares;
         }
+        wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
+        if (wantAmt > wantBal) _wantAmt = wantBal;
 
-        _wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
-        if (_wantAmt > wantBal) _wantAmt = wantBal;
+        require(wantAmt > 0, "nothing to withdraw after slippage");
 
-        require(_wantAmt > 0, "nothing to withdraw after slippage");
-        
-        return (sharesRemoved, _wantAmt);
-    }    
+        return (sharesRemoved, wantAmt);
+    }
 
 }

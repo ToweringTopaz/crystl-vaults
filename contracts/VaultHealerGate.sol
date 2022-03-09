@@ -18,35 +18,36 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
-    //For front-end and general purpose external compounding. Returned amount is zero on failure, or the gas cost on success
-    function earn(uint256 vid) external nonReentrant returns (uint successGas) {
-        if (vaultInfo[vid].lastEarnBlock == block.number) return 0;
-        Fee.Data[3] memory fees = vaultFeeManager.getEarnFees(vid);
-        uint gasBefore = gasleft();
-        if (_earn(vid, fees)) return gasBefore - gasleft();
-    }
-
     //For front-end and general purpose external compounding. Returned amounts are zero on failure, or the gas cost on success
-    function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
+    function earn(uint256[] calldata vids) external returns (uint[] memory successGas) {
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
             uint gasBefore = gasleft();
-            if (_earn(vids[i], fees[i])) successGas[i] = gasBefore - gasleft();
+            if (_earn(vids[i], fees[i], msg.data[0:0])) successGas[i] = gasBefore - gasleft();
+        }
+    }
+    function earn(uint256[] calldata vids, bytes[] calldata data) public nonReentrant returns (uint[] memory successGas) {
+        require(vids.length == data.length, "VH: input array mismatch");
+        Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
+        successGas = new uint[](vids.length);
+        for (uint i; i < vids.length; i++) {
+            uint gasBefore = gasleft();
+            if (_earn(vids[i], fees[i], data[i])) successGas[i] = gasBefore - gasleft();
         }
     }
 
-    function _earn(uint256 vid) internal {
-        _earn(vid, vaultFeeManager.getEarnFees(vid));
+    function _earn(uint256 vid, bytes memory data) internal returns (bool) {
+        return _earn(vid, vaultFeeManager.getEarnFees(vid), data);
     }
 
-    function _earn(uint256 vid, Fee.Data[3] memory fees) internal returns (bool) {
+    function _earn(uint256 vid, Fee.Data[3] memory fees, bytes memory data) internal returns (bool) {
         console.log("earn blocknum", block.number);
         VaultInfo storage vault = vaultInfo[vid];
         if (!vault.active || vault.lastEarnBlock == block.number) return false;
 
         vault.lastEarnBlock = uint48(block.number);
-        try strat(vid).earn(fees) returns (bool success, uint256 wantLockedTotal) {
+        try strat(vid).earn(fees, _msgSender(), data) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
                 return true;
@@ -61,32 +62,32 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
-    function maximizerDeposit(uint _vid, uint _wantAmt) external payable whenNotPaused(_vid) {
+    function maximizerDeposit(uint _vid, uint _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) {
         address sender = _msgSender();
         require(address(strat(_vid)) == sender, "VH: sender does not match vid");
         //totalMaximizerEarningsOffset[_vid] += 
-        _deposit(_vid >> 16, _wantAmt, sender, sender);
+        _deposit(_vid >> 16, _wantAmt, sender, sender, _data);
     }
 
-    // Want tokens moved from user -> this -> Strat (compounding)
-    function deposit(uint256 _vid, uint256 _wantAmt) external payable whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, _msgSender(), _msgSender());
+    // Want tokens moved from user -> this -> Strat (compounding
+    function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
+        _deposit(_vid, _wantAmt, _msgSender(), _msgSender(), _data);
     }
 
     // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external payable whenNotPaused(_vid) nonReentrant {
-        _deposit(_vid, _wantAmt, _msgSender(), _to);
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
+        _deposit(_vid, _wantAmt, _msgSender(), _to, _data);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to) private returns (uint256 vidSharesAdded) {
+    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
         console.log("deposit blocknum", block.number);
         VaultInfo memory vault = vaultInfo[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
-        if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid); 
+        if (vault.noAutoEarn & 1 == 0 && vault.active && vault.lastEarnBlock != block.number) _earn(_vid, _data); 
 
         IStrategy vaultStrat = strat(_vid);
 
-        if (_wantAmt > 0) pendingDeposits[address(vaultStrat)] = PendingDeposit({
+        if (_wantAmt > 0 && address(vault.want) != address(0)) pendingDeposits[address(vaultStrat)] = PendingDeposit({
             token: vault.want,
             amount0: uint96(_wantAmt >> 96),
             from: _from,
@@ -97,7 +98,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         // we make the deposit
         uint256 wantAdded;
-        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupplyBefore);
+        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupplyBefore, abi.encode(_msgSender(), _from, _to, _data));
 
         // if this is a maximizer vault, do these extra steps
         if (_vid > 2**16 && totalSupplyBefore > 0)
@@ -108,42 +109,42 @@ abstract contract VaultHealerGate is VaultHealerBase {
             _to,
             _vid, //use the vid of the strategy 
             vidSharesAdded,
-            hex'' //leave this blank for now
+            _data
         );
 
         emit Deposit(_from, _to, _vid, wantAdded);
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _vid, uint256 _wantAmt) external nonReentrant {
-        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
+    function withdraw(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external nonReentrant {
+        _withdraw(_vid, _wantAmt, _msgSender(), _msgSender(), _data);
     }
 
     // For withdrawing to other address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
-        _withdraw(_vid, _wantAmt, _msgSender(), _to);
-    }
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external nonReentrant {
+        _withdraw(_vid, _wantAmt, _msgSender(), _to, _data);
+    }    
 
-    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
+    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) external nonReentrant {
         require(
             _from == _msgSender() || isApprovedForAll(_from, _msgSender()),
             "ERC1155: caller is not owner nor approved"
         );
-        _withdraw(_vid, _wantAmt, _from, _to);
+        _withdraw(_vid, _wantAmt, _from, _to, _data);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) private {
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private {
 		uint fromBalance = balanceOf(_from, _vid);
         require(fromBalance > 0, "User has 0 shares");
         
         VaultInfo memory vault = vaultInfo[_vid];
 
         // we call an earn on the vault before we action the _deposit
-        if (vault.noAutoEarn & 2 == 0 && vault.lastEarnBlock != block.number) _earn(_vid); 
+        if (vault.noAutoEarn & 2 == 0 && vault.lastEarnBlock != block.number) _earn(_vid, _data); 
 
         IStrategy vaultStrat = strat(_vid);
 
-        (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply(_vid));
+        (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply(_vid), abi.encode(_msgSender(), _from, _to, _data));
         
         if (_vid > 2**16) {
             withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(_vid, _from, vidSharesRemoved);
@@ -173,13 +174,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         vault.want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
 
         emit Withdraw(_from, _to, _vid, wantAmt);
-    }
+    }    
 
-    // Withdraw everything from vault for yourself
-    function withdrawAll(uint256 _vid) external nonReentrant {
-        _withdraw(_vid, type(uint256).max, _msgSender(), _msgSender());
-    }
-    
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint192 _amount) external {
         IERC20 token = pendingDeposits[msg.sender].token;
@@ -197,28 +193,28 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _beforeTokenTransfer(
-            address operator,
-            address from,
-            address to,
-            uint256[] memory ids,
-            uint256[] memory amounts,
-            bytes memory data
-        ) internal virtual override {
-            super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-            if (from != address(0) && to != address(0)) {
-                for (uint i; i < ids.length; i++) {
-                    uint vid = ids[i];
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        if (from != address(0) && to != address(0)) {
+            for (uint i; i < ids.length; i++) {
+                uint vid = ids[i];
 
-                    if (vid > 2**16) {
-                        _earn(vid);
-                        uint amount = amounts[i];
-                        withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, amount);
-                        UpdateOffsetsOnDeposit(vid, to, amount); 
-                    }
-
+                if (vid > 2**16) {
+                    _earn(vid, data);
+                    uint amount = amounts[i];
+                    withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(vid, from, amount);
+                    UpdateOffsetsOnDeposit(vid, to, amount); 
                 }
+
             }
         }
+    }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function UpdateOffsetsOnDeposit(uint256 _vid, address _from, uint256 _vidSharesAdded) internal {
@@ -257,7 +253,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         if (targetVidAmount == 0) return;
 
         // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
-        _withdraw(targetVid, targetVidAmount, vaultStrat, _from);
+        _withdraw(targetVid, targetVidAmount, vaultStrat, _from, msg.data[0:0]);
         target.want.safeTransferFrom(vaultStrat, _from, target.want.balanceOf(vaultStrat));
         
         uint removedPortionOfOffset = fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);

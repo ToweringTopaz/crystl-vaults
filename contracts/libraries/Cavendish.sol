@@ -34,7 +34,7 @@ library Cavendish {
     /// @param _implementation The contract to be cloned
     /// @param salt Used to determine and calculate the proxy address
     /// @return Address of the deployed proxy
-    function clone(address _implementation, bytes32 salt) internal returns (address) {
+    function clone(address _implementation, bytes32 salt) external returns (address) {
         require(_implementation != address(0), "ERC1167: zero address");
         address instance;
         assembly {

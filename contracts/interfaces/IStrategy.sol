@@ -12,9 +12,11 @@ interface IStrategy is IERC165 {
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
-    function earn(Fee.Data[3] memory fees) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external payable returns (uint256 wantAdded, uint256 sharesAdded);
-    function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal) external returns (uint256 sharesRemoved, uint256 wantAmt);
+    function earn(Fee.Data[3] memory fees, address _operator, bytes calldata _data) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
+    
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata _data) external payable returns (uint256 wantAdded, uint256 sharesAdded);
+    function withdraw(uint256 _wantAmt, uint256 _userShares, uint256 _sharesTotal, bytes calldata _data) external returns (uint256 sharesRemoved, uint256 wantAmt);
+
     function panic() external;
     function unpanic() external;
     function router() external view returns (IUniRouter); // Univ2 router used by this strategy

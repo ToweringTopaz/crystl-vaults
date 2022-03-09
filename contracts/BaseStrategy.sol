@@ -37,6 +37,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     modifier getConfig() {
         _getConfig();
         _;
+        //_verifyConfig(); //todo: for testing only
     }
     function _getConfig() private view {
         address configAddr = configAddress();
@@ -49,6 +50,25 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             extcodecopy(configAddr, 0x80, 1, len) //get the data
         }
     }
+
+    //todo: testing function - remove in production deploy
+    /*function _verifyConfig() internal view {
+        address configAddr = configAddress();
+        uint ptr;
+        uint len;
+        assembly {
+            len := sub(extcodesize(configAddr), 1) //get length, subtracting 1 for the invalid opcode
+            ptr := mload(0x40)
+            if lt(ptr, add(0x80, len)) { //assert that the free memory pointer is large enough to cover config in memory
+                revert(0,0)
+            }
+        }
+        for (uint i = 0x80; i < ptr; i+=0x20) {
+            uint memdata;
+            assembly {memdata := mload(i)}
+            console.log("memory at ", i, memdata);
+        }
+    }*/
 
     function initialize(bytes memory _config) public virtual onlyVaultHealer {
         require(address(this) != implementation, "Strategy: This contract must be used by proxy");
@@ -181,6 +201,20 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     function configInfo() external view getConfig returns (
+        uint256 vid,
+        IERC20 want,
+        uint256 wantDust,
+        address masterchef,
+        uint pid, 
+        IUniRouter _router, 
+        IMagnetite _magnetite,
+        IERC20[] memory earned,
+        uint256[] memory earnedDust,
+        uint slippageFactor,
+        bool feeOnTransfer
+    ) { return _configInfo(); }
+
+    function _configInfo() internal pure returns (
         uint256 vid,
         IERC20 want,
         uint256 wantDust,
