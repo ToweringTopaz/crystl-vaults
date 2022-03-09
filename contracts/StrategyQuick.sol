@@ -11,7 +11,8 @@ contract StrategyQuick is Strategy {
 
     constructor(address _vaultHealer) Strategy(_vaultHealer) {}
 
-    function _afterHarvest() internal override {
+    function _vaultHarvest() internal override {
+        super._vaultHarvest();
         D_QUICK.leave(D_QUICK.balanceOf(address(this)));
     }
 }
