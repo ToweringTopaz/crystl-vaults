@@ -80,11 +80,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			dinoswapVaults[0]['masterchef'],
             dinoswapVaults[0]['PID'],
             0, //have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x93f1a40b23000000"), //vaultSharesTotal - includes selector and encoded call format
+            ethers.BigNumber.from("0xe2bbb15824000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0x441a3e7024000000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x441a3e702f000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
         );
 
         //create factory and deploy strategyConfig contract
@@ -403,10 +403,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
                 // Stake a round number of LPs (e.g., 1 or 0.0001) - not a round number yet!
-        it('Should deposit 1500 of user2\'s LP tokens into the vault, increasing users stakedWantTokens by the correct amount', async () => {
+        it('Should deposit all of user2\'s LP tokens into the vault, increasing users stakedWantTokens by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user2.address);
             await vaultHealer["earn(uint256)"](strat1_pid);
-            user2InitialDeposit = ethers.utils.parseEther("1500");
+            user2InitialDeposit = await LPtoken.balanceOf(user2.address); //ethers.utils.parseEther("1500");
             const vaultSharesTotalBeforeUser2FirstDeposit = await strat1.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser2FirstDeposit)} LP tokens before user 2 deposits`)
 

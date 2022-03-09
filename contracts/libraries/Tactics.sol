@@ -67,7 +67,6 @@ library Tactics {
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
         uint returnvarPosition = (TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
         bytes memory data = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
-
         data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
         assembly {
             amountStaked := mload(add(data, add(0x20,returnvarPosition)))

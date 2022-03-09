@@ -18,10 +18,7 @@ contract Strategy is BaseStrategy {
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
         console.log("earn2");
-        _beforeHarvest();
-        (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-        Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
-        _afterHarvest();
+        _vaultHarvest();
 
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
@@ -125,23 +122,14 @@ contract Strategy is BaseStrategy {
             }
         }
 
-        wantBal = _vaultWithdraw(_wantToken, _wantAmt, wantBal);
+        if (_wantAmt > wantBal) {
+            _vaultWithdraw(_wantToken, _wantAmt - wantBal);
+            wantBal = _wantToken.balanceOf(address(this));
+		}
 
         return calculateFinalWithdrawAmounts(_wantAmt, _userShares, _sharesTotal, wantLockedBefore, _wantLockedTotal(), wantBal);
     }
-
-    function _vaultWithdraw(IERC20 _wantToken, uint _wantAmt, uint _wantBal) private returns (uint256 wantBal) {
-        // Check if strategy has tokens from panic
-        if (_wantAmt > _wantBal) {
-            _beforeWithdraw();
-            (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-            Tactics.withdraw(tacticsA, tacticsB, _wantAmt - wantBal);
-            _afterWithdraw();
-
-            return _wantToken.balanceOf(address(this));
-        }
-        return _wantBal;
-    }
+       
 
     function calculateFinalWithdrawAmounts(uint _wantAmt, uint _userShares, uint _sharesTotal, uint wantLockedBefore, uint wantLockedAfter, uint wantBal) private pure returns (uint256 sharesRemoved, uint256 wantAmt) {
         //Account for reflect, pool withdraw fee, etc; charge these to user
