@@ -1,4 +1,4 @@
-//for crystl compounder:
+//for crystl compounder (on apeswap? note - has expired):
 let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
     crystlVault[0]['masterchef'],
     crystlVault[0]['PID'],
@@ -10,7 +10,7 @@ let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
     ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
 );
 
-//for Masterchef standard:
+//for Masterchef standard (e.g. Dinoswap):
 let [tacticsA, tacticsB] = await tactics.generateTactics(
     dinoswapVaults[0]['masterchef'],
     dinoswapVaults[0]['PID'],
@@ -22,7 +22,7 @@ let [tacticsA, tacticsB] = await tactics.generateTactics(
     ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
 );
 
-//for stakingRewards:
+//for stakingRewards (e.g. Quickswap, Dfyn):
 let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
     quickVaults[0]['masterchef'],
     quickVaults[0]['PID'],
