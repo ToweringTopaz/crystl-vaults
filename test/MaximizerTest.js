@@ -725,8 +725,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log("user4InitialCrystlBalance: ", ethers.utils.formatEther(user4InitialCrystlBalance));
             await crystlToken.connect(user4).approve(vaultHealer.address, user4InitialDeposit); //no, I have to approve the vaulthealer surely?
 
-            await vaultHealer["earn(uint256)"](maximizer_strat_pid);
-            await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
+            await vaultHealer["earn(uint256[])"]([maximizer_strat_pid,crystl_compounder_strat_pid]);
 
             const vaultSharesTotalBeforeUser4FirstDeposit = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             const wantLockedTotalBeforeUser4FirstDeposit = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
@@ -992,8 +991,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log("user4InitialCrystlShares: ", user4InitialCrystlShares);
             totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
-            await vaultHealer["earn(uint256)"](maximizer_strat_pid);
-            await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
+            await vaultHealer["earn(uint256[])"]([maximizer_strat_pid,crystl_compounder_strat_pid]);
             const vaultSharesTotalBeforeUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             const wantLockedTotalBeforeUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
 
