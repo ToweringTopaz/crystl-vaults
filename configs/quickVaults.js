@@ -10,6 +10,14 @@ const quickVaults = [
         PID: 999,
         earned: [ QUICK ]
     },
+    {
+        want: lps.polygon.WELT_USDC_QUICK_LP, // Want
+        vaulthealer: accounts.polygon.PRODUCTION_VAULT_HEALER,
+        masterchef: masterChefs.polygon.QUICK_STAKING_WELT_USDC, // Masterchef
+        router: routers.polygon.QUICKSWAP_ROUTER,
+        PID: 999,
+        earned: [ QUICK ]
+    }
 ]
 
 module.exports = {

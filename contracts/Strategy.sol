@@ -18,7 +18,7 @@ contract Strategy is BaseStrategy {
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
         console.log("earn2");
-        _vaultHarvest();
+        _vaultHarvest(_wantToken);
 
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();

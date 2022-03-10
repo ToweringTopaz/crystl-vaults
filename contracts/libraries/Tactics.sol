@@ -40,6 +40,7 @@ library Tactics {
         4: specified amount
         3: address(this)
         2: pid
+        5: wantTokenAddress
     */
     type TacticsA is uint256;
     type TacticsB is uint256;
@@ -66,32 +67,32 @@ library Tactics {
 
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
         uint returnvarPosition = (TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
-        bytes memory data = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
+        bytes memory data = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0, address(0)); //pid, vst call, 0
         data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
         assembly {
             amountStaked := mload(add(data, add(0x20,returnvarPosition)))
         }
     }
 
-    function deposit(TacticsA tacticsA, TacticsB tacticsB, uint256 amount) internal {
-        _doCall(tacticsA, tacticsB, amount, 192);
+    function deposit(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, address wantToken) internal {
+        _doCall(tacticsA, tacticsB, amount, wantToken, 192);
     }
-    function withdraw(TacticsA tacticsA, TacticsB tacticsB, uint256 amount) internal {
-        _doCall(tacticsA, tacticsB, amount, 128);
+    function withdraw(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, address wantToken) internal {
+        _doCall(tacticsA, tacticsB, amount, wantToken, 128);
     }
     function harvest(TacticsA tacticsA, TacticsB tacticsB) internal {
-        _doCall(tacticsA, tacticsB, 0, 64);
+        _doCall(tacticsA, tacticsB, 0, address(0), 64);
     }
     function emergencyVaultWithdraw(TacticsA tacticsA, TacticsB tacticsB) internal {
-        _doCall(tacticsA, tacticsB, 0, 0);
+        _doCall(tacticsA, tacticsB, 0, address(0), 0);
     }
-    function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
-        bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsB.unwrap(tacticsB) >> offset), amount);
+    function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, address wantToken, uint256 offset) private {
+        bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsB.unwrap(tacticsB) >> offset), amount, wantToken);
         masterchef(tacticsA).functionCall(generatedCall, "Tactics: call failed");
         
     }
 
-    function _generateCall(uint24 pid, uint64 encodedCall, uint amount) public view returns (bytes memory generatedCall) {
+    function _generateCall(uint24 pid, uint64 encodedCall, uint amount, address wantToken) public view returns (bytes memory generatedCall) {
         generatedCall = abi.encodePacked(bytes4(bytes8(encodedCall)));
 
         for (bytes4 params = bytes4(bytes8(encodedCall) << 32); params != 0; params <<= 4) {
@@ -103,6 +104,8 @@ library Tactics {
                 word = uint(uint160(address(this)));
             } else if (p == 0x40000000) {
                 word = amount;
+            } else if (p == 0x50000000) {
+                word = uint(uint160(wantToken));
             } else if (p != 0xf0000000) {
                 revert("Tactics: invalid tactic");
             }

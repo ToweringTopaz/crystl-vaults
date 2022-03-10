@@ -222,13 +222,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         //token allowance for the pool to pull the correct amount of funds only
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         _wantToken.safeIncreaseAllowance(address(uint160(Tactics.TacticsA.unwrap(tacticsA) >> 96)), _amount); //address(tacticsA >> 96) is masterchef        
-        Tactics.deposit(tacticsA, tacticsB, _amount);
+        Tactics.deposit(tacticsA, tacticsB, _amount, address(_wantToken));
     }
     function _vaultWithdraw(IERC20 _wantToken, uint256 _amount) internal virtual {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-        Tactics.withdraw(tacticsA, tacticsB, _amount);
+        Tactics.withdraw(tacticsA, tacticsB, _amount, address(_wantToken));
     }
-    function _vaultHarvest() internal virtual {
+    function _vaultHarvest(IERC20 _wantToken) internal virtual {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
     }

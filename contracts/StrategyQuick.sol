@@ -11,8 +11,8 @@ contract StrategyQuick is Strategy {
 
     constructor(address _vaultHealer) Strategy(_vaultHealer) {}
 
-    function _vaultHarvest() internal override {
-        super._vaultHarvest();
+    function _vaultHarvest(IERC20 _wantToken) internal override {
+        super._vaultHarvest(_wantToken);
         D_QUICK.leave(D_QUICK.balanceOf(address(this)));
     }
 }
