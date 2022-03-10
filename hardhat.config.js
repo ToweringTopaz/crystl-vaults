@@ -18,8 +18,12 @@ if (!mnemonic) {
   throw new Error("Please set your MNEMONIC in a .env file");
 }
 // Ensure that we have archive mainnet node URL set as an environment variable
-const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
-if (!archiveMainnetNodeURL) {
+const archiveMainnetNodePolygonURL = process.env.SPEEDY_ARCHIVE_RPC;
+if (!archiveMainnetNodePolygonURL) {
+  throw new Error("Please set your PRIVATE_RPC in a .env file");
+}
+const archiveMainnetNodeBscURL = process.env.SPEEDY_ARCHIVE_RPC_BSC;
+if (!archiveMainnetNodeBscURL) {
   throw new Error("Please set your PRIVATE_RPC in a .env file");
 }
 
@@ -43,15 +47,19 @@ module.exports = {
         accountsBalance: "10000000000000000000000",
       },
       forking: {
-        url: archiveMainnetNodeURL,
+        url: archiveMainnetNodeBscURL,
         blockNumber: 25326200,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",
     },
     polygon: {
-      url: archiveMainnetNodeURL,
-      accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
+      url: archiveMainnetNodePolygonURL,
+      accounts: [`0x${myPrivateKey}`],
+    },
+	bsc: {
+      url: archiveMainnetNodeBscURL,
+      accounts: [`0x${myPrivateKey}`], 
     },
   },
   solidity: {
