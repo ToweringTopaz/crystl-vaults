@@ -18,14 +18,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
-    //For front-end and general purpose external compounding. Returned amount is zero on failure, or the gas cost on success
-    function earn(uint256 vid) external nonReentrant returns (uint successGas) {
-        if (vaultInfo[vid].lastEarnBlock == block.number) return 0;
-        Fee.Data[3] memory fees = vaultFeeManager.getEarnFees(vid);
-        uint gasBefore = gasleft();
-        if (_earn(vid, fees)) return gasBefore - gasleft();
-    }
-
     //For front-end and general purpose external compounding. Returned amounts are zero on failure, or the gas cost on success
     function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
@@ -119,12 +111,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _withdraw(_vid, _wantAmt, _msgSender(), _msgSender());
     }
 
-    // For withdrawing to other address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _to) external nonReentrant {
-        _withdraw(_vid, _wantAmt, _msgSender(), _to);
-    }
-
-    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) external nonReentrant {
         require(
             _from == _msgSender() || isApprovedForAll(_from, _msgSender()),
             "ERC1155: caller is not owner nor approved"
@@ -173,11 +160,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         vault.want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
 
         emit Withdraw(_from, _to, _vid, wantAmt);
-    }
-
-    // Withdraw everything from vault for yourself
-    function withdrawAll(uint256 _vid) external nonReentrant {
-        _withdraw(_vid, type(uint256).max, _msgSender(), _msgSender());
     }
     
     //called by strategy, cannot be nonReentrant

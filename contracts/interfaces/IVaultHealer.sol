@@ -26,7 +26,7 @@ interface IVaultHealer is IAccessControl {
     event FailedWithdrawFeeBytes(uint vid, bytes reason);
     event MaximizerWithdraw(address indexed account, uint indexed vid, uint targetShares);
     function executePendingDeposit(address _to, uint192 _amount) external;
-    function withdrawFrom(uint256 _vid, uint256 _wantAmt, address _from, address _to) external;
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) external;
     function withdraw(uint256 _vid, uint256 _wantAmt) external;
     function deposit(uint256 _vid, uint256 _wantAmt, address _to) external payable;
     function deposit(uint256 _vid, uint256 _wantAmt) external payable;

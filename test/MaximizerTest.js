@@ -444,7 +444,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer["earn(uint256)"](maximizer_strat_pid);
+            await vaultHealer["earn(uint256[])"]([maximizer_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -475,7 +475,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
+            await vaultHealer["earn(uint256[])"]([crystl_compounder_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -576,7 +576,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer["earn(uint256)"](maximizer_strat_pid);
+            await vaultHealer["earn(uint256[])"]([maximizer_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -606,7 +606,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
+            await vaultHealer["earn(uint256[])"]([crystl_compounder_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -695,7 +695,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         it('Should deposit 1500 LP tokens from user into the vault, increasing vaultSharesTotal by the correct amount', async () => {
             // const LPtokenBalanceOfUser2BeforeFirstDeposit = await LPtoken.balanceOf(user3.address);
 			
-			await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid); //call earn so there's not a large amount added from compounding
+			await vaultHealer["earn(uint256[])"]([crystl_compounder_strat_pid]); //call earn so there's not a large amount added from compounding
 			
             user3InitialDeposit = await LPtoken.balanceOf(user3.address); //ethers.utils.parseEther("15");
             const vaultSharesTotalBeforeUser3FirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
@@ -770,7 +770,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer["earn(uint256)"](maximizer_strat_pid);
+            await vaultHealer["earn(uint256[])"]([maximizer_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -800,7 +800,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
-            await vaultHealer["earn(uint256)"](crystl_compounder_strat_pid);
+            await vaultHealer["earn(uint256[])"]([crystl_compounder_strat_pid]);
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarnSome = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
@@ -925,7 +925,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user1CrystlShareBalanceBeforeFinalWithdraw = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
             user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user1.address);
 
-            await vaultHealer["withdrawAll(uint256)"](maximizer_strat_pid); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256)"](maximizer_strat_pid,ethers.constants.MaxUint256); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
 
@@ -967,7 +967,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             user1CrystlShareBalanceBeforeFinalWithdraw = await vaultHealer.balanceOf(user3.address, crystl_compounder_strat_pid);
             user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user3.address);
 
-            await vaultHealer.connect(user3)["withdrawAll(uint256)"](maximizer_strat_pid); //user3 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
+            await vaultHealer.connect(user3)["withdraw(uint256,uint256)"](maximizer_strat_pid,ethers.constants.MaxUint256); //user3 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user3.address);
 
@@ -996,7 +996,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const wantLockedTotalBeforeUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
 
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalBeforeUser4Withdrawal)} CRYSTL tokens before user 4 withdraws`)
-            await vaultHealer.connect(user4).withdrawAll(crystl_compounder_strat_pid);
+            await vaultHealer.connect(user4)["withdraw(uint256,uint256)"](crystl_compounder_strat_pid,ethers.constants.MaxUint256);
 
             const vaultSharesTotalAfterUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
             const wantLockedTotalAfterUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
