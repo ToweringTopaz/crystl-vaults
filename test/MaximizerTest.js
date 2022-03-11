@@ -1,8 +1,8 @@
 // import hre from "hardhat";
 
 const { tokens, accounts, routers } = require('../configs/addresses.js');
-const { WMATIC, CRYSTL, USDC } = tokens.polygon;
-const { FEE_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
+const { WMATIC, CRYSTL, DAI, USDC } = tokens.polygon;
+const { FEE_ADDRESS, BURN_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { IUniRouter02_abi } = require('./abi_files/IUniRouter02_abi.js');
@@ -16,18 +16,19 @@ const { getContractAddress } = require('@ethersproject/address')
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
-const { dfynVaults } = require('../configs/dfynVaults'); //<-- replace all references to 'dfynVaults' (for example), with the right '...Vaults' name
-const { crystlVault } = require('../configs/crystlVault'); //<-- replace all references to 'dfynVaults' (for example), with the right '...Vaults' name
+const { apeSwapVaults } = require('../configs/apeSwapVaults.js'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
 
-const MASTERCHEF = dfynVaults[0].masterchef;
-const VAULT_HEALER = dfynVaults[0].vaulthealer;
-const WANT = dfynVaults[0].want;
-const EARNED = dfynVaults[0].earned;
+const MASTERCHEF = apeSwapVaults[1].masterchef;
+const VAULT_HEALER = apeSwapVaults[1].vaulthealer;
+const WANT = apeSwapVaults[1].want;
+const EARNED = apeSwapVaults[1].earned;
+const PID = apeSwapVaults[1].PID;
 const CRYSTL_ROUTER = routers.polygon.APESWAP_ROUTER;
-const LP_AND_EARN_ROUTER = dfynVaults[0].router;
+const LP_AND_EARN_ROUTER = apeSwapVaults[1].router;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
+//const minBlocksBetweenSwaps = 100;
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
     connected to vaultHealer @  ${VAULT_HEALER}
@@ -59,20 +60,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			console.log("FailedEarnBytes: ", vid, reason);
 		});
 		
-        magnetite.overridePath(CRYSTL_ROUTER, [CRYSTL, WMATIC]);
+		//DINO to MATIC
+		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
+		//DINO to WETH
+		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
 
-		// earned to token0, e.g. DINO to MATIC
-		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
-		// earned to token1, e.g. DINO to WETH
-		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
-
-        // // earned to token0, e.g. QUICK to RELAY
-		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0x831753dd7087cac61ab5644b308642cc1c33dc13', '0x904371845bc56dcbbcf0225ef84a669b2fd6bd0d' ]);
-		// // earned to token1, e.g. QUICK to QUICK?
-		// magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0x831753dd7087cac61ab5644b308642cc1c33dc13' ]);
 
         //create the factory for the strategy implementation contract
-        Strategy = await ethers.getContractFactory('StrategyQuick');
+        Strategy = await ethers.getContractFactory('Strategy');
         //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 
@@ -81,14 +76,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			dfynVaults[0]['masterchef'],
-            dfynVaults[0]['PID'],
+			apeSwapVaults[1]['masterchef'],
+            apeSwapVaults[1]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
-            ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
-            ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
-            ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
-            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
-            ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
 
         //create factory and deploy strategyConfig contract
@@ -99,46 +94,47 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         DEPLOYMENT_DATA = await strategyConfig.generateConfig(
             tacticsA,
 			tacticsB,
-			dfynVaults[0]['want'],
-			0, //wantDust
+			apeSwapVaults[1]['want'],
+			apeSwapVaults[1]['wantDust'],
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			dfynVaults[0]['earned'],
-			[0, 0] //earnedDust
+			apeSwapVaults[1]['earned'],
+			apeSwapVaults[1]['earnedDust'],
 		);
-        console.log("generated config");
-
+        
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
+        console.log(TOKEN0ADDRESS)
         TOKEN1ADDRESS = await LPtoken.token1()
+        console.log(TOKEN1ADDRESS)
 
         TOKEN_OTHER = USDC;
 
         let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
-			crystlVault[0]['masterchef'],
-            crystlVault[0]['PID'],
-            0, //have to look at contract and see
+			apeSwapVaults[0]['masterchef'],
+            apeSwapVaults[0]['PID'],
+            0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0xe2bbb15824000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x441a3e7024000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0xe2bbb1582f000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x5312ea8e20000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
 
 		CRYSTL_COMPOUNDER_DATA = await strategyConfig.generateConfig(
-			crystlTacticsA,
+            crystlTacticsA,
 			crystlTacticsB,
-			crystlVault[0]['want'],
-			0, //wantDust
-			CRYSTL_ROUTER,
+			apeSwapVaults[0]['want'],
+			apeSwapVaults[0]['wantDust'],
+			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			crystlVault[0]['earned'],
-			[0] //earnDust
-		)
+			apeSwapVaults[0]['earned'],
+			apeSwapVaults[0]['earnedDust'],
+		);
 		console.log("cc stratconfig generated");
 
         vaultHealerOwnerSigner = user1
@@ -157,30 +153,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		console.log("strategyCrystlCompounder address: ", strategyCrystlCompounder.address);
 
-		let [maxiTacticsA, maxiTacticsB] = await tactics.generateTactics(
-			dfynVaults[0]['masterchef'],
-            dfynVaults[0]['PID'],
-            0, //have to look at contract and see
-            ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
-            ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
-            ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
-            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
-            ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
-        );
-		console.log("maxi tactics generated");
-
-		MAXIMIZER_DATA = await strategyConfig.generateConfig(
-			maxiTacticsA,
-			maxiTacticsB,
-			dfynVaults[0]['want'],
-			0, //wantDust
-			LP_AND_EARN_ROUTER,
-			magnetite.address,
-			240, //slippageFactor
-			false, //feeOnTransfer
-			dfynVaults[0]['earned'],
-			[0, 0] //earnedDust
-		)
+		MAXIMIZER_DATA = DEPLOYMENT_DATA;
 		console.log("maxi config generated");
 
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
