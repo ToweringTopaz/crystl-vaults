@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
-abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Context, IVaultHealer, ReentrancyGuard {
+abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Context,*/ IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
@@ -86,9 +86,10 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, ERC2771Contex
             "VH: vid out of range");
     }
 
-
+/*
    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) { return ERC2771Context._msgData(); }
    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) { return ERC2771Context._msgSender(); }
+*/
 
     //True values are the default behavior; call earn before deposit/withdraw
     function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
