@@ -135,6 +135,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			apeSwapVaults[0]['earned'],
 			apeSwapVaults[0]['earnedDust'],
 		);
+		
+		TARGET_WANT = await ethers.getContractAt(token_abi, apeSwapVaults[0]['want']);		
 		console.log("cc stratconfig generated");
 
         vaultHealerOwnerSigner = user1
@@ -200,7 +202,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //create a router to swap into the underlying tokens for the LP and then add liquidity
         LPandEarnRouter = await ethers.getContractAt(IUniRouter02_abi, LP_AND_EARN_ROUTER);
         WNATIVE = await LPandEarnRouter.WETH();
-        tokenAddressList = [TOKEN0ADDRESS, TOKEN1ADDRESS];
+        tokenAddressList = [TOKEN0ADDRESS, TOKEN1ADDRESS, CRYSTL, WNATIVE];
 
         // for each of users 1 through 4, swap from MATIC into TOKEN0 and TOKEN1
         for (let user of users) {
@@ -246,7 +248,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         }
         
         tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
-        crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
+        TARGET_WANT = await ethers.getContractAt(token_abi, CRYSTL);
 
     });
 	
@@ -381,7 +383,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			
             // await LPandEarnRouter.swapExactETHForTokens(0, [WNATIVE, CRYSTL], user1.address, Date.now() + 900, { value: ethers.utils.parseEther("4500") })
 			// token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
-            // await crystlToken.approve(vaultHealer.address, user1InitialDeposit);
+            // await TARGET_WANT.approve(vaultHealer.address, user1InitialDeposit);
             
             await LPtoken.approve(vaultHealer.address, user1InitialDeposit);
             const vaultSharesTotalBeforeFirstDeposit = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal() //=0
@@ -403,9 +405,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // Compound LPs (Call the earn function with this specific farm’s maximizer_strat_pid).
         // Check balance to ensure it increased as expected
-        it('Should wait 10 blocks, then compound the maximizer vault by calling earn(), resulting in an increase in crystl in the crystl compounder', async () => {
+        it('Should wait 10 blocks, then compound the maximizer vault by calling earn(), resulting in an increase in maxiTarget in the maxiTarget compounder', async () => {
             const vaultSharesTotalBeforeCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            console.log(`We start with ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarn)} crystl tokens in the crystl compounder`)
+            console.log(`We start with ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarn)} crystl tokens in the maxiTarget compounder`)
             console.log(`We let 100 blocks pass, and then call earn...`)
 
             balanceMaticAtFeeAddressBeforeEarn = await ethers.provider.getBalance(FEE_ADDRESS); //note: MATIC, not WMATIC
@@ -421,7 +423,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number after calling earn ${await ethers.provider.getBlockNumber()}`)
 
             vaultSharesTotalAfterCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            console.log(`After the earn call we have ${ethers.utils.formatEther(vaultSharesTotalAfterCallingEarn)} crystl tokens in the crystl compounder`)
+            console.log(`After the earn call we have ${ethers.utils.formatEther(vaultSharesTotalAfterCallingEarn)} maxiTarget tokens in the maxiTarget compounder`)
             // console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
 
             expect(vaultSharesTotalAfterCallingEarn).to.be.gt(vaultSharesTotalBeforeCallingEarn); //.toNumber()
@@ -435,11 +437,11 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // Compound LPs (Call the earn function with this specific farm’s maximizer_strat_pid).
         // Check balance to ensure it increased as expected
-        it('Should wait 10 blocks, then compound the CRYSTL Compounder by calling earn(), so that vaultSharesTotal is greater after than before', async () => {
+        it('Should wait 10 blocks, then compound the maxiTarget Compounder by calling earn(), so that vaultSharesTotal is greater after than before', async () => {
             const vaultSharesTotalBeforeCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             const wantLockedTotalBeforeCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal()
 
-            console.log(`Before calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarn)} CRYSTL tokens in it`)
+            console.log(`Before calling earn on the maxiTarget compounder, we have ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarn)} maxiTarget tokens in it`)
             console.log(`We let 100 blocks pass...`)
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             console.log(`vaultSharesTotalBeforeCallingEarn: ${vaultSharesTotalBeforeCallingEarn}`)
@@ -453,7 +455,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
             vaultSharesTotalInCrystalCompounderAfterCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`vaultSharesTotalInCrystalCompounderAfterCallingEarn: ${vaultSharesTotalInCrystalCompounderAfterCallingEarn}`)
-            console.log(`After calling earn on the CRYSTL compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarn)} CRYSTL tokens in it`)
+            console.log(`After calling earn on the maxiTarget compounder, we have ${ethers.utils.formatEther(vaultSharesTotalInCrystalCompounderAfterCallingEarn)} maxiTarget tokens in it`)
             // console.log(await vaultHealer.userTotals(maximizer_strat_pid, user1.address));
 
             expect(vaultSharesTotalInCrystalCompounderAfterCallingEarn).to.be.gt(vaultSharesTotalBeforeCallingEarn); //.toNumber()
@@ -466,8 +468,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersSharesBeforeFirstWithdrawal = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-            user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user1.address);
+            user1CrystlBalanceBeforeWithdraw = await TARGET_WANT.balanceOf(user1.address);
 			user1CrystlShareBalanceBeforeWithdraw = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
 //			user1CrystlShareRawBalanceBeforeWithdraw = await vaultHealer.rawBalanceOf(user1.address, crystl_compounder_strat_pid);
 
@@ -492,7 +493,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
 /*        it('Should increase the user\'s rawBalance of CRYSTL shares when withdrawing from maximizer, while not touching the balance of crystl or crystl shares', async () => {
-            user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
+            user1CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user1.address);
 			user1CrystlShareBalanceAfterWithdraw = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
 			user1CrystlShareRawBalanceAfterWithdraw = await vaultHealer.rawBalanceOf(user1.address, crystl_compounder_strat_pid);
             //console.log(`The user got ${ethers.utils.formatEther((user1CrystlBalanceAfterWithdraw).sub(user1CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
@@ -504,8 +505,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 */
 
         // withdraw should also cause crystl to be returned to the user (all of it)
-        it('Should return CRYSTL harvest to user 1 when they withdraw (above test)', async () => {
-            user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
+        it('Should return maxiTarget harvest to user 1 when they withdraw (above test)', async () => {
+            user1CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user1.address);
             console.log(`The user got ${ethers.utils.formatEther((user1CrystlBalanceAfterWithdraw).sub(user1CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
 
             expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
@@ -597,8 +598,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.balanceOf(user2.address, maximizer_strat_pid);
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-            user2CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user2.address);
+
+            user2CrystlBalanceBeforeWithdraw = await TARGET_WANT.balanceOf(user2.address);
             console.log(`User 2 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal.div(2))} LP tokens from the maximizer vault`)
 
             await vaultHealer.connect(user2)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2)); 
@@ -620,7 +621,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return CRYSTL harvest to user 2 when they withdraw (above test)', async () => {
-            user2CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user2.address);
+            user2CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user2.address);
 
             console.log(`The user got ${ethers.utils.formatEther((user2CrystlBalanceAfterWithdraw).sub(user2CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
 
@@ -634,8 +635,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeSecondWithdrawal = await vaultHealer.balanceOf(user2.address, maximizer_strat_pid);
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-            user2CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user2.address);
+          
+            user2CrystlBalanceBeforeWithdraw = await TARGET_WANT.balanceOf(user2.address);
             console.log(`User 2 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeSecondWithdrawal)} LP tokens from the maximizer vault`)
 
             await vaultHealer.connect(user2)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeSecondWithdrawal); 
@@ -658,7 +659,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return CRYSTL harvest to user 2 when they withdraw (above test)', async () => {
-            user2CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user2.address);
+            user2CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user2.address);
 
             console.log(`The user got ${ethers.utils.formatEther((user2CrystlBalanceAfterWithdraw).sub(user2CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
 
@@ -691,12 +692,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit 1500 CRYSTL tokens from user 4 directly into the crystl compounder vault, increasing vaultSharesTotal by the correct amount', async () => {
             user4InitialDeposit = ethers.utils.parseEther("1500");
-            user4InitialCrystlBalance = await crystlToken.balanceOf(user4.address);
+            user4InitialCrystlBalance = await TARGET_WANT.balanceOf(user4.address);
             user4InitialCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
             console.log("user4InitialCrystlBalance: ", ethers.utils.formatEther(user4InitialCrystlBalance));
-            await crystlToken.connect(user4).approve(vaultHealer.address, user4InitialDeposit); //no, I have to approve the vaulthealer surely?
+            await TARGET_WANT.connect(user4).approve(vaultHealer.address, user4InitialDeposit); //no, I have to approve the vaulthealer surely?
 
             await vaultHealer["earn(uint256[])"]([maximizer_strat_pid,crystl_compounder_strat_pid]);
 
@@ -715,7 +716,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4FirstDeposit)} CRYSTL tokens after user 4 deposits`)
             console.log(`WantLockedTotal is ${ethers.utils.formatEther(wantLockedTotalAfterUser4FirstDeposit)} CRYSTL tokens before user 4 deposits`)
             
-            user4FinalCrystlBalance = await crystlToken.balanceOf(user4.address);
+            user4FinalCrystlBalance = await TARGET_WANT.balanceOf(user4.address);
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid)
             totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
@@ -791,8 +792,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeFirstWithdrawal = await vaultHealer.balanceOf(user3.address, maximizer_strat_pid);
 
             vaultSharesTotalInMaximizerBeforeWithdraw = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            crystlToken = await ethers.getContractAt(token_abi, CRYSTL);
-            user3CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user3.address);
+            user3CrystlBalanceBeforeWithdraw = await TARGET_WANT.balanceOf(user3.address);
             console.log(`User 3 withdraws ${ethers.utils.formatEther(UsersStakedTokensBeforeFirstWithdrawal.div(2))} LP tokens from the maximizer vault`)
 
             await vaultHealer.connect(user3)["withdraw(uint256,uint256)"](maximizer_strat_pid, UsersStakedTokensBeforeFirstWithdrawal.div(2));  
@@ -815,7 +815,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return CRYSTL harvest to user when they withdraw (above test)', async () => {
-            user3CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user3.address);
+            user3CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user3.address);
             console.log(`The user got ${ethers.utils.formatEther((user3CrystlBalanceAfterWithdraw).sub(user3CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
             expect(user3CrystlBalanceAfterWithdraw).to.be.gt(user3CrystlBalanceBeforeWithdraw);
         })
@@ -861,7 +861,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 /*
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return CRYSTL harvest to user when they withdraw (above test)', async () => {
-            user3CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user3.address);
+            user3CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user3.address);
 
             console.log(`The user got ${ethers.utils.formatEther((user3CrystlBalanceAfterWithdraw).sub(user3CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
 
@@ -896,8 +896,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
 
             user1CrystlShareBalanceBeforeFinalWithdraw = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
-            user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user1.address);
-
+            user1CrystlBalanceBeforeWithdraw = await TARGET_WANT.balanceOf(user1.address);
+			console.log("bal_before:", user1CrystlBalanceBeforeWithdraw);
             await vaultHealer["withdraw(uint256,uint256)"](maximizer_strat_pid,ethers.constants.MaxUint256); //user1 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
@@ -923,7 +923,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         
         // withdraw should also cause crystl to be returned to the user (all of it)
         it('Should return crystl harvest to user when they withdraw (above test)', async () => {
-            user1CrystlBalanceAfterWithdraw = await crystlToken.balanceOf(user1.address);
+            user1CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user1.address);
+			console.log("bal_after:", user1CrystlBalanceAfterWithdraw);
             console.log(`The user got ${ethers.utils.formatEther((user1CrystlBalanceAfterWithdraw).sub(user1CrystlBalanceBeforeWithdraw))} CRYSTL tokens back from the maximizer vault`)
             expect(user1CrystlBalanceAfterWithdraw).to.be.gt(user1CrystlBalanceBeforeWithdraw);
         })
@@ -938,7 +939,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const UsersStakedTokensBeforeFinalWithdrawal = await vaultHealer.balanceOf(user3.address, maximizer_strat_pid);
 
             user1CrystlShareBalanceBeforeFinalWithdraw = await vaultHealer.balanceOf(user3.address, crystl_compounder_strat_pid);
-            user1CrystlBalanceBeforeWithdraw = await crystlToken.balanceOf(user3.address);
+            user1CrystlBalanceBeforeWithdraw = await TARGET_WANT.balanceOf(user3.address);
 
             await vaultHealer.connect(user3)["withdraw(uint256,uint256)"](maximizer_strat_pid,ethers.constants.MaxUint256); //user3 (default signer) deposits 1 of LP tokens into maximizer_strat_pid 0 of vaulthealer
             
@@ -958,7 +959,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         })
 
         it('Should withdraw all of user4s CRYSTL tokens directly from the crystl compounder vault, resulting in what?', async () => {
-            user4InitialCrystlBalance = await crystlToken.balanceOf(user4.address);
+            user4InitialCrystlBalance = await TARGET_WANT.balanceOf(user4.address);
             user4InitialCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             console.log("user4InitialCrystlBalance: ", user4InitialCrystlBalance);
             console.log("user4InitialCrystlShares: ", user4InitialCrystlShares);
@@ -975,7 +976,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const wantLockedTotalAfterUser4Withdrawal = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).wantLockedTotal() //=0
 
             console.log(`VaultSharesTotal is ${ethers.utils.formatEther(vaultSharesTotalAfterUser4Withdrawal)} CRYSTL tokens after user 4 withdraws`)
-            user4FinalCrystlBalance = await crystlToken.balanceOf(user4.address);
+            user4FinalCrystlBalance = await TARGET_WANT.balanceOf(user4.address);
             user4FinalCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             totalCrystlVaultSharesAfter = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
 
