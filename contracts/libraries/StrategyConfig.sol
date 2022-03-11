@@ -40,6 +40,9 @@ library StrategyConfig {
             _tacticsB := mload(add(config,0x40))
         }
     }
+    function masterchef(MemPointer config) internal pure returns (address) {
+        return Tactics.masterchef(tacticsA(config));
+    }
     function wantToken(MemPointer config) internal pure returns (IERC20 want, uint256 dust) {
         assembly {
             want := and(mload(add(config,0x54)), MASK_160)
