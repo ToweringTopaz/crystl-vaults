@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./libraries/PRBMath.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
@@ -223,7 +224,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		console.log("wttauoow:", _vid);
 		console.log(_from, _vidSharesRemoved);
         uint targetVid = _vid >> 16;
-        VaultInfo storage target = vaultInfo[targetVid];
 
         uint targetTotalSupply = totalSupply(targetVid);
         if (targetTotalSupply == 0) return;
@@ -234,8 +234,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
         address vaultStrat = address(strat(_vid));
 
         // calculate the amount of targetVid token to be withdrawn
-        uint256 targetVidShares = _vidSharesRemoved * (balanceOf(vaultStrat, targetVid) + totalOffset) / totalSupply(_vid) 
-            - fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
+        uint256 totalSupply_vid = totalSupply(_vid);
+        uint256 targetVidShares = PRBMath.mulDiv(
+            _vidSharesRemoved, 
+            ((totalSupply(targetVid) + totalOffset) * balanceOf(_from, _vid) - fromOffset * totalSupply_vid ),
+            balanceOf(_from, _vid) * totalSupply_vid
+        );
 
         uint256 targetVidAmount = targetVidShares * strat(targetVid).wantLockedTotal() / targetTotalSupply;
         if (targetVidAmount == 0) return;
@@ -245,14 +249,16 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		console.log(targetVid, targetVidAmount);
 		console.log(vaultStrat, _from, target.want.balanceOf(_from));
         _withdraw(targetVid, targetVidAmount, vaultStrat, _from);
+
 		console.log(address(target.want));
 		console.log(vaultStrat, _from, target.want.balanceOf(_from));
+
         uint removedPortionOfOffset = fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
 
         // update the offsets for user and for vid
         totalMaximizerEarningsOffset[_vid] = totalOffset - removedPortionOfOffset;
         maximizerEarningsOffset[_from][_vid] = fromOffset - removedPortionOfOffset;
-
+ 
         emit MaximizerWithdraw(_from, _vid, targetVidShares);
     }
 }
