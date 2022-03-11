@@ -22,8 +22,10 @@ contract Strategy is BaseStrategy {
 
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
+        console.log("earnedLength: ", earnedLength);
 
         for (uint i; i < earnedLength; i++) {
+            console.log("made it into for loop");
             (IERC20 earnedToken, uint dust) = config.earned(i);
             console.log("earnedToken: ", address(earnedToken));
 
@@ -76,7 +78,7 @@ contract Strategy is BaseStrategy {
     function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
-        uint wantLockedBefore = wantBal + _vaultSharesTotal();
+        uint wantLockedBefore = wantBal + _vaultSharesTotal(_wantToken);
 
         if (msg.value > 0) {
             IWETH weth = config.weth();
@@ -98,7 +100,7 @@ contract Strategy is BaseStrategy {
         _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
 
-        wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
+        wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal(_wantToken) - wantLockedBefore;
         sharesAdded = wantAdded;
         if (_sharesTotal > 0) { 
             sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
@@ -112,7 +114,7 @@ contract Strategy is BaseStrategy {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         //User's balance, in want tokens
         uint wantBal = _wantToken.balanceOf(address(this)); 
-        uint wantLockedBefore = wantBal + _vaultSharesTotal();
+        uint wantLockedBefore = wantBal + _vaultSharesTotal(_wantToken);
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
@@ -130,7 +132,7 @@ contract Strategy is BaseStrategy {
         }
 
         //Account for reflect, pool withdraw fee, etc; charge these to user
-        uint wantLockedAfter = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        uint wantLockedAfter = _wantToken.balanceOf(address(this)) + _vaultSharesTotal(_wantToken);
         uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
 
         //Calculate shares to remove

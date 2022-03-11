@@ -109,7 +109,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
     function _wantLockedTotal() internal view virtual returns (uint256) {
         (IERC20 _wantToken, ) = config.wantToken();
-        return _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        return _wantToken.balanceOf(address(this)) + _vaultSharesTotal(_wantToken);
     }
 
 
@@ -119,9 +119,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         uint256 wantAmt = _wantToken.balanceOf(address(this));
         if (wantAmt == 0) return;
         
-        uint256 sharesBefore = _vaultSharesTotal();
+        uint256 sharesBefore = _vaultSharesTotal(_wantToken);
         _vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
-        uint256 sharesAfter = _vaultSharesTotal();
+        uint256 sharesAfter = _vaultSharesTotal(_wantToken);
         
         //including dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
@@ -210,12 +210,12 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         return super.supportsInterface(interfaceId) || interfaceId == type(IStrategy).interfaceId;
     }
 
-    function vaultSharesTotal() external view getConfig returns (uint256) {
-        return _vaultSharesTotal();
+    function vaultSharesTotal(IERC20 _wantToken) external view getConfig returns (uint256) {
+        return _vaultSharesTotal(_wantToken);
     }
 
 
-    function _vaultSharesTotal() internal view virtual returns (uint256) {
+    function _vaultSharesTotal(IERC20 _wantToken) internal view virtual returns (uint256) {
         return Tactics.vaultSharesTotal(config.tacticsA());
     }
     function _vaultDeposit(IERC20 _wantToken, uint256 _amount) internal virtual {   
@@ -228,7 +228,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.withdraw(tacticsA, tacticsB, _amount, address(_wantToken));
     }
-    function _vaultHarvest(IERC20 _wantToken) internal virtual {
+    function _vaultHarvest(IERC20 _wantToken) internal virtual getConfig {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
     }
