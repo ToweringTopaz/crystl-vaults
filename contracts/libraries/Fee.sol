@@ -39,7 +39,9 @@ library Fee {
 
     //Use this if ethAmt is all fees
     function payEthAll(Data[3] calldata _fees, uint _ethAmt) internal {
+        if (_ethAmt == 0) return;
         uint feeTotalRate = totalRate(_fees);
+        assert(feeTotalRate > 0);
         for (uint i; i < 3; i++) {
             (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
             if (_receiver == address(0) || _rate == 0) break;

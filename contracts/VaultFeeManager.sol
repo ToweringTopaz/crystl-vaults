@@ -60,8 +60,8 @@ contract VaultFeeManager is IVaultFeeManager {
             uint vid = _vids[i];
             _fees[i] = _overrideDefaultEarnFees.get(vid) ? earnFees[vid] : _default;
             for (uint k; k < 3; k++) {
-                if (_fees[k][i].receiver() == TX_ORIGIN)
-                    _fees[k][i] = Fee.create(tx.origin, _fees[k][i].rate());
+                if (_fees[i][k].receiver() == TX_ORIGIN)
+                    _fees[i][k] = Fee.create(tx.origin, _fees[i][k].rate());
             }
         }
     }
