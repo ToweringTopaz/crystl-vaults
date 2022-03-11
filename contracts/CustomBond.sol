@@ -415,7 +415,7 @@ contract CustomBond is Ownable {
         // } else {
         // _fee = _value.mul( currentOlympusFee() ).div( 1e6 );
             _payout = FixedPoint.fraction( customTreasury.valueOfToken(address(principalToken), _value), bondPrice() ).decode112with18().div( 1e11 );
-        }
+    }
 
     /**
      *  @notice calculate current ratio of debt to payout token supply
