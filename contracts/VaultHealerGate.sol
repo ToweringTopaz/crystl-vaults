@@ -221,8 +221,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function withdrawTargetTokenAndUpdateOffsetsOnWithdrawal(uint256 _vid, address _from, uint256 _vidSharesRemoved) internal {
-		console.log("wttauoow:", _vid);
-		console.log(_from, _vidSharesRemoved);
         uint targetVid = _vid >> 16;
 
         uint targetTotalSupply = totalSupply(targetVid);
@@ -247,7 +245,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
 		console.log("_withdraw(targetVid, targetVidAmount, vaultStrat, _from);");
 		console.log(targetVid, targetVidAmount);
-		// console.log(vaultStrat, _from, target.want.balanceOf(_from));
+		VaultInfo storage target = vaultInfo[targetVid];
+		console.log(vaultStrat, _from, target.want.balanceOf(_from));
         _withdraw(targetVid, targetVidAmount, vaultStrat, _from);
 
 		// console.log(address(target.want));
