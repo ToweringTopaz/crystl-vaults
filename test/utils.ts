@@ -1,4 +1,4 @@
-import hre from "hardhat";
+import hre, { network } from "hardhat";
 const { ethers } = require("hardhat");
 import { ERC20 } from "../typechain";
 
@@ -82,7 +82,19 @@ export const advanceBlockTo = async (blockNumber: number) => {
   }
 }
 
-export const advanceBlockNumber = async (blockNumber: number) => {
+export const advanceBlockWithNumber = async (blockNumber: number) => {
   for (let i = 0; i < blockNumber; i++) 
     await advanceBlock()
 }
+
+export const setBalance = async (addr: string, balance: string) => {
+  await network.provider.send("hardhat_setBalance", [
+    addr,
+    balance,
+  ]);
+}
+
+export const increaseTime = async (time: number) => {
+  await network.provider.send("evm_increaseTime", [time]);
+}
+
