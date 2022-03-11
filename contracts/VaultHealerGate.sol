@@ -247,11 +247,11 @@ abstract contract VaultHealerGate is VaultHealerBase {
         // withdraw an amount of reward token from the target vault proportional to the users withdrawal from the main vault
 		console.log("_withdraw(targetVid, targetVidAmount, vaultStrat, _from);");
 		console.log(targetVid, targetVidAmount);
-		console.log(vaultStrat, _from, target.want.balanceOf(_from));
+		// console.log(vaultStrat, _from, target.want.balanceOf(_from));
         _withdraw(targetVid, targetVidAmount, vaultStrat, _from);
 
-		console.log(address(target.want));
-		console.log(vaultStrat, _from, target.want.balanceOf(_from));
+		// console.log(address(target.want));
+		// console.log(vaultStrat, _from, target.want.balanceOf(_from));
 
         uint removedPortionOfOffset = fromOffset * _vidSharesRemoved / balanceOf(_from, _vid);
 
