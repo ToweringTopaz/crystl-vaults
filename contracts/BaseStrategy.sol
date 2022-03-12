@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
-import "hardhat/console.sol";
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
@@ -135,7 +134,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         IERC20 _tokenA,
         IERC20 _tokenB
     ) internal {
-        console.log("swap A to B:", address(_tokenA), address(_tokenB));
         if (_tokenA == _tokenB) return; //Do nothing for one-token paths
         IERC20[] memory path = config.magnetite().findAndSavePath(address(config.router()), _tokenA, _tokenB);
         require(path[0] == _tokenA && path[path.length - 1] == _tokenB, "Strategy: received invalid path for swap");

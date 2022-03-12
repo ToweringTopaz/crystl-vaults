@@ -34,7 +34,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     }
 
     function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) onlyRole(BOOST_ADMIN) {
-        require(vid < 2**224, "VH: incompatible vid for boost pool");
+        if (vid >= 2**224) revert MaximizerTooDeep(vid);
         VaultInfo storage vault = vaultInfo[vid];
         uint16 nonce = vault.numBoosts;
         vault.numBoosts = nonce + 1;
@@ -50,9 +50,10 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
     //Users can enableBoost to opt-in to a boosted vault
     function enableBoost(address _user, uint _boostID) public nonReentrant {
-        require(_msgSender() == _user || isApprovedForAll(_user, _msgSender()), "VH: must be approved to accept boost");
-        require(activeBoosts.get(_boostID), "not an active boost");
-        require(!userBoosts[_user].get(_boostID), "boost is already active for user");
+		
+        if (_msgSender() != _user && !isApprovedForAll(_user, _msgSender())) revert NotApprovedToEnableBoost(_user, _msgSender());
+        if (!activeBoosts.get(_boostID)) revert BoostPoolNotActive(_boostID);
+        if (userBoosts[_user].get(_boostID)) revert BoostPoolAlreadyJoined(_user, _boostID);
         userBoosts[_user].set(_boostID);
 
         boostPool(_boostID).joinPool(_user, uint112(balanceOf(_user, uint224(_boostID))));
@@ -68,9 +69,15 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         boostPool(_boostID).harvest(_msgSender());
     }
 
+
+	error NotApprovedToEnableBoost(address account, address operator);
+	error BoostPoolNotActive(uint256 _boostID);
+	error BoostPoolAlreadyJoined(address account, uint256 _boostID);
+	error BoostPoolNotJoined(address account, uint256 _boostID);
+
     //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
     function emergencyBoostWithdraw(uint _boostID) external nonReentrant {
-        require(userBoosts[_msgSender()].get(_boostID), "boost is not active for user");
+        if (!userBoosts[_msgSender()].get(_boostID)) revert BoostPoolNotJoined(_msgSender(), _boostID);
         try boostPool(_boostID).emergencyWithdraw{gas: 2**19}(_msgSender()) returns (bool success) {
             if (!success) activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         } catch {

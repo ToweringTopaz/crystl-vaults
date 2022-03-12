@@ -10,14 +10,17 @@ contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
+	
+	error TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+	error DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
 
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
-    function earn(Fee.Data[3] calldata fees) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
-        console.log("earn1");
+    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
+        //console.log("earn1");
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
-        console.log("earn2");
+        //console.log("earn2");
         _vaultHarvest();
 
         IWETH weth = config.weth();
@@ -34,24 +37,24 @@ contract Strategy is BaseStrategy {
             if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
             
             success = true; //We have something worth compounding
-            console.log("earn3");
+            //console.log("earn3");
             safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
-            console.log("earn4");
+            //console.log("earn4");
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
-        console.log("earn5");
+        //console.log("earn5");
         uint wethAdded = weth.balanceOf(address(this));
         if (_wantToken == weth) wethAdded -= wantBalanceBefore; //ignore pre-existing want tokens
-        console.log("earn6");
+        //console.log("earn6");
         if (config.isMaximizer()) {
-            console.log("earnm1");
+            //console.log("earnm1");
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-            console.log("earnm2");
-            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0); //deposit the rest
-            console.log("earnm3");
+            //console.log("earnm2");
+            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, ""); //deposit the rest
+            //console.log("earnm3");
         } else {
-            console.log("earnc1");
+            //console.log("earnc1");
             wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
 
             if (config.isPairStake()) {
@@ -59,21 +62,21 @@ contract Strategy is BaseStrategy {
                 safeSwap(wethAdded / 2, weth, token0);
                 safeSwap(wethAdded / 2, weth, token1);
                 LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-                console.log("earnc1a");
+                //console.log("earnc1a");
             } else {
                 safeSwap(wethAdded, weth, _wantToken);
-                console.log("earnc1b");
+                //console.log("earnc1b");
             }
-            console.log("earn7");
+            //console.log("earn7");
             _farm();
-            console.log("earn8");
+            //console.log("earn8");
         }
 
         __wantLockedTotal = _wantLockedTotal();
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
@@ -103,53 +106,56 @@ contract Strategy is BaseStrategy {
         if (_sharesTotal > 0) { 
             sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
         }
-        require(wantAdded > dust, "deposit: no/dust shares added");
+        if (wantAdded < dust) revert DustDeposit(wantAdded);
     }
 
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
-    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal) external virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
+    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) external virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
-        //User's balance, in want tokens
         uint wantBal = _wantToken.balanceOf(address(this)); 
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
-        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal;
+        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal; //User's balance, in want tokens
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         unchecked { //overflow is caught and handled in the second condition
-                if (_wantAmt + dust > userWant || _wantAmt + dust < _wantAmt) {
-                _wantAmt = userWant;
+            if (_wantAmt + dust > userWant || _wantAmt + dust < _wantAmt) {
+				_wantAmt = userWant;
             }
         }
-        
-        // Check if strategy has tokens from panic
+
+		uint withdrawSlippage;
         if (_wantAmt > wantBal) {
-            _vaultWithdraw(_wantToken, _wantAmt - wantBal);
-
+            _vaultWithdraw(_wantToken, _wantAmt - wantBal); //Withdraw from the masterchef, staking pool, etc.
             wantBal = _wantToken.balanceOf(address(this));
-        }
-
-        //Account for reflect, pool withdraw fee, etc; charge these to user
-        uint wantLockedAfter = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
-        uint withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
-
-        //Calculate shares to remove
+			uint wantLockedAfter = wantBal + _vaultSharesTotal();
+			
+			//Account for reflect, pool withdraw fee, etc; charge these to user
+			withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
+		} else {
+			withdrawSlippage = 0;
+		}
+		
+		//Calculate shares to remove
         sharesRemoved = Math.ceilDiv(
             (_wantAmt + withdrawSlippage) * _sharesTotal,
             wantLockedBefore
         );
-
+		
         //Get final withdrawal amount
         if (sharesRemoved > _userShares) {
             sharesRemoved = _userShares;
         }
+		wantAmt = sharesRemoved * wantLockedBefore / _sharesTotal;
+		if (wantAmt > withdrawSlippage) {
+			wantAmt -= withdrawSlippage;
+			if (wantAmt > wantBal) wantAmt = wantBal;
+		} else {
+			revert TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+		}
 
-        _wantAmt = Math.ceilDiv(sharesRemoved * wantLockedBefore, _sharesTotal) - withdrawSlippage;
-        if (_wantAmt > wantBal) _wantAmt = wantBal;
+        return (sharesRemoved, wantAmt);
 
-        require(_wantAmt > 0, "nothing to withdraw after slippage");
-        
-        return (sharesRemoved, _wantAmt);
-    }    
+    }
 
 }

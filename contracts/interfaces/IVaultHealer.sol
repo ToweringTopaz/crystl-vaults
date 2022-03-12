@@ -25,13 +25,25 @@ interface IVaultHealer is IAccessControl {
     event FailedWithdrawFee(uint vid, string reason);
     event FailedWithdrawFeeBytes(uint vid, bytes reason);
     event MaximizerWithdraw(address indexed account, uint indexed vid, uint targetShares);
+	
+	error PausedError(uint256 vid); //Action cannot be completed on a paused vid
+	error MaximizerTooDeep(uint256 targetVid); //Too many layers of nested maximizers (13 is plenty I should hope)
+	error VidOutOfRange(uint256 vid); //Specified vid does not represent an existing vault
+	error PanicCooldown(uint256 expiry); //Cannot panic this vault again until specified time
+	error InvalidFallback(); //The fallback function should not be called in this context
+	
+	error ERC1167_Create2Failed();	//Low-level error with creating a strategy proxy
+	error ERC1167_ImplZeroAddress(); //If attempting to deploy a strategy with a zero implementation address
+	
     function executePendingDeposit(address _to, uint192 _amount) external;
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to) external;
-    function withdraw(uint256 _vid, uint256 _wantAmt) external;
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to) external payable;
-    function deposit(uint256 _vid, uint256 _wantAmt) external payable;
+
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) external;
+    function withdraw(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external;
+    function deposit(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external payable;
+    function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable;
+
     function strat(uint256 _vid) external view returns (IStrategy);
-    function maximizerDeposit(uint256 _vid, uint256 _wantAmt) external payable;
+    function maximizerDeposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable;
     struct VaultInfo {
         IERC20 want;
         uint8 noAutoEarn;

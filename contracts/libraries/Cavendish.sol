@@ -29,13 +29,15 @@ library Cavendish {
 	bytes11 constant PROXY_INIT_CODE = hex'602d80343434335afa15f3';	//below is keccak256(abi.encodePacked(PROXY_INIT_CODE));
     bytes32 constant PROXY_INIT_HASH = hex'577cbdbf32026552c0ae211272febcff3ea352b0c755f8f39b49856dcac71019';
 
+	error ERC1167_Create2Failed();
+	error ERC1167_ImplZeroAddress();
 
     /// @notice Creates an 1167-compliant minimal proxy whose address is purely a function of the deployer address and the salt
     /// @param _implementation The contract to be cloned
     /// @param salt Used to determine and calculate the proxy address
     /// @return Address of the deployed proxy
-    function clone(address _implementation, bytes32 salt) internal returns (address) {
-        require(_implementation != address(0), "ERC1167: zero address");
+    function clone(address _implementation, bytes32 salt) external returns (address) {
+        if (_implementation == address(0)) revert ERC1167_ImplZeroAddress();
         address instance;
         assembly {
             sstore(PROXY_INIT_HASH, shl(96, _implementation)) //store at slot PROXY_INIT_HASH which should be empty
@@ -43,7 +45,7 @@ library Cavendish {
             instance := create2(0, 0x00, 11, salt)
             sstore(PROXY_INIT_HASH, 0) 
         }
-        require(instance != address(0), "ERC1167: create2 failed");
+        if (instance == address(0)) revert ERC1167_Create2Failed();
         return instance;
     }
     

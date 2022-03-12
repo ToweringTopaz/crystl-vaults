@@ -46,9 +46,9 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
         addVault(vid, _implementation, data);
     }
 
-
+	
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) nonReentrant returns (uint vid) {
-        require(targetVid < 2**208, "VH: maximizer too deep");
+		if (targetVid >= 2**208) revert MaximizerTooDeep(targetVid);
         VaultInfo storage targetVault = vaultInfo[targetVid];
         uint16 nonce = targetVault.numMaximizers + 1;
         vid = (targetVid << 16) | nonce;
@@ -82,10 +82,10 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
     }
     function _requireValidVid(uint vid) internal view {
         uint subVid = vid & 0xffff;
-        require(subVid > 0 && subVid <= (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers),
-            "VH: vid out of range");
+        if (subVid == 0 || subVid > (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers))
+			revert VidOutOfRange(vid);
     }
-
+	
 /*
    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) { return ERC2771Context._msgData(); }
    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) { return ERC2771Context._msgSender(); }
@@ -113,7 +113,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
     }
 
 	function panic(uint vid) external {
-        require (panicLockExpiry[vid] < block.timestamp, "panic once per 6 hours");
+        if (panicLockExpiry[vid] > block.timestamp) revert PanicCooldown(panicLockExpiry[vid]);
         panicLockExpiry[vid] = block.timestamp + PANIC_LOCK_DURATION;
         pause(vid);
         strat(vid).panic();
@@ -126,26 +126,12 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
         return !vaultInfo[vid].active;
     }
     modifier whenNotPaused(uint vid) {
-        require(!paused(vid), "VH: paused");
+        if (paused(vid)) revert PausedError(vid);
         _;
-    }
-
-    function _beforeTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        for (uint i; i < ids.length; i++) {
-            require(!paused(ids[i]) || to == address(0), "VH: tokens for paused vaults may not be transferred except to burn");
-        }
     }
 
     fallback() external {
         Cavendish._fallback();
-        revert("VH: invalid call to fallback");
+        revert InvalidFallback();
     }
 }
