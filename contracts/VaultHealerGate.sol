@@ -161,7 +161,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         //withdraw fee is implemented here
         try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
             //hardcoded 3% max fee rate
-            if (feeReceiver != address(0) && feeRate <= 300 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
+            if (feeReceiver != address(0) && feeRate <= 300 && vault.active) { //waive withdrawal fee on paused vaults as there's generally something wrong
                 uint feeAmt = wantAmt * feeRate / 10000;
                 wantAmt -= feeAmt;
                 vault.want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
@@ -221,6 +221,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         }
     }
 	
+	//The final update for maximizer offsets must happen AFTER token transfer
     function _safeTransferFrom(
         address from,
         address to,
@@ -251,6 +252,24 @@ abstract contract VaultHealerGate is VaultHealerBase {
 			}
 		}
 	}
+	
+	//Add nonReentrant for maximizer security
+	function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override nonReentrant { super.safeTransferFrom(from, to, id, amount, data); }
+	
+	//Add nonReentrant for maximizer security
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) public virtual override nonReentrant { super.safeBatchTransferFrom(from, to, ids, amounts, data); }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
     function maximizerUpdate(address _account, uint256 _vid) internal {

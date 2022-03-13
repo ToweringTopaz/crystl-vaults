@@ -107,7 +107,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
         emit Paused(vid);
     }
     function unpause(uint vid) public onlyRole("PAUSER") requireValidVid(vid) {
-        require(paused(vid));
+        require(!vaultInfo[vid].active);
         vaultInfo[vid].active = true;
         emit Unpaused(vid);
     }
