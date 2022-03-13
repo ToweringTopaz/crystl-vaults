@@ -43,7 +43,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
         IBoostPool _boost = IBoostPool(Cavendish.clone(_implementation, bytes32(_boostID)));
 
-        _boost.initialize(_msgSender(), _boostID, initdata);
+        _boost.initialize(msg.sender, _boostID, initdata);
         activeBoosts.set(_boostID);
         emit AddBoost(_boostID);
     }
@@ -51,7 +51,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     //Users can enableBoost to opt-in to a boosted vault
     function enableBoost(address _user, uint _boostID) public nonReentrant {
 		
-        if (_msgSender() != _user && !isApprovedForAll(_user, _msgSender())) revert NotApprovedToEnableBoost(_user, _msgSender());
+        if (msg.sender != _user && !isApprovedForAll(_user, msg.sender)) revert NotApprovedToEnableBoost(_user, msg.sender);
         if (!activeBoosts.get(_boostID)) revert BoostPoolNotActive(_boostID);
         if (userBoosts[_user].get(_boostID)) revert BoostPoolAlreadyJoined(_user, _boostID);
         userBoosts[_user].set(_boostID);
@@ -62,23 +62,23 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
     //Standard opt-in function users will call
     function enableBoost(uint _boostID) external {
-        enableBoost(_msgSender(), _boostID);
+        enableBoost(msg.sender, _boostID);
     }
 
     function harvestBoost(uint _boostID) external nonReentrant {
-        boostPool(_boostID).harvest(_msgSender());
+        boostPool(_boostID).harvest(msg.sender);
     }
 
     //In case of a buggy boost pool, users can opt out at any time but lose the boost rewards
     function emergencyBoostWithdraw(uint _boostID) external nonReentrant {
-        if (!userBoosts[_msgSender()].get(_boostID)) revert BoostPoolNotJoined(_msgSender(), _boostID);
-        try boostPool(_boostID).emergencyWithdraw{gas: 2**19}(_msgSender()) returns (bool success) {
+        if (!userBoosts[msg.sender].get(_boostID)) revert BoostPoolNotJoined(msg.sender, _boostID);
+        try boostPool(_boostID).emergencyWithdraw{gas: 2**19}(msg.sender) returns (bool success) {
             if (!success) activeBoosts.unset(_boostID); //Disable boost if the pool is broken
         } catch {
             activeBoosts.unset(_boostID);
         }
-        userBoosts[_msgSender()].unset(_boostID);
-        emit BoostEmergencyWithdraw(_msgSender(), _boostID);
+        userBoosts[msg.sender].unset(_boostID);
+        emit BoostEmergencyWithdraw(msg.sender, _boostID);
     }
 
     function _beforeTokenTransfer(
