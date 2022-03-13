@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
-import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+//import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
@@ -14,7 +14,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
-    bytes32 constant STRATEGY = keccak256("STRATEGY");
+    //bytes32 constant STRATEGY = keccak256("STRATEGY");
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
@@ -113,8 +113,9 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
     }
 
 	function panic(uint vid) external {
-        if (panicLockExpiry[vid] > block.timestamp) revert PanicCooldown(panicLockExpiry[vid]);
-        panicLockExpiry[vid] = block.timestamp + PANIC_LOCK_DURATION;
+        uint expiry = panicLockExpiry[vid];
+        if (expiry > block.timestamp) revert PanicCooldown(expiry);
+        expiry = block.timestamp + PANIC_LOCK_DURATION;
         pause(vid);
         strat(vid).panic();
     }
@@ -122,11 +123,11 @@ abstract contract VaultHealerBase is AccessControl, ERC1155Supply, /*ERC2771Cont
         unpause(vid);
         strat(vid).unpanic();
     }
-    function paused(uint vid) public view returns (bool) {
+    function paused(uint vid) external view returns (bool) {
         return !vaultInfo[vid].active;
     }
     modifier whenNotPaused(uint vid) {
-        if (paused(vid)) revert PausedError(vid);
+        if (!vaultInfo[vid].active) revert PausedError(vid);
         _;
     }
 
