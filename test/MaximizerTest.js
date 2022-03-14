@@ -295,6 +295,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 	
     describe(`Testing depositing into maximizer vault, compounding maximizer vault, withdrawing from maximizer vault:
     `, () => {
+		
+		it('Should have a VaultHealer within the code size limit', async () => {
+			vhSize = await cavendish.sizeOf(vaultHealer.address)
+
+             expect(vhSize).to.be.lt(24576);
+         })
+		
         //user zaps in their whole token0 balance
          it('Should zap token0 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
              token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
@@ -536,7 +543,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 ;
         })
 
-        it('Should increase the user\'s rawBalance of CRYSTL shares when withdrawing from maximizer, while not touching the balance of crystl or crystl shares', async () => {
+        it('Should increase the user\'s balance of CRYSTL shares when withdrawing from maximizer, while not affecting the user\'s totalBalance', async () => {
             user1CrystlBalanceAfterWithdraw = await TARGET_WANT.balanceOf(user1.address);
 			user1CrystlShareBalanceAfterWithdraw = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
 			user1CrystlShareTotalBalanceAfterWithdraw = await vaultHealer.totalBalanceOf(user1.address, crystl_compounder_strat_pid);
@@ -875,8 +882,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             const User3StakedTokensBeforeTransfer = await vaultHealer.balanceOf(user3.address, maximizer_strat_pid);
             const User1StakedTokensBeforeTransfer = await vaultHealer.balanceOf(user1.address, maximizer_strat_pid);
 
-			user1CrystlShareBalanceBeforeTransfer = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
-			user3CrystlShareBalanceBeforeTransfer = await vaultHealer.balanceOf(user3.address, crystl_compounder_strat_pid);
+			user1CrystlShareTotalBalanceBeforeTransfer = await vaultHealer.totalBalanceOf(user1.address, crystl_compounder_strat_pid);
+			user3CrystlShareTotalBalanceBeforeTransfer = await vaultHealer.totalBalanceOf(user3.address, crystl_compounder_strat_pid);
 
             User3OffsetBeforeTransfer = await vaultHealer.maximizerEarningsOffset(user3.address,maximizer_strat_pid);
             
@@ -895,12 +902,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(User3StakedTokensBeforeTransfer.sub(User3StakedTokensAfterTransfer)).to.eq(User1StakedTokensAfterTransfer.sub(User1StakedTokensBeforeTransfer))
         })
 
-        it('Transfer should not affect crystl share balances', async () => {
-			user1CrystlShareBalanceAfterTransfer = await vaultHealer.balanceOf(user1.address, crystl_compounder_strat_pid);
-			user3CrystlShareBalanceAfterTransfer = await vaultHealer.balanceOf(user3.address, crystl_compounder_strat_pid);
+        it('Transfer should not affect total crystl share balances', async () => {
+			user1CrystlShareTotalBalanceAfterTransfer = await vaultHealer.totalBalanceOf(user1.address, crystl_compounder_strat_pid);
+			user3CrystlShareTotalBalanceAfterTransfer = await vaultHealer.totalBalanceOf(user3.address, crystl_compounder_strat_pid);
 
-			expect(user1CrystlShareBalanceAfterTransfer).to.be.eq(user1CrystlShareBalanceBeforeTransfer);
-			expect(user3CrystlShareBalanceAfterTransfer).to.be.eq(user3CrystlShareBalanceBeforeTransfer);
+			expect(user1CrystlShareTotalBalanceAfterTransfer).to.be.eq(user1CrystlShareTotalBalanceBeforeTransfer);
+			expect(user3CrystlShareTotalBalanceAfterTransfer).to.be.eq(user3CrystlShareTotalBalanceBeforeTransfer);
         })		
 
         it('Should increase offset when you receive transferred tokens', async () => {
@@ -1045,13 +1052,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 )
         })
 
-        it('Should leave zero crystl in the crystl compounder once all 3 users have fully withdrawn their funds', async () => {
+        it('Should leave zero crystl shares owned by the maximizer strategy once all 3 users have fully withdrawn their funds', async () => {
             vaultSharesTotalInCrystlCompounderAtEnd = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
-            vaultSharesTotalInMaximizerAtEnd = await strategyMaximizer.connect(vaultHealerOwnerSigner).vaultSharesTotal()
+            maximizerSharesAtEnd = await vaultHealer.balanceOf(strategyMaximizer.address, crystl_compounder_strat_pid)
 
-            console.log(`There are now ${ethers.utils.formatEther(vaultSharesTotalInMaximizerAtEnd)} LP tokens in the maximizer and 
-            ${ethers.utils.formatEther(vaultSharesTotalInCrystlCompounderAtEnd)} crystl tokens left in the compounder`);
-            expect(vaultSharesTotalInCrystlCompounderAtEnd).to.eq(0);
+          
+            expect(maximizerSharesAtEnd).to.eq(0);
         })
     })
 })

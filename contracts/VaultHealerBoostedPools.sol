@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./VaultHealerGate.sol";
 import "./interfaces/IBoostPool.sol";
-import "hardhat/console.sol";
 
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
