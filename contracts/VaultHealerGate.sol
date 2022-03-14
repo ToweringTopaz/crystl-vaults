@@ -300,7 +300,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		}
      }
 	 
-	function maximizerRawTargetShares(address _account, uint256 _vid) internal view returns (uint256) {
+	function maximizerRawTargetShares(address _account, uint256 _vid) public view returns (uint256) {
         uint targetVid = _vid >> 16;
 		if (targetVid == 0) return 0;
 
