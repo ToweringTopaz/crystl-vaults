@@ -31,6 +31,7 @@ interface IVaultHealer is IAccessControl {
 	error VidOutOfRange(uint256 vid); //Specified vid does not represent an existing vault
 	error PanicCooldown(uint256 expiry); //Cannot panic this vault again until specified time
 	error InvalidFallback(); //The fallback function should not be called in this context
+	error WithdrawZeroBalance(address from); //User attempting to withdraw from a vault when they have zero shares
 
 	error NotApprovedToEnableBoost(address account, address operator);
 	error BoostPoolNotActive(uint256 _boostID);

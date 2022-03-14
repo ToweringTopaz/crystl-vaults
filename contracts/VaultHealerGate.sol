@@ -121,19 +121,20 @@ abstract contract VaultHealerGate is VaultHealerBase {
         );
         _withdraw(_vid, _wantAmt, _from, _to, _data);
     }
-	
-	error WithdrawZeroBalance(address from);
+
+    error BadMaximizerLogic(uint _before, uint _after); //todo: this is a test
 
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private {
 		uint fromBalance = balanceOf(_from, _vid);
         if (fromBalance == 0) {
 			revert WithdrawZeroBalance(_from);
 		}
-        
-        VaultInfo memory vault = vaultInfo[_vid];
 
         // we call an earn on the vault before we action the _deposit
-        if (vault.noAutoEarn & 2 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
+        if (vaultInfo[_vid].noAutoEarn & 2 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
+
+        //todo: this is a test
+        uint testTotalShares = totalBalanceOf(_from, _vid >> 16);
 
         IStrategy vaultStrat = strat(_vid);
 
@@ -147,31 +148,32 @@ abstract contract VaultHealerGate is VaultHealerBase {
             _vid,
             vidSharesRemoved
         );
-        
-		assert(vault.want.balanceOf(address(vaultStrat)) >= wantAmt);
 		
-        //withdraw fee is implemented here
-        try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
-            //hardcoded 3% max fee rate
-            if (feeReceiver != address(0) && feeRate <= 300 && vault.active) { //waive withdrawal fee on paused vaults as there's generally something wrong
-                uint feeAmt = wantAmt * feeRate / 10000;
-                wantAmt -= feeAmt;
-                vault.want.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
+        IERC20 _wantToken = vaultInfo[_vid].want;
+        if (address(_wantToken) != address(0)) {
+            //withdraw fee is implemented here
+            try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
+                //hardcoded 3% max fee rate
+                if (feeReceiver != address(0) && feeRate <= 300 && vaultInfo[_vid].active) { //waive withdrawal fee on paused vaults as there's generally something wrong
+                    uint feeAmt = wantAmt * feeRate / 10000;
+                    wantAmt -= feeAmt;
+                    _wantToken.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
+                }
+            } catch Error(string memory reason) {
+                emit FailedWithdrawFee(_vid, reason);
+            } catch (bytes memory reason) {
+                emit FailedWithdrawFeeBytes(_vid, reason);
             }
-        } catch Error(string memory reason) {
-            emit FailedWithdrawFee(_vid, reason);
-        } catch (bytes memory reason) {
-            emit FailedWithdrawFeeBytes(_vid, reason);
+
+            _wantToken.safeTransferFrom(address(vaultStrat), _to, wantAmt);
         }
-
-        //this call transfers wantTokens from the strat to the user
-		assert(vault.want.balanceOf(address(vaultStrat)) >= wantAmt);
-
-        vault.want.safeTransferFrom(address(vaultStrat), _to, wantAmt);
 
         if (_vid > 2**16) maximizerUpdate(_from, _vid);
 
         emit Withdraw(_from, _to, _vid, wantAmt);
+
+        //todo: this is a test
+        if (totalBalanceOf(_from, _vid >> 16) != testTotalShares) revert BadMaximizerLogic(testTotalShares, totalBalanceOf(_from, _vid >> 16));
     }
 	
     //called by strategy, cannot be nonReentrant
@@ -317,7 +319,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		return targetVidShares > accountOffset ? targetVidShares - accountOffset : 0;
 	}
 	
-	function totalBalanceOf(address _account, uint256 _vid) external view returns (uint256 amount) {
+    //todo should be external, not public?
+	function totalBalanceOf(address _account, uint256 _vid) public view returns (uint256 amount) {
 		amount = super.balanceOf(_account, _vid);
 		uint lastMaximizer = (_vid << 16) + vaultInfo[_vid].numMaximizers;
 		for (uint i = (_vid << 16) + 1; i <= lastMaximizer; i++) {
