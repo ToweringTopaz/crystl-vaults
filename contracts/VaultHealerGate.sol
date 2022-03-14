@@ -3,9 +3,7 @@ pragma solidity ^0.8.9;
 
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./libraries/PRBMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-
 
 abstract contract VaultHealerGate is VaultHealerBase {
     using SafeERC20 for IERC20;
@@ -41,7 +39,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _earn(uint256 vid, Fee.Data[3] memory fees, bytes calldata data) internal returns (bool) {
-        console.log("earn blocknum", block.number);
         VaultInfo storage vault = vaultInfo[vid];
         if (!vault.active || vault.lastEarnBlock == block.number) return false;
 
@@ -50,10 +47,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (success) {                
                 emit Earned(vid, wantLockedTotal);
                 return true;
-            } else console.log("earn !success");
+            }
         } catch Error(string memory reason) {
             emit FailedEarn(vid, reason);
-            console.log("failed earn:", reason);
         } catch (bytes memory reason) {
             emit FailedEarnBytes(vid, reason);
         }
@@ -66,7 +62,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
         require(address(strat(_vid)) == sender, "VH: sender does not match vid");
         //totalMaximizerEarningsOffset[_vid] += 
         _deposit(_vid >> 16, _wantAmt, sender, sender, _data);
-		console.log("maxideposit:", _vid, balanceOf(msg.sender, _vid >> 16));
     }
 
     // Want tokens moved from user -> this -> Strat (compounding
@@ -80,7 +75,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
-        console.log("deposit blocknum", block.number);
         VaultInfo memory vault = vaultInfo[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
         if (vault.noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
@@ -133,8 +127,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private {
 		uint fromBalance = balanceOf(_from, _vid);
         if (fromBalance == 0) {
-			console.log("bad withdraw: ", _vid, _from);
-			console.log("amount: ", _wantAmt);
 			revert WithdrawZeroBalance(_from);
 		}
         
@@ -284,7 +276,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 			uint256 userOffsetAfter = Math.ceilDiv(balanceOf(_account, _vid) * (balanceOf(address(strat(_vid)), targetVid) + totalOffset), totalSupply(_vid));
 			uint userOffsetBefore = maximizerEarningsOffset[_account][_vid];
 			maximizerEarningsOffset[_account][_vid] = userOffsetAfter;
-			console.log("userOffsetAfter: ", userOffsetAfter);
 			totalMaximizerEarningsOffset[_vid] = totalOffset + userOffsetAfter - userOffsetBefore;
 		}
 
@@ -304,7 +295,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
 			uint sharesEarned = targetVidShares - accountOffset;
 			totalMaximizerEarningsOffset[_vid] += sharesEarned;
 			maximizerEarningsOffset[_account][_vid] = targetVidShares;
-			console.log("targetVidShares: ", targetVidShares);
 			_safeTransferFrom(address(strat(_vid)), _account, targetVid, sharesEarned, "");
 		    emit MaximizerWithdraw(_account, _vid, sharesEarned);
 		}
@@ -333,6 +323,5 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		for (uint i = (_vid << 16) + 1; i <= lastMaximizer; i++) {
 			amount += maximizerPendingTargetShares(_account, i);
 		}
-		console.log("total balance: ", amount);
 	}
 }
