@@ -28,12 +28,12 @@ contract Strategy is BaseStrategy {
 
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
-            console.log("earnedToken: ", address(earnedToken));
+            //console.log("earnedToken: ", address(earnedToken));
 
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
-            console.log("earnedAmt: ", earnedAmt);
+            //console.log("earnedAmt: ", earnedAmt);
             if (earnedToken == _wantToken) earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
-            console.log("earnedAmt: ", earnedAmt);
+            //console.log("earnedAmt: ", earnedAmt);
             if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
             
             success = true; //We have something worth compounding

@@ -37,6 +37,7 @@ interface IVaultHealer is IAccessControl {
 	error BoostPoolNotActive(uint256 _boostID);
 	error BoostPoolAlreadyJoined(address account, uint256 _boostID);
 	error BoostPoolNotJoined(address account, uint256 _boostID);
+    error ArrayMismatch(uint lenA, uint lenB);
 
 	error ERC1167_Create2Failed();	//Low-level error with creating a strategy proxy
 	error ERC1167_ImplZeroAddress(); //If attempting to deploy a strategy with a zero implementation address

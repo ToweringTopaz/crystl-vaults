@@ -43,10 +43,10 @@ contract Magnetite is Ownable, IMagnetite {
         IUniRouter router = IUniRouter(_router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
 
-        console.log("magnetite find and save len", path.length);
+        //console.log("magnetite find and save len", path.length);
         if (path.length == 0) {
             path = generatePath(router, a, b);
-            console.log("magnetite find and save new len", path.length);
+            //console.log("magnetite find and save new len", path.length);
             _setPath(_router, path, false);
         }
     }
@@ -79,7 +79,7 @@ contract Magnetite is Ownable, IMagnetite {
         } else {
             if (pathAB.length > 0) return;
         }
-        console.log("setting path", address(_path[0]), address(_path[len - 1]));
+        //console.log("setting path", address(_path[0]), address(_path[len - 1]));
         IERC20[] storage pathBA = _paths[hashBA];
         
         for (uint i; i < len; i++) {
@@ -112,7 +112,7 @@ contract Magnetite is Ownable, IMagnetite {
     
     function generatePath(IUniRouter router, IERC20 a, IERC20 b) internal view returns (IERC20[] memory path) {
     
-        console.log("magnetite generatePath");
+        //console.log("magnetite generatePath");
         if (a == b) {
             path = new IERC20[](1);
             path[0] = a;
@@ -168,8 +168,8 @@ contract Magnetite is Ownable, IMagnetite {
             return path;
         }
         if (e1 != e0) {
-            console.log("a,b:", address(a), address(b));
-            console.log("e0,e1:", address(e0), address(e1));
+            //console.log("a,b:", address(a), address(b));
+            //console.log("e0,e1:", address(e0), address(e1));
             revert("no path found");
         }
         path[2] = e0;
@@ -179,8 +179,8 @@ contract Magnetite is Ownable, IMagnetite {
     }   
     function findPair(IUniRouter router, IERC20 a, IERC20[] memory b) internal view returns (IERC20) {
         IUniFactory factory = IUniFactory(router.factory());
-        console.log("findpair", address(a), address(b[0]));
-        console.log(address(b[1]));
+        //console.log("findpair", address(a), address(b[0]));
+        //console.log(address(b[1]));
         IERC20[] memory allCom = commonTokens(router);
         PairData[] memory pairData = new PairData[](allCom.length + b.length);
 
@@ -213,7 +213,7 @@ contract Magnetite is Ownable, IMagnetite {
         for (uint i = 1; i < pairData.length; i++) {
             if (compare(router, pairData[best], pairData[i])) best = i;
         }
-        console.log("no liq :(");
+        //console.log("no liq :(");
         require(pairData[best].liquidity > 0, "no liquidity");
         
         return pairData[best].token;

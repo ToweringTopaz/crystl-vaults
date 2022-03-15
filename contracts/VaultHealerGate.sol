@@ -15,7 +15,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint96 amount1;
     }
     mapping(address => mapping(uint256 => uint256)) public maximizerEarningsOffset;
-    mapping(uint256 => uint256) public totalMaximizerEarningsOffset;
+    mapping(uint256 => uint256) public totalSupply;
+    mapping(uint256 => uint256) public totalMaximizerEarnings;
 
     mapping(address => PendingDeposit) private pendingDeposits;
 
@@ -28,8 +29,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
             if (_earn(vids[i], fees[i], msg.data[0:0])) successGas[i] = gasBefore - gasleft();
         }
     }
+
     function earn(uint256[] calldata vids, bytes[] calldata data) external nonReentrant returns (uint[] memory successGas) {
-        require(vids.length == data.length, "VH: input array mismatch");
+        if (vids.length != data.length) revert ArrayMismatch(vids.length, data.length);
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
@@ -58,10 +60,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
     
     //Allows maximizers to make reentrant calls, only to deposit to their target
     function maximizerDeposit(uint _vid, uint _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) {
-        address sender = msg.sender;
-        require(address(strat(_vid)) == sender, "VH: sender does not match vid");
-        //totalMaximizerEarningsOffset[_vid] += 
-        _deposit(_vid >> 16, _wantAmt, sender, sender, _data);
+        require(address(strat(_vid)) == msg.sender, "VH: sender does not match vid");
+        totalMaximizerEarnings[_vid] += _deposit(_vid >> 16, _wantAmt, msg.sender, msg.sender, _data);
     }
 
     // Want tokens moved from user -> this -> Strat (compounding
@@ -75,26 +75,22 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
-        VaultInfo memory vault = vaultInfo[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
-        if (vault.noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
+        if (vaultInfo[_vid].noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
 
-        IStrategy vaultStrat = strat(_vid);
+        //todo: this is a test
+        uint targetVid = _vid >> 16;
+        uint testTotalShares = maximizerPendingTargetShares(_to, _vid) + balanceOf(_to, targetVid);
+        console.log("target shares before deposit:", testTotalShares);
 
-        if (_wantAmt > 0 && address(vault.want) != address(0)) pendingDeposits[address(vaultStrat)] = PendingDeposit({
-            token: vault.want,
-            amount0: uint96(_wantAmt >> 96),
-            from: _from,
-            amount1: uint96(_wantAmt)
-        });
-        
-        uint256 totalSupplyBefore = totalSupply(_vid);
-        // if this is a maximizer vault, do these extra steps
-        if (_vid > 2**16 && totalSupplyBefore > 0) maximizerHarvest(_to, _vid);
+        //Store the _from address, deposit amount, and ERC20 token associated with this vault. The strategy will be able to withdraw from _from via 
+        //VaultHealer's approval, but no more than _wantAmt. This allows VaultHealer to be the only vault contract where token approvals are needed. 
+        //Users can be approve VaultHealer freely and be assured that VaultHealer will not withdraw anything except when they call deposit, and only
+        //up to the correct deposit amount.
+        preparePendingDeposit(_vid, _from, _wantAmt);
 
         // we make the deposit
-        uint256 wantAdded;
-        (wantAdded, vidSharesAdded) = vaultStrat.deposit{value: msg.value}(_wantAmt, totalSupplyBefore, abi.encode(msg.sender, _from, _to, _data));
+        (_wantAmt, vidSharesAdded) = strat(_vid).deposit{value: msg.value}(_wantAmt, totalSupply[_vid], abi.encode(msg.sender, _from, _to, _data));
 
         //we mint tokens for the user via the 1155 contract
         _mint(
@@ -103,10 +99,14 @@ abstract contract VaultHealerGate is VaultHealerBase {
             vidSharesAdded,
             _data
         );
-		
-        if (_vid > 2**16 && totalSupplyBefore > 0) maximizerUpdate(_to, _vid);
 
-        emit Deposit(_from, _to, _vid, wantAdded);
+        delete pendingDeposits[address(strat(_vid))]; //In case the pending deposit was not used, don't store it
+
+        emit Deposit(_from, _to, _vid, _wantAmt);
+
+        //todo: this is a test
+        uint targetBalance = balanceOf(_to, targetVid);
+        if (targetBalance != testTotalShares) revert BadMaximizerLogic(testTotalShares, targetBalance);
     }
 
     // Withdraw LP tokens from MasterChef.
@@ -124,23 +124,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     error BadMaximizerLogic(uint _before, uint _after); //todo: this is a test
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private {
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesRemoved) {
 		uint fromBalance = balanceOf(_from, _vid);
-        if (fromBalance == 0) {
-			revert WithdrawZeroBalance(_from);
-		}
+        if (fromBalance == 0) revert WithdrawZeroBalance(_from);
 
         // we call an earn on the vault before we action the _deposit
         if (vaultInfo[_vid].noAutoEarn & 2 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
 
         //todo: this is a test
-        uint testTotalShares = totalBalanceOf(_from, _vid >> 16);
+        uint targetVid = _vid >> 16;
+        uint testTotalShares = maximizerPendingTargetShares(_from, _vid) + balanceOf(_from, targetVid);
+        console.log("target shares before withdrawal:", testTotalShares);
 
-        IStrategy vaultStrat = strat(_vid);
-
-        (uint256 vidSharesRemoved, uint256 wantAmt) = vaultStrat.withdraw(_wantAmt, fromBalance, totalSupply(_vid), abi.encode(msg.sender, _from, _to, _data));
-        
-        if (_vid > 2**16) maximizerHarvest(_from, _vid);
+        (vidSharesRemoved, _wantAmt) = strat(_vid).withdraw(_wantAmt, fromBalance, totalSupply[_vid], abi.encode(msg.sender, _from, _to, _data));
 		
         //burn the tokens equal to vidSharesRemoved
         _burn(
@@ -149,7 +145,21 @@ abstract contract VaultHealerGate is VaultHealerBase {
             vidSharesRemoved
         );
 		
+        //Collect the withdrawal fee and transfer the ERC20 token out
+        _wantAmt = executeWithdrawal(_vid, _wantAmt, _to);
+
+        emit Withdraw(_from, _to, _vid, _wantAmt);
+
+        //todo: this is a test
+        uint targetBalance = balanceOf(_from, _vid >> 16);
+        console.log("targetBalance:" , targetBalance);
+        if (targetBalance != testTotalShares) revert BadMaximizerLogic(testTotalShares, targetBalance);
+    }
+
+    function executeWithdrawal(uint _vid, uint _wantAmt, address _to) private returns (uint wantAmt) {
         IERC20 _wantToken = vaultInfo[_vid].want;
+        wantAmt = _wantAmt;
+        address vaultStrat = address(strat(_vid));
         if (address(_wantToken) != address(0)) {
             //withdraw fee is implemented here
             try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
@@ -157,7 +167,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 if (feeReceiver != address(0) && feeRate <= 300 && vaultInfo[_vid].active) { //waive withdrawal fee on paused vaults as there's generally something wrong
                     uint feeAmt = wantAmt * feeRate / 10000;
                     wantAmt -= feeAmt;
-                    _wantToken.safeTransferFrom(address(vaultStrat), feeReceiver, feeAmt);
+                    _wantToken.safeTransferFrom(vaultStrat, feeReceiver, feeAmt);
                 }
             } catch Error(string memory reason) {
                 emit FailedWithdrawFee(_vid, reason);
@@ -165,15 +175,19 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 emit FailedWithdrawFeeBytes(_vid, reason);
             }
 
-            _wantToken.safeTransferFrom(address(vaultStrat), _to, wantAmt);
+            _wantToken.safeTransferFrom(vaultStrat, _to, wantAmt);
         }
+    }
 
-        if (_vid > 2**16) maximizerUpdate(_from, _vid);
 
-        emit Withdraw(_from, _to, _vid, wantAmt);
-
-        //todo: this is a test
-        if (totalBalanceOf(_from, _vid >> 16) != testTotalShares) revert BadMaximizerLogic(testTotalShares, totalBalanceOf(_from, _vid >> 16));
+    function preparePendingDeposit(uint _vid, address _from, uint _wantAmt) private {
+        IERC20 vaultWant = vaultInfo[_vid].want;
+        if (_wantAmt > 0 && address(vaultWant) != address(0)) pendingDeposits[address(strat(_vid))] = PendingDeposit({
+            token: vaultWant,
+            amount0: uint96(_wantAmt >> 96),
+            from: _from,
+            amount1: uint96(_wantAmt)
+        });
     }
 	
     //called by strategy, cannot be nonReentrant
@@ -201,52 +215,62 @@ abstract contract VaultHealerGate is VaultHealerBase {
         bytes memory data
     ) internal virtual override {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
-        if (from != address(0) && to != address(0)) {
+
+        if (from == address(0)) { //tokens minted during deposit
+            for (uint i; i < ids.length; i++) {
+                uint vid = ids[i];
+                uint supplyBefore = totalSupply[vid];
+                uint supplyAfter = supplyBefore + amounts[i];
+                totalSupply[vid] = supplyAfter;
+
+                if (vid > 2**16 && supplyBefore > 0) {
+                    uint bal = balanceOf(to, vid);
+                    maximizerHarvest(to, vid, bal, bal + amounts[i], supplyBefore, supplyAfter);
+                }
+            }
+        } else if (to == address(0)) { //tokens burned during withdrawal
+            for (uint i; i < ids.length; i++) {
+                uint vid = ids[i];
+                uint amount = amounts[i];
+                uint supplyBefore = totalSupply[vid];
+                uint supplyAfter = supplyBefore - amount;
+                totalSupply[vid] = supplyAfter;
+
+                if (vid > 2**16 && amount > 0) {
+                    if (supplyAfter == 0) {
+                        uint targetVid = vid >> 16;
+                        address vaultStrat = address(strat(vid));
+                        uint remainingTargetShares = balanceOf(vaultStrat, targetVid);
+                        
+                        _safeTransferFrom(vaultStrat, from, targetVid, remainingTargetShares, "");
+
+                        totalMaximizerEarnings[vid] = 0;
+                        maximizerEarningsOffset[from][vid] = 0;
+                        emit MaximizerWithdraw(from, vid, remainingTargetShares);
+                    } else {
+                        uint bal = balanceOf(from, vid);
+                        maximizerHarvest(from, vid, bal, bal - amount, supplyBefore, supplyAfter);
+                    }
+                }
+            }
+        } else {
             for (uint i; i < ids.length; i++) {
                 uint vid = ids[i];
 
                 if (vid > 2**16) {
                     _earn(vid, vaultFeeManager.getEarnFees(vid), msg.data[0:0]);
-                    maximizerHarvest(from, vid);
-					if (from != to) maximizerHarvest(to, vid);
+                    uint bal = balanceOf(from, vid);
+                    uint supply = totalSupply[vid];
+                    uint amount = amounts[i];
+                    maximizerHarvest(from, vid, bal, bal - amount, supply, supply);
+                    bal = balanceOf(to, vid);
+					maximizerHarvest(to, vid, bal, bal + amount, supply, supply);
                 }
 
             }
         }
     }
-	
-	//The final update for maximizer offsets must happen AFTER token transfer
-    function _safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) internal virtual override {
-		super._safeTransferFrom(from, to, id, amount, data);
-		if (id > 2**16) {
-			maximizerUpdate(from, id);
-			if (from != to) maximizerUpdate(to, id);
-		}
-	}
 
-    function _safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-		super._safeBatchTransferFrom(from, to, ids, amounts, data);
-		for (uint i; i < ids.length; i++) {
-			uint vid = ids[i];
-			if (vid > 2**16) {
-				maximizerUpdate(from, vid);
-				if (from != to) maximizerUpdate(to, vid);
-			}
-		}
-	}
-	
 	//Add nonReentrant for maximizer security
 	function safeTransferFrom(
         address from,
@@ -265,42 +289,23 @@ abstract contract VaultHealerGate is VaultHealerBase {
         bytes memory data
     ) public virtual override nonReentrant { super.safeBatchTransferFrom(from, to, ids, amounts, data); }
 
-    // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function maximizerUpdate(address _account, uint256 _vid) internal {
-        uint256 targetVid = _vid >> 16;
-		if (targetVid == 0) return;
-
-		if (totalSupply(_vid) == 0) {
-			maximizerEarningsOffset[_account][_vid] = 0;
-			totalMaximizerEarningsOffset[_vid] = 0;
-		} else {
-			uint totalOffset = totalMaximizerEarningsOffset[_vid];
-			uint256 userOffsetAfter = Math.ceilDiv(balanceOf(_account, _vid) * (balanceOf(address(strat(_vid)), targetVid) + totalOffset), totalSupply(_vid));
-			uint userOffsetBefore = maximizerEarningsOffset[_account][_vid];
-			maximizerEarningsOffset[_account][_vid] = userOffsetAfter;
-			totalMaximizerEarningsOffset[_vid] = totalOffset + userOffsetAfter - userOffsetBefore;
-		}
-
-    }
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
-    function maximizerHarvest(address _account, uint256 _vid) internal {
-        uint targetVid = _vid >> 16;
-		if (targetVid == 0) return;
-		
-        // calculate the amount of targetVid shares to be withdrawn		
-		uint targetVidShares = maximizerRawTargetShares(_account, _vid);
-		uint accountOffset = maximizerEarningsOffset[_account][_vid];
-		
-		if (targetVidShares > accountOffset) {
-			
-			uint sharesEarned = targetVidShares - accountOffset;
-			totalMaximizerEarningsOffset[_vid] += sharesEarned;
-			maximizerEarningsOffset[_account][_vid] = targetVidShares;
-			_safeTransferFrom(address(strat(_vid)), _account, targetVid, sharesEarned, "");
+    function maximizerHarvest(address _account, uint256 _vid, uint256 _balanceBefore, uint256 _balanceAfter, uint256 _supplyBefore, uint256 _supplyAfter) internal {
+        uint totalBefore = totalMaximizerEarnings[_vid];
+        totalMaximizerEarnings[_vid] = _supplyAfter * totalBefore / _supplyBefore;
+
+        uint accountOffset = maximizerEarningsOffset[_account][_vid];
+        maximizerEarningsOffset[_account][_vid] = _balanceAfter * totalBefore / _supplyBefore;
+
+        uint accountTargetShares = _balanceBefore * totalBefore / _supplyBefore;
+
+		if (accountTargetShares > accountOffset) {
+			uint sharesEarned = accountTargetShares - accountOffset;
+            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
 		    emit MaximizerWithdraw(_account, _vid, sharesEarned);
 		}
-     }
+    }
 	 
 	function maximizerRawTargetShares(address _account, uint256 _vid) public view returns (uint256) {
         uint targetVid = _vid >> 16;
@@ -309,7 +314,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		uint userVaultBalance = balanceOf(_account, _vid);
 		if (userVaultBalance == 0) return 0;		
 		
-		return userVaultBalance * (balanceOf(address(strat(_vid)), targetVid) + totalMaximizerEarningsOffset[_vid]) / totalSupply(_vid);
+		return userVaultBalance * totalMaximizerEarnings[_vid] / totalSupply[_vid];
 	}
 	
 	function maximizerPendingTargetShares(address _account, uint256 _vid) public view returns (uint256) {
@@ -318,13 +323,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		
 		return targetVidShares > accountOffset ? targetVidShares - accountOffset : 0;
 	}
-	
-    //todo should be external, not public?
-	function totalBalanceOf(address _account, uint256 _vid) public view returns (uint256 amount) {
+
+	function totalBalanceOf(address _account, uint256 _vid) external view returns (uint256 amount) {
 		amount = super.balanceOf(_account, _vid);
 		uint lastMaximizer = (_vid << 16) + vaultInfo[_vid].numMaximizers;
 		for (uint i = (_vid << 16) + 1; i <= lastMaximizer; i++) {
 			amount += maximizerPendingTargetShares(_account, i);
 		}
 	}
+
 }
