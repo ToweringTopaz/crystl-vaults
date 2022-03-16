@@ -4,6 +4,7 @@
 require('@nomiclabs/hardhat-waffle');
 require('dotenv').config()
 require("solidity-coverage");
+require("@nomiclabs/hardhat-etherscan");
 
 const chainIds = {
   hardhat: 31337,
@@ -34,7 +35,7 @@ module.exports = {
     hardhat: {
       initialBaseFeePerGas: 1_00_000_000,
       gasPrice: "auto",
-      allowUnlimitedContractSize: true,
+      allowUnlimitedContractSize: false,
       accounts: {
         initialIndex: 0,
         count: 20,
@@ -55,15 +56,26 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.9",
+    version: "0.8.12",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
+        runs: 200//2**32-1,
       },
 	  debug: {
 	  }
     },
+	overrides: {
+		"contracts/VaultHealer.sol": {
+			version: "0.8.12",
+			settings: {
+			  optimizer: {
+				enabled: true,
+				runs: 200,
+			  },
+			},
+		},
+	},
   },
   mocha: {
     timeout: 90000,

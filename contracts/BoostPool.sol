@@ -11,12 +11,9 @@ Join us at PolyCrystal.Finance!
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./interfaces/IStrategy.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IBoostPool.sol";
-import "hardhat/console.sol";
 
 contract BoostPool is IBoostPool, Initializable, Ownable {
     using SafeERC20 for IERC20;

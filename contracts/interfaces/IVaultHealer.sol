@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./IMagnetite.sol";
 import "./IStrategy.sol";
 import "./IVaultFeeManager.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -24,7 +24,7 @@ interface IVaultHealer is IAccessControl {
     event FailedEarnBytes(uint vid, bytes reason);
     event FailedWithdrawFee(uint vid, string reason);
     event FailedWithdrawFeeBytes(uint vid, bytes reason);
-    event MaximizerWithdraw(address indexed account, uint indexed vid, uint targetShares);
+    event MaximizerHarvest(address indexed account, uint indexed vid, uint targetShares);
 	
 	error PausedError(uint256 vid); //Action cannot be completed on a paused vid
 	error MaximizerTooDeep(uint256 targetVid); //Too many layers of nested maximizers (13 is plenty I should hope)
@@ -32,6 +32,7 @@ interface IVaultHealer is IAccessControl {
 	error PanicCooldown(uint256 expiry); //Cannot panic this vault again until specified time
 	error InvalidFallback(); //The fallback function should not be called in this context
 	error WithdrawZeroBalance(address from); //User attempting to withdraw from a vault when they have zero shares
+	error UnauthorizedPendingDepositAmount(); //Strategy attempting to pull more tokens from the user than authorized
 
 	error NotApprovedToEnableBoost(address account, address operator);
 	error BoostPoolNotActive(uint256 _boostID);

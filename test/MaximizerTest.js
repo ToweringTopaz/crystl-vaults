@@ -902,6 +902,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             expect(User3StakedTokensBeforeTransfer.sub(User3StakedTokensAfterTransfer)).to.eq(User1StakedTokensAfterTransfer.sub(User1StakedTokensBeforeTransfer))
         })
 
+/* This must be checked with inline asserts due to earn
         it('Transfer should not affect total crystl share balances', async () => {
 			user1CrystlShareTotalBalanceAfterTransfer = await vaultHealer.totalBalanceOf(user1.address, crystl_compounder_strat_pid);
 			user3CrystlShareTotalBalanceAfterTransfer = await vaultHealer.totalBalanceOf(user3.address, crystl_compounder_strat_pid);
@@ -909,7 +910,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			expect(user1CrystlShareTotalBalanceAfterTransfer).to.be.eq(user1CrystlShareTotalBalanceBeforeTransfer);
 			expect(user3CrystlShareTotalBalanceAfterTransfer).to.be.eq(user3CrystlShareTotalBalanceBeforeTransfer);
         })		
-
+*/
         it('Should increase offset when you receive transferred tokens', async () => {
              // const User1OffsetAfterTransfer = await vaultHealer.rewardDebt(maximizer_strat_pid, user1.address);
 			const User3OffsetAfterTransfer = await vaultHealer.maximizerEarningsOffset(user3.address,maximizer_strat_pid);

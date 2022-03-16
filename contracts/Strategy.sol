@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import "./BaseStrategy.sol";
 import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "hardhat/console.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -17,10 +16,8 @@ contract Strategy is BaseStrategy {
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
     function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
-        //console.log("earn1");
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
-        //console.log("earn2");
         _vaultHarvest();
 
         IWETH weth = config.weth();
@@ -28,33 +25,22 @@ contract Strategy is BaseStrategy {
 
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
-            //console.log("earnedToken: ", address(earnedToken));
 
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
-            //console.log("earnedAmt: ", earnedAmt);
             if (earnedToken == _wantToken) earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
-            //console.log("earnedAmt: ", earnedAmt);
             if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
             
             success = true; //We have something worth compounding
-            //console.log("earn3");
             safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
-            //console.log("earn4");
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
-        //console.log("earn5");
         uint wethAdded = weth.balanceOf(address(this));
         if (_wantToken == weth) wethAdded -= wantBalanceBefore; //ignore pre-existing want tokens
-        //console.log("earn6");
         if (config.isMaximizer()) {
-            //console.log("earnm1");
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-            //console.log("earnm2");
             IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, ""); //deposit the rest
-            //console.log("earnm3");
         } else {
-            //console.log("earnc1");
             wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
 
             if (config.isPairStake()) {
@@ -62,14 +48,10 @@ contract Strategy is BaseStrategy {
                 safeSwap(wethAdded / 2, weth, token0);
                 safeSwap(wethAdded / 2, weth, token1);
                 LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-                //console.log("earnc1a");
             } else {
                 safeSwap(wethAdded, weth, _wantToken);
-                //console.log("earnc1b");
             }
-            //console.log("earn7");
             _farm();
-            //console.log("earn8");
         }
 
         __wantLockedTotal = _wantLockedTotal();

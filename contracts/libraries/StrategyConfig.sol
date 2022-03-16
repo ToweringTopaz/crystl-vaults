@@ -149,22 +149,11 @@ library StrategyConfig {
         address[] memory _earned,
         uint8[] memory _earnedDust
     ) external view returns (bytes memory configData) {
-        console.log("made it into generateConfig");
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
-                console.log("1");
-
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
-                console.log("1");
-
         uint8 vaultType = uint8(_earned.length);
-                        console.log("1");
-
         if (_feeOnTransfer) vaultType += 0x80;
-                        console.log("1");
-
         configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
-                        console.log("1");
-
 		
 		IERC20 _targetWant = IERC20(_wantToken);
 

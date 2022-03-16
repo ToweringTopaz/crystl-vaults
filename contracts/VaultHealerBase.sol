@@ -6,14 +6,12 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
-//import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-abstract contract VaultHealerBase is AccessControl, ERC1155, /*ERC2771Context,*/ IVaultHealer, ReentrancyGuard {
+abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
     bytes32 constant PAUSER = keccak256("PAUSER");
-    //bytes32 constant STRATEGY = keccak256("STRATEGY");
     bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
@@ -21,9 +19,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, /*ERC2771Context,*/
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
-	mapping(uint => uint) public panicLockExpiry;
-
-
+	mapping(uint => uint) private panicLockExpiry;
 
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
@@ -31,7 +27,6 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, /*ERC2771Context,*/
         _setupRole(PAUSER, _owner);
         _setupRole(FEE_SETTER, _owner);
     }
-
 
     function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         vaultFeeManager = _manager;
@@ -84,11 +79,6 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, /*ERC2771Context,*/
         if (subVid == 0 || subVid > (subVid == vid ? numVaultsBase : vaultInfo[vid >> 16].numMaximizers))
 			revert VidOutOfRange(vid);
     }
-	
-/*
-   function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) { return ERC2771Context._msgData(); }
-   function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) { return ERC2771Context._msgSender(); }
-*/
 
     //True values are the default behavior; call earn before deposit/withdraw
     function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
