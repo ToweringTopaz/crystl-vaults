@@ -241,7 +241,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
                         uint targetVid = vid >> 16;
                         address vaultStrat = address(strat(vid));
                         uint remainingTargetShares = balanceOf(vaultStrat, targetVid);
-                        
+
                         _safeTransferFrom(vaultStrat, from, targetVid, remainingTargetShares, "");
 
                         totalMaximizerEarnings[vid] = 0;
@@ -258,13 +258,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 uint vid = ids[i];
 
                 if (vid > 2**16) {
-                    _earn(vid, vaultFeeManager.getEarnFees(vid), msg.data[0:0]);
-                    uint bal = balanceOf(from, vid);
-                    uint supply = totalSupply[vid];
-                    uint amount = amounts[i];
-                    maximizerHarvest(from, vid, bal, bal - amount, supply, supply);
-                    bal = balanceOf(to, vid);
-					maximizerHarvest(to, vid, bal, bal + amount, supply, supply);
+                    //_earn(vid, vaultFeeManager.getEarnFees(vid), msg.data[0:0]); //todo: reenable
+                    maximizerHarvest(from, to, vid, balanceOf(from, vid), balanceOf(to, vid), amounts[i], totalSupply[vid]);
                 }
 
             }
@@ -300,11 +295,34 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
         uint accountTargetShares = _balanceBefore * totalBefore / _supplyBefore;
 
-		if (accountTargetShares > accountOffset) {
-			uint sharesEarned = accountTargetShares - accountOffset;
+        if (accountTargetShares > accountOffset) {
+            uint sharesEarned = accountTargetShares - accountOffset;
             _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
-		    emit MaximizerWithdraw(_account, _vid, sharesEarned);
-		}
+            emit MaximizerWithdraw(_account, _vid, sharesEarned);
+        }
+    }
+
+    function maximizerHarvest(address _from, address _to, uint256 _vid, uint256 _fromBalanceBefore, uint256 _toBalanceBefore, uint256 _amount, uint256 _supply) internal {
+        uint totalBefore = totalMaximizerEarnings[_vid];
+
+        uint fromOffset = maximizerEarningsOffset[_from][_vid];
+        uint toOffset = maximizerEarningsOffset[_to][_vid];
+        maximizerEarningsOffset[_from][_vid] = (_fromBalanceBefore - _amount) * totalBefore / _supply;
+        maximizerEarningsOffset[_to][_vid] = (_toBalanceBefore + _amount) * totalBefore / _supply;
+
+        uint fromTargetShares = _fromBalanceBefore * totalBefore / _supply;
+        uint toTargetShares = _toBalanceBefore * totalBefore / _supply;
+
+        if (fromTargetShares > fromOffset) {
+            uint sharesEarned = fromTargetShares - fromOffset;
+            _safeTransferFrom(address(strat(_vid)), _from, _vid >> 16, sharesEarned, "");
+            emit MaximizerWithdraw(_from, _vid, sharesEarned);
+        }
+        if (toTargetShares > toOffset) {
+            uint sharesEarned = toTargetShares - toOffset;
+            _safeTransferFrom(address(strat(_vid)), _to, _vid >> 16, sharesEarned, "");
+            emit MaximizerWithdraw(_to, _vid, sharesEarned);
+        }
     }
 	 
 	function maximizerRawTargetShares(address _account, uint256 _vid) public view returns (uint256) {
