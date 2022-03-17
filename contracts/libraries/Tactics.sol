@@ -91,7 +91,7 @@ library Tactics {
         
     }
 
-    function _generateCall(uint24 pid, uint64 encodedCall, uint amount) public view returns (bytes memory generatedCall) {
+    function _generateCall(uint24 pid, uint64 encodedCall, uint amount) private view returns (bytes memory generatedCall) {
         generatedCall = abi.encodePacked(bytes4(bytes8(encodedCall)));
 
         for (bytes4 params = bytes4(bytes8(encodedCall) << 32); params != 0; params <<= 4) {

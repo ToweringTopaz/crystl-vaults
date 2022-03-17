@@ -5,6 +5,8 @@ require('@nomiclabs/hardhat-waffle');
 require('dotenv').config()
 require("solidity-coverage");
 require("@nomiclabs/hardhat-etherscan");
+require("@nomiclabs/hardhat-solhint");
+
 
 const chainIds = {
   hardhat: 31337,
@@ -27,6 +29,11 @@ if (!archiveMainnetNodeURL) {
 const myPrivateKey = process.env.MY_PRIVATE_KEY;
 if (!myPrivateKey) {
   throw new Error("Please set your MY_PRIVATE_KEY in a .env file");
+}
+
+const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
+if (!polygonScanApiKey) {
+  throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
 module.exports = {
@@ -65,21 +72,15 @@ module.exports = {
 	  debug: {
 	  }
     },
-	overrides: {
-		"contracts/VaultHealer.sol": {
-			version: "0.8.12",
-			settings: {
-			  optimizer: {
-				enabled: true,
-				runs: 200,
-			  },
-			},
-		},
-	},
   },
   mocha: {
     timeout: 90000,
   },
+  etherscan: {
+	apiKey: {
+	  polygon: polygonScanApiKey,
+	}
+  }
 };
 
 

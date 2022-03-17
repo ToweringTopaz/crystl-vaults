@@ -222,7 +222,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         _wantToken.safeIncreaseAllowance(address(uint160(Tactics.TacticsA.unwrap(tacticsA) >> 96)), _amount); //address(tacticsA >> 96) is masterchef        
         Tactics.deposit(tacticsA, tacticsB, _amount);
     }
-    function _vaultWithdraw(IERC20 _wantToken, uint256 _amount) internal virtual {
+    function _vaultWithdraw(IERC20 /*_wantToken*/, uint256 _amount) internal virtual {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.withdraw(tacticsA, tacticsB, _amount);
     }
