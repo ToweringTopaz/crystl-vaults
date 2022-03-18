@@ -21,13 +21,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     //For front-end and general purpose external compounding. Returned amounts are zero on failure, or the gas cost on success
     function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
-        Fee.Data[3][] memory fees;
+        Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         uint len = vids.length;
-        try vaultFeeManager.getEarnFees(vids) returns (Fee.Data[3][] memory _fees) {
-            fees = _fees;
-        } catch {
-            fees = new Fee.Data[3][](len);
-        }
 
         successGas = new uint[](len);
         for (uint i; i < len; i++) {
@@ -39,25 +34,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function earn(uint256[] calldata vids, bytes[] calldata data) external nonReentrant returns (uint[] memory successGas) {
         uint len = vids.length;
         if (data.length != len) revert ArrayMismatch(len, data.length);
-        Fee.Data[3][] memory fees;
-        try vaultFeeManager.getEarnFees(vids) returns (Fee.Data[3][] memory _fees) {
-            fees = _fees;
-        } catch {
-            fees = new Fee.Data[3][](len);
-        }
+        Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
+        
         successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
             uint gasBefore = gasleft();
             if (_earn(vids[i], fees[i], data[i])) successGas[i] = gasBefore - gasleft();
         }
-    }
-
-    function _earn(uint256 vid, bytes calldata _data) internal returns (bool) {
-        Fee.Data[3] memory fees;
-        try vaultFeeManager.getEarnFees(vid) returns (Fee.Data[3] memory _fees) {
-            fees = _fees;
-        } catch {}
-        return _earn(vid, fees, _data);
     }
 
     function _earn(uint256 vid, Fee.Data[3] memory fees, bytes calldata data) internal returns (bool) {
@@ -96,7 +79,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
         // If enabled, we call an earn on the vault before we action the _deposit
-        if (vaultInfo[_vid].noAutoEarn & 1 == 0) _earn(_vid, _data); 
+        if (vaultInfo[_vid].noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
 
         //Store the _from address, deposit amount, and ERC20 token associated with this vault. The strategy will be able to withdraw from _from via 
         //VaultHealer's approval, but no more than _wantAmt. This allows VaultHealer to be the only vault contract where token approvals are needed. 
@@ -138,7 +121,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         if (fromBalance == 0) revert WithdrawZeroBalance(_from);
 
         // we call an earn on the vault before we action the _deposit
-        if (vaultInfo[_vid].noAutoEarn & 2 == 0) _earn(_vid, _data); 
+        if (vaultInfo[_vid].noAutoEarn & 2 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
 
         (vidSharesRemoved, _wantAmt) = strat(_vid).withdraw(_wantAmt, fromBalance, totalSupply[_vid], abi.encode(msg.sender, _from, _to, _data));
 		
@@ -252,7 +235,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             for (uint i; i < ids.length; i++) {
                 uint vid = ids[i];
                 if (vid > 2**16) {
-                    _earn(vid, msg.data[0:0]);
+                    _earn(vid, vaultFeeManager.getEarnFees(vid), msg.data[0:0]);
                     _maximizerHarvestBeforeTransfer(from, to, vid, balanceOf(from, vid), balanceOf(to, vid), amounts[i], totalSupply[vid]);
                 }
             }
