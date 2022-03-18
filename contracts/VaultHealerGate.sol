@@ -78,8 +78,9 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
+        uint totalSupplyBefore = totalSupply[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
-        if (vaultInfo[_vid].noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
+        if (totalSupplyBefore > 0 && vaultInfo[_vid].noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
 
         //Store the _from address, deposit amount, and ERC20 token associated with this vault. The strategy will be able to withdraw from _from via 
         //VaultHealer's approval, but no more than _wantAmt. This allows VaultHealer to be the only vault contract where token approvals are needed. 
@@ -88,7 +89,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         preparePendingDeposit(_vid, _from, _wantAmt);
 
         // we make the deposit
-        (_wantAmt, vidSharesAdded) = strat(_vid).deposit{value: msg.value}(_wantAmt, totalSupply[_vid], abi.encode(msg.sender, _from, _to, _data));
+        (_wantAmt, vidSharesAdded) = strat(_vid).deposit{value: msg.value}(_wantAmt, totalSupplyBefore, abi.encode(msg.sender, _from, _to, _data));
 
         //we mint tokens for the user via the 1155 contract
         _mint(
