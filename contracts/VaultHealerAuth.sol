@@ -5,10 +5,7 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 contract VaultHealerAuth is AccessControlEnumerable {
 
-    bytes32 constant PAUSER = keccak256("PAUSER");
-    bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
-    bytes32 public constant BOOST_ADMIN = keccak256("BOOST_ADMIN");
 
     constructor(address _owner) {
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
