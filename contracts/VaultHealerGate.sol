@@ -86,7 +86,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
         //VaultHealer's approval, but no more than _wantAmt. This allows VaultHealer to be the only vault contract where token approvals are needed. 
         //Users can be approve VaultHealer freely and be assured that VaultHealer will not withdraw anything except when they call deposit, and only
         //up to the correct deposit amount.
-        preparePendingDeposit(_vid, _from, _wantAmt);
+        IERC20 vaultWant = vaultInfo[_vid].want;
+        if (_wantAmt > 0 && address(vaultWant) != address(0)) pendingDeposits[address(strat(_vid))] = PendingDeposit({
+            token: vaultWant,
+            amount0: uint96(_wantAmt >> 96),
+            from: _from,
+            amount1: uint96(_wantAmt)
+        });
 
         // we make the deposit
         (_wantAmt, vidSharesAdded) = strat(_vid).deposit{value: msg.value}(_wantAmt, totalSupplyBefore, abi.encode(msg.sender, _from, _to, _data));
@@ -134,45 +140,25 @@ abstract contract VaultHealerGate is VaultHealerBase {
         );
 		
         //Collect the withdrawal fee and transfer the ERC20 token out
-        _wantAmt = executeWithdrawal(_vid, _wantAmt, _to);
-
-        emit Withdraw(_from, _to, _vid, _wantAmt);
-    }
-
-    function executeWithdrawal(uint _vid, uint _wantAmt, address _to) private returns (uint wantAmt) {
         IERC20 _wantToken = vaultInfo[_vid].want;
-        wantAmt = _wantAmt;
         address vaultStrat = address(strat(_vid));
         if (address(_wantToken) != address(0)) {
             //withdraw fee is implemented here
             try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
                 //hardcoded 3% max fee rate
                 if (feeReceiver != address(0) && feeRate <= 300 && vaultInfo[_vid].active) { //waive withdrawal fee on paused vaults as there's generally something wrong
-                    uint feeAmt = wantAmt * feeRate / 10000;
-                    wantAmt -= feeAmt;
+                    uint feeAmt = _wantAmt * feeRate / 10000;
+                    _wantAmt -= feeAmt;
                     _wantToken.safeTransferFrom(vaultStrat, feeReceiver, feeAmt);
                 }
-            } catch Error(string memory reason) {
-                emit FailedWithdrawFee(_vid, reason);
-            } catch (bytes memory reason) {
-                emit FailedWithdrawFeeBytes(_vid, reason);
-            }
+            } catch {}
 
-            _wantToken.safeTransferFrom(vaultStrat, _to, wantAmt);
+            _wantToken.safeTransferFrom(vaultStrat, _to, _wantAmt);
         }
+
+        emit Withdraw(_from, _to, _vid, _wantAmt);
     }
 
-
-    function preparePendingDeposit(uint _vid, address _from, uint _wantAmt) private {
-        IERC20 vaultWant = vaultInfo[_vid].want;
-        if (_wantAmt > 0 && address(vaultWant) != address(0)) pendingDeposits[address(strat(_vid))] = PendingDeposit({
-            token: vaultWant,
-            amount0: uint96(_wantAmt >> 96),
-            from: _from,
-            amount1: uint96(_wantAmt)
-        });
-    }
-	
     //called by strategy, cannot be nonReentrant
     function executePendingDeposit(address _to, uint192 _amount) external {
         IERC20 token = pendingDeposits[msg.sender].token;

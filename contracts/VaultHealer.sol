@@ -8,16 +8,15 @@ contract VaultHealer is VaultHealerBoostedPools {
 
     QuartzUniV2Zap immutable public zap;
 
-    constructor(string memory _uri, address /*trustedForwarder*/, address _owner)
-        /*ERC2771Context(trustedForwarder)*/
-        ERC1155(_uri)
-		VaultHealerBase(_owner)
+    constructor(address _owner, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates)
+        ERC1155("")
+		VaultHealerBase(_owner, withdrawReceiver, withdrawRate, earnReceivers, earnRates)
     {
         zap = new QuartzUniV2Zap(address(this));
     }
 
    function isApprovedForAll(address account, address operator) public view override returns (bool) {
-        return super.isApprovedForAll(account, operator) || operator == address(zap) /*|| isTrustedForwarder(operator)*/;
+        return super.isApprovedForAll(account, operator) || operator == address(zap);
    }
 
     function setURI(string calldata _uri) external auth {

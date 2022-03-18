@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
-import "./interfaces/IVaultFeeManager.sol";
+import "./VaultFeeManager.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./VaultHealerAuth.sol";
 
@@ -12,17 +12,17 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
 
-    IVaultFeeManager public vaultFeeManager;
+    VaultFeeManager immutable public vaultFeeManager;
+    VaultHealerAuth immutable public vhAuth;
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 	mapping(uint => uint) private panicLockExpiry;
 
-    constructor(address _owner) {
-        vhAuth = IAccessControl(new VaultHealerAuth(_owner));
+    constructor(address _owner, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
+        vhAuth = new VaultHealerAuth(_owner);
+        vaultFeeManager = new VaultFeeManager(address(vhAuth), withdrawReceiver, withdrawRate, earnReceivers, earnRates);
     }
-
-    IAccessControl immutable public vhAuth;
 
     modifier auth {
         _auth();
@@ -31,11 +31,6 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     function _auth() view private {
         bytes4 selector = bytes4(msg.data);
         if (!IAccessControl(vhAuth).hasRole(selector, msg.sender)) revert RestrictedFunction(selector);
-    }
-
-    function setVaultFeeManager(IVaultFeeManager _manager) external auth {
-        vaultFeeManager = _manager;
-        emit SetVaultFeeManager(_manager);
     }
 
     function createVault(address _implementation, bytes calldata data) external auth nonReentrant returns (uint16 vid) {

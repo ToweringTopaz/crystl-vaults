@@ -64,5 +64,4 @@ interface IVaultHealer {
 
     function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16);
     function numVaultsBase() external view returns (uint16);
-    function vhAuth() external view returns (IAccessControl);
 }
