@@ -25,9 +25,12 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     IAccessControl immutable public vhAuth;
 
     modifier auth {
+        _auth();
+        _;
+    }
+    function _auth() view private {
         bytes4 selector = bytes4(msg.data);
         if (!IAccessControl(vhAuth).hasRole(selector, msg.sender)) revert RestrictedFunction(selector);
-        _;
     }
 
     function setVaultFeeManager(IVaultFeeManager _manager) external auth {
