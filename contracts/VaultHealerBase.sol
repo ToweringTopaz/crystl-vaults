@@ -28,7 +28,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, Reent
         _setupRole(FEE_SETTER, _owner);
     }
 
-    function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
         vaultFeeManager = _manager;
         emit SetVaultFeeManager(_manager);
     }
