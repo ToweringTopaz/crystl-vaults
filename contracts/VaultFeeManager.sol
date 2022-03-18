@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/IAccessControl.sol";
+import "./interfaces/IVaultHealer.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./interfaces/IVaultFeeManager.sol";
 
@@ -12,7 +13,7 @@ contract VaultFeeManager is IVaultFeeManager {
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
     address constant public TX_ORIGIN = address(bytes20(keccak256("TX_ORIGIN"))); // if this address is used for earn fee, substitute tx.origin to pay the account providing the gas
 
-    IAccessControl immutable public vaultHealer;
+    IAccessControl immutable public vhAuth;
 
     mapping(uint256 => Fee.Data) withdrawFee;
     mapping(uint256 => Fee.Data[3]) earnFees;
@@ -30,7 +31,7 @@ contract VaultFeeManager is IVaultFeeManager {
     event ResetWithdrawFee(uint vid);
 
     constructor(address _vaultHealer, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
-        vaultHealer = IAccessControl(_vaultHealer);
+        vhAuth = IAccessControl(IVaultHealer(_vaultHealer).vhAuth());
 
         defaultEarnFees.set(earnReceivers, earnRates);
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
@@ -41,7 +42,7 @@ contract VaultFeeManager is IVaultFeeManager {
     }
 
     modifier auth {
-        require(vaultHealer.hasRole(FEE_SETTER, msg.sender), "!auth");
+        require(vhAuth.hasRole(FEE_SETTER, msg.sender), "!auth");
         _;
     }
 

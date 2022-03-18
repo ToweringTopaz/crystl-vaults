@@ -12,17 +12,15 @@ contract VaultHealer is VaultHealerBoostedPools {
         /*ERC2771Context(trustedForwarder)*/
         ERC1155(_uri)
 		VaultHealerBase(_owner)
-        VaultHealerBoostedPools(_owner)
     {
         zap = new QuartzUniV2Zap(address(this));
-        _setupRole(DEFAULT_ADMIN_ROLE, _owner);
     }
 
    function isApprovedForAll(address account, address operator) public view override returns (bool) {
         return super.isApprovedForAll(account, operator) || operator == address(zap) /*|| isTrustedForwarder(operator)*/;
    }
 
-    function setURI(string calldata _uri) external onlyRole("DEFAULT_ADMIN_ROLE") {
+    function setURI(string calldata _uri) external auth {
         _setURI(_uri);
     }
 

@@ -7,7 +7,7 @@ import "./IStrategy.sol";
 import "./IVaultFeeManager.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 
-interface IVaultHealer is IAccessControl {
+interface IVaultHealer {
 
     event AddVault(uint indexed vid);
     event SetVaultFeeManager(IVaultFeeManager indexed _manager);
@@ -33,6 +33,7 @@ interface IVaultHealer is IAccessControl {
 	error InvalidFallback(); //The fallback function should not be called in this context
 	error WithdrawZeroBalance(address from); //User attempting to withdraw from a vault when they have zero shares
 	error UnauthorizedPendingDepositAmount(); //Strategy attempting to pull more tokens from the user than authorized
+    error RestrictedFunction(bytes4 selector);
 
 	error NotApprovedToEnableBoost(address account, address operator);
 	error BoostPoolNotActive(uint256 _boostID);
@@ -63,5 +64,5 @@ interface IVaultHealer is IAccessControl {
 
     function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16);
     function numVaultsBase() external view returns (uint16);
-    
+    function vhAuth() external view returns (IAccessControl);
 }

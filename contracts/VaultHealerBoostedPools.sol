@@ -8,16 +8,9 @@ import "./interfaces/IBoostPool.sol";
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
 
-    bytes32 public constant BOOSTPOOL = keccak256("BOOSTPOOL");
-    bytes32 public constant BOOST_ADMIN = keccak256("BOOST_ADMIN");
-
     BitMaps.BitMap activeBoosts;
     mapping(address => BitMaps.BitMap) userBoosts;
     
-    constructor(address _owner) {
-        _setupRole(BOOST_ADMIN, _owner);
-        _setRoleAdmin(BOOSTPOOL, BOOST_ADMIN);
-    }
     function boostPool(uint _boostID) public view returns (IBoostPool) {
         return IBoostPool(Cavendish.computeAddress(bytes32(_boostID)));
     }
@@ -32,7 +25,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         return (_boostID, boostPool(_boostID));
     }
 
-    function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) onlyRole(BOOST_ADMIN) {
+    function createBoost(uint vid, address _implementation, bytes calldata initdata) external requireValidVid(vid) auth {
         if (vid >= 2**224) revert MaximizerTooDeep(vid);
         VaultInfo storage vault = vaultInfo[vid];
         uint16 nonce = vault.numBoosts;

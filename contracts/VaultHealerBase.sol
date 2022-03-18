@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./interfaces/IVaultFeeManager.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./VaultHealerAuth.sol";
 
-abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, ReentrancyGuard {
+abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
-    bytes32 constant PAUSER = keccak256("PAUSER");
-    bytes32 constant VAULT_ADDER = keccak256("VAULT_ADDER");
-    bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
 
     IVaultFeeManager public vaultFeeManager;
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
@@ -22,26 +19,29 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, Reent
 	mapping(uint => uint) private panicLockExpiry;
 
     constructor(address _owner) {
-        _setupRole(DEFAULT_ADMIN_ROLE, _owner);
-        _setupRole(VAULT_ADDER, _owner);
-        _setupRole(PAUSER, _owner);
-        _setupRole(FEE_SETTER, _owner);
+        vhAuth = IAccessControl(new VaultHealerAuth(_owner));
     }
 
-    function setVaultFeeManager(IVaultFeeManager _manager) external onlyRole(FEE_SETTER) {
+    IAccessControl immutable public vhAuth;
+
+    modifier auth {
+        bytes4 selector = bytes4(msg.data);
+        if (!IAccessControl(vhAuth).hasRole(selector, msg.sender)) revert RestrictedFunction(selector);
+        _;
+    }
+
+    function setVaultFeeManager(IVaultFeeManager _manager) external auth {
         vaultFeeManager = _manager;
         emit SetVaultFeeManager(_manager);
     }
 
-
-    function createVault(address _implementation, bytes calldata data) external onlyRole(VAULT_ADDER) nonReentrant returns (uint16 vid) {
+    function createVault(address _implementation, bytes calldata data) external auth nonReentrant returns (uint16 vid) {
         vid = numVaultsBase + 1;
         numVaultsBase = vid;
         addVault(vid, _implementation, data);
     }
-
 	
-    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) onlyRole(VAULT_ADDER) nonReentrant returns (uint vid) {
+    function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) auth nonReentrant returns (uint vid) {
 		if (targetVid >= 2**208) revert MaximizerTooDeep(targetVid);
         VaultInfo storage targetVault = vaultInfo[targetVid];
         uint16 nonce = targetVault.numMaximizers + 1;
@@ -60,8 +60,8 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, Reent
         emit AddVault(vid);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC1155) returns (bool) {
-        return AccessControl.supportsInterface(interfaceId) || ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
     //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
@@ -81,7 +81,7 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, Reent
     }
 
     //True values are the default behavior; call earn before deposit/withdraw
-    function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external onlyRole("PAUSER") requireValidVid(vid) {
+    function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external auth requireValidVid(vid) {
         uint8 setting = earnBeforeDeposit ? 0 : 1;
         if (!earnBeforeWithdraw) setting += 2;
         vaultInfo[vid].noAutoEarn = setting;
@@ -91,26 +91,21 @@ abstract contract VaultHealerBase is AccessControl, ERC1155, IVaultHealer, Reent
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
-    function pause(uint vid) public onlyRole("PAUSER") whenNotPaused(vid) {
+    function pause(uint vid, bool panic) external auth whenNotPaused(vid) {
+        if (panic) {
+            uint expiry = panicLockExpiry[vid];
+            if (expiry > block.timestamp) revert PanicCooldown(expiry);
+            expiry = block.timestamp + PANIC_LOCK_DURATION;
+            strat(vid).panic();
+        }
         vaultInfo[vid].active = false;
         emit Paused(vid);
     }
-    function unpause(uint vid) public onlyRole("PAUSER") requireValidVid(vid) {
+    function unpause(uint vid) external auth requireValidVid(vid) {
         require(!vaultInfo[vid].active);
         vaultInfo[vid].active = true;
-        emit Unpaused(vid);
-    }
-
-	function panic(uint vid) external {
-        uint expiry = panicLockExpiry[vid];
-        if (expiry > block.timestamp) revert PanicCooldown(expiry);
-        expiry = block.timestamp + PANIC_LOCK_DURATION;
-        pause(vid);
-        strat(vid).panic();
-    }
-    function unpanic(uint vid) external {
-        unpause(vid);
         strat(vid).unpanic();
+        emit Unpaused(vid);
     }
     function paused(uint vid) external view returns (bool) {
         return !vaultInfo[vid].active;
