@@ -16,15 +16,16 @@ const { getContractAddress } = require('@ethersproject/address')
 //////////////////////////////////////////////////////////////////////////
 
 const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the contract deployed for this strategy
-const { apeSwapVaults } = require('../configs/apeSwapVaults.js'); //<-- replace all references to 'dinoswapVaults' (for example), with the right '...Vaults' name
+const { dfynVaults } = require('../configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
+const { apeSwapVaults } = require('../configs/apeSwapVaults.js'); //<-- target vault(s)
 
-const MASTERCHEF = apeSwapVaults[1].masterchef;
-const VAULT_HEALER = apeSwapVaults[1].vaulthealer;
-const WANT = apeSwapVaults[1].want;
-const EARNED = apeSwapVaults[1].earned;
-const PID = apeSwapVaults[1].PID;
+const MASTERCHEF = dfynVaults[0].masterchef;
+const VAULT_HEALER = dfynVaults[0].vaulthealer;
+const WANT = dfynVaults[0].want;
+const EARNED = dfynVaults[0].earned;
+const PID = dfynVaults[0].PID;
 const TARGET_WANT_ROUTER = routers.polygon.APESWAP_ROUTER;
-const LP_AND_EARN_ROUTER = apeSwapVaults[1].router;
+const LP_AND_EARN_ROUTER = dfynVaults[0].router;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
@@ -77,7 +78,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
 
         //create the factory for the strategy implementation contract
-        Strategy = await ethers.getContractFactory('Strategy');
+        Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 
@@ -86,14 +87,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
-			apeSwapVaults[1]['masterchef'],
-            apeSwapVaults[1]['PID'],
+			dfynVaults[0]['masterchef'],
+            dfynVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
+            ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
         );
 
         //create factory and deploy strategyConfig contract
@@ -104,21 +105,19 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         DEPLOYMENT_DATA = await strategyConfig.generateConfig(
             tacticsA,
 			tacticsB,
-			apeSwapVaults[1]['want'],
-			apeSwapVaults[1]['wantDust'],
+			dfynVaults[0]['want'],
+			dfynVaults[0]['wantDust'],
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			apeSwapVaults[1]['earned'],
-			apeSwapVaults[1]['earnedDust'],
+			dfynVaults[0]['earned'],
+			dfynVaults[0]['earnedDust'],
 		);
         
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
-        console.log(TOKEN0ADDRESS)
         TOKEN1ADDRESS = await LPtoken.token1()
-        console.log(TOKEN1ADDRESS)
 
         TOKEN_OTHER = USDC;
 
@@ -138,7 +137,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			crystlTacticsB,
 			apeSwapVaults[0]['want'],
 			apeSwapVaults[0]['wantDust'],
-			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
+			TARGET_WANT_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
@@ -157,7 +156,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
        
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
 		strat1_pid = await vaultHealer.numVaultsBase();
-		strat1 = await ethers.getContractAt('Strategy', await vaultHealer.strat(strat1_pid))
+		strat1 = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(strat1_pid))
         console.log("strat1 address: ",strat1.address);
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, TARGET_WANT_COMPOUNDER_DATA);
@@ -171,7 +170,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createMaximizer(crystl_compounder_strat_pid, MAXIMIZER_DATA);
-        strategyMaximizer = await ethers.getContractAt('Strategy', await vaultHealer.strat(maximizer_strat_pid));
+        strategyMaximizer = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(maximizer_strat_pid));
         console.log("strategyMaximizer address: ", strategyMaximizer.address);
 
         //create the staking pool for the boosted vault
@@ -200,7 +199,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			BOOST_POOL_DATA
 		);
 		
-        // find users 1 through 4 with MATIC
+        // fund users 1 through 4 with MATIC
         users = [user1, user2, user3, user4]
         for (let x of users) {
             await network.provider.send("hardhat_setBalance", [
@@ -212,9 +211,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //create a router to swap into the underlying tokens for the LP and then add liquidity
         LPandEarnRouter = await ethers.getContractAt(IUniRouter02_abi, LP_AND_EARN_ROUTER);
         WNATIVE = await LPandEarnRouter.WETH();
-        tokenAddressList = [TOKEN0ADDRESS, TOKEN1ADDRESS, CRYSTL, WNATIVE];
+        tokenAddressList = [TOKEN0ADDRESS, TOKEN1ADDRESS, WNATIVE]; //I removed CRYSTL here, which means 
 
-        // for each of users 1 through 4, swap from MATIC into TOKEN0 and TOKEN1
+        // for each of users 1 through 4, swap from MATIC into TOKEN0, TOKEN1 and WNATIVE
         for (let user of users) {
             for (let tokenAddress of tokenAddressList) {
                 if (ethers.utils.getAddress(tokenAddress) == ethers.utils.getAddress(WNATIVE)) {
@@ -225,18 +224,21 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
                 }
             }   
         }
-
-        await targetRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("50000") }) //USDC 6 decimals
+        console.log("Made first set of swaps");
+        //swap some of user4 funds into TOKEN_OTHER - USDC at the moment
+        await targetRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") }) //USDC 6 decimals
+        console.log("Made swap into TOKEN_OTHER");
         TARGET_WANT_UNDERLYING0 = WMATIC
         TARGET_WANT_UNDERLYING1 = CRYSTL
         targetUnderlyingList = [TARGET_WANT_UNDERLYING0, TARGET_WANT_UNDERLYING1]
         
+        // just for user4, swap into WNATIVE and CRYSTL, for the target vault LP's
         for (tokenAddress of targetUnderlyingList) {
-            if (ethers.utils.getAddress(tokenAddress) == ethers.utils.getAddress(WNATIVE)) {
+            if (ethers.utils.getAddress(tokenAddress) == ethers.utils.getAddress(WMATIC)) {
                 wmatic_token = await ethers.getContractAt(IWETH_abi, tokenAddress); 
                 await wmatic_token.connect(user4).deposit({ value: ethers.utils.parseEther("1000") });
             } else {
-                await LPandEarnRouter.connect(user4).swapExactETHForTokens(0, [WNATIVE, tokenAddress], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
+                await targetRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, tokenAddress], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") })
             }
         }  
 
@@ -275,26 +277,25 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         targetUnderlying1 = await ethers.getContractAt(token_abi, TARGET_WANT_UNDERLYING1);
         targetUnderlyingInstanceList = [targetUnderlying0, targetUnderlying1];
 
-        // get approvals for users 1 through 3 for tokens 0 and 1
+        // get approvals for user4 for targetUnderlying 0 and 1
         for (let tokenInstance of targetUnderlyingInstanceList) {
             var tempBalance = await tokenInstance.balanceOf(user4.address);
-            await tokenInstance.connect(user4).approve(LPandEarnRouter.address, tempBalance);
+            await tokenInstance.connect(user4).approve(targetRouter.address, tempBalance);
         }
-        console.log("got here")
+
         //add liquidity for user4 of TARGET_WANT tokens
-        await LPandEarnRouter.connect(user4).addLiquidity(
-            TARGET_WANT_UNDERLYING0, 
-            TARGET_WANT_UNDERLYING1, 
+        await targetRouter.connect(user4).addLiquidity(
+            TARGET_WANT_UNDERLYING0, //WMATIC
+            TARGET_WANT_UNDERLYING1, //CRYSTL
             await targetUnderlying0.balanceOf(user4.address), 
             await targetUnderlying1.balanceOf(user4.address), 
             0, 
             0, 
-            user4.address, Date.now() + 900
+            user4.address, 
+            Date.now() + 900
             )
-        console.log("got here")
-        tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
-        //TARGET_WANT = await ethers.getContractAt(token_abi, CRYSTL);
 
+        tokenOther = await ethers.getContractAt(token_abi, TOKEN_OTHER);
     });
 	
     describe(`Testing depositing into maximizer vault, compounding maximizer vault, withdrawing from maximizer vault:
@@ -753,6 +754,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         it('Should deposit 1500 TARGET_WANT tokens from user 4 directly into the crystl compounder vault, increasing vaultSharesTotal by the correct amount', async () => {
             user4InitialDeposit = await TARGET_WANT.balanceOf(user4.address); //ethers.utils.parseEther("1500");
+            console.log("user4InitialDeposit: ", user4InitialDeposit);
             user4InitialCrystlBalance = await TARGET_WANT.balanceOf(user4.address);
             user4InitialCrystlShares = await vaultHealer.balanceOf(user4.address, crystl_compounder_strat_pid);
             totalCrystlVaultSharesBefore = await vaultHealer.totalSupply(crystl_compounder_strat_pid);
