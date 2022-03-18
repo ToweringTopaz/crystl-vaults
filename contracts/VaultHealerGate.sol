@@ -21,13 +21,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     //For front-end and general purpose external compounding. Returned amounts are zero on failure, or the gas cost on success
     function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
-        Fee.Data[3][] memory fees;
+        Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         uint len = vids.length;
-        try vaultFeeManager.getEarnFees(vids) returns (Fee.Data[3][] memory _fees) {
-            fees = _fees;
-        } catch {
-            fees = new Fee.Data[3][](len);
-        }
 
         successGas = new uint[](len);
         for (uint i; i < len; i++) {
@@ -39,12 +34,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function earn(uint256[] calldata vids, bytes[] calldata data) external nonReentrant returns (uint[] memory successGas) {
         uint len = vids.length;
         if (data.length != len) revert ArrayMismatch(len, data.length);
-        Fee.Data[3][] memory fees;
-        try vaultFeeManager.getEarnFees(vids) returns (Fee.Data[3][] memory _fees) {
-            fees = _fees;
-        } catch {
-            fees = new Fee.Data[3][](len);
-        }
+        Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
+        
         successGas = new uint[](vids.length);
         for (uint i; i < vids.length; i++) {
             uint gasBefore = gasleft();
