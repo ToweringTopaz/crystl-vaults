@@ -52,11 +52,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		// vaultHealer = await getContractAddress({from, nonce});
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
-        VaultHealer = await ethers.getContractFactory("VaultHealer", {
-			libraries: {
-				Cavendish: cavendish.address,
-			}
-		});
+        VaultHealer = await ethers.getContractFactory("VaultHealer");
         vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address);
 		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
 		vaultFeeManager = await VaultFeeManager.deploy(vaultHealer.address, FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);

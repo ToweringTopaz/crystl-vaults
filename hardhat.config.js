@@ -68,7 +68,7 @@ module.exports = {
 	  viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 200//2**32-1,
+        runs: 500,
       },
 	  debug: {
 	  }
