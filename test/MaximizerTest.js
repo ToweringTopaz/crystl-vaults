@@ -43,13 +43,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
 		
-        const from = user1.address;
-        const nonce = 1 + await user1.getTransactionCount();
+        // const from = user1.address;
+        // const nonce = 1 + await user1.getTransactionCount();
 		// vaultHealer = await getContractAddress({from, nonce});
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
-		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
-		vaultFeeManager = await VaultFeeManager.deploy(await getContractAddress({from, nonce}), FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
+
 		Cavendish = await ethers.getContractFactory("Cavendish");
 		cavendish = await Cavendish.deploy();
         VaultHealer = await ethers.getContractFactory("VaultHealer", {
@@ -57,7 +56,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 				Cavendish: cavendish.address,
 			}
 		});
-        vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address, vaultFeeManager.address);
+        vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address);
+		
+		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
+		vaultFeeManager = await VaultFeeManager.deploy(vaultHealer.address, FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);		
+		
+		await vaultHealer.setVaultFeeManager(vaultFeeManager.address);
 		
         vaultHealer.on("FailedEarn", (vid, reason) => {
 			console.log("FailedEarn: ", vid, reason);

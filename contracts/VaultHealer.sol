@@ -8,14 +8,13 @@ contract VaultHealer is VaultHealerBoostedPools {
 
     QuartzUniV2Zap immutable public zap;
 
-    constructor(string memory _uri, address /*trustedForwarder*/, address _owner, address _feeManager)
+    constructor(string memory _uri, address /*trustedForwarder*/, address _owner)
         /*ERC2771Context(trustedForwarder)*/
         ERC1155(_uri)
 		VaultHealerBase(_owner)
         VaultHealerBoostedPools(_owner)
     {
         zap = new QuartzUniV2Zap(address(this));
-        vaultFeeManager = IVaultFeeManager(_feeManager);
         _setupRole(DEFAULT_ADMIN_ROLE, _owner);
     }
 
