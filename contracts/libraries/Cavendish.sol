@@ -39,7 +39,7 @@ library Cavendish {
     function clone(address _implementation, bytes32 salt) internal returns (address) {
         if (_implementation == address(0)) revert ERC1167_ImplZeroAddress();
         address instance;
-        assembly {
+        assembly ("memory-safe") {
             sstore(PROXY_INIT_HASH, shl(96, _implementation)) //store at slot PROXY_INIT_HASH which should be empty
             mstore(0, PROXY_INIT_CODE)
             instance := create2(0, 0x00, 11, salt)
@@ -65,7 +65,7 @@ library Cavendish {
 	
 	function sizeOf(address _contract) external view returns (uint256 size) {
 	
-		assembly {
+		assembly ("memory-safe") {
 			size := extcodesize(_contract)
 		}
 	}
@@ -76,7 +76,7 @@ library Cavendish {
     ///      Generally compatible with contracts that use fallback functions. Simply call this at the
     ///       top of your fallback, and it will run only when needed.
     function _fallback() internal view {
-        assembly {
+        assembly ("memory-safe") {
             if iszero(extcodesize(caller())) { //will be, for a contract under construction
                 let _implementation := sload(PROXY_INIT_HASH)
                 if gt(_implementation, 0) {
