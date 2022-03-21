@@ -2,6 +2,7 @@ const { accounts } = require('../configs/addresses.js');
 const { ethers } = require('hardhat');
 const { dfynVaults } = require('../configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
 
+
 let [tacticsA, tacticsB] = await tactics.generateTactics(
 	dfynVaults[0]['masterchef'],
 	dfynVaults[0]['PID'],

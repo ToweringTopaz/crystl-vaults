@@ -7,6 +7,13 @@ require("solidity-coverage");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-solhint");
 
+const { accounts } = require('./configs/addresses.js');
+// const { ethers } = require('hardhat');
+const { dfynVaults } = require('./configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
+
+const { tactics_abi } = require('./abi_files/tactics_abi.js');
+const { strategyConfig_abi } = require('./abi_files/strategyConfig_abi.js');
+const { vaultHealer_abi } = require('./abi_files/vaultHealer_abi.js');
 
 const chainIds = {
   hardhat: 31337,
@@ -39,10 +46,10 @@ if (!polygonScanApiKey) {
 task("createVault", "Creates a new vault")
   // .addParam("account", "The account's address")
   .setAction(async (taskArgs) => {
-    tactics =  await ethers.getContractAt(tactics_abi, TACTICS);
-    strategyConfig =  await ethers.getContractAt(strategyConfig_abi, STRATEGY_CONFIG);
-    vaultHealer = await ethers.getContractAs(vaultHealer_abi, VAULTHEALER)
-    
+    tactics =  await ethers.getContractAt(tactics_abi, accounts.polygon.TACTICS);
+    strategyConfig =  await ethers.getContractAt(strategyConfig_abi, accounts.polygon.STRATEGY_CONFIG);
+    vaultHealer = await ethers.getContractAs(vaultHealer_abi, accounts.polygon.VAULTHEALER)
+
     let [tacticsA, tacticsB] = await tactics.generateTactics(
       dfynVaults[0]['masterchef'],
       dfynVaults[0]['PID'],
