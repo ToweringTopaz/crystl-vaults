@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.4;
+
+pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -14,14 +15,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     address public immutable vaultHealer;
     address public immutable implementation;
 
-
     constructor(address _vaultHealer) { 
         vaultHealer = _vaultHealer;
         implementation = address(this);
     }
 
 
-    receive() external payable virtual { require(Address.isContract(msg.sender), "Strategy: invalid deposit"); }
+    receive() external payable virtual { if (!Address.isContract(msg.sender)) revert Strategy_ImproperEthDeposit(msg.sender, msg.value); }
 
 
     modifier onlyVaultHealer {
@@ -29,29 +29,28 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         _;
     }
     function _requireVaultHealer() private view {
-        require(msg.sender == vaultHealer, "Strategy: Function can only be called by VaultHealer");
+        if (msg.sender != vaultHealer) revert Strategy_NotVaultHealer(msg.sender);
     }
-
 
     modifier getConfig() {
-        _getConfig();
+        uint ptr = _getConfig();
+        if (ptr != 0x80) revert Strategy_CriticalMemoryError(ptr);
         _;
     }
-    function _getConfig() private view {
+
+    function _getConfig() private view returns (uint ptr) {
         address configAddr = configAddress();
-        assembly {
-        //  if gt(mload(0x40), 0x80) { // asserting that this function is only called once at the beginning of every incoming call
-        //           revert(0,0)        // we keep these 3 lines in, commented, as they're useful for building and testing
-        //    }
+        assembly ("memory-safe") {
             let len := sub(extcodesize(configAddr), 1) //get length, subtracting 1 for the invalid opcode
-            mstore(0x40, add(0x80, len)) //update free memory pointer
-            extcodecopy(configAddr, 0x80, 1, len) //get the data
+            ptr := mload(0x40)
+            mstore(0x40, add(ptr, len)) //update free memory pointer
+            extcodecopy(configAddr, ptr, 1, len) //get the data
         }
     }
 
     function initialize(bytes memory _config) public virtual onlyVaultHealer {
-        require(address(this) != implementation, "Strategy: This contract must be used by proxy");
-        assembly {
+        if (address(this) == implementation) revert Strategy_InitializeOnlyByProxy();
+        assembly ("memory-safe") {
             let len := mload(_config) //get length of config
             mstore(_config, 0x600c80380380823d39803df3fe) //simple bytecode which saves everything after the f3
 
@@ -60,8 +59,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 revert(0, 0)
             }
         }
-		_getConfig();
-		(IERC20 _wantToken,) = config.wantToken();
+		StrategyConfig.MemPointer config_ = StrategyConfig.MemPointer.wrap(_getConfig());
+		(IERC20 _wantToken,) = config_.wantToken();
 		_wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
 
     }
@@ -69,13 +68,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     //should only happen when this contract deposits as a maximizer
     function onERC1155Received(
         address operator, address from, uint256 id, uint256, bytes calldata) external view onlyVaultHealer getConfig returns (bytes4) {
-        require (operator == address(this) && from == address(0) && id == config.vid() >> 16, "Strategy: Improper ERC1155 deposit");
+        if (operator != address(this) || from != address(0) || id != config.vid() >> 16) revert Strategy_Improper1155Deposit(operator, from, id);
         return 0xf23a6e61;
     }
 
     //no batch transfer
-    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
-        revert("Strategy: Batch transfers not supported here");
+    function onERC1155BatchReceived(address operator, address from, uint256[] calldata ids, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
+        revert Strategy_Improper1155BatchDeposit(operator, from, ids);
     }
 
     function panic() external getConfig onlyVaultHealer {
@@ -124,8 +123,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         
         //including dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        require(sharesAfter + _wantToken.balanceOf(address(this)) + dust >= (sharesBefore + wantAmt) * config.slippageFactor() / 256,
-            "High vault deposit slippage");
+        if (sharesAfter + _wantToken.balanceOf(address(this)) + dust < (sharesBefore + wantAmt) * config.slippageFactor() / 256)
+            revert Strategy_ExcessiveFarmSlippage();
         return;
     }
 

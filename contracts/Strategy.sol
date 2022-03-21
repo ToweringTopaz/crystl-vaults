@@ -9,9 +9,6 @@ contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
-	
-	error TotalSlippageWithdrawal(); //nothing to withdraw after slippage
-	error DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
 
     constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
 
@@ -88,7 +85,7 @@ contract Strategy is BaseStrategy {
         if (_sharesTotal > 0) { 
             sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
         }
-        if (wantAdded < dust) revert DustDeposit(wantAdded);
+        if (wantAdded < dust) revert Strategy_DustDeposit(wantAdded);
     }
 
 
@@ -133,7 +130,7 @@ contract Strategy is BaseStrategy {
 			wantAmt -= withdrawSlippage;
 			if (wantAmt > wantBal) wantAmt = wantBal;
 		} else {
-			revert TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+			revert Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
 		}
 
         return (sharesRemoved, wantAmt);

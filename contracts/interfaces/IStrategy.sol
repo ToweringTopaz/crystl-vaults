@@ -9,6 +9,17 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./IMagnetite.sol";
 
 interface IStrategy is IERC165 {
+
+    error Strategy_CriticalMemoryError(uint ptr);
+    error Strategy_Improper1155Deposit(address operator, address from, uint id);
+    error Strategy_Improper1155BatchDeposit(address operator, address from, uint[] ids);
+    error Strategy_ImproperEthDeposit(address sender, uint amount);
+    error Strategy_NotVaultHealer(address sender);
+    error Strategy_InitializeOnlyByProxy();
+    error Strategy_ExcessiveFarmSlippage();
+	error Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+	error Strategy_DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
+
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
     function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
