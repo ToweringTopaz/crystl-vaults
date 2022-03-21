@@ -11,9 +11,9 @@ const { accounts } = require('./configs/addresses.js');
 // const { ethers } = require('hardhat');
 const { dfynVaults } = require('./configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
 
-const { tactics_abi } = require('./abi_files/tactics_abi.js');
-const { strategyConfig_abi } = require('./abi_files/strategyConfig_abi.js');
-const { vaultHealer_abi } = require('./abi_files/vaultHealer_abi.js');
+const { tactics_abi } = require('./test/abi_files/tactics_abi.js');
+const { strategyConfig_abi } = require('./test/abi_files/strategyConfig_abi.js');
+const { vaultHealer_abi } = require('./test/abi_files/vaultHealer_abi.js');
 
 const chainIds = {
   hardhat: 31337,
@@ -47,8 +47,11 @@ task("createVault", "Creates a new vault")
   // .addParam("account", "The account's address")
   .setAction(async (taskArgs) => {
     tactics =  await ethers.getContractAt(tactics_abi, accounts.polygon.TACTICS);
+    console.log("Tactics Instantiated")
     strategyConfig =  await ethers.getContractAt(strategyConfig_abi, accounts.polygon.STRATEGY_CONFIG);
+    console.log("strategyConfig Instantiated")
     vaultHealer = await ethers.getContractAs(vaultHealer_abi, accounts.polygon.VAULTHEALER)
+    console.log("vaultHealer Instantiated")
 
     let [tacticsA, tacticsB] = await tactics.generateTactics(
       dfynVaults[0]['masterchef'],
