@@ -54,7 +54,7 @@ library Tactics {
         uint64 harvestCode, //includes selector and encoded call format
         uint64 emergencyCode//includes selector and encoded call format
     ) external pure returns (TacticsA tacticsA, TacticsB tacticsB) {
-        assembly {
+        assembly ("memory-safe") {
             tacticsA := or(or(shl(96, _masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
             tacticsB := or(or(shl(192, depositCode), shl(128, withdrawCode)), or(shl(64, harvestCode), emergencyCode))
         }
@@ -68,7 +68,7 @@ library Tactics {
         uint returnvarPosition = (TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
         bytes memory data = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
         data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
-        assembly {
+        assembly ("memory-safe") {
             amountStaked := mload(add(data, add(0x20,returnvarPosition)))
         }
     }
