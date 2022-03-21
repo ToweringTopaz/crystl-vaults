@@ -1,20 +1,6 @@
-const { tokens, accounts, routers } = require('../configs/addresses.js');
+const { accounts } = require('../configs/addresses.js');
 const { ethers } = require('hardhat');
-const { FEE_ADDRESS, ZERO_ADDRESS } = accounts.polygon;
-
-const Cavendish = artifacts.require("Cavendish");
-const VaultFeeManager = artifacts.require("VaultFeeManager");
-const Magnetite = artifacts.require("Magnetite");
-const VaultHealer = artifacts.require("VaultHealer");
-const StrategyConfig = artifacts.require("StrategyConfig");
-const Tactics = artifacts.require("Tactics");
-const StrategyQuick = artifacts.require("StrategyQuick");
-const Strategy = artifacts.require("Strategy");
-const BoostPool = artifacts.require("BoostPool");
-const QuartzUniV2Zap = artifacts.require("QuartzUniV2Zap");
-
-withdrawFee = ethers.BigNumber.from(10);
-earnFee = ethers.BigNumber.from(500);
+const { dfynVaults } = require('../configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
 
 let [tacticsA, tacticsB] = await tactics.generateTactics(
 	dfynVaults[0]['masterchef'],
@@ -27,14 +13,13 @@ let [tacticsA, tacticsB] = await tactics.generateTactics(
 	ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
 );
 
-
 DEPLOYMENT_DATA = await strategyConfig.generateConfig(
 	tacticsA,
 	tacticsB,
 	dfynVaults[0]['want'],
 	dfynVaults[0]['wantDust'],
-	LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
-	magnetite.address,
+	dfynVaults[0]['router'], //note this has to be specified at deployment time
+	accounts.polygon.V3_MAGNETITE, //where do we get this from?
 	240, //slippageFactor
 	false, //feeOnTransfer
 	dfynVaults[0]['earned'],
@@ -43,11 +28,8 @@ DEPLOYMENT_DATA = await strategyConfig.generateConfig(
 
 await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
 
-strat1_pid = await vaultHealer.numVaultsBase();
+strat_pid = await vaultHealer.numVaultsBase();
 
-	console.log("vaultHealer: ", vaultHealer.address);
-	console.log("VaultFeeManager: ", vaultFeeManager.address);
-	console.log("StrategyConfig: ", strategyConfigInstance.address);
-	console.log("Tactics: ", tacticsInstance.address);
-	console.log("Strategy: ", strategyImplementation.address);
+console.log("New strategy pid: ", strat_pid);
+
 
