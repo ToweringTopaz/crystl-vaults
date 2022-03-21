@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import "./BaseStrategy.sol";
-import "./libraries/LibQuartz.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
@@ -36,18 +35,15 @@ contract Strategy is BaseStrategy {
         if (config.isMaximizer()) {
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-            IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, ""); //deposit the rest
+            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, "") {} //deposit the rest
+            catch {  //compound want instead if maximizer doesn't work
+                weth.deposit{value: ethToTarget}();
+                swapToWantToken(ethToTarget, weth);
+            }
         } else {
             wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
+            swapToWantToken(wethAdded, weth);
 
-            if (config.isPairStake()) {
-                (IERC20 token0, IERC20 token1) = config.token0And1();
-                safeSwap(wethAdded / 2, weth, token0);
-                safeSwap(wethAdded / 2, weth, token1);
-                LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-            } else {
-                safeSwap(wethAdded, weth, _wantToken);
-            }
             _farm();
         }
 
@@ -63,14 +59,7 @@ contract Strategy is BaseStrategy {
         if (msg.value > 0) {
             IWETH weth = config.weth();
             weth.deposit{value: msg.value}();
-            if (config.isPairStake()) {
-                (IERC20 token0, IERC20 token1) = config.token0And1();
-                safeSwap(msg.value / 2, weth, token0);
-                safeSwap(msg.value / 2, weth, token1);
-                LibQuartz.optimalMint(IUniPair(address(_wantToken)), token0, token1);
-            } else {
-                safeSwap(msg.value, weth, _wantToken);
-            }
+            swapToWantToken(msg.value, weth);
         }
 
         //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this

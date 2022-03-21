@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
+import "./libraries/LibQuartz.sol";
+
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
@@ -34,7 +36,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     modifier getConfig() {
         uint ptr = _getConfig();
-        if (ptr != 0x80) revert Strategy_CriticalMemoryError(ptr);
+        if (ptr != StrategyConfig.MemPointer.unwrap(config)) revert Strategy_CriticalMemoryError(ptr);
         _;
     }
 
@@ -96,7 +98,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
 
     function configAddress() public view returns (address configAddr) {
-        assembly {
+        assembly ("memory-safe") {
             mstore(0, or(0xd694000000000000000000000000000000000000000001000000000000000000, shl(80,address())))
             configAddr := and(0xffffffffffffffffffffffffffffffffffffffff, keccak256(0, 23)) //create address, nonce 1
         }
@@ -155,6 +157,18 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             address(this), 
             block.timestamp
         );
+    }
+
+    function swapToWantToken(uint256 _amountIn, IERC20 _tokenA) internal {
+        (IERC20 want,) = config.wantToken();
+        if (config.isPairStake()) {
+            (IERC20 token0, IERC20 token1) = config.token0And1();
+            safeSwap(_amountIn / 2, _tokenA, token0);
+            safeSwap(_amountIn / 2, _tokenA, token1);
+            LibQuartz.optimalMint(IUniPair(address(want)), token0, token1);
+        } else {
+            safeSwap(_amountIn, _tokenA, want);
+        }
     }
 
     function configInfo() external view getConfig returns (
