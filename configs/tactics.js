@@ -1,4 +1,4 @@
-//for crystl compounder (on apeswap? note - has expired):
+//for crystl compounder on Crystl.finance (standard masterchef):
 let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
     crystlVault[0]['masterchef'],
     crystlVault[0]['PID'],

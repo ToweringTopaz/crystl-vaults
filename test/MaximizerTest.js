@@ -75,8 +75,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         //create the factory for the tactics implementation contract
         Tactics = await ethers.getContractFactory("Tactics");
+
         //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
         tactics = await Tactics.deploy()
+        
 		let [tacticsA, tacticsB] = await tactics.generateTactics(
 			dfynVaults[0]['masterchef'],
             dfynVaults[0]['PID'],
