@@ -52,14 +52,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		// vaultHealer = await getContractAddress({from, nonce});
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
-        VaultHealer = await ethers.getContractFactory("VaultHealer", {
-			libraries: {
-				Cavendish: cavendish.address,
-			}
-		});
-        vaultHealer = await VaultHealer.deploy("", ZERO_ADDRESS, user1.address);
-		VaultFeeManager = await ethers.getContractFactory("VaultFeeManager");
-		vaultFeeManager = await VaultFeeManager.deploy(vaultHealer.address, FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
+        VaultHealer = await ethers.getContractFactory("VaultHealer");
+        vaultHealer = await VaultHealer.deploy(user1.address, FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
 
 		vaultHealer.setVaultFeeManager(vaultFeeManager.address);
 
@@ -478,8 +472,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(ethers.utils.formatEther(userBoostedWantTokensBeforeWithdrawal));
 
 
-            await vaultHealer["withdraw(uint256,uint256,bytes)"](strat1_pid, ethers.constants, []); 
-            await vaultHealer["withdrawAll(uint256)"](strat1_pid); //+userBoostedWantTokensBeforeWithdrawal user1 (default signer) deposits 1 of LP tokens into strat1_pid 0 of vaulthealer
+            await vaultHealer["withdraw(uint256,uint256,bytes)"](strat1_pid, ethers.constants.MaxUint256, []); 
+			//+userBoostedWantTokensBeforeWithdrawal user1 (default signer) deposits 1 of LP tokens into strat1_pid 0 of vaulthealer
             
             const LPtokenBalanceAfterFinalWithdrawal = await LPtoken.balanceOf(user1.address);
             console.log("LPtokenBalanceAfterFinalWithdrawal - user1")

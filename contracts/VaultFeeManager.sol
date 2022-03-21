@@ -30,8 +30,8 @@ contract VaultFeeManager is IVaultFeeManager {
     event ResetEarnFees(uint vid);
     event ResetWithdrawFee(uint vid);
 
-    constructor(address _vaultHealer, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
-        vhAuth = IAccessControl(IVaultHealer(_vaultHealer).vhAuth());
+    constructor(address _vhAuth, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
+        vhAuth = IAccessControl(_vhAuth);
 
         defaultEarnFees.set(earnReceivers, earnRates);
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
