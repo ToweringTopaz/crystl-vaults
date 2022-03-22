@@ -6,14 +6,16 @@ import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./VaultFeeManager.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./VaultHealerAuth.sol";
 
-abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
+abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard, Multicall {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
 
     VaultFeeManager immutable public vaultFeeManager;
     VaultHealerAuth immutable public vhAuth;
+    
     uint16 public numVaultsBase = 0; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
