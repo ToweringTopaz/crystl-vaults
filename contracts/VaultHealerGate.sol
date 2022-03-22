@@ -250,17 +250,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
 	function _maximizerHarvest(address _account, uint256 _vid, uint256 _balance, uint256 _supply) private {
-        uint accountOffset = maximizerEarningsOffset[_account][_vid];
-        uint totalBefore = totalMaximizerEarnings[_vid];
-		
-        uint accountTargetShares = _balance * totalBefore / _supply;
-		maximizerEarningsOffset[_account][_vid] = accountTargetShares;
-
-        if (accountTargetShares > accountOffset) {
-            uint sharesEarned = accountTargetShares - accountOffset;
-            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
-            emit MaximizerHarvest(_account, _vid, sharesEarned);
-        }
+        _maximizerHarvest(_account, _vid, _balance, _balance, _supply, _supply);
     }
 	
 	
