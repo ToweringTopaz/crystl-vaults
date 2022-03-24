@@ -8,6 +8,7 @@ import "./VaultFeeManager.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "./VaultHealerAuth.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard, Multicall {
 
@@ -21,9 +22,9 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard, Mul
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 	mapping(uint => uint) private panicLockExpiry;
 
-    constructor(address _owner, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
-        vhAuth = new VaultHealerAuth(_owner);
-        vaultFeeManager = new VaultFeeManager(address(vhAuth), withdrawReceiver, withdrawRate, earnReceivers, earnRates);
+    constructor() {
+        vhAuth = new VaultHealerAuth(msg.sender);
+        vaultFeeManager = new VaultFeeManager(address(vhAuth));
     }
 
     modifier auth {
@@ -50,8 +51,9 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard, Mul
         addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
     }
 
-
     function addVault(uint256 vid, address implementation, bytes calldata data) internal {
+        //
+        if (!IERC165(implementation).supportsInterface(type(IStrategy).interfaceId)) revert NotStrategyImpl(implementation);
 
         IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
         _strat.initialize(abi.encodePacked(vid, data));
