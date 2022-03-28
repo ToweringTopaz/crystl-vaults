@@ -53,14 +53,18 @@ interface IVaultHealer {
     ///@notice This is used solely by maximizer strategies to deposit their earnings
     function maximizerDeposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable;
 
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) external;
+    ///@notice Standard withdraw for msg.sender
     function withdraw(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external;
+
+    ///@notice Withdraw with custom from/to accounts. The caller must equal or be approved by the _from address
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) external;
+
     function deposit(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external payable;
     function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable;
 
 
     ///@notice This returns the strategy address for any vid.
-    ///@dev For dapp usage, it may be better to calculate strategy addresses locally. The formula is in the function Cavendish.computeAddress
+    ///@dev For dapp or contract usage, it may be better to calculate strategy addresses locally. The formula is in the function Cavendish.computeAddress
     function strat(uint256 _vid) external view returns (IStrategy);
 
     struct VaultInfo {
@@ -73,22 +77,23 @@ interface IVaultHealer {
     }
 
     function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16);
+    
+    //@notice Returns the number of non-maximizer vaults, where the want token is compounded within one strategy
     function numVaultsBase() external view returns (uint16);
 
-    ///@notice Compounds the listed vaults
-    ///@dev Recommend not using these for frontend
-    function earn(uint256[] calldata vids) external nonReentrant returns (uint[] memory successGas) {
-    function earn(uint256[] calldata vids, bytes[] calldata data) external nonReentrant returns (uint[] memory successGas) {
+    ///@notice Compounds the listed vaults. Generally only needs to be called by an optimized earn script, not frontend users. Earn is triggered automatically on deposit and withdraw by default.
+    function earn(uint256[] calldata vids) external returns (uint[] memory successGas);
+    function earn(uint256[] calldata vids, bytes[] calldata data) external returns (uint[] memory successGas);
 
 
     ///@notice The number of shares in a maximizer's target vault pending to a user account from said maximizer
     ///@param _account Some user account
     ///@param _vid The vid of the maximizer
     ///@dev The vid of the target is implied to be _vid >> 16
-	function maximizerPendingTargetShares(address _account, uint256 _vid) public view returns (uint256) {
+	function maximizerPendingTargetShares(address _account, uint256 _vid) external view returns (uint256);
 
     ///@notice The balance of a user's shares in a vault, plus any pending shares from maximizers
-	function totalBalanceOf(address _account, uint256 _vid) external view returns (uint256 amount) {
+	function totalBalanceOf(address _account, uint256 _vid) external view returns (uint256 amount);
 
 
     ///@notice Harvests a single maximizer
@@ -99,4 +104,8 @@ interface IVaultHealer {
     ///@param _vid The vid of the target vault, to which many maximizers may deposit
     function harvestTarget(uint256 _vid) external;
 
+    ///@notice This can be used to make two or more calls to the contract as an atomic transaction.
+    ///@param inputs are the standard abi-encoded function calldata with selector. This can be any external function on vaultHealer.
+    ///@dev We can chain multiple transactions with this 
+    function multicall(bytes[] calldata inputs) external returns (bytes[] memory);
 }
