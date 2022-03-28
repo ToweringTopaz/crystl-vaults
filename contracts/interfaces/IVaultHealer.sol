@@ -37,7 +37,7 @@ interface IVaultHealer {
 	error WithdrawZeroBalance(address from); //User attempting to withdraw from a vault when they have zero shares
 	error UnauthorizedPendingDepositAmount(); //Strategy attempting to pull more tokens from the user than authorized
     error RestrictedFunction(bytes4 selector);
-    error NotStrategyImpl(address implementation);
+    error NotStrategyImpl(IStrategy implementation);
     error ImplWrongHealer(IVaultHealer implHealer); //Attempting to use a strategy configured for another VH, not this one
 
 	error NotApprovedToEnableBoost(address account, address operator);
