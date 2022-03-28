@@ -22,8 +22,10 @@ module.exports = {
     },
   },
   plugins: [
-    'truffle-plugin-verify'
+    'truffle-plugin-verify',
+    'truffle-plugin-stdjsonin'
   ],
+  
   api_keys: {
     polygonscan: process.env.POLYGONSCAN_API_KEY
   },

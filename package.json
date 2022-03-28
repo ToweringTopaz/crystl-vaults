@@ -32,6 +32,7 @@
     "hardhat": "^2.6.4",
     "hardhat-console": "^1.0.0",
     "solidity-coverage": "^0.7.20",
+    "truffle-plugin-stdjsonin": "git+https://github.com/mhrsalehi/truffle-plugin-stdjsonin.git",
     "truffle-plugin-verify": "^0.5.14",
     "ts-node": "^9.1.1"
   }
