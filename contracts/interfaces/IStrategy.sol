@@ -23,7 +23,8 @@ interface IStrategy is IERC165 {
 
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
-    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
+    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy (vaultSharesTotal + want token balance)
+	function vaultSharesTotal() external view returns (uint256); //Want tokens deposited in strategy's pool
     function earn(Fee.Data[3] memory fees, address _operator, bytes calldata _data) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
     
     function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata _data) external payable returns (uint256 wantAdded, uint256 sharesAdded);
