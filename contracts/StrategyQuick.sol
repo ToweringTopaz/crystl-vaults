@@ -9,7 +9,7 @@ contract StrategyQuick is Strategy {
 
     IDragonLair public constant D_QUICK = IDragonLair(0xf28164A485B0B2C90639E47b0f377b4a438a16B1);
 
-    constructor(address _vaultHealer) Strategy(_vaultHealer) {}
+    constructor(IVaultHealer _vaultHealer) Strategy(_vaultHealer) {}
 
     function _vaultHarvest() internal override {
         super._vaultHarvest();

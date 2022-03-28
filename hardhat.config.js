@@ -11,8 +11,6 @@ const { accounts } = require('./configs/addresses.js');
 // const { ethers } = require('hardhat');
 const { dfynVaults } = require('./configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
 
-const { tactics_abi } = require('./test/abi_files/tactics_abi.js');
-const { strategyConfig_abi } = require('./test/abi_files/strategyConfig_abi.js');
 const { vaultHealer_abi } = require('./test/abi_files/vaultHealer_abi.js');
 
 const chainIds = {
@@ -43,17 +41,29 @@ if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
+
+
+task("deployImplementation", "Deploys a strategy implementation contract")
+  .addParam("name", "The contract's name")
+  .setAction(async (taskArgs) => {
+    vaultHealer = await ethers.getContractAs(vaultHealer_abi, accounts.polygon.VAULTHEALER)
+    console.log("vaultHealer Instantiated")
+	
+    StrategyImplementation = await ethers.getContractFactory("Strategy");
+    strategyImplementation = await StrategyImplementation.deploy();
+    
+    console.log("New strategy impl address: ", strategyImplementation.address);
+  });
+
 task("createVault", "Creates a new vault")
   // .addParam("account", "The account's address")
   .setAction(async (taskArgs) => {
-    tactics =  await ethers.getContractAt(tactics_abi, accounts.polygon.TACTICS);
-    console.log("Tactics Instantiated")
-    strategyConfig =  await ethers.getContractAt(strategyConfig_abi, accounts.polygon.STRATEGY_CONFIG);
-    console.log("strategyConfig Instantiated")
+    strategyImplementation =  await ethers.getContractAt(strategy_abi, accounts.polygon.STRATEGY_IMPLEMENTATION);
+    console.log("Strategy Implementation Instantiated")
     vaultHealer = await ethers.getContractAs(vaultHealer_abi, accounts.polygon.VAULTHEALER)
     console.log("vaultHealer Instantiated")
 
-    let [tacticsA, tacticsB] = await tactics.generateTactics(
+    let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
       dfynVaults[0]['masterchef'],
       dfynVaults[0]['PID'],
       0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
@@ -64,7 +74,7 @@ task("createVault", "Creates a new vault")
       ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
     );
     
-    DEPLOYMENT_DATA = await strategyConfig.generateConfig(
+    DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
       tacticsA,
       tacticsB,
       dfynVaults[0]['want'],

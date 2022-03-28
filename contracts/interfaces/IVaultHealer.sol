@@ -38,6 +38,7 @@ interface IVaultHealer {
 	error UnauthorizedPendingDepositAmount(); //Strategy attempting to pull more tokens from the user than authorized
     error RestrictedFunction(bytes4 selector);
     error NotStrategyImpl(address implementation);
+    error ImplWrongHealer(IVaultHealer implHealer); //Attempting to use a strategy configured for another VH, not this one
 
 	error NotApprovedToEnableBoost(address account, address operator);
 	error BoostPoolNotActive(uint256 _boostID);

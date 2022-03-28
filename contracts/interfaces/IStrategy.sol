@@ -7,6 +7,7 @@ import "../libraries/Fee.sol";
 import "../libraries/Tactics.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./IMagnetite.sol";
+import "./IVaultHealer.sol";
 
 interface IStrategy is IERC165 {
 
@@ -32,8 +33,10 @@ interface IStrategy is IERC165 {
     function unpanic() external;
     function router() external view returns (IUniRouter); // Univ2 router used by this strategy
 
+    function vaultHealer() external view returns (IVaultHealer);
+    function implementation() external view returns (IStrategy);
     function isMaximizer() external view returns (bool);
-    function getMaximizerImplementation() external view returns (address);
+    function getMaximizerImplementation() external view returns (IStrategy);
     function configInfo() external view returns (
         uint256 vid,
         IERC20 want,

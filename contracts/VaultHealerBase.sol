@@ -52,7 +52,11 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     function addVault(uint256 vid, address implementation, bytes calldata data) internal {
         //
-        if (!IERC165(implementation).supportsInterface(type(IStrategy).interfaceId)) revert NotStrategyImpl(implementation);
+        if (!IERC165(implementation).supportsInterface(type(IStrategy).interfaceId) //doesn't support interface
+            || IStrategy(implementation).implementation() != IStrategy(implementation) //is proxy
+        ) revert NotStrategyImpl(implementation);
+        IVaultHealer implVaultHealer = IStrategy(implementation).vaultHealer();
+        if (address(implVaultHealer) != address(this)) revert ImplWrongHealer(implVaultHealer);
 
         IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
         _strat.initialize(abi.encodePacked(vid, data));

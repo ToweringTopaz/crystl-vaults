@@ -44,22 +44,6 @@ library Tactics {
     type TacticsA is uint256;
     type TacticsB is uint256;
 
-    function generateTactics(
-        address _masterchef,
-        uint24 pid, 
-        uint8 vstReturnPosition, 
-        uint64 vstCode, //includes selector and encoded call format
-        uint64 depositCode, //includes selector and encoded call format
-        uint64 withdrawCode, //includes selector and encoded call format
-        uint64 harvestCode, //includes selector and encoded call format
-        uint64 emergencyCode//includes selector and encoded call format
-    ) external pure returns (TacticsA tacticsA, TacticsB tacticsB) {
-        assembly ("memory-safe") {
-            tacticsA := or(or(shl(96, _masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
-            tacticsB := or(or(shl(192, depositCode), shl(128, withdrawCode)), or(shl(64, harvestCode), emergencyCode))
-        }
-    }
-
     function masterchef(TacticsA tacticsA) internal pure returns (address) {
         return address(uint160(TacticsA.unwrap(tacticsA) >> 96));
     }  
