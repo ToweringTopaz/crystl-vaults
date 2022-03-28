@@ -17,16 +17,8 @@ withdrawFee = ethers.BigNumber.from(10);
 earnFee = ethers.BigNumber.from(500);
 
 module.exports = async function (deployer, network, accounts) {
-	await deployer.deploy(VaultHealer, "", ZERO_ADDRESS, accounts[0])
+	await deployer.deploy(VaultHealer)
 	vaultHealer = await VaultHealer.deployed();
-
-	await deployer.deploy(VaultFeeManager, 
-		vaultHealer.address, 
-		FEE_ADDRESS, 
-		withdrawFee, 
-		[ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], 
-		[earnFee, 0, 0])
-	vaultFeeManager = await VaultFeeManager.deployed();
 
     await deployer.deploy(StrategyConfig);
 	const strategyConfigInstance = await StrategyConfig.deployed();

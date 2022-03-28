@@ -30,15 +30,8 @@ contract VaultFeeManager is IVaultFeeManager {
     event ResetEarnFees(uint vid);
     event ResetWithdrawFee(uint vid);
 
-    constructor(address _vhAuth, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
+    constructor(address _vhAuth) {
         vhAuth = IAccessControl(_vhAuth);
-
-        defaultEarnFees.set(earnReceivers, earnRates);
-        defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
-        Fee.check(defaultEarnFees, 3000);
-        Fee.check(defaultWithdrawFee, 300);
-        emit SetDefaultEarnFees(defaultEarnFees);
-        emit SetDefaultWithdrawFee(defaultWithdrawFee);
     }
 
     modifier auth {

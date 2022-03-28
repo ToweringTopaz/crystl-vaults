@@ -53,7 +53,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Cavendish = await ethers.getContractFactory("Cavendish");
 		cavendish = await Cavendish.deploy();
         VaultHealer = await ethers.getContractFactory("VaultHealer");
-        vaultHealer = await VaultHealer.deploy(user1.address, FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
+        vaultHealer = await VaultHealer.deploy();
+		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultHealer.vaultFeeManager());
+		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
+		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
 		
         vaultHealer.on("FailedEarn", (vid, reason) => {
 			console.log("FailedEarn: ", vid, reason);
