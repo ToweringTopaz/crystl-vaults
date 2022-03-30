@@ -157,6 +157,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, TARGET_WANT_COMPOUNDER_DATA);
         crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
+        console.log(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		console.log("strategyCrystlCompounder address: ", strategyCrystlCompounder.address);
 
@@ -164,6 +165,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		console.log("maxi config generated");
 
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
+        console.log(maximizer_strat_pid);
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createMaximizer(crystl_compounder_strat_pid, MAXIMIZER_DATA);
         strategyMaximizer = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(maximizer_strat_pid));
