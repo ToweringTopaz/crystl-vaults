@@ -9,7 +9,7 @@ contract Strategy is BaseStrategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
 
-    constructor(address _vaultHealer) BaseStrategy(_vaultHealer) {}
+    constructor(IVaultHealer _vaultHealer) BaseStrategy(_vaultHealer) {}
 
     function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
         (IERC20 _wantToken,) = config.wantToken();
@@ -124,6 +124,58 @@ contract Strategy is BaseStrategy {
 
         return (sharesRemoved, wantAmt);
 
+    }
+
+    function generateConfig(
+        Tactics.TacticsA _tacticsA,
+        Tactics.TacticsB _tacticsB,
+        address _wantToken,
+        uint8 _wantDust,
+        address _router,
+        address _magnetite,
+        uint8 _slippageFactor,
+        bool _feeOnTransfer,
+        address[] memory _earned,
+        uint8[] memory _earnedDust
+    ) external view returns (bytes memory configData) {
+        require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
+        require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
+        uint8 vaultType = uint8(_earned.length);
+        if (_feeOnTransfer) vaultType += 0x80;
+        configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
+		
+		IERC20 _targetWant = IERC20(_wantToken);
+
+        //Look for LP tokens. If not, want must be a single-stake
+        try IUniPair(address(_targetWant)).token0() returns (IERC20 _token0) {
+            vaultType += 0x20;
+            IERC20 _token1 = IUniPair(address(_targetWant)).token1();
+            configData = abi.encodePacked(configData, vaultType, _token0, _token1);
+        } catch { //if not LP, then single stake
+            configData = abi.encodePacked(configData, vaultType);
+        }
+
+        for (uint i; i < _earned.length; i++) {
+            configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
+        }
+
+        configData = abi.encodePacked(configData, IUniRouter(_router).WETH());
+    }
+
+    function generateTactics(
+        address _masterchef,
+        uint24 pid, 
+        uint8 vstReturnPosition, 
+        uint64 vstCode, //includes selector and encoded call format
+        uint64 depositCode, //includes selector and encoded call format
+        uint64 withdrawCode, //includes selector and encoded call format
+        uint64 harvestCode, //includes selector and encoded call format
+        uint64 emergencyCode//includes selector and encoded call format
+    ) external pure returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) {
+        assembly ("memory-safe") {
+            tacticsA := or(or(shl(96, _masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
+            tacticsB := or(or(shl(192, depositCode), shl(128, withdrawCode)), or(shl(64, harvestCode), emergencyCode))
+        }
     }
 
 }

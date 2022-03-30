@@ -35,7 +35,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         if (!IAccessControl(vhAuth).hasRole(selector, msg.sender)) revert RestrictedFunction(selector);
     }
 
-    function createVault(address _implementation, bytes calldata data) external auth nonReentrant returns (uint16 vid) {
+    function createVault(IStrategy _implementation, bytes calldata data) external auth nonReentrant returns (uint16 vid) {
         vid = numVaultsBase + 1;
         numVaultsBase = vid;
         addVault(vid, _implementation, data);
@@ -47,14 +47,18 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         uint16 nonce = targetVault.numMaximizers + 1;
         vid = (targetVid << 16) | nonce;
         targetVault.numMaximizers = nonce;
-        addVault(vid, address(strat(targetVid).getMaximizerImplementation()), data);
+        addVault(vid, strat(targetVid).getMaximizerImplementation(), data);
     }
 
-    function addVault(uint256 vid, address implementation, bytes calldata data) internal {
+    function addVault(uint256 vid, IStrategy implementation, bytes calldata data) internal {
         //
-        if (!IERC165(implementation).supportsInterface(type(IStrategy).interfaceId)) revert NotStrategyImpl(implementation);
+        if (!implementation.supportsInterface(type(IStrategy).interfaceId) //doesn't support interface
+            || implementation.implementation() != implementation //is proxy
+        ) revert NotStrategyImpl(implementation);
+        IVaultHealer implVaultHealer = implementation.vaultHealer();
+        if (address(implVaultHealer) != address(this)) revert ImplWrongHealer(implVaultHealer);
 
-        IStrategy _strat = IStrategy(Cavendish.clone(implementation, bytes32(uint(vid))));
+        IStrategy _strat = IStrategy(Cavendish.clone(address(implementation), bytes32(uint(vid))));
         _strat.initialize(abi.encodePacked(vid, data));
         vaultInfo[vid].want = _strat.wantToken();
         vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses

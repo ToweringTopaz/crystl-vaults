@@ -7,6 +7,7 @@ import "../libraries/Fee.sol";
 import "../libraries/Tactics.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./IMagnetite.sol";
+import "./IVaultHealer.sol";
 
 interface IStrategy is IERC165 {
 
@@ -22,7 +23,8 @@ interface IStrategy is IERC165 {
 
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
-    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy
+    function wantLockedTotal() external view returns (uint256); // Total want tokens managed by strategy (vaultSharesTotal + want token balance)
+	function vaultSharesTotal() external view returns (uint256); //Want tokens deposited in strategy's pool
     function earn(Fee.Data[3] memory fees, address _operator, bytes calldata _data) external returns (bool success, uint256 _wantLockedTotal); // Main want token compounding function
     
     function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata _data) external payable returns (uint256 wantAdded, uint256 sharesAdded);
@@ -32,8 +34,10 @@ interface IStrategy is IERC165 {
     function unpanic() external;
     function router() external view returns (IUniRouter); // Univ2 router used by this strategy
 
+    function vaultHealer() external view returns (IVaultHealer);
+    function implementation() external view returns (IStrategy);
     function isMaximizer() external view returns (bool);
-    function getMaximizerImplementation() external view returns (address);
+    function getMaximizerImplementation() external view returns (IStrategy);
     function configInfo() external view returns (
         uint256 vid,
         IERC20 want,

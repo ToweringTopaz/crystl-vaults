@@ -14,12 +14,12 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
-    address public immutable vaultHealer;
-    address public immutable implementation;
+    IVaultHealer public immutable vaultHealer;
+    IStrategy public immutable implementation;
 
-    constructor(address _vaultHealer) { 
+    constructor(IVaultHealer _vaultHealer) { 
         vaultHealer = _vaultHealer;
-        implementation = address(this);
+        implementation = this;
     }
 
 
@@ -31,7 +31,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         _;
     }
     function _requireVaultHealer() private view {
-        if (msg.sender != vaultHealer) revert Strategy_NotVaultHealer(msg.sender);
+        if (msg.sender != address(vaultHealer)) revert Strategy_NotVaultHealer(msg.sender);
     }
 
     modifier getConfig() {
@@ -51,7 +51,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     function initialize(bytes memory _config) public virtual onlyVaultHealer {
-        if (address(this) == implementation) revert Strategy_InitializeOnlyByProxy();
+        if (this == implementation) revert Strategy_InitializeOnlyByProxy();
         assembly ("memory-safe") {
             let len := mload(_config) //get length of config
             mstore(_config, 0x600c80380380823d39803df3fe) //simple bytecode which saves everything after the f3
@@ -212,7 +212,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     //For IStrategy-conforming strategies who don't implement their own maximizers. Should revert if a strategy implementation
     //is incapable of being a maximizer.
-    function getMaximizerImplementation() external virtual view returns (address) {
+    function getMaximizerImplementation() external virtual view returns (IStrategy) {
         return implementation;
     }
 
