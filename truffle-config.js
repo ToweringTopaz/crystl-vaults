@@ -14,7 +14,7 @@ module.exports = {
       //provider: () => new HDWalletProvider(POLYGON_DEPLOYER_KEY, `https://matic-mainnet.chainstacklabs.com`),
       //provider: () => new HDWalletProvider(POLYGON_DEPLOYER_KEY, `https://rpc-mainnet.matic.network`),
       network_id: 137,
-      networkCheckTimeout: 1000000,
+      networkCheckTimeout: 100000000,
       confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true,

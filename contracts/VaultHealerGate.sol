@@ -313,6 +313,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		}
 	}
 
+    // // View function to see staked Want tokens on frontend.
+    // function stakedWantTokens(uint256 _vid, address _user) external view returns (uint256) {
+    //     uint256 wantLockedTotal = strat(_vid).wantLockedTotal();
+    //     if (balanceOf(_user, _vid) == 0) {
+    //         return 0;
+    //     }
+    //     return balanceOf(_user, _vid)*(wantLockedTotal)/(totalSupply[_vid]);
+    // }
+
 	function harvestMaximizer(uint256 _vid) external nonReentrant {
 		_maximizerHarvest(msg.sender, _vid, balanceOf(msg.sender, _vid), totalSupply[_vid]);
 	}
