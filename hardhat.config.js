@@ -44,10 +44,40 @@ if (!polygonScanApiKey) {
 task("vaultQuickDeploy", "Deploys everything")
   //.addParam("name", "The contract's name")
   .setAction(async (taskArgs) => {
-    VaultQuickDeploy = await await ethers.getContractFactory("VaultQuickDeploy");
+    VaultQuickDeploy = await ethers.getContractFactory("VaultQuickDeploy");
     vaultQuickDeploy = await VaultQuickDeploy.deploy();
     
     console.log("New quick deploy address: ", vaultQuickDeploy.address);
+	
+	
+	await hre.run("verify:verify", {
+		address: vaultQuickDeploy.address		
+	})
+	const vaultHealer = await vaultQuickDeploy.vaultHealer();
+	const vhAuth = await vaultHealer.vhAuth();
+	
+	await hre.run("verify:verify", {
+		address: vaultHealer.address
+	})
+	await hre.run("verify:verify", {
+		address: vhAuth.address,
+		constructorArguments: [vaultQuickDeploy.address],
+	})	
+	await hre.run("verify:verify", {
+		address: await vaultQuickDeploy.vaultFeeManager().address,
+		constructorArguments: [vhAuth.address],
+	})	
+	
+	await hre.run("verify:verify", {
+		address: await vaultQuickDeploy.strategy().address,
+		constructorArguments: [ vaultHealer.address ],
+	})
+	await hre.run("verify:verify", {
+		address: await vaultQuickDeploy.strategyQuick().address,
+		constructorArguments: [ vaultHealer.address ],
+	})	
+	
+	
   });
 
 task("deployImplementation", "Deploys a strategy implementation contract")
@@ -133,7 +163,7 @@ module.exports = {
 	  viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1,
       },
 	  debug: {
 	  }
