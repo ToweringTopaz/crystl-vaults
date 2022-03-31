@@ -94,7 +94,8 @@ contract Strategy is BaseStrategy {
 
 		uint withdrawSlippage;
         if (_wantAmt > wantBal) {
-            _vaultWithdraw(_wantToken, _wantAmt - wantBal); //Withdraw from the masterchef, staking pool, etc.
+            uint toWithdraw = _wantAmt - wantBal;
+            _vaultWithdraw(_wantToken, toWithdraw); //Withdraw from the masterchef, staking pool, etc.
             wantBal = _wantToken.balanceOf(address(this));
 			uint wantLockedAfter = wantBal + _vaultSharesTotal();
 			
@@ -105,10 +106,8 @@ contract Strategy is BaseStrategy {
 		}
 		
 		//Calculate shares to remove
-        sharesRemoved = Math.ceilDiv(
-            (_wantAmt + withdrawSlippage) * _sharesTotal,
-            wantLockedBefore
-        );
+        sharesRemoved = (_wantAmt + withdrawSlippage) * _sharesTotal;
+        sharesRemoved = Math.ceilDiv(sharesRemoved, wantLockedBefore);
 		
         //Get final withdrawal amount
         if (sharesRemoved > _userShares) {
