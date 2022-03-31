@@ -16,7 +16,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     VaultFeeManager immutable public vaultFeeManager;
     VaultHealerAuth immutable public vhAuth;
     
-    uint16 public numVaultsBase = 0; //number of non-maximizer vaults
+    uint16 public numVaultsBase; //number of non-maximizer vaults
 
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 	mapping(uint => uint) private panicLockExpiry;

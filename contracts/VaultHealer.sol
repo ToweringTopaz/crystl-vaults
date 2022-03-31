@@ -24,5 +24,10 @@ contract VaultHealer is VaultHealerBoostedPools, Multicall {
         _setURI(_uri);
     }
 
+    function stakedWantTokens(address account, uint vid) external view returns (uint) {
+        uint shares = balanceOf(account, vid);
+        return shares == 0 ? 0 : strat(vid).wantLockedTotal() * shares / totalSupply[vid];
+    }
+
 }
 
