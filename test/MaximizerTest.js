@@ -53,7 +53,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Cavendish = await ethers.getContractFactory("Cavendish");
 		cavendish = await Cavendish.deploy();
         VaultHealer = await ethers.getContractFactory("VaultHealer");
-        vaultHealer = await VaultHealer.deploy(user1.address, FEE_ADDRESS, withdrawFee, [ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
+        vaultHealer = await VaultHealer.deploy();
+		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultHealer.vaultFeeManager());
+		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
+		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
 		
         vaultHealer.on("FailedEarn", (vid, reason) => {
 			console.log("FailedEarn: ", vid, reason);
@@ -72,14 +75,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
-
-        //create the factory for the tactics implementation contract
-        Tactics = await ethers.getContractFactory("Tactics");
-
-        //deploy the tactics contract for this specific type of strategy (e.g. masterchef, stakingRewards, or miniChef)
-        tactics = await Tactics.deploy()
         
-		let [tacticsA, tacticsB] = await tactics.generateTactics(
+		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
 			dfynVaults[0]['masterchef'],
             dfynVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
@@ -90,12 +87,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
         );
 
-        //create factory and deploy strategyConfig contract
-        StrategyConfig = await ethers.getContractFactory("StrategyConfig");
-        strategyConfig = await StrategyConfig.deploy()
-        console.log("strategyConfig deployed");
-
-        DEPLOYMENT_DATA = await strategyConfig.generateConfig(
+        DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
             tacticsA,
 			tacticsB,
 			dfynVaults[0]['want'],
@@ -114,7 +106,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         TOKEN_OTHER = USDC;
 
-        let [crystlTacticsA, crystlTacticsB] = await tactics.generateTactics(
+        let [crystlTacticsA, crystlTacticsB] = await strategyImplementation.generateTactics(
 			apeSwapVaults[0]['masterchef'],
             apeSwapVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
@@ -125,7 +117,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
         );
 
-		TARGET_WANT_COMPOUNDER_DATA = await strategyConfig.generateConfig(
+		TARGET_WANT_COMPOUNDER_DATA = await strategyImplementation.generateConfig(
             crystlTacticsA,
 			crystlTacticsB,
 			apeSwapVaults[0]['want'],
@@ -154,6 +146,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, TARGET_WANT_COMPOUNDER_DATA);
         crystl_compounder_strat_pid = await vaultHealer.numVaultsBase();
+        console.log(crystl_compounder_strat_pid);
         strategyCrystlCompounder = await ethers.getContractAt('Strategy', await vaultHealer.strat(crystl_compounder_strat_pid));
 		console.log("strategyCrystlCompounder address: ", strategyCrystlCompounder.address);
 
@@ -161,6 +154,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		console.log("maxi config generated");
 
         maximizer_strat_pid = (crystl_compounder_strat_pid << 16) + 1 //we start at 1, not zero, numbering the maximizers for a given pool
+        console.log(maximizer_strat_pid);
 
 		await vaultHealer.connect(vaultHealerOwnerSigner).createMaximizer(crystl_compounder_strat_pid, MAXIMIZER_DATA);
         strategyMaximizer = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(maximizer_strat_pid));

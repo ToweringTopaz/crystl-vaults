@@ -293,16 +293,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
             emit MaximizerHarvest(_to, _vid, sharesEarned);
         }
     }
-	 
-	function maximizerRawTargetShares(address _account, uint256 _vid) public view returns (uint256) {
-		uint userVaultBalance = balanceOf(_account, _vid);
-		if (userVaultBalance == 0) return 0;		
-		
-		return userVaultBalance * totalMaximizerEarnings[_vid] / totalSupply[_vid];
-	}
 	
 	function maximizerPendingTargetShares(address _account, uint256 _vid) public view returns (uint256) {
-		uint targetVidShares = maximizerRawTargetShares(_account, _vid);
+        uint userVaultBalance = balanceOf(_account, _vid);
+		if (userVaultBalance == 0) return 0;		
+
+		uint targetVidShares = userVaultBalance * totalMaximizerEarnings[_vid] / totalSupply[_vid];
 		uint accountOffset = maximizerEarningsOffset[_account][_vid];
 		
 		return targetVidShares > accountOffset ? targetVidShares - accountOffset : 0;

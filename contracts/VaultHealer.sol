@@ -3,14 +3,15 @@ pragma solidity ^0.8.13;
 
 import "./QuartzUniV2Zap.sol";
 import "./VaultHealerBoostedPools.sol";
+import "@openzeppelin/contracts/utils/Multicall.sol";
 
-contract VaultHealer is VaultHealerBoostedPools {
+
+contract VaultHealer is VaultHealerBoostedPools, Multicall {
 
     QuartzUniV2Zap immutable public zap;
 
-    constructor(address _owner, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates)
+    constructor()
         ERC1155("")
-		VaultHealerBase(_owner, withdrawReceiver, withdrawRate, earnReceivers, earnRates)
     {
         zap = new QuartzUniV2Zap(address(this));
     }

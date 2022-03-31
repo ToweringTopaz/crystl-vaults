@@ -30,15 +30,8 @@ contract VaultFeeManager is IVaultFeeManager {
     event ResetEarnFees(uint vid);
     event ResetWithdrawFee(uint vid);
 
-    constructor(address _vhAuth, address withdrawReceiver, uint16 withdrawRate, address[3] memory earnReceivers, uint16[3] memory earnRates) {
+    constructor(address _vhAuth) {
         vhAuth = IAccessControl(_vhAuth);
-
-        defaultEarnFees.set(earnReceivers, earnRates);
-        defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
-        Fee.check(defaultEarnFees, 3000);
-        Fee.check(defaultWithdrawFee, 300);
-        emit SetDefaultEarnFees(defaultEarnFees);
-        emit SetDefaultWithdrawFee(defaultWithdrawFee);
     }
 
     modifier auth {
@@ -82,36 +75,39 @@ contract VaultFeeManager is IVaultFeeManager {
 
      function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) external auth {
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
-        Fee.check(defaultEarnFees, 3000);
         Fee.check(defaultWithdrawFee, 300);
         emit SetDefaultEarnFees(defaultEarnFees);
         emit SetDefaultWithdrawFee(defaultWithdrawFee);
     }   
 
-    function setEarnFees(uint _vid, Fee.Data[3] calldata _earnFees) external auth {
+    function setEarnFees(uint _vid, address[3] calldata earnReceivers, uint16[3] calldata earnRates) external auth {
         _overrideDefaultEarnFees.set(_vid);
-        earnFees[_vid] = _earnFees;
-        emit SetEarnFees(_vid, _earnFees);
+        earnFees[_vid].set(earnReceivers, earnRates);
+        Fee.check(earnFees[_vid], 3000);
+        emit SetEarnFees(_vid, earnFees[_vid]);
     }
     function resetEarnFees(uint _vid) external auth {
         _overrideDefaultEarnFees.unset(_vid);
+        delete earnFees[_vid];
         emit ResetEarnFees(_vid);
     }
     
-    function setDefaultEarnFees(Fee.Data[3] calldata _earnFees) external auth {
-        defaultEarnFees = _earnFees;
-        emit SetDefaultEarnFees(_earnFees);
+    function setDefaultEarnFees(address[3] calldata earnReceivers, uint16[3] calldata earnRates) external auth {
+        defaultEarnFees.set(earnReceivers, earnRates);
+        Fee.check(defaultEarnFees, 3000);
+        emit SetDefaultEarnFees(defaultEarnFees);
     }   
 
     function setWithdrawFee(uint _vid, address withdrawReceiver, uint16 withdrawRate) external auth {
         _overrideDefaultWithdrawFee.set(_vid);
-        Fee.Data _withdrawFee = Fee.create(withdrawReceiver, withdrawRate);
         withdrawFee[_vid] = Fee.create(withdrawReceiver, withdrawRate);
-        emit SetWithdrawFee(_vid, _withdrawFee);
+        Fee.check(defaultWithdrawFee, 300);
+        emit SetWithdrawFee(_vid, withdrawFee[_vid]);
     }
 
     function resetWithdrawFee(uint _vid) external auth {
-        _overrideDefaultEarnFees.unset(_vid);   
+        _overrideDefaultEarnFees.unset(_vid);
+        withdrawFee[_vid] = Fee.Data.wrap(0);
          emit ResetWithdrawFee(_vid);
     }
 

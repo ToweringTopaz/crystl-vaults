@@ -2,9 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "../interfaces/IWETH.sol";
+using Fee for Fee.Data global;
+using Fee for Fee.Data[3] global;
 
 library Fee {
-    using Fee for Data;
 
     type Data is uint256;
 
