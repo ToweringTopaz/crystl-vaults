@@ -41,7 +41,14 @@ if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
-
+task("vaultQuickDeploy", "Deploys everything")
+  //.addParam("name", "The contract's name")
+  .setAction(async (taskArgs) => {
+    VaultQuickDeploy = await await ethers.getContractFactory("VaultQuickDeploy");
+    vaultQuickDeploy = await VaultQuickDeploy.deploy();
+    
+    console.log("New quick deploy address: ", vaultQuickDeploy.address);
+  });
 
 task("deployImplementation", "Deploys a strategy implementation contract")
   .addParam("name", "The contract's name")
