@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./VaultHealerGate.sol";
 import "./interfaces/IBoostPool.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 abstract contract VaultHealerBoostedPools is VaultHealerGate {
     using BitMaps for BitMaps.BitMap;
@@ -15,7 +16,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         return IBoostPool(Cavendish.computeAddress(bytes32(_boostID)));
     }
     
-    function nextBoostPool(uint vid) public view returns (uint, IBoostPool) {
+    function nextBoostPool(uint vid) external view returns (uint, IBoostPool) {
         return boostPoolVid(vid, vaultInfo[vid].numBoosts + 1);
     }
 
@@ -106,5 +107,70 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
             userBoosts[to].unset(boostID); //pool finished for "to"
         }
     }
+
+    struct BoostInfo {
+        uint id;
+        IERC20 rewardToken;
+        uint pendingReward;
+    }
+
+    function boostInfo(address account, uint vid) external view returns (
+        BoostInfo[] memory active,
+        BoostInfo[] memory finished,
+        BoostInfo[] memory available
+    ) {
+        uint16 len = vaultInfo[vid].numBoosts;
+
+        bytes memory statuses = new bytes(len);
+        uint numActive;
+        uint numFinished;
+        uint numAvailable;
+        for (uint16 i; i < len; i++) {
+            uint id = uint(bytes32(bytes4(0xB0057000 + i))) | vid;
+            bytes1 status;
+
+            if (userBoosts[account].get(id)) status = 0x01; //pool active for user
+            if (activeBoosts.get(id)) status |= 0x02; //pool still paying rewards
+            
+            if (status == 0x01) numFinished++; //user in finished pool
+            else if (status == 0x02) numAvailable++; //user not in active pool
+            else if (status == 0x03) numActive++; //user in active pool
+
+            statuses[i] = status;
+        }
+
+        active = new BoostInfo[](numActive);
+        finished = new BoostInfo[](numFinished);
+        available = new BoostInfo[](numAvailable);
+
+        uint activeIndex;
+        uint finishedIndex;
+        uint availableIndex;
+
+        for (uint16 i; i < len; i++) {
+            bytes1 status = statuses[i];
+            if (status == 0x00) continue;
+
+            (uint boostID, IBoostPool pool) = boostPoolVid(vid, i);
+
+            BoostInfo memory info; //reference to the output array member where we will be storing the data
+            if (status == 0x01) {
+                info = finished[finishedIndex];
+                finishedIndex++;
+            }
+            else if (status == 0x02) {
+                info = available[availableIndex];
+                availableIndex++;
+            }
+            else {
+                info = active[activeIndex];
+                activeIndex++;
+            }
+
+            info.id = boostID;
+            (info.rewardToken, info.pendingReward) = pool.pendingReward(account);
+        }
+    }
+
 }
 
