@@ -260,13 +260,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		
 		maximizerEarningsOffset[_account][_vid] = _balanceAfter * totalBefore / _supplyBefore;
         totalMaximizerEarnings[_vid] = _supplyAfter * totalBefore / _supplyBefore;
-        uint accountTargetShares = _balanceBefore * totalBefore / _supplyBefore;
 
-        if (accountTargetShares > accountOffset) {
-            uint sharesEarned = accountTargetShares - accountOffset;
-            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
-            emit MaximizerHarvest(_account, _vid, sharesEarned);
-        }
+        payHarvest(_account, _vid, _balanceBefore * totalBefore / _supplyBefore, accountOffset);
     }
 
     function _maximizerHarvestBeforeTransfer(address _from, address _to, uint256 _vid, uint256 _fromBalanceBefore, uint256 _toBalanceBefore, uint256 _amount, uint256 _supply) private {
@@ -277,20 +272,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
         maximizerEarningsOffset[_from][_vid] = (_fromBalanceBefore - _amount) * totalBefore / _supply;
         maximizerEarningsOffset[_to][_vid] = (_toBalanceBefore + _amount) * totalBefore / _supply;
 
-        uint fromTargetShares = _fromBalanceBefore * totalBefore / _supply;
-        uint toTargetShares = _toBalanceBefore * totalBefore / _supply;
+        payHarvest(_from, _vid, _fromBalanceBefore * totalBefore / _supply, fromOffset);
+        payHarvest(_to, _vid, _toBalanceBefore * totalBefore / _supply, toOffset);
+    }
 
-		address vaultStrat = address(strat(_vid));
-
-        if (fromTargetShares > fromOffset) {
-            uint sharesEarned = fromTargetShares - fromOffset;
-            _safeTransferFrom(vaultStrat, _from, _vid >> 16, sharesEarned, "");
-            emit MaximizerHarvest(_from, _vid, sharesEarned);
-        }
-        if (toTargetShares > toOffset) {
-            uint sharesEarned = toTargetShares - toOffset;
-            _safeTransferFrom(vaultStrat, _to, _vid >> 16, sharesEarned, "");
-            emit MaximizerHarvest(_to, _vid, sharesEarned);
+    function payHarvest(address _account, uint _vid, uint targetShares, uint offset) private {
+        if (targetShares > offset) {
+            uint sharesEarned = targetShares - offset;
+            _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
+            emit MaximizerHarvest(_account, _vid, sharesEarned);
         }
     }
 	

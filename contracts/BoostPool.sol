@@ -107,7 +107,8 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
     }
 
     // View function to see pending Reward on frontend.
-    function pendingReward(address _user) external view returns (uint256) {
+    function pendingReward(address _user) external view returns (IERC20 token, uint256 amount) {
+        token = REWARD_TOKEN;
         User storage user = userInfo[_user];
         uint256 _accRewardTokenPerShare = accRewardTokenPerShare;
         uint _lastRewardBlock = lastRewardBlock;
@@ -117,7 +118,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
             uint256 tokenReward = multiplier * rewardPerBlock;
             _accRewardTokenPerShare += tokenReward * 1e30 / _totalStaked;
         }
-        return calcPending(user, _accRewardTokenPerShare);
+        amount = calcPending(user, _accRewardTokenPerShare);
     }
 
     // Update reward variables of the given pool to be up-to-date.
