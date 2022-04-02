@@ -119,8 +119,9 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         BoostInfo[] memory finished,
         BoostInfo[] memory available
     ) {
-        uint16 len = vaultInfo[vid].numBoosts;
+        uint16 len = vaultInfo[vid].numBoosts; //total number of boost pools that ever existed for this vault
 
+        //Create bytes array indicating status of each boost pool and total number for each status
         bytes memory statuses = new bytes(len);
         uint numActive;
         uint numFinished;
@@ -132,9 +133,10 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
             if (userBoosts[account].get(id)) status = 0x01; //pool active for user
             if (activeBoosts.get(id)) status |= 0x02; //pool still paying rewards
             
-            if (status == 0x01) numFinished++; //user in finished pool
+            if (status == 0x00) continue; //pool finished, user isn't in, nothing to do
+            else if (status == 0x01) numFinished++; //user in finished pool
             else if (status == 0x02) numAvailable++; //user not in active pool
-            else if (status == 0x03) numActive++; //user in active pool
+            else numActive++; //user in active pool
 
             statuses[i] = status;
         }
@@ -149,7 +151,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
 
         for (uint16 i; i < len; i++) {
             bytes1 status = statuses[i];
-            if (status == 0x00) continue;
+            if (status == 0x00) continue; //pool is done and user isn't in
 
             (uint boostID, IBoostPool pool) = boostPoolVid(vid, i);
 
