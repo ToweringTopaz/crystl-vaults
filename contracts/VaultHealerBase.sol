@@ -8,6 +8,7 @@ import "./VaultFeeManager.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./VaultHealerAuth.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "./libraries/VaultChonk.sol";
 
 abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
@@ -38,31 +39,11 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     function createVault(IStrategy _implementation, bytes calldata data) external auth nonReentrant returns (uint16 vid) {
         vid = numVaultsBase + 1;
         numVaultsBase = vid;
-        addVault(vid, _implementation, data);
+        VaultChonk.createVault(vaultInfo, vid, _implementation, data);
     }
 	
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) auth nonReentrant returns (uint vid) {
-		if (targetVid >= 2**208) revert MaximizerTooDeep(targetVid);
-        VaultInfo storage targetVault = vaultInfo[targetVid];
-        uint16 nonce = targetVault.numMaximizers + 1;
-        vid = (targetVid << 16) | nonce;
-        targetVault.numMaximizers = nonce;
-        addVault(vid, strat(targetVid).getMaximizerImplementation(), data);
-    }
-
-    function addVault(uint256 vid, IStrategy implementation, bytes calldata data) internal {
-        //
-        if (!implementation.supportsInterface(type(IStrategy).interfaceId) //doesn't support interface
-            || implementation.implementation() != implementation //is proxy
-        ) revert NotStrategyImpl(implementation);
-        IVaultHealer implVaultHealer = implementation.vaultHealer();
-        if (address(implVaultHealer) != address(this)) revert ImplWrongHealer(implVaultHealer);
-
-        IStrategy _strat = IStrategy(Cavendish.clone(address(implementation), bytes32(uint(vid))));
-        _strat.initialize(abi.encodePacked(vid, data));
-        vaultInfo[vid].want = _strat.wantToken();
-        vaultInfo[vid].active = true; //uninitialized vaults are paused; this unpauses
-        emit AddVault(vid);
+        return VaultChonk.createMaximizer(vaultInfo, targetVid, data);
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {

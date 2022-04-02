@@ -107,4 +107,10 @@ interface IVaultHealer {
     ///@notice This can be used to make two or more calls to the contract as an atomic transaction.
     ///@param inputs are the standard abi-encoded function calldata with selector. This can be any external function on vaultHealer.
     //function multicall(bytes[] calldata inputs) external returns (bytes[] memory);
+
+    struct BoostInfo {
+        uint id;
+        IERC20 rewardToken;
+        uint pendingReward;
+    }
 }
