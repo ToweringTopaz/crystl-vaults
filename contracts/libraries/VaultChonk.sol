@@ -67,9 +67,7 @@ library VaultChonk {
         address account,
         uint vid
     ) external view returns (
-        IVaultHealer.BoostInfo[] memory active,
-        IVaultHealer.BoostInfo[] memory finished,
-        IVaultHealer.BoostInfo[] memory available
+        IVaultHealer.BoostInfo[][3] memory boosts //active, finished, available
     ) {
         //Create bytes array indicating status of each boost pool and total number for each status
         bytes memory statuses = new bytes(len);
@@ -91,30 +89,20 @@ library VaultChonk {
             statuses[i] = status;
         }
 
-        active = new IVaultHealer.BoostInfo[](numActive);
-        finished = new IVaultHealer.BoostInfo[](numFinished);
-        available = new IVaultHealer.BoostInfo[](numAvailable);
+        boosts[0] = new IVaultHealer.BoostInfo[](numActive);
+        boosts[1] = new IVaultHealer.BoostInfo[](numFinished);
+        boosts[2] = new IVaultHealer.BoostInfo[](numAvailable);
 
-        uint activeIndex;
-        uint finishedIndex;
-        uint availableIndex;
+        uint[3] memory infoIndex;
 
         for (uint16 i; i < len; i++) {
-            bytes1 status = statuses[i];
-            if (status == 0x00) continue; //pool is done and user isn't in
-
+            uint8 status = uint8(statuses[i]);
+            if (status == 0) continue; //pool is done and user isn't in
+            status %= 3;
+            
             (uint boostID, IBoostPool pool) = boostPoolVid(vid, i);
 
-            IVaultHealer.BoostInfo memory info; //reference to the output array member where we will be storing the data
-            if (status == 0x01) {
-                info = finished[finishedIndex++];
-            }
-            else if (status == 0x02) {
-                info = available[availableIndex++];
-            }
-            else {
-                info = active[activeIndex++];
-            }
+            IVaultHealer.BoostInfo memory info = boosts[status][infoIndex[status]++]; //reference to the output array member where we will be storing the data
 
             info.id = boostID;
             (info.rewardToken, info.pendingReward) = pool.pendingReward(account);
@@ -130,5 +118,12 @@ library VaultChonk {
         uint _boostID = (uint(bytes32(bytes4(0xB0057000 + n))) | vid);
         return (_boostID, boostPool(_boostID));
     }
+
+	function sizeOf(address _contract) external view returns (uint256 size) {
+	
+		assembly ("memory-safe") {
+			size := extcodesize(_contract)
+		}
+	}
 
 }

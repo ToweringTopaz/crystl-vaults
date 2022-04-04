@@ -96,11 +96,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         }
     }
 
-    function boostInfo(address account, uint vid) external view returns (
-        BoostInfo[] memory active,
-        BoostInfo[] memory finished,
-        BoostInfo[] memory available
-    ) {
+    function boostInfo(address account, uint vid) external view returns (BoostInfo[][3] memory boosts) {
         return VaultChonk.boostInfo(vaultInfo[vid].numBoosts, activeBoosts, userBoosts[account], account, vid);
     }
 }

@@ -160,10 +160,10 @@ module.exports = {
   solidity: {
     version: "0.8.13",
     settings: {
-	  viaIR: true,
+	  //viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 1,
+        runs: 1000,
       },
 	  debug: {
 	  }

@@ -50,9 +50,13 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
 
-		Cavendish = await ethers.getContractFactory("Cavendish");
-		cavendish = await Cavendish.deploy();
-        VaultHealer = await ethers.getContractFactory("VaultHealer");
+		VaultChonk = await ethers.getContractFactory("VaultChonk");
+		vaultChonk = await VaultChonk.deploy();
+		VaultHealer = await ethers.getContractFactory("VaultHealer", {
+			libraries: {
+				VaultChonk: vaultChonk.address,
+			},
+		});
         vaultHealer = await VaultHealer.deploy();
 		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultHealer.vaultFeeManager());
 		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
@@ -289,8 +293,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
 		
 		it('Should have a VaultHealer within the code size limit', async () => {
-			vhSize = await cavendish.sizeOf(vaultHealer.address)
-
+			vhSize = await vaultChonk.sizeOf(vaultHealer.address)
+			console.log("contract size is ", vhSize);
              expect(vhSize).to.be.lt(24576);
          })
 		

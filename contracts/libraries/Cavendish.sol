@@ -63,14 +63,6 @@ library Cavendish {
         return address(uint160(uint256(_data)));
     }
 	
-	function sizeOf(address _contract) external view returns (uint256 size) {
-	
-		assembly ("memory-safe") {
-			size := extcodesize(_contract)
-		}
-	}
-	
-	
     /// @notice Called by the proxy constructor to provide the bytecode for the final proxy contract. 
     /// @dev Deployer contracts must call Cavendish._fallback() in their own fallback functions.
     ///      Generally compatible with contracts that use fallback functions. Simply call this at the
