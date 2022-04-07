@@ -18,7 +18,7 @@ interface IVaultHealer {
     event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
-    event Earned(uint256 indexed vid, uint256 wantAmountEarned);
+    event Earned(uint256 indexed vid, uint256 wantLockedTotal, uint256 totalSupply);
     event AddBoost(uint indexed boostid);
     event EnableBoost(address indexed user, uint indexed boostid);
     event BoostEmergencyWithdraw(address user, uint _boostID);

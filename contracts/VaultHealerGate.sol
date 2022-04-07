@@ -50,7 +50,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         vault.lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees, msg.sender, data) returns (bool success, uint256 wantLockedTotal) {
             if (success) {                
-                emit Earned(vid, wantLockedTotal);
+                emit Earned(vid, wantLockedTotal, totalSupply[vid]);
                 return true;
             }
         } catch Error(string memory reason) {
