@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "./StakingPool.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "./interfaces/IStakingPool.sol";
 
 contract PoolFactory {
-  address public defaultOwner;
+  address public immutable defaultOwner;
+  address public immutable poolImplementation;
 
   event DeployedPoolContract(
       address indexed pool,
@@ -16,8 +18,9 @@ contract PoolFactory {
       uint256 bonusEndBlock,
       address owner);
 
-  constructor (address _defaultOwner) {
+  constructor (address _defaultOwner, address _poolImplementation) {
     defaultOwner = _defaultOwner;
+    poolImplementation = _poolImplementation;
   }
 
   function deployDefaultPoolContract(
@@ -36,7 +39,7 @@ contract PoolFactory {
         uint256 _startBlock,
         uint256 _bonusEndBlock,
         address _owner) public {
-    StakingPool pool = new StakingPool();
+    IStakingPool pool = IStakingPool(Clones.clone(poolImplementation));
 
     pool.initialize(_stakeToken, _rewardToken, _rewardPerBlock, _startBlock, _bonusEndBlock);
 
