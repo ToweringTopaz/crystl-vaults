@@ -41,44 +41,85 @@ if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
-task("vaultQuickDeploy", "Deploys everything")
-  //.addParam("name", "The contract's name")
-  .setAction(async (taskArgs) => {
-    VaultQuickDeploy = await ethers.getContractFactory("VaultQuickDeploy");
-    vaultQuickDeploy = await VaultQuickDeploy.deploy();
+task("deployChonk", "Deploys VaultChonk library")
+    .setAction(async (taskArgs) => {
+	
+	vaultChonk = await ethers.getContractFactory("VaultChonk");
+	vaultChonk = await vaultChonk.deploy();	
+	
+	console.log("VaultChonk deployed at: ", vaultChonk.address);
+});
+
+task("vaultDeploy", "Deploys everything")
+  .addParam("chonk", "The vaultChonk library address")
+  .setAction(async ({ chonk }) => {
+
+    vaultDeploy = await ethers.getContractFactory("VaultDeploy", {libraries: { VaultChonk: chonk }});
+    vaultDeploy = await vaultDeploy.deploy();
     
-    console.log("New quick deploy address: ", vaultQuickDeploy.address);
-	
-	
-	await hre.run("verify:verify", {
-		address: vaultQuickDeploy.address		
-	})
-	const vaultHealer = await vaultQuickDeploy.vaultHealer();
-	const vhAuth = await vaultHealer.vhAuth();
-	
-	await hre.run("verify:verify", {
-		address: vaultHealer.address
-	})
-	await hre.run("verify:verify", {
-		address: vhAuth.address,
-		constructorArguments: [vaultQuickDeploy.address],
-	})	
-	await hre.run("verify:verify", {
-		address: await vaultQuickDeploy.vaultFeeManager().address,
-		constructorArguments: [vhAuth.address],
-	})	
-	
-	await hre.run("verify:verify", {
-		address: await vaultQuickDeploy.strategy().address,
-		constructorArguments: [ vaultHealer.address ],
-	})
-	await hre.run("verify:verify", {
-		address: await vaultQuickDeploy.strategyQuick().address,
-		constructorArguments: [ vaultHealer.address ],
-	})	
-	
+    console.log("New deploy address: ", vaultDeploy.address);
 	
   });
+
+task("testVaultDeploy", "Deploys everything and initializes it as a test VaultHealer")
+  .addParam("chonk", "The vaultChonk library address")
+  .setAction(async ({ chonk }) => {
+
+    vaultDeploy = await ethers.getContractFactory("TestVaultDeploy", {libraries: { VaultChonk: chonk }});
+    vaultDeploy = await vaultDeploy.deploy();
+    
+    console.log("New deploy address: ", vaultDeploy.address);
+	
+  });
+
+task("vaultVerify", "Verifies everything")
+  .addParam("chonk", "The vaultChonk contract")
+  .addParam("deploy", "The vaultDeploy contract")
+  .setAction(async ({ chonk, deploy }) => {
+	  
+    vaultDeploy = await ethers.getContractAt("VaultDeploy", deploy);
+
+//	await hre.run("verify:verify", {
+//		address: chonk
+//	})	
+	
+//	await hre.run("verify:verify", {
+//		address: vaultDeploy.address,
+//		libraries: { VaultChonk: chonk }
+//	})
+	const vaultHealer = await ethers.getContractAt("VaultHealer", await vaultDeploy.vaultHealer());
+	const vhAuth = await ethers.getContractAt("VaultHealerAuth", await vaultHealer.vhAuth());
+	
+//	await hre.run("verify:verify", {
+//		address: vaultHealer.address
+//	})
+//	await hre.run("verify:verify", {
+//		address: vhAuth.address,
+//		constructorArguments: [vaultDeploy.address],
+//	})
+//await hre.run("verify:verify", {
+//		address: await vaultHealer.vaultFeeManager(),
+//		constructorArguments: [vhAuth.address],
+//	})	
+	await hre.run("verify:verify", {
+		address: await vaultHealer.zap(),
+		constructorArguments: [ vaultHealer.address ],
+	})	
+	await hre.run("verify:verify", {
+		address: await vaultDeploy.strategy(),
+		constructorArguments: [ vaultHealer.address ],
+	})
+	await hre.run("verify:verify", {
+		address: await vaultDeploy.strategyQuick(),
+		constructorArguments: [ vaultHealer.address ],
+	})	
+	await hre.run("verify:verify", {
+		address: await vaultDeploy.boostPoolImpl(),
+		constructorArguments: [ vaultHealer.address ],
+	})		
+	
+  });
+
 
 task("deployImplementation", "Deploys a strategy implementation contract")
   .addParam("name", "The contract's name")
