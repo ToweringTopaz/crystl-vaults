@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IStrategy.sol";
 import "./IVaultFeeManager.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
+import "./IBoostPool.sol";
 
 ///@notice Interface for the Crystl v3 Vault central contract
 interface IVaultHealer {
@@ -110,6 +111,7 @@ interface IVaultHealer {
 
     struct BoostInfo {
         uint id;
+        IBoostPool pool;
         IERC20 rewardToken;
         uint pendingReward;
     }
