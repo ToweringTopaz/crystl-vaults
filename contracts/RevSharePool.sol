@@ -240,7 +240,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
         _updatePool();
         require(_amount <= address(this).balance - rewardsPending, 'not enough rewards');
         // Withdraw rewards
-        (bool success,) = _to.call{value: _amount}("");
+        (bool success,) = msg.sender.call{value: _amount}("");
         require(success, "Reward transfer failed");
         emit EmergencyRewardWithdraw(msg.sender, _amount);
     }
