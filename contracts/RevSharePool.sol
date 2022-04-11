@@ -178,12 +178,17 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     }
 
     // Deposit Rewards into contract
-    function depositRewards() external nonReentrant payable {
+    function depositRewards() public nonReentrant payable {
         require(msg.value > 0, 'Deposit value must be greater than 0.');
+        rewardsPending += uint128(msg.value);
+        _updatePool();
+        rewardsPending -= uint128(msg.value);
         emit DepositRewards(msg.value);
     }
 
-    receive() external payable {}
+    receive() external payable nonReentrant {
+        depositRewards();
+    }
 
     /// @param _to address to send reward token to
     /// @param _amount value of reward token to transfer
