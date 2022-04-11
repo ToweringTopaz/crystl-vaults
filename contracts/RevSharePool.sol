@@ -72,8 +72,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
 
     function decayHalflife(uint128 amountStart, uint64 timeLastUpdate, uint64 halflife) internal view returns (uint128 amountAfter, uint128 amountDecayed) {
 
-        amountAfter = amountStart;
-        if (timeLastUpdate >= block.timestamp) return (amountAfter, 0);
+        if (timeLastUpdate >= block.timestamp) return (amountStart, 0);
 
         amountAfter = uint128(ABDKMath64x64.div(
             ABDKMath64x64.fromUInt(amountStart),
@@ -193,6 +192,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     /// @param _to address to send reward token to
     /// @param _amount value of reward token to transfer
     function safeTransferReward(address _to, uint256 _amount) internal {
+        rewardsPending -= uint128(_amount);
         (bool success,) = _to.call{value: _amount}("");
         require(success, "Reward transfer failed");
     }
@@ -240,7 +240,8 @@ contract RevSharePool is Ownable, ReentrancyGuard {
         _updatePool();
         require(_amount <= address(this).balance - rewardsPending, 'not enough rewards');
         // Withdraw rewards
-        safeTransferReward(msg.sender, _amount);
+        (bool success,) = _to.call{value: _amount}("");
+        require(success, "Reward transfer failed");
         emit EmergencyRewardWithdraw(msg.sender, _amount);
     }
 
