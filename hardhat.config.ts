@@ -28,6 +28,7 @@ const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
 if (!archiveMainnetNodeURL) {
   throw new Error("Please set your PRIVATE_RPC in a .env file");
 }
+const mumbaiNodeURL = process.env.MUMBAI_RPC;
 
 const myPrivateKey = process.env.MY_PRIVATE_KEY;
 if (!myPrivateKey) {
@@ -50,7 +51,7 @@ export default {
       },
       forking: {
         url: archiveMainnetNodeURL,
-        blockNumber: 24162989,
+        // blockNumber: 24162989,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",
@@ -58,7 +59,15 @@ export default {
     polygon: {
       url: archiveMainnetNodeURL,
       accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
+      gas: 7000000,
+      gasPrice: 50000000000
     },
+    mumbai: {
+      url: mumbaiNodeURL,
+      accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
+      gas: 7000000,
+      gasPrice: 8000000000
+    }
   },
   solidity: {
     version: "0.7.5",

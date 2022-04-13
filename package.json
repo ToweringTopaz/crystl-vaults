@@ -11,7 +11,9 @@
     "@openzeppelin/contracts-upgradeable": "^4.4.1",
     "@truffle/hdwallet-provider": "^1.4.3",
     "dotenv": "^8.6.0",
+    "node-fetch": "^2.6.1",
     "path": "^0.12.7",
+    "request": "^2.88.2",
     "truffle": "^5.4.0",
     "truffle-flattener": "^1.4.4"
   },
