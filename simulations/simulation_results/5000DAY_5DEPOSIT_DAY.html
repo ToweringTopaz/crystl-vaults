@@ -1,0 +1,57 @@
+<html>
+
+<head>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript">
+    google.charts.load('current', { 'packages': ['corechart'] });
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+      var data = google.visualization.arrayToDataTable([
+        ['BlockNumber', 'DiscountRate'],
+        [26774058, 0.9419193783327923],
+        [26793058, 8.706907670216921],
+        [26812059, -3.4084043922331846],
+        [26831060, -13.087567514120838],
+        [26850061, -21.796773444876454],
+        [26869062, -29.63329657467691],
+        [26907064, -31.407912928035643],
+        [26926065, -38.18890122172779],
+        [26945066, -43.38357729093455],
+        [26964067, -48.00047820995866],
+        [26983068, -52.11040363475712],
+        [27021070, -52.08867468236018],
+        [27040071, -56.248511325764326],
+        [27059072, -59.431196657309684],
+        [27078073, -62.28603893572703],
+        [27097074, -64.84975910281365],
+        [27135076, -64.4171658720051],
+        [27154077, -67.10011592130292],
+        [27173078, -69.14148835295843],
+        [27192079, -70.98641819896703],
+        [27211080, -72.65493757768564],
+        [27249082, -72.01820289843666],
+        [27268083, -73.82521718504222],
+        [27287084, -75.18457738905714],
+        [27306085, -76.41995993480748],
+        [27325086, -77.54273648082466]
+      ]);
+
+      var options = {
+        title: 'Bond Market Simulation(5000 Tokens Each day - 5 deposit with BondAdjustment)',
+        curveType: 'function',
+        legend: { position: 'bottom' }
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+      chart.draw(data, options);
+    }
+  </script>
+</head>
+
+<body>
+  <div id="curve_chart" style="width: 1000px; height: 700px"></div>
+</body>
+
+</html>

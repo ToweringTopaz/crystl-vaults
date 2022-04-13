@@ -1,0 +1,57 @@
+<html>
+
+<head>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript">
+    google.charts.load('current', { 'packages': ['corechart'] });
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+      var data = google.visualization.arrayToDataTable([
+        ['BlockNumber', 'DiscountRate'],
+        [26773635, 1.0336843277962522],
+        [26792635, 8.805731666730182],
+        [26811636, -3.3205942639521915],
+        [26830637, -13.008556583637931],
+        [26849638, -21.725679937076066],
+        [26868639, -29.56932714529115],
+        [26906640, -31.345879939830613],
+        [26925641, -39.06074277291493],
+        [26944642, -45.16726887588192],
+        [26963643, -50.66188124189369],
+        [26982644, -55.605908214946666],
+        [27020645, -56.72571495707778],
+        [27039646, -61.58856969524802],
+        [27058647, -65.43766705699309],
+        [27077648, -68.90104458585873],
+        [27096649, -72.01737663282599],
+        [27134650, -72.72321607076223],
+        [27153651, -75.78839057666951],
+        [27172652, -78.21455899850685],
+        [27191653, -80.39761014454287],
+        [27210654, -82.35340806755754],
+        [27248655, -82.79852757948767],
+        [27267656, -84.7315109331613],
+        [27286657, -86.26151835896539],
+        [27305658, -87.63820901864844],
+        [27324659, -88.87694557065315]
+      ]);
+
+      var options = {
+        title: 'Bond Market Simulation(5000 Tokens Each day)',
+        curveType: 'function',
+        legend: { position: 'bottom' }
+      };
+
+      var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+      chart.draw(data, options);
+    }
+  </script>
+</head>
+
+<body>
+  <div id="curve_chart" style="width: 1000px; height: 700px"></div>
+</body>
+
+</html>

@@ -1,0 +1,32 @@
+<html>
+    <head>
+      <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+      <script type="text/javascript">
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
+  
+        function drawChart() {
+          var data = google.visualization.arrayToDataTable([
+            ['BlockNumber', 'DiscountRate'],
+            [  26773294,  0.8531409772815255 ],
+            [  26792294,  8.6112999632739 ],
+            [  26811295,  -89.91688994726628 ]
+          ]);
+  
+          var options = {
+            title: 'Bond Market Simulation(100000 Tokens Each for 1days)',
+            curveType: 'function',
+            legend: { position: 'bottom' }
+          };
+  
+          var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+  
+          chart.draw(data, options);
+        }
+      </script>
+    </head>
+    <body>
+      <div id="curve_chart" style="width: 1000px; height: 700px"></div>
+    </body>
+  </html>
+  

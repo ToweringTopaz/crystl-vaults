@@ -1,0 +1,44 @@
+<html>
+    <head>
+      <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+      <script type="text/javascript">
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
+  
+        function drawChart() {
+          var data = google.visualization.arrayToDataTable([
+            ['BlockNumber', 'DiscountRate'],
+            [ 26772730,  0.7169466407640318 ],
+            [ 26791730,  8.464628835399623 ],
+            [ 26810731,  -43.297496932725984 ],
+            [ 26829732,  -69.2262702377502 ],
+            [ 26848733,  -83.91226963537703 ],
+            [ 26867734,  -91.26882658921339 ],
+            [ 26886735,  -95.4355625452409 ],
+            [ 26905736,  -97.52277708536171 ],
+            [ 26924737,  -98.70497027815873 ],
+            [ 26943738,  -99.29715823018948 ],
+            [ 26962739,  -99.6325720297069 ],
+            [ 26981740,  -99.80058857220466 ],
+            [ 27000741,  -99.89575272935872 ],
+            [ 27019742,  -99.9432832321325 ],
+            [ 27038743,  -99.97034990265588 ]
+          ]);
+  
+          var options = {
+            title: 'Bond Market Simulation(10000 Tokens Each for 7days)',
+            curveType: 'function',
+            legend: { position: 'bottom' }
+          };
+  
+          var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+  
+          chart.draw(data, options);
+        }
+      </script>
+    </head>
+    <body>
+      <div id="curve_chart" style="width: 1000px; height: 700px"></div>
+    </body>
+  </html>
+  
