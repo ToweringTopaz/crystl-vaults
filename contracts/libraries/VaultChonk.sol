@@ -79,7 +79,7 @@ library VaultChonk {
             bytes1 status;
 
             if (userBoosts.get(id)) status = 0x01; //pool active for user
-            if (activeBoosts.get(id)) status |= 0x02; //pool still paying rewards
+            if (activeBoosts.get(id) && boostPool(id).isActive()) status |= 0x02; //pool still paying rewards
             
             if (status == 0x00) continue; //pool finished, user isn't in, nothing to do
             else if (status == 0x01) numFinished++; //user in finished pool
