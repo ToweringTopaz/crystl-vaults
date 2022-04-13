@@ -1,30 +1,60 @@
-# PolyCrystal Vaults
-The official repository of PolyCrystal.Finance vault code ❤️🔮
+# PolyCrystal Bonding
+The official repository of PolyCrystal.Finance Bonding code ❤️🔮
 
 Use them now at [PolyCrystal.Finance/Vaults](https://polycrystal.finance/vaults)!
 
 ## Contracts
 
-### VaultHealer
-The primary contract which handles user balances and user interactions is the VaultHealer contract, which works as a "MasterChef" of sorts for each one of the vaults.
+### CustomBond
+The primary contract that handles bonding & bonding mechanism is the **CustomBond** contract. The core contract of bonding.
 
-`VaultHealer: 0xDB48731c021bdB3d73Abb771B4D7aF0F43C0aC16`
+### CustomTreasury
+The treasury contract that takes CRYSTL tokens for bond sale. **CustomTreasury** is the primary contract that works as treasury for bond market.
 
-### Strategies
-Additionally, this VaultHealer contract has a set of strategies (one for each specific vault). This list will be ever-growing as additional vaults are added, so the full list won't be included here. The full list can always be queried on the [VaultHealer contract directly](https://polygonscan.com/address/0xDB48731c021bdB3d73Abb771B4D7aF0F43C0aC16#readContract).
+## Commands
 
-## Vault Security
+### Bonding Contract Test
+Test Command
+```
+npx hardhat test
+```
+100% Test Coverage
 
-PolyCrystal's Vaults are a direct fork of [PolyCat.Finance's Vault2 Contracts](https://github.com/polycatfi/polycat-contracts/tree/master/Vault2) with some minor, audited optimizations & necessary configuration changes in place. None of these optimizations alter the flow of funds or how account balances are managed.
+### Bonding Market Adjustment
+Adjustment Command
+```
+npx ts-node --files scripts/AdjustBond.ts <customBond Addr> <customTreasury Addr>
+```
 
-We chose this approach since the original vaulting contracts were well-audited and battled tested. We believe time in the market is the biggest tell for the security of a contract, hence the forking approach.
+### Deploy & Initialize Bonding Contracts
+Deployment & Initialization Command
+```
+npx hardhat run scripts/InitializeBond.ts --network <polygon | mumbai>
+```
+*Disclaimer : To change bond market initialization variables modify **InitializeBond.ts***
 
-### Contract Alterations
-Below are the specific details about each contract used and alternations associated (if any). Clean-up work (such as variable name changes, comments, or import paths) will not be individually specified, but can be seen in the diff-check linked.
+### Deploy Bonding Contracts
+Deployment Command
+```
+npx hardhat run scripts/DeployBond.ts --network <polygon | mumbai>
+```
 
-- [VaultHealer.sol](https://www.diffchecker.com/hxjHmDf8) - The addition of optional autocompounding functionality of all vaults for each withdraw or deposit. This is to increase the efficiency of compounding. This functionality is able to be toggled off by the owner, if we ever need to revert to the original compounding approach. This piece of code was part of an internal audit by CryptExLocker, and was the largest change to any of the contracts.
-- [BaseStrategy.sol](https://www.diffchecker.com/auvehlHF) - Configuration changes. The addition of two read-only variable for front end optimization `tolerance` and `burnAmount`.
-- BaseStrategyLP.sol - No changes.
-- [BaseStrategyLPSingle.sol](https://www.diffchecker.com/0oQ9IhvW) - Changed `earn()` function modifier from `onlyGov` to `onlyOwner` so VaultHealer contract can effectively call the autocompounding strategy.
-- Operators.sol - No changes.
-- [StrategyMasterHealer.sol](https://www.diffchecker.com/3f0TaHLB) - File name change from StrategyMasterChef.sol. Inclusion of `tolerance` read-only variable.
+## Variable Alteration
+1. `Vesting Term` : 46200 -> 3800 * 7
+
+## Test Deployments
+```
+- Mumbai -
+customTreasury ::  0xD61743e6cfb9BCB928FA7B1C72d9B8b23E5e1EdB
+    customBond ::  0xCED5BCa52aA6E79e5Ae5f895C03D716363482920
+-- Uninitialized
+customTreasury :: 0xfF91446fb4Cf95e58ea4D1C74509483cBac217bd
+    customBond :: 0x672C24da7ca5e3891a7d43d1EC19df33EeE2fdFb
+
+- Mainnet -
+customTreasury ::  0xf1dF8De68170009d0dDec516A249035FfbCA636E
+    customBond ::  0xfF91446fb4Cf95e58ea4D1C74509483cBac217bd
+-- Uninitialized
+customTreasury :: 0x766C2eb894BFe639d9c0aB9ba9E35243604fFcb8
+    customBond :: 0xcEb2701556A808D6cB9C468A1261840D87686fef
+```
