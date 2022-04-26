@@ -104,14 +104,8 @@ library VaultChonk {
 
             IVaultHealer.BoostInfo memory info = boosts[status][infoIndex[status]++]; //reference to the output array member where we will be storing the data
 
-            (uint rewardToken, uint pendingReward) = pool.pendingReward(account);
-
-            info = BoostInfo({
-                id: boostID,
-                pool: pool,
-                rewardToken: rewardToken,
-                pendingReward: pendingReward
-            });
+            info.id = boostID;
+            (info.rewardToken, info.pendingReward) = pool.pendingReward(account);
         }
     }
 
