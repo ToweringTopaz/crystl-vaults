@@ -64,6 +64,10 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         VAULTHEALER = IVaultHealer(_vaultHealer);
     }
 
+    function isActive() external view returns (bool) {
+        return block.number < bonusEndBlock;
+    }
+
     function generateInitData(address rewardToken, uint112 _rewardPerBlock, uint32 delayBlocks, uint32 durationBlocks) external pure returns (bytes memory data) {
         data = abi.encode(rewardToken, _rewardPerBlock, delayBlocks, durationBlocks);
     }

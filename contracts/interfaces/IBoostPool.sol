@@ -12,4 +12,5 @@ interface IBoostPool {
     function notifyOnTransfer(address _from, address _to, uint256 _amount) external returns (bool poolDone);
     function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external;
     function pendingReward(address _user) external view returns (IERC20 token, uint256 amount);
+    function isActive() external view returns (bool);
 }
