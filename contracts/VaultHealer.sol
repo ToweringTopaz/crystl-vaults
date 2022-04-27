@@ -41,6 +41,11 @@ contract VaultHealer is VaultHealerBoostedPools, Multicall {
     function wantLockedTotal(uint vid) public view returns (uint) {
         return strat(vid).wantLockedTotal();
     }
-
+    function wantLockedTotalBatch(uint[] calldata vids) external view returns (uint[] calldata amounts) {
+        amounts = new uint[](vids.length);
+        
+        for (uint i; i < vids.length; i++) {
+            amounts[i] = strat(vid).wantLockedTotal();
+    }
 }
 
