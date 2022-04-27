@@ -309,11 +309,10 @@ abstract contract VaultHealerGate is VaultHealerBase {
         for (uint k; k < amounts.length; k++) {
             uint lastMaximizer = (_vid[k] << 16) + vaultInfo[_vid[k]].numMaximizers;
             for (uint i = (_vid[k] << 16) + 1; i <= lastMaximizer; i++) {
-                amounts[i] += maximizerPendingTargetShares(_account[k], i);
+                amounts[k] += maximizerPendingTargetShares(_account[k], i);
             }
         }
     }
-    function _totalBalance(address account, )
 
 	function harvestMaximizer(uint256 _vid) external nonReentrant {
 		_maximizerHarvest(msg.sender, _vid, balanceOf(msg.sender, _vid), totalSupply[_vid]);
