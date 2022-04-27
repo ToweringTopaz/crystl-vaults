@@ -173,29 +173,27 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function configInfo() external view getConfig returns (
         uint256 vid,
-        IERC20 want,
-        uint256 wantDust,
-        address masterchef,
-        uint pid, 
-        IUniRouter _router, 
-        IMagnetite _magnetite,
-        IERC20[] memory earned,
-        uint256[] memory earnedDust,
         uint slippageFactor,
-        bool feeOnTransfer
+        bool feeOnTransfer,
+        uint pid,
+        uint256 wantDust,
+        address[3] memory market, //masterchef, router, and magnetite contracts
+        IERC20[] memory tokens, // tokens[0] is want token, followed by earned tokens
+        uint256[] memory dust // dust[0] is want, followed by earned dust
+
     ) {
         vid = config.vid();
-        (want, wantDust) = config.wantToken();
         uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
-        masterchef = address(uint160(_tacticsA >> 96));
+        address masterchef = address(uint160(_tacticsA >> 96));
         pid = uint24(_tacticsA >> 64);
-        _router = config.router();
-        _magnetite = config.magnetite();
-        uint len = config.earnedLength();
-        earned = new IERC20[](len);
-        earnedDust = new uint[](len);
-        for (uint i; i < len; i++) {
-            (earned[i], earnedDust[i]) = config.earned(i);
+        market = [address(config.router()), masterchef, address(config.magnetite())];
+
+        uint len = config.earnedLength() + 1;
+        tokens = new IERC20[](len);
+        dust = new uint[](len);
+        (tokens[0], dust[0]) = config.wantToken();
+        for (uint i = 1; i < len; i++) {
+            (tokens[i], dust[i]) = config.earned(i - 1);
         }
         slippageFactor = config.slippageFactor();
         feeOnTransfer = config.feeOnTransfer();

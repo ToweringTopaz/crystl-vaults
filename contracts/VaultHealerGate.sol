@@ -45,7 +45,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function _earn(uint256 vid, Fee.Data[3] memory fees, bytes calldata data) internal returns (bool) {
         VaultInfo storage vault = vaultInfo[vid];
-        if (!vault.active || vault.lastEarnBlock == block.number) return false;
+        if (paused(vid) || vault.lastEarnBlock == block.number) return false;
 
         vault.lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees, msg.sender, data) returns (bool success, uint256 wantLockedTotal) {
@@ -146,7 +146,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             //withdraw fee is implemented here
             try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
                 //hardcoded 3% max fee rate
-                if (feeReceiver != address(0) && feeRate <= 300 && vaultInfo[_vid].active) { //waive withdrawal fee on paused vaults as there's generally something wrong
+                if (feeReceiver != address(0) && feeRate <= 300 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
                     uint feeAmt = _wantAmt * feeRate / 10000;
                     _wantAmt -= feeAmt;
                     _wantToken.safeTransferFrom(vaultStrat, feeReceiver, feeAmt);
@@ -261,7 +261,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		maximizerEarningsOffset[_account][_vid] = _balanceAfter * totalBefore / _supplyBefore;
         totalMaximizerEarnings[_vid] = _supplyAfter * totalBefore / _supplyBefore;
 
-        payHarvest(_account, _vid, _balanceBefore * totalBefore / _supplyBefore, accountOffset);
+        payHarvest(_account, _vid, _balanceBefore, _supplyBefore, accountOffset);
     }
 
     function _maximizerHarvestBeforeTransfer(address _from, address _to, uint256 _vid, uint256 _fromBalanceBefore, uint256 _toBalanceBefore, uint256 _amount, uint256 _supply) private {
@@ -272,11 +272,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
         maximizerEarningsOffset[_from][_vid] = (_fromBalanceBefore - _amount) * totalBefore / _supply;
         maximizerEarningsOffset[_to][_vid] = (_toBalanceBefore + _amount) * totalBefore / _supply;
 
-        payHarvest(_from, _vid, _fromBalanceBefore * totalBefore / _supply, fromOffset);
-        payHarvest(_to, _vid, _toBalanceBefore * totalBefore / _supply, toOffset);
+        payHarvest(_from, _vid, _fromBalanceBefore, _supply, fromOffset);
+        payHarvest(_to, _vid, _toBalanceBefore, _supply, toOffset);
     }
 
-    function payHarvest(address _account, uint _vid, uint targetShares, uint offset) private {
+    function payHarvest(address _account, uint _vid, uint balanceBefore, uint supplyBefore, uint offset) private {
+        uint targetShares = balanceBefore * totalMaximizerEarnings[_vid] / supplyBefore;
         if (targetShares > offset) {
             uint sharesEarned = targetShares - offset;
             _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
@@ -302,6 +303,17 @@ abstract contract VaultHealerGate is VaultHealerBase {
 			amount += maximizerPendingTargetShares(_account, i);
 		}
 	}
+    function totalBalanceOfBatch(address[] calldata _account, uint256[] calldata _vid) external view returns (uint256[] memory amounts) {
+        amounts = super.balanceOfBatch(_account, _vid);
+
+        for (uint k; k < amounts.length; k++) {
+            uint lastMaximizer = (_vid[k] << 16) + vaultInfo[_vid[k]].numMaximizers;
+            for (uint i = (_vid[k] << 16) + 1; i <= lastMaximizer; i++) {
+                amounts[i] += maximizerPendingTargetShares(_account[k], i);
+            }
+        }
+    }
+    function _totalBalance(address account, )
 
 	function harvestMaximizer(uint256 _vid) external nonReentrant {
 		_maximizerHarvest(msg.sender, _vid, balanceOf(msg.sender, _vid), totalSupply[_vid]);

@@ -54,10 +54,10 @@ task("vaultDeploy", "Deploys everything")
   .addParam("chonk", "The vaultChonk library address")
   .setAction(async ({ chonk }) => {
 
-    vaultDeploy = await ethers.getContractFactory("VaultDeploy", {libraries: { VaultChonk: chonk }});
-    vaultDeploy = await vaultDeploy.deploy();
+    vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
+    vaultHealer = await vaultDeploy.deploy();
     
-    console.log("New deploy address: ", vaultDeploy.address);
+    console.log("New VaultDeploy address: ", vaultDeploy.address);
 	
   });
 
@@ -201,10 +201,10 @@ module.exports = {
   solidity: {
     version: "0.8.13",
     settings: {
-	  //viaIR: true,
+	  viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 800,
+        runs: 100,
       },
 	  debug: {
 	  }

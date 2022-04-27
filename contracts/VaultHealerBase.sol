@@ -52,6 +52,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
     function strat(uint _vid) public view returns (IStrategy) {
+        if (_vid == 0) revert VidOutOfRange(0);
         return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
     }
 
@@ -68,9 +69,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     //True values are the default behavior; call earn before deposit/withdraw
     function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external auth requireValidVid(vid) {
-        uint8 setting = earnBeforeDeposit ? 0 : 1;
-        if (!earnBeforeWithdraw) setting += 2;
-        vaultInfo[vid].noAutoEarn = setting;
+        vaultInfo[vid].noAutoEarn = (earnBeforeDeposit ? 0 : 1) | (earnBeforeWithdraw ? 0 : 2);
         emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
     }
 
@@ -88,16 +87,29 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         emit Paused(vid);
     }
     function unpause(uint vid) external auth requireValidVid(vid) {
-        require(!vaultInfo[vid].active);
+        if (vaultInfo[vid].active) revert PausedError(vid); //use direct variable; paused(vid) 
         vaultInfo[vid].active = true;
         strat(vid).unpanic();
         emit Unpaused(vid);
     }
-    function paused(uint vid) external view returns (bool) {
-        return !vaultInfo[vid].active;
+    function paused(uint vid) public view returns (bool) {
+        return !vaultInfo[vid].active || ((vid >> 16) > 0 && paused(vid >> 16));
+    }
+    function paused(uint[] calldata vids) external view returns (bytes memory pausedArray) {
+        
+        uint len = vids.length;
+        pausedArray = new bytes(len);
+
+        for (uint i; i < len; i++) {
+            pausedArray[i] = paused(vids[i]) ? bytes1(0x01) : bytes1(0x00);
+        }        
+    }
+    modifier whenPaused(uint vid) {
+        if (!paused(vid)) revert PausedError(vid);
+        _;
     }
     modifier whenNotPaused(uint vid) {
-        if (!vaultInfo[vid].active) revert PausedError(vid);
+        if (paused(vid)) revert PausedError(vid);
         _;
     }
 
