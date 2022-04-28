@@ -13,7 +13,7 @@ import "./interfaces/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./libraries/ABDKMath64x64.sol";
+import "./libraries/PRBMath.sol";
 
 contract RevSharePool is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -73,16 +73,11 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     function decayHalflife(uint128 amountStart, uint48 timeLastUpdate, uint48 halflife) public view returns (uint128 amountAfter, uint128 amountDecayed) {
 
         if (timeLastUpdate >= block.timestamp) return (amountStart, 0);
-
-        amountAfter = toUint128(ABDKMath64x64.toUInt(ABDKMath64x64.div(
-            ABDKMath64x64.fromUInt(amountStart),
-            ABDKMath64x64.exp_2(
-                ABDKMath64x64.divu(
-                    block.timestamp - timeLastUpdate,
-                    halflife
-                )
-            )
-        )));
+// todo fix
+//        amountAfter = toUint128(ABDKMath64x64.toUInt(ABDKMath64x64.div(
+//            ABDKMath64x64.fromUInt(amountStart),
+//            PRBMath.exp2(((block.timestamp - timeLastUpdate) << 64) / halflife)
+//        )));
         amountDecayed = amountStart - amountAfter;
     }
 

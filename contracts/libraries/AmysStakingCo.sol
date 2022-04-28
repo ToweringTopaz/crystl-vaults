@@ -5,9 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../interfaces/IMasterHealer.sol";
 
-enum ChefType { UNKNOWN, MASTERCHEF, MINICHEF }
-
-library AmysStakingCo {
+contract AmysStakingCo {
     using Address for address;
 
     error UnknownChefType(address chef);
@@ -17,6 +15,7 @@ library AmysStakingCo {
     uint8 constant CHEF_MASTER = 1;
     uint8 constant CHEF_MINI = 2;
     uint8 constant CHEF_STAKING_REWARDS = 3;
+    uint8 constant OPERATOR = 255;
 
     function getMCPoolData(address chef) external view returns (uint8 chefType, address[] memory lpTokens, uint256[] memory allocPoint, uint256[] memory endTime) {
 

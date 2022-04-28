@@ -38,16 +38,22 @@ interface IStrategy is IERC165 {
     function implementation() external view returns (IStrategy);
     function isMaximizer() external view returns (bool);
     function getMaximizerImplementation() external view returns (IStrategy);
-    function configInfo() external view returns (
-        uint256 vid,
-        uint slippageFactor,
-        bool feeOnTransfer,
-        uint pid,
-        uint256 wantDust,
-        address[3] memory market, //masterchef, router, and magnetite contracts
-        IERC20[] memory tokens, // tokens[0] is want token, followed by earned tokens
-        uint256[] memory dust // dust[0] is want, followed by earned dust
-    );
+
+    struct ConfigInfo {
+        uint256 vid;
+        IERC20 want;
+        uint256 wantDust;
+        address masterchef;
+        uint pid;
+        IUniRouter _router;
+        IMagnetite _magnetite;
+        IERC20[] earned;
+        uint256[] earnedDust;
+        uint slippageFactor;
+        bool feeOnTransfer;
+    }
+
+    function configInfo() external view returns (ConfigInfo memory);
     function tactics() external view returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB);
     
 }

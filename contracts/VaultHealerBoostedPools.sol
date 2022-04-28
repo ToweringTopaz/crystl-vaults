@@ -15,7 +15,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
         return IBoostPool(Cavendish.computeAddress(bytes32(_boostID)));
     }
     
-    function nextBoostPool(uint vid) public view returns (uint, IBoostPool) {
+    function nextBoostPool(uint vid) external view returns (uint, IBoostPool) {
         return boostPoolVid(vid, vaultInfo[vid].numBoosts + 1);
     }
 
