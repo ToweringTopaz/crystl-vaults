@@ -54,10 +54,8 @@ task("vaultDeploy", "Deploys everything")
   .addParam("chonk", "The vaultChonk library address")
   .setAction(async ({ chonk }) => {
 
-    vaultDeploy = await ethers.getContractFactory("VaultDeploy", {libraries: { VaultChonk: chonk }});
-    vaultDeploy = await vaultDeploy.deploy();
-    
-    console.log("New deploy address: ", vaultDeploy.address);
+    vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
+    vaultHealer = await vaultHealer.deploy();
 	
   });
 
