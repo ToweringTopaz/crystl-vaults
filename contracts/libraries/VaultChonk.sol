@@ -56,8 +56,14 @@ library VaultChonk {
     }
 
     //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
-    function strat(uint _vid) private view returns (IStrategy) {
-        return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
+    function strat(uint vid) internal view returns (IStrategy) {
+        if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
+        return IStrategy(Cavendish.computeAddress(bytes32(vid)));
+    }
+
+    function strat(IVaultHealer vaultHealer, uint256 vid) internal pure returns (IStrategy) {
+        if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
+        return IStrategy(Cavendish.computeAddress(bytes32(vid), address(vaultHealer)));
     }
 
     function boostInfo(

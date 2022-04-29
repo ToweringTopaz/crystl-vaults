@@ -12,12 +12,13 @@ Join us at PolyCrystal.Finance!
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "./interfaces/IVaultHealer.sol";
+ import "./libraries/VaultChonk.sol";
 import "./interfaces/IBoostPool.sol";
 
 contract BoostPool is IBoostPool, Initializable, Ownable {
     using SafeERC20 for IERC20;
-
+    using VaultChonk for IVaultHealer;
+    
     // Info of each user.
     struct User {
         uint128 amount;     // How many LP tokens the user has provided.

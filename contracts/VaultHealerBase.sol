@@ -52,7 +52,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
     function strat(uint _vid) public view returns (IStrategy) {
-        return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
+        return VaultChonk.strat(_vid);
     }
 
     //Requires that a vid represents some deployed vault

@@ -16,12 +16,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/IVaultHealer.sol";
-import "hardhat/console.sol";
+import "./VaultChonk.sol";
+import "../interfaces/IUniRouter.sol";
 
 library LibQuartz {
-    using SafeERC20 for IERC20;
-    using SafeERC20 for IUniPair;
+    using SafeERC20 for *;
+    using VaultChonk for IVaultHealer;
 
     uint256 constant MINIMUM_AMOUNT = 1000;
     
@@ -112,7 +112,6 @@ library LibQuartz {
         require(address(token1) != address(0), "LibQuartz: token1 cannot be the zero address");
         IUniPair pair = IUniPair(factory.getPair(token0, token1));
         if (address(pair) == address(0)) return false; //pair hasn't been created, so zero liquidity
-        console.log(address(pair));
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         if (reserveA > min_amount && reserveB > min_amount) {
