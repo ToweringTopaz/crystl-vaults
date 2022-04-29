@@ -46,7 +46,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         return VaultChonk.createMaximizer(vaultInfo, targetVid, data);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC167) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, IERC165) returns (bool) {
         return ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
