@@ -45,7 +45,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function _earn(uint256 vid, Fee.Data[3] memory fees, bytes calldata data) internal returns (bool) {
         VaultInfo storage vault = vaultInfo[vid];
-        if (!vault.active || vault.lastEarnBlock == block.number) return false;
+        if (paused(vid) || vault.lastEarnBlock == block.number) return false;
 
         vault.lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees, msg.sender, data) returns (bool success, uint256 wantLockedTotal) {
@@ -146,7 +146,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
             //withdraw fee is implemented here
             try vaultFeeManager.getWithdrawFee(_vid) returns (address feeReceiver, uint16 feeRate) {
                 //hardcoded 3% max fee rate
-                if (feeReceiver != address(0) && feeRate <= 300 && vaultInfo[_vid].active) { //waive withdrawal fee on paused vaults as there's generally something wrong
+                if (feeReceiver != address(0) && feeRate <= 300 && !paused(_vid)) { //waive withdrawal fee on paused vaults as there's generally something wrong
                     uint feeAmt = _wantAmt * feeRate / 10000;
                     _wantAmt -= feeAmt;
                     _wantToken.safeTransferFrom(vaultStrat, feeReceiver, feeAmt);
@@ -302,6 +302,16 @@ abstract contract VaultHealerGate is VaultHealerBase {
 			amount += maximizerPendingTargetShares(_account, i);
 		}
 	}
+    function totalBalanceOfBatch(address[] calldata _account, uint256[] calldata _vid) external view returns (uint256[] memory amounts) {
+        amounts = super.balanceOfBatch(_account, _vid);
+
+        for (uint k; k < amounts.length; k++) {
+            uint lastMaximizer = (_vid[k] << 16) + vaultInfo[_vid[k]].numMaximizers;
+            for (uint i = (_vid[k] << 16) + 1; i <= lastMaximizer; i++) {
+                amounts[k] += maximizerPendingTargetShares(_account[k], i);
+            }
+        }
+    }
 
 	function harvestMaximizer(uint256 _vid) external nonReentrant {
 		_maximizerHarvest(msg.sender, _vid, balanceOf(msg.sender, _vid), totalSupply[_vid]);
