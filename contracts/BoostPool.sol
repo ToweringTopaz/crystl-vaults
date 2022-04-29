@@ -18,7 +18,7 @@ import "./interfaces/IBoostPool.sol";
 contract BoostPool is IBoostPool, Initializable, Ownable {
     using SafeERC20 for IERC20;
     using VaultChonk for IVaultHealer;
-    
+
     // Info of each user.
     struct User {
         uint128 amount;     // How many LP tokens the user has provided.
@@ -86,7 +86,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
 
         _transferOwnership(_owner);
         
-        (IERC20 vaultWant,,,,,) = IVaultHealer(msg.sender).vaultInfo(uint256(_boostID & type(uint224).max));
+        IERC20 vaultWant = IVaultHealer(msg.sender).strat(uint256(_boostID & type(uint224).max)).wantToken();
         require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
 
         REWARD_TOKEN = IERC20(_rewardToken);

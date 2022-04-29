@@ -68,16 +68,15 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     //True values are the default behavior; call earn before deposit/withdraw
     function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external auth requireValidVid(vid) {
-        uint8 setting = earnBeforeDeposit ? 0 : 1;
-        if (!earnBeforeWithdraw) setting += 2;
-        vaultInfo[vid].noAutoEarn = setting;
+        vaultInfo[vid].noAutoEarn = (earnBeforeDeposit ? 0 : 1) | (earnBeforeWithdraw ? 0 : 2);
         emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
     }
 
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
-    function pause(uint vid, bool panic) external auth whenNotPaused(vid) {
+    function pause(uint vid, bool panic) external auth requireValidVid(vid) {
+        if (!vaultInfo[vid].active) revert PausedError(vid); //use direct variable; paused(vid) also may be true due to maximizer
         if (panic) {
             uint expiry = panicLockExpiry[vid];
             if (expiry > block.timestamp) revert PanicCooldown(expiry);
@@ -88,16 +87,30 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         emit Paused(vid);
     }
     function unpause(uint vid) external auth requireValidVid(vid) {
-        require(!vaultInfo[vid].active);
+        if ((vid >> 16) > 0 && paused(vid >> 16)) revert PausedError(vid >> 16); // if maximizer's target is paused, it must be unpaused first
+        if (vaultInfo[vid].active) revert PausedError(vid); //use direct variable
         vaultInfo[vid].active = true;
         strat(vid).unpanic();
         emit Unpaused(vid);
     }
-    function paused(uint vid) external view returns (bool) {
-        return !vaultInfo[vid].active;
+    function paused(uint vid) public view returns (bool) {
+        return !vaultInfo[vid].active || ((vid >> 16) > 0 && paused(vid >> 16));
     }
+    function paused(uint[] calldata vids) external view returns (bytes memory pausedArray) {
+        uint len = vids.length;
+        pausedArray = new bytes(len);
+        for (uint i; i < len; i++) {
+            pausedArray[i] = paused(vids[i]) ? bytes1(0x01) : bytes1(0x00);
+        }        
+    }
+    modifier whenPaused(uint vid) {
+        if (!paused(vid)) revert PausedError(vid);
+        _;
+    }
+
     modifier whenNotPaused(uint vid) {
         if (!vaultInfo[vid].active) revert PausedError(vid);
+        if (paused(vid)) revert PausedError(vid);
         _;
     }
 

@@ -52,7 +52,7 @@ contract QuartzUniV2Zap {
         IERC20 tokenIn = IERC20(tokenInAddress);
         require(tokenIn.allowance(msg.sender, address(this)) >= tokenInAmount, "Quartz: Input token is not approved");
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenInAmount);
-        require(tokenIn.balanceOf(address(this)) >= tokenInAmount, "Quartz: Fee-on-transfer/reflect tokens not yet supported");
+        require(tokenIn.balanceOf(address(this)) >= tokenInAmount, "Quartz: Fee-on-transfer/reflect tokens not supported");
 
         _swapAndStake(vid, tokenAmountOutMin, tokenIn);
     }
