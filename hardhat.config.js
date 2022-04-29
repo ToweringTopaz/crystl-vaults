@@ -61,17 +61,6 @@ task("vaultDeploy", "Deploys everything")
 	
   });
 
-task("testVaultDeploy", "Deploys everything and initializes it as a test VaultHealer")
-  .addParam("chonk", "The vaultChonk library address")
-  .setAction(async ({ chonk }) => {
-
-    vaultDeploy = await ethers.getContractFactory("TestVaultDeploy", {libraries: { VaultChonk: chonk }});
-    vaultDeploy = await vaultDeploy.deploy();
-    
-    console.log("New deploy address: ", vaultDeploy.address);
-	
-  });
-
 task("vaultVerify", "Verifies everything")
   .addParam("chonk", "The vaultChonk contract")
   .addParam("deploy", "The vaultDeploy contract")
@@ -79,28 +68,28 @@ task("vaultVerify", "Verifies everything")
 	  
     vaultDeploy = await ethers.getContractAt("VaultDeploy", deploy);
 
-//	await hre.run("verify:verify", {
-//		address: chonk
-//	})	
+	await hre.run("verify:verify", {
+		address: chonk
+	})	
 	
-//	await hre.run("verify:verify", {
-//		address: vaultDeploy.address,
-//		libraries: { VaultChonk: chonk }
-//	})
+	await hre.run("verify:verify", {
+		address: vaultDeploy.address,
+		libraries: { VaultChonk: chonk }
+	})
 	const vaultHealer = await ethers.getContractAt("VaultHealer", await vaultDeploy.vaultHealer());
 	const vhAuth = await ethers.getContractAt("VaultHealerAuth", await vaultHealer.vhAuth());
 	
-//	await hre.run("verify:verify", {
-//		address: vaultHealer.address
-//	})
-//	await hre.run("verify:verify", {
-//		address: vhAuth.address,
-//		constructorArguments: [vaultDeploy.address],
-//	})
-//await hre.run("verify:verify", {
-//		address: await vaultHealer.vaultFeeManager(),
-//		constructorArguments: [vhAuth.address],
-//	})	
+	await hre.run("verify:verify", {
+		address: vaultHealer.address
+	})
+	await hre.run("verify:verify", {
+		address: vhAuth.address,
+		constructorArguments: [vaultDeploy.address],
+	})
+await hre.run("verify:verify", {
+		address: await vaultHealer.vaultFeeManager(),
+		constructorArguments: [vhAuth.address],
+	})	
 	await hre.run("verify:verify", {
 		address: await vaultHealer.zap(),
 		constructorArguments: [ vaultHealer.address ],
@@ -201,12 +190,26 @@ module.exports = {
   solidity: {
     version: "0.8.13",
     settings: {
-	  //viaIR: true,
+	  viaIR: true,
       optimizer: {
         enabled: true,
         runs: 1,
+		details: {
+			peephole: true,
+			inliner: true,
+			jumpdestRemover: true,
+			orderLiterals: true,
+			deduplicate: true,
+			cse: true,
+			constantOptimizer: true,
+			yul: true
+		}
       },
 	  debug: {
+		  revertStrings: "default"
+	  },
+	  metadata: {
+		  bytecodeHash: "none"
 	  }
     },
   },

@@ -73,7 +73,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     }
 
 
-//Like OpenZeppelin Pausable, but centralized here at the vaulthealer
+//Like OpenZeppelin Pausable, but centralized here at the vaulthealer. Maximizers auto-pause if their target is paused
 
     function pause(uint vid, bool panic) external auth requireValidVid(vid) {
         if (!vaultInfo[vid].active) revert PausedError(vid); //use direct variable; paused(vid) also may be true due to maximizer

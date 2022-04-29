@@ -265,15 +265,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _maximizerHarvestBeforeTransfer(address _from, address _to, uint256 _vid, uint256 _fromBalanceBefore, uint256 _toBalanceBefore, uint256 _amount, uint256 _supply) private {
-        uint fromOffset = maximizerEarningsOffset[_from][_vid];
-        uint toOffset = maximizerEarningsOffset[_to][_vid];
-		uint totalBefore = totalMaximizerEarnings[_vid];
-		
-        maximizerEarningsOffset[_from][_vid] = (_fromBalanceBefore - _amount) * totalBefore / _supply;
-        maximizerEarningsOffset[_to][_vid] = (_toBalanceBefore + _amount) * totalBefore / _supply;
-
-        payHarvest(_from, _vid, _fromBalanceBefore * totalBefore / _supply, fromOffset);
-        payHarvest(_to, _vid, _toBalanceBefore * totalBefore / _supply, toOffset);
+        _maximizerHarvest(_from, _vid, _fromBalanceBefore, _fromBalanceBefore - _amount, _supply, _supply);
+        _maximizerHarvest(_to, _vid, _toBalanceBefore, _toBalanceBefore + _amount, _supply, _supply);
     }
 
     function payHarvest(address _account, uint _vid, uint targetShares, uint offset) private {
