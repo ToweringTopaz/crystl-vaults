@@ -17,7 +17,7 @@ import "./interfaces/IBoostPool.sol";
 
 contract BoostPool is IBoostPool, Initializable, Ownable {
     using SafeERC20 for IERC20;
-    using VaultChonk for IVaultHealer;
+//    using VaultChonk for IVaultHealer;
 
     // Info of each user.
     struct User {

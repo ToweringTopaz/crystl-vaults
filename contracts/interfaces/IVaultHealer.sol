@@ -10,7 +10,7 @@ import "./IBoostPool.sol";
 import "../libraries/Cavendish.sol";
 
 ///@notice Interface for the Crystl v3 Vault central contract
-interface IVaultHealer {
+interface IVaultHealer is IERC1155 {
 
     event AddVault(uint indexed vid);
 
@@ -73,7 +73,7 @@ interface IVaultHealer {
 
     ///@notice This returns the strategy address for any vid.
     ///@dev For dapp or contract usage, it may be better to calculate strategy addresses locally. The formula is in the function Cavendish.computeAddress
-//    function strat(uint256 _vid) external view returns (IStrategy);
+    function strat(uint256 _vid) external view returns (IStrategy);
 
     struct VaultInfo {
         IERC20 want;

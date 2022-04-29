@@ -223,7 +223,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 uint vid = ids[i];
                 if (vid > 2**16) {
                     _earn(vid, vaultFeeManager.getEarnFees(vid), msg.data[0:0]);
-                    _maximizerHarvestBeforeTransfer(from, to, vid, balanceOf(from, vid), balanceOf(to, vid), amounts[i], totalSupply[vid]);
+                    _maximizerHarvest(from, vid, balanceOf(from, vid), balanceOf(from, vid) - amounts[i], totalSupply[vid], totalSupply[vid]);
+                    _maximizerHarvest(to, vid, balanceOf(to, vid), balanceOf(to, vid) + amounts[i], totalSupply[vid], totalSupply[vid]);
                 }
             }
         }
