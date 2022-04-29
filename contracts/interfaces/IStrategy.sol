@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IUniRouter.sol";
@@ -38,19 +38,22 @@ interface IStrategy is IERC165 {
     function implementation() external view returns (IStrategy);
     function isMaximizer() external view returns (bool);
     function getMaximizerImplementation() external view returns (IStrategy);
-    function configInfo() external view returns (
-        uint256 vid,
-        IERC20 want,
-        uint256 wantDust,
-        address masterchef,
-        uint pid, 
-        IUniRouter _router, 
-        IMagnetite _magnetite,
-        IERC20[] memory earned,
-        uint256[] memory earnedDust,
-        uint slippageFactor,
-        bool feeOnTransfer
-    );
+
+    struct ConfigInfo {
+        uint256 vid;
+        IERC20 want;
+        uint256 wantDust;
+        address masterchef;
+        uint pid;
+        IUniRouter _router;
+        IMagnetite _magnetite;
+        IERC20[] earned;
+        uint256[] earnedDust;
+        uint slippageFactor;
+        bool feeOnTransfer;
+    }
+
+    function configInfo() external view returns (ConfigInfo memory);
     function tactics() external view returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB);
     
 }
