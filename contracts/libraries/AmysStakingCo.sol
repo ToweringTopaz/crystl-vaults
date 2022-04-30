@@ -168,11 +168,17 @@ contract AmysStakingCo {
             token0: token0,
             token1: token1,
             factory: factory,
-            symbol: bytes32(bytes(IERC20Metadata(token).symbol())),
-            token0symbol: bytes32(bytes(IERC20Metadata(token0).symbol())),
-            token1symbol: bytes32(bytes(IERC20Metadata(token1).symbol()))
+            symbol: getSymbol(token),
+            token0symbol: getSymbol(token0),
+            token1symbol: getSymbol(token1)
         });
+    }
 
+    function getSymbol(address token) internal view returns (bytes32) {
+        if (token == address(0)) return bytes32(0);
+        (bool success, bytes memory data) = token.staticcall(abi.encodeWithSignature("symbol()"));
+        if (!success) return bytes32(0);
+        return bytes32(bytes(abi.decode(data,(string))));
     }
 
     function lpTokenInfo(address[] memory tokens) public view returns (LPTokenInfo[] memory info) {
@@ -182,7 +188,7 @@ contract AmysStakingCo {
         }
     }
 
-    function checkLP(address token) internal view returns (bool isLP, address token0, address token1, address factory) {
+    function checkLP(address token) public view returns (bool isLP, address token0, address token1, address factory) {
         (bool success, bytes memory data) = token.staticcall(abi.encodeWithSignature("token0()"));
         if (!success || data.length < 32) return (false, address(0), address(0), address(0));
         token0 = abi.decode(data,(address));

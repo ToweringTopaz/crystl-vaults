@@ -8,6 +8,7 @@ contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
+    using VaultChonk for IVaultHealer;
 
     constructor(IVaultHealer _vaultHealer) BaseStrategy(_vaultHealer) {}
 
@@ -114,13 +115,12 @@ contract Strategy is BaseStrategy {
             sharesRemoved = _userShares;
         }
 		wantAmt = sharesRemoved * wantLockedBefore / _sharesTotal;
-		if (wantAmt > withdrawSlippage) {
-			wantAmt -= withdrawSlippage;
-			if (wantAmt > wantBal) wantAmt = wantBal;
-		} else {
-			revert Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
-		}
-
+        
+        if (wantAmt <= withdrawSlippage) revert Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+		
+		wantAmt -= withdrawSlippage;
+		if (wantAmt > wantBal) wantAmt = wantBal;
+		
         return (sharesRemoved, wantAmt);
 
     }
@@ -165,12 +165,13 @@ contract Strategy is BaseStrategy {
         address _masterchef,
         uint24 pid, 
         uint8 vstReturnPosition, 
-        uint64 vstCode, //includes selector and encoded call format
-        uint64 depositCode, //includes selector and encoded call format
-        uint64 withdrawCode, //includes selector and encoded call format
-        uint64 harvestCode, //includes selector and encoded call format
-        uint64 emergencyCode//includes selector and encoded call format
+        bytes8 vstCode, //includes selector and encoded call format
+        bytes8 depositCode, //includes selector and encoded call format
+        bytes8 withdrawCode, //includes selector and encoded call format
+        bytes8 harvestCode, //includes selector and encoded call format
+        bytes8 emergencyCode//includes selector and encoded call format
     ) external pure returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) {
+        tacticsA = bytes20(_masterchef).concat(bytes3(pid)).concat(bytes1(vstReturnPosition)).concat(vstCode);
         assembly ("memory-safe") {
             tacticsA := or(or(shl(96, _masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
             tacticsB := or(or(shl(192, depositCode), shl(128, withdrawCode)), or(shl(64, harvestCode), emergencyCode))
