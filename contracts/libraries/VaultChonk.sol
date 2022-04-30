@@ -55,6 +55,17 @@ library VaultChonk {
         emit AddBoost(_boostID);
     }
 
+    //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
+    function strat(uint vid) internal view returns (IStrategy) {
+        if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
+        return IStrategy(Cavendish.computeAddress(bytes32(vid)));
+    }
+
+    function strat(IVaultHealer vaultHealer, uint256 vid) internal pure returns (IStrategy) {
+        if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
+        return IStrategy(Cavendish.computeAddress(bytes32(vid), address(vaultHealer)));
+    }
+
     function boostInfo(
         uint16 len,
         BitMaps.BitMap storage activeBoosts, 
@@ -120,15 +131,5 @@ library VaultChonk {
 			size := extcodesize(_contract)
 		}
 	}
-
-    function strat(uint256 vid) internal view returns (IStrategy) {
-        if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
-        return IStrategy(Cavendish.computeAddress(bytes32(vid)));
-    }
-
-    function strat(IVaultHealer vaultHealer, uint256 vid) internal pure returns (IStrategy) {
-        if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
-        return IStrategy(Cavendish.computeAddress(bytes32(vid), address(vaultHealer)));
-    }
 
 }

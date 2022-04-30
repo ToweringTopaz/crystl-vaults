@@ -113,7 +113,7 @@ library LibQuartz {
         require(address(token1) != address(0), "LibQuartz: token1 cannot be the zero address");
         IUniPair pair = IUniPair(factory.getPair(token0, token1));
         if (address(pair) == address(0)) return false; //pair hasn't been created, so zero liquidity
-        
+
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         return reserveA > min_amount && reserveB > min_amount;

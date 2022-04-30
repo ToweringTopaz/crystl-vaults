@@ -52,8 +52,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 
     //Computes the strategy address for any vid based on this contract's address and the vid's numeric value
     function strat(uint _vid) public view returns (IStrategy) {
-        if (_vid == 0) revert VidOutOfRange(0);
-        return IStrategy(Cavendish.computeAddress(bytes32(_vid)));
+        return VaultChonk.strat(_vid);
     }
 
     //Requires that a vid represents some deployed vault
@@ -74,7 +73,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     }
 
 
-//Like OpenZeppelin Pausable, but centralized here at the vaulthealer
+//Like OpenZeppelin Pausable, but centralized here at the vaulthealer. Maximizers auto-pause if their target is paused
 
     function pause(uint vid, bool panic) external auth requireValidVid(vid) {
         if (!vaultInfo[vid].active) revert PausedError(vid); //use direct variable; paused(vid) also may be true due to maximizer
@@ -88,8 +87,8 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         emit Paused(vid);
     }
     function unpause(uint vid) external auth requireValidVid(vid) {
+        if ((vid >> 16) > 0 && paused(vid >> 16)) revert PausedError(vid >> 16); // if maximizer's target is paused, it must be unpaused first
         if (vaultInfo[vid].active) revert PausedError(vid); //use direct variable
-        if ((vid >> 16) > 0 && paused(vid >> 16)) revert PausedError(vid >> 16); // if maximizer's target is paused, we can't unpause
         vaultInfo[vid].active = true;
         strat(vid).unpanic();
         emit Unpaused(vid);
@@ -110,6 +109,18 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         if (!paused(vid)) revert PausedError(vid);
         _;
     }
+    function paused(uint[] calldata vids) external view returns (bytes memory pausedArray) {
+        uint len = vids.length;
+        pausedArray = new bytes(len);
+        for (uint i; i < len; i++) {
+            pausedArray[i] = paused(vids[i]) ? bytes1(0x01) : bytes1(0x00);
+        }        
+    }
+    modifier whenPaused(uint vid) {
+        if (!paused(vid)) revert PausedError(vid);
+        _;
+    }
+
     modifier whenNotPaused(uint vid) {
         if (paused(vid)) revert PausedError(vid);
         _;
