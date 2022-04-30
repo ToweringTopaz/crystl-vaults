@@ -73,7 +73,7 @@ interface IVaultHealer is IERC1155 {
 
     ///@notice This returns the strategy address for any vid.
     ///@dev For dapp or contract usage, it may be better to calculate strategy addresses locally. The formula is in the function Cavendish.computeAddress
-    function strat(uint256 _vid) external view returns (IStrategy);
+    //function strat(uint256 _vid) external view returns (IStrategy);
 
     struct VaultInfo {
         IERC20 want;
