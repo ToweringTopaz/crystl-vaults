@@ -7,6 +7,7 @@ import "../interfaces/IMagnetite.sol";
 import "../interfaces/IVaultHealer.sol";
 
 library StrategyConfig {
+    using StrategyConfig for MemPointer;
     
     type MemPointer is uint256;
 
@@ -118,23 +119,51 @@ library StrategyConfig {
         }
     }
 
-    function test(bytes memory configData) external pure returns (Tactics.TacticsA _tacticsA, Tactics.TacticsB _tacticsB, IERC20 want, uint wantDust, IUniRouter _router, IMagnetite _magnetite) {
-        MemPointer c = toConfig(configData);
-        (_tacticsA, _tacticsB) = tactics(c);
-        (want, wantDust) = wantToken(c);
-        _router = router(c);
-        _magnetite = magnetite(c);
-    }
-    function test2(bytes memory configData) external pure returns (uint _slippageFactor, bool _feeOnTransfer, IERC20[] memory _earned, uint[] memory _dust) {
-        MemPointer c = toConfig(configData);
-        _slippageFactor = slippageFactor(c);
-        _feeOnTransfer = feeOnTransfer(c);
-        uint len = earnedLength(c);
-        _earned = new IERC20[](len);
-        _dust = new uint[](len);
-        for (uint i; i < len; i++) {
-            (_earned[i], _dust[i]) = earned(c, i);
+    function configAddress(IStrategy strategy) internal pure returns (address configAddr) {
+        assembly ("memory-safe") {
+            mstore(0, or(0xd694000000000000000000000000000000000000000001000000000000000000, shl(80,strategy)))
+            configAddr := and(0xffffffffffffffffffffffffffffffffffffffff, keccak256(0, 23)) //create address, nonce 1
         }
+    }
+
+    function configInfo(IStrategy strategy) internal view returns (IStrategy.ConfigInfo memory info) {
+
+        StrategyConfig.MemPointer config;
+        address _configAddress = configAddress(strategy);
+
+        assembly ("memory-safe") {
+            config := mload(0x40)
+            let size := sub(extcodesize(_configAddress), 1)
+            extcodecopy(_configAddress, config, 1, size)
+            mstore(0x40,add(config, size))
+        }
+
+        (IERC20 want, uint wantDust) = config.wantToken();
+        uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
+        address _masterchef = address(uint160(_tacticsA >> 96));
+        uint24 pid = uint24(_tacticsA >> 72);
+
+        uint len = config.earnedLength();
+
+        IERC20[] memory _earned = new IERC20[](len);
+        uint[] memory earnedDust = new uint[](len);
+        for (uint i; i < len; i++) {
+            (_earned[i], earnedDust[i]) = config.earned(i);
+        }
+
+        return IStrategy.ConfigInfo({
+            vid: config.vid(),
+            want: want,
+            wantDust: wantDust,
+            masterchef: _masterchef,
+            pid: pid,
+            _router: config.router(),
+            _magnetite: config.magnetite(),
+            earned: _earned,
+            earnedDust: earnedDust,
+            slippageFactor: config.slippageFactor(),
+            feeOnTransfer: config.feeOnTransfer()
+        });
     }
 
 }

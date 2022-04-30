@@ -81,8 +81,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
         
 		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
-			dfynVaults[0]['masterchef'],
-            dfynVaults[0]['PID'],
+			MASTERCHEF,
+            PID,
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
@@ -293,6 +293,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
 		
 		it('Should have a VaultHealer within the code size limit', async () => {
+			vhSize = await vaultChonk.sizeOf(vaultHealer.address)
+			console.log("contract size is ", vhSize);
+             expect(vhSize).to.be.lt(24576);
+         })
+		
+		it('Should return correct variables on configInfo', async () => {
 			vhSize = await vaultChonk.sizeOf(vaultHealer.address)
 			console.log("contract size is ", vhSize);
              expect(vhSize).to.be.lt(24576);

@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import "./BaseStrategy.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./libraries/VaultChonk.sol";
+
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -171,11 +173,8 @@ contract Strategy is BaseStrategy {
         bytes8 harvestCode, //includes selector and encoded call format
         bytes8 emergencyCode//includes selector and encoded call format
     ) external pure returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) {
-        tacticsA = bytes20(_masterchef).concat(bytes3(pid)).concat(bytes1(vstReturnPosition)).concat(vstCode);
-        assembly ("memory-safe") {
-            tacticsA := or(or(shl(96, _masterchef), shl(72, pid)), or(shl(64, vstReturnPosition), vstCode))
-            tacticsB := or(or(shl(192, depositCode), shl(128, withdrawCode)), or(shl(64, harvestCode), emergencyCode))
-        }
+        tacticsA = Tactics.TacticsA.wrap(bytes32(abi.encodePacked(bytes20(_masterchef),bytes3(pid),bytes1(vstReturnPosition),vstCode)));
+        tacticsB = Tactics.TacticsB.wrap(bytes32(abi.encodePacked(depositCode, withdrawCode, harvestCode, emergencyCode)));
     }
 
 }

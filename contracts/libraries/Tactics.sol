@@ -40,16 +40,16 @@ library Tactics {
         3: address(this)
         2: pid
     */
-    type TacticsA is bytes32;
-    type TacticsB is bytes32;
+    type TacticsA is uint256;
+    type TacticsB is uint256;
 
     function masterchef(TacticsA tacticsA) internal pure returns (address) {
-        return address(uint160(uint(TacticsA.unwrap(tacticsA) >> 96)));
+        return address(uint160(TacticsA.unwrap(tacticsA) >> 96));
     }  
 
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
-        uint returnvarPosition = uint(TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
-        bytes memory data = _generateCall(uint24(uint(TacticsA.unwrap(tacticsA) >> 72)), uint64(uint(TacticsA.unwrap(tacticsA))), 0); //pid, vst call, 0
+        uint returnvarPosition = (TacticsA.unwrap(tacticsA) >> 64) & 0xff; //where is our vaultshares in the return data
+        bytes memory data = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsA.unwrap(tacticsA)), 0); //pid, vst call, 0
         data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
         assembly ("memory-safe") {
             amountStaked := mload(add(data, add(0x20,returnvarPosition)))
@@ -69,7 +69,7 @@ library Tactics {
         _doCall(tacticsA, tacticsB, 0, 0);
     }
     function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
-        bytes memory generatedCall = _generateCall(uint24(uint(TacticsA.unwrap(tacticsA)) >> 72), uint64(uint(TacticsB.unwrap(tacticsB)) >> offset), amount);
+        bytes memory generatedCall = _generateCall(uint24(TacticsA.unwrap(tacticsA) >> 72), uint64(TacticsB.unwrap(tacticsB) >> offset), amount);
         masterchef(tacticsA).functionCall(generatedCall, "Tactics: call failed");
         
     }

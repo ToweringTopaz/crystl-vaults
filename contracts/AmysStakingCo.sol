@@ -3,10 +3,13 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "../interfaces/IMasterHealer.sol";
+import "./interfaces/IMasterHealer.sol";
+import "./libraries/StrategyConfig.sol";
+import "./libraries/VaultChonk.sol";
 
 contract AmysStakingCo {
     using Address for address;
+    using StrategyConfig for StrategyConfig.MemPointer;
 
     error UnknownChefType(address chef);
     error PoolLengthZero(address chef);
@@ -190,22 +193,33 @@ contract AmysStakingCo {
 
     function checkLP(address token) public view returns (bool isLP, address token0, address token1, address factory) {
         (bool success, bytes memory data) = token.staticcall(abi.encodeWithSignature("token0()"));
-        if (!success || data.length < 32) return (false, address(0), address(0), address(0));
-        token0 = abi.decode(data,(address));
+        if (success && data.length >= 32) {
+            token0 = abi.decode(data,(address));
 
-        (success, data) = token.staticcall(abi.encodeWithSignature("token1()"));
-        if (token0 == address(0) || !success || data.length < 32) return (false, address(0), address(0), address(0));
-        token1 = abi.decode(data,(address));
+            (success, data) = token.staticcall(abi.encodeWithSignature("token1()"));
+            if (token0 != address(0) && success && data.length >= 32) {
+                token1 = abi.decode(data,(address));
 
-        (success, data) = token.staticcall(abi.encodeWithSignature("factory()"));
-        if (token1 == address(0) || !success || data.length < 32) return (false, address(0), address(0), address(0));
-        factory = abi.decode(data,(address));
+                (success, data) = token.staticcall(abi.encodeWithSignature("factory()"));
+                if (token1 != address(0) && success && data.length >= 32) {
+                    factory = abi.decode(data,(address));
 
-        (success, data) = factory.staticcall(abi.encodeWithSignature("getPair(address,address)", token0, token1));
-        if (factory == address(0) || !success || data.length < 32) return (false, address(0), address(0), address(0));
-        address pairFound = abi.decode(data,(address));
-        
-        if (pairFound == token) return (true, token0, token1, factory);
-        else return (false, address(0), address(0), address(0));
+                    (success, data) = factory.staticcall(abi.encodeWithSignature("getPair(address,address)", token0, token1));
+                    if (factory != address(0) && success && data.length >= 32) {
+                        address pairFound = abi.decode(data,(address));
+                        isLP = (pairFound == token);
+                    }
+                }
+            }
+        }
     }
+
+    function strat(IVaultHealer vaultHealer, uint vid) public pure returns (IStrategy) {
+        return VaultChonk.strat(vaultHealer, vid);
+    }
+
+    function configInfo(IStrategy strategy) public view returns (IStrategy.ConfigInfo memory info) {
+        return StrategyConfig.configInfo(strategy);
+    }
+
 }
