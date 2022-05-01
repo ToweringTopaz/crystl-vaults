@@ -237,7 +237,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint256 id,
         uint256 amount,
         bytes memory data
-    ) public virtual override nonReentrant { super.safeTransferFrom(from, to, id, amount, data); }
+    ) public virtual override(ERC1155, IERC1155) nonReentrant { super.safeTransferFrom(from, to, id, amount, data); }
 	
 	//Add nonReentrant for maximizer security
     function safeBatchTransferFrom(
@@ -246,7 +246,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) public virtual override nonReentrant { super.safeBatchTransferFrom(from, to, ids, amounts, data); }
+    ) public virtual override(ERC1155, IERC1155) nonReentrant { super.safeBatchTransferFrom(from, to, ids, amounts, data); }
 
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault
@@ -262,23 +262,12 @@ abstract contract VaultHealerGate is VaultHealerBase {
 		maximizerEarningsOffset[_account][_vid] = _balanceAfter * totalBefore / _supplyBefore;
         totalMaximizerEarnings[_vid] = _supplyAfter * totalBefore / _supplyBefore;
 
-        payHarvest(_account, _vid, _balanceBefore, _supplyBefore, accountOffset);
+        //payHarvest(_account, _vid, _balanceBefore, _supplyBefore, accountOffset);
+        payHarvest(_account, _vid, _balanceBefore * totalBefore / _supplyBefore, accountOffset);
     }
 
-    function _maximizerHarvestBeforeTransfer(address _from, address _to, uint256 _vid, uint256 _fromBalanceBefore, uint256 _toBalanceBefore, uint256 _amount, uint256 _supply) private {
-        uint fromOffset = maximizerEarningsOffset[_from][_vid];
-        uint toOffset = maximizerEarningsOffset[_to][_vid];
-		uint totalBefore = totalMaximizerEarnings[_vid];
-		
-        maximizerEarningsOffset[_from][_vid] = (_fromBalanceBefore - _amount) * totalBefore / _supply;
-        maximizerEarningsOffset[_to][_vid] = (_toBalanceBefore + _amount) * totalBefore / _supply;
 
-        payHarvest(_from, _vid, _fromBalanceBefore, _supply, fromOffset);
-        payHarvest(_to, _vid, _toBalanceBefore, _supply, toOffset);
-    }
-
-    function payHarvest(address _account, uint _vid, uint balanceBefore, uint supplyBefore, uint offset) private {
-        uint targetShares = balanceBefore * totalMaximizerEarnings[_vid] / supplyBefore;
+     function payHarvest(address _account, uint _vid, uint targetShares, uint offset) private {
         if (targetShares > offset) {
             uint sharesEarned = targetShares - offset;
             _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");

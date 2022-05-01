@@ -298,12 +298,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
              expect(vhSize).to.be.lt(24576);
          })
 		
-		it('Should return correct variables on configInfo', async () => {
-			vhSize = await vaultChonk.sizeOf(vaultHealer.address)
-			console.log("contract size is ", vhSize);
-             expect(vhSize).to.be.lt(24576);
-         })
-		
         //user zaps in their whole token0 balance
          it('Should zap token0 into the vault (convert to underlying, add liquidity, and deposit to vault) - leading to an increase in vaultSharesTotal', async () => {
              token0 = await ethers.getContractAt(token_abi, TOKEN0ADDRESS);
