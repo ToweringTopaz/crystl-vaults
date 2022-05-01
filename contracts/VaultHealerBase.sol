@@ -109,17 +109,6 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         if (!paused(vid)) revert PausedError(vid);
         _;
     }
-    function paused(uint[] calldata vids) external view returns (bytes memory pausedArray) {
-        uint len = vids.length;
-        pausedArray = new bytes(len);
-        for (uint i; i < len; i++) {
-            pausedArray[i] = paused(vids[i]) ? bytes1(0x01) : bytes1(0x00);
-        }        
-    }
-    modifier whenPaused(uint vid) {
-        if (!paused(vid)) revert PausedError(vid);
-        _;
-    }
 
     modifier whenNotPaused(uint vid) {
         if (paused(vid)) revert PausedError(vid);

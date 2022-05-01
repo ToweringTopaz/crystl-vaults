@@ -41,6 +41,21 @@ if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
+task("deploy", "Deploys a named contract")
+  .addParam("contract", "contract to deploy")
+  .setAction(async ({ contract }) => {
+
+    contractFactory = await ethers.getContractFactory(contract);
+    contract = await contractFactory.deploy();
+	
+	console.log("Contract deployed at: ", contract.address);
+
+	await hre.run("verify:verify", {
+		address: contract.address,
+	})
+	
+  });
+
 task("deployChonk", "Deploys VaultChonk library")
     .setAction(async (taskArgs) => {
 	
@@ -175,7 +190,7 @@ module.exports = {
       },
       forking: {
         url: archiveMainnetNodeURL,
-        //blockNumber: 25326200,
+        blockNumber: 25326200,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",

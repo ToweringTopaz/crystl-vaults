@@ -218,7 +218,11 @@ contract AmysStakingCo {
         return VaultChonk.strat(vaultHealer, vid);
     }
 
-    function configInfo(IStrategy strategy) public view returns (IStrategy.ConfigInfo memory info) {
+    function configInfo(IVaultHealer vaultHealer, uint vid) public view returns (IStrategy.ConfigInfo memory) {
+        return configInfo(strat(vaultHealer, vid));
+    }
+
+    function configInfo(IStrategy strategy) public view returns (IStrategy.ConfigInfo memory) {
         return StrategyConfig.configInfo(strategy);
     }
 

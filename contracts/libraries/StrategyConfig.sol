@@ -133,15 +133,20 @@ library StrategyConfig {
 
         assembly ("memory-safe") {
             config := mload(0x40)
-            let size := sub(extcodesize(_configAddress), 1)
+            let size := extcodesize(_configAddress)
+            if iszero(size) {
+                mstore(0, "Strategy config does not exist")
+                revert(0,0x20)
+            }
+            size := sub(size,1)
             extcodecopy(_configAddress, config, 1, size)
             mstore(0x40,add(config, size))
         }
 
         (IERC20 want, uint wantDust) = config.wantToken();
-        uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
-        address _masterchef = address(uint160(_tacticsA >> 96));
-        uint24 pid = uint24(_tacticsA >> 72);
+        bytes32 _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
+        address _masterchef = address(bytes20(_tacticsA));
+        uint24 pid = uint24(uint(_tacticsA) >> 72);
 
         uint len = config.earnedLength();
 
