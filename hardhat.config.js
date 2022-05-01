@@ -70,7 +70,9 @@ task("vaultDeploy", "Deploys everything")
   .setAction(async ({ chonk }) => {
 
     vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
-    vaultHealer = await vaultHealer.deploy();
+    vaultHealer = await vaultDeploy.deploy();
+    
+    console.log("New VaultDeploy address: ", vaultDeploy.address);
 	
   });
 
@@ -81,28 +83,28 @@ task("vaultVerify", "Verifies everything")
 	  
     vaultDeploy = await ethers.getContractAt("VaultDeploy", deploy);
 
-	await hre.run("verify:verify", {
-		address: chonk
-	})	
+//	await hre.run("verify:verify", {
+//		address: chonk
+//	})	
 	
-	await hre.run("verify:verify", {
-		address: vaultDeploy.address,
-		libraries: { VaultChonk: chonk }
-	})
+//	await hre.run("verify:verify", {
+//		address: vaultDeploy.address,
+//		libraries: { VaultChonk: chonk }
+//	})
 	const vaultHealer = await ethers.getContractAt("VaultHealer", await vaultDeploy.vaultHealer());
 	const vhAuth = await ethers.getContractAt("VaultHealerAuth", await vaultHealer.vhAuth());
 	
-	await hre.run("verify:verify", {
-		address: vaultHealer.address
-	})
-	await hre.run("verify:verify", {
-		address: vhAuth.address,
-		constructorArguments: [vaultDeploy.address],
-	})
-await hre.run("verify:verify", {
-		address: await vaultHealer.vaultFeeManager(),
-		constructorArguments: [vhAuth.address],
-	})	
+//	await hre.run("verify:verify", {
+//		address: vaultHealer.address
+//	})
+//	await hre.run("verify:verify", {
+//		address: vhAuth.address,
+//		constructorArguments: [vaultDeploy.address],
+//	})
+//await hre.run("verify:verify", {
+//		address: await vaultHealer.vaultFeeManager(),
+//		constructorArguments: [vhAuth.address],
+//	})	
 	await hre.run("verify:verify", {
 		address: await vaultHealer.zap(),
 		constructorArguments: [ vaultHealer.address ],
@@ -203,7 +205,7 @@ module.exports = {
   solidity: {
     version: "0.8.13",
     settings: {
-	  viaIR: true,
+	  viaIR: false,
       optimizer: {
         enabled: true,
         runs: 1,
@@ -219,10 +221,6 @@ module.exports = {
 		}
       },
 	  debug: {
-		  revertStrings: "default"
-	  },
-	  metadata: {
-		  bytecodeHash: "none"
 	  }
     },
   },

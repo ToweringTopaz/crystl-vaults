@@ -65,7 +65,7 @@ library VaultChonk {
         if (vid == 0) revert IVaultHealer.VidOutOfRange(0);
         return IStrategy(Cavendish.computeAddress(bytes32(vid), address(vaultHealer)));
     }
-
+	
     function boostInfo(
         uint16 len,
         BitMaps.BitMap storage activeBoosts, 

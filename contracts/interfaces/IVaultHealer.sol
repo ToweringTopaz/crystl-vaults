@@ -10,7 +10,7 @@ import "./IBoostPool.sol";
 import "../libraries/Cavendish.sol";
 
 ///@notice Interface for the Crystl v3 Vault central contract
-interface IVaultHealer {
+interface IVaultHealer is IERC1155 {
 
     event AddVault(uint indexed vid);
 

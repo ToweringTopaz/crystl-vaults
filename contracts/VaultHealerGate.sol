@@ -223,7 +223,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
                 uint vid = ids[i];
                 if (vid > 2**16) {
                     _earn(vid, vaultFeeManager.getEarnFees(vid), msg.data[0:0]);
-                    _maximizerHarvestBeforeTransfer(from, to, vid, balanceOf(from, vid), balanceOf(to, vid), amounts[i], totalSupply[vid]);
+                    _maximizerHarvest(from, vid, balanceOf(from, vid), balanceOf(from, vid) - amounts[i], totalSupply[vid], totalSupply[vid]);
+                    _maximizerHarvest(to, vid, balanceOf(to, vid), balanceOf(to, vid) + amounts[i], totalSupply[vid], totalSupply[vid]);
                 }
             }
         }
@@ -265,8 +266,15 @@ abstract contract VaultHealerGate is VaultHealerBase {
     }
 
     function _maximizerHarvestBeforeTransfer(address _from, address _to, uint256 _vid, uint256 _fromBalanceBefore, uint256 _toBalanceBefore, uint256 _amount, uint256 _supply) private {
-        _maximizerHarvest(_from, _vid, _fromBalanceBefore, _fromBalanceBefore - _amount, _supply, _supply);
-        _maximizerHarvest(_to, _vid, _toBalanceBefore, _toBalanceBefore + _amount, _supply, _supply);
+        uint fromOffset = maximizerEarningsOffset[_from][_vid];
+        uint toOffset = maximizerEarningsOffset[_to][_vid];
+		uint totalBefore = totalMaximizerEarnings[_vid];
+		
+        maximizerEarningsOffset[_from][_vid] = (_fromBalanceBefore - _amount) * totalBefore / _supply;
+        maximizerEarningsOffset[_to][_vid] = (_toBalanceBefore + _amount) * totalBefore / _supply;
+
+        payHarvest(_from, _vid, _fromBalanceBefore, _supply, fromOffset);
+        payHarvest(_to, _vid, _toBalanceBefore, _supply, toOffset);
     }
 
     function payHarvest(address _account, uint _vid, uint balanceBefore, uint supplyBefore, uint offset) private {

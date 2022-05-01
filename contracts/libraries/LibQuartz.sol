@@ -18,25 +18,26 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./VaultChonk.sol";
 import "../interfaces/IUniRouter.sol";
-import "./Cavendish.sol";
-import "./VaultChonk.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
     using SafeERC20 for IUniPair;
     using VaultChonk for IVaultHealer;
 	
+
     uint256 constant MINIMUM_AMOUNT = 1000;
     
     function getRouter(IVaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
-        return vaultHealer.strat(vid).router();
+        IStrategy strat = vaultHealer.strat(vid);
+        return strat.router();
     }
     
-    function getRouterAndPair(IVaultHealer vaultHealer, uint vid) internal view returns (IUniRouter router, IStrategy strategy, IUniPair pair) {
-        strategy = vaultHealer.strat(vid);
+    function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
+        (IERC20 want,,,,,) = vaultHealer.vaultInfo(_vid);
+        strat = vaultHealer.strat(_vid);
 
-        pair = IUniPair(address(strategy.wantToken()));
-        router = strategy.router();
+        pair = IUniPair(address(want));
+        router = strat.router();
         require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
     }
     function getSwapAmount(IUniRouter router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
@@ -113,10 +114,14 @@ library LibQuartz {
         require(address(token1) != address(0), "LibQuartz: token1 cannot be the zero address");
         IUniPair pair = IUniPair(factory.getPair(token0, token1));
         if (address(pair) == address(0)) return false; //pair hasn't been created, so zero liquidity
-
+		
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
-        return reserveA > min_amount && reserveB > min_amount;
+        if (reserveA > min_amount && reserveB > min_amount) {
+            return hasLiquidity = true;
+        } else {
+            return hasLiquidity = false;
+        }
     }
 
     // credit for this implementation goes to

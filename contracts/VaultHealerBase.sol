@@ -46,7 +46,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         return VaultChonk.createMaximizer(vaultInfo, targetVid, data);
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, IERC165) returns (bool) {
         return ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
@@ -73,7 +73,7 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     }
 
 
-//Like OpenZeppelin Pausable, but centralized here at the vaulthealer. Maximizers auto-pause if their target is paused
+//Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
     function pause(uint vid, bool panic) external auth requireValidVid(vid) {
         if (!vaultInfo[vid].active) revert PausedError(vid); //use direct variable; paused(vid) also may be true due to maximizer
@@ -109,7 +109,6 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         if (!paused(vid)) revert PausedError(vid);
         _;
     }
-
     modifier whenNotPaused(uint vid) {
         if (paused(vid)) revert PausedError(vid);
         _;
