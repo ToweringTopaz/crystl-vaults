@@ -6,6 +6,7 @@ const MY_PRIVATE_KEY = process.env.MY_PRIVATE_KEY;
 const PRIVATE_RPC = process.env.PRIVATE_RPC;
 const SPEEDY_RPC = process.env.SPEEDY_RPC;
 const POLYGON_PUBLIC_RPC = process.env.POLYGON_PUBLIC_RPC;
+const BNB_SPEEDY_RPC = process.env.BNB_SPEEDY_RPC;
 
 module.exports = {
   networks: {
@@ -20,6 +21,15 @@ module.exports = {
       skipDryRun: true,
       // gasPrice: 250000000000
     },
+    bnb: {
+      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, BNB_SPEEDY_RPC),
+      network_id: 56,
+      networkCheckTimeout: 1000000,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      // gasPrice: 250000000000
+    }
   },
   plugins: [
     'truffle-plugin-verify',
@@ -27,7 +37,8 @@ module.exports = {
   ],
   
   api_keys: {
-    polygonscan: process.env.POLYGONSCAN_API_KEY
+    polygonscan: process.env.POLYGONSCAN_API_KEY,
+    bscscan: process.env.BSCSCAN_API_KEY
   },
   // Configure your compilers
   compilers: {
