@@ -10,14 +10,12 @@ contract VaultDeploy {
 
     VaultHealer public immutable vaultHealer;
     Strategy public immutable strategy;
-    StrategyQuick public immutable strategyQuick;
     BoostPool immutable public boostPoolImpl;
 
     constructor() {
         vaultHealer = VaultHealer(msg.sender);
 
         strategy = new Strategy(vaultHealer);
-        strategyQuick = block.chainid == 137 ? new StrategyQuick(vaultHealer) : StrategyQuick(payable(0));
         boostPoolImpl = new BoostPool(address(vaultHealer));
     }
     

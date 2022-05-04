@@ -17,11 +17,11 @@ withdrawFee = ethers.BigNumber.from(10);
 earnFee = ethers.BigNumber.from(500);
 
 module.exports = async function (deployer, network, accounts) {
-	// await deployer.deploy(VaultHealer)
-	// vaultHealer = await VaultHealer.deployed();
+	await deployer.deploy(VaultHealer)
+	vaultHealer = await VaultHealer.deployed();
 
-    await deployer.deploy(StrategyConfig);
-	const strategyConfigInstance = await StrategyConfig.deployed();
+    // await deployer.deploy(StrategyConfig, );
+	// const strategyConfigInstance = await StrategyConfig.deployed();
 
     // await deployer.deploy(Tactics);
 	// const tacticsInstance = await Tactics.deployed();
@@ -32,9 +32,9 @@ module.exports = async function (deployer, network, accounts) {
 	// // await deployer.deploy(BoostPool, vaultHealer.address);
 	// // const boostPoolImplementation = await BoostPool.deployed();
 
-	// console.log("vaultHealer: ", vaultHealer.address);
+	console.log("vaultHealer: ", vaultHealer.address);
 	// console.log("VaultFeeManager: ", vaultFeeManager.address);
-	console.log("StrategyConfig: ", strategyConfigInstance.address);
+	// console.log("StrategyConfig: ", strategyConfigInstance.address);
 	// console.log("Tactics: ", tacticsInstance.address);
 	// console.log("Strategy: ", strategyImplementation.address);
 };
