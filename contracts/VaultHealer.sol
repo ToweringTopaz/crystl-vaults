@@ -18,7 +18,7 @@ contract VaultHealer is VaultHealerBoostedPools, Multicall {
         address(new VaultDeploy());
     }
 
-   function isApprovedForAll(address account, address operator) public view override returns (bool) {
+   function isApprovedForAll(address account, address operator) public view override(ERC1155, IERC1155) returns (bool) {
         return super.isApprovedForAll(account, operator) || operator == address(zap);
    }
 

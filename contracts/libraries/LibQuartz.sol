@@ -16,12 +16,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../interfaces/IVaultHealer.sol";
+import "./VaultChonk.sol";
 import "../interfaces/IUniRouter.sol";
 
 library LibQuartz {
     using SafeERC20 for IERC20;
     using SafeERC20 for IUniPair;
+    using VaultChonk for IVaultHealer;
 
     uint256 constant MINIMUM_AMOUNT = 1000;
     

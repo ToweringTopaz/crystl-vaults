@@ -237,7 +237,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint256 id,
         uint256 amount,
         bytes memory data
-    ) public virtual override nonReentrant { super.safeTransferFrom(from, to, id, amount, data); }
+    ) public virtual override(ERC1155, IERC1155) nonReentrant { super.safeTransferFrom(from, to, id, amount, data); }
 	
 	//Add nonReentrant for maximizer security
     function safeBatchTransferFrom(
@@ -246,7 +246,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) public virtual override nonReentrant { super.safeBatchTransferFrom(from, to, ids, amounts, data); }
+    ) public virtual override(ERC1155, IERC1155) nonReentrant { super.safeBatchTransferFrom(from, to, ids, amounts, data); }
 
 
     // // For maximizer vaults, this function helps us keep track of each users' claim on the tokens in the target vault

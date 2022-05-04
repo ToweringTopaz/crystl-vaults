@@ -17,7 +17,7 @@ contract VaultDeploy {
         vaultHealer = VaultHealer(msg.sender);
 
         strategy = new Strategy(vaultHealer);
-        strategyQuick = new StrategyQuick(vaultHealer);
+        strategyQuick = block.chainid == 137 ? new StrategyQuick(vaultHealer) : StrategyQuick(payable(0));
         boostPoolImpl = new BoostPool(address(vaultHealer));
     }
     

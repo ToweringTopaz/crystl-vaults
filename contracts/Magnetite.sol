@@ -28,7 +28,7 @@ contract Magnetite is Ownable, IMagnetite {
 
 
     constructor() {
-        require (IUniRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff).factory() == IUniFactory(0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32), 
+        if (block.chainid != 25) require (IUniRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff).factory() == IUniFactory(0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32), 
             "This contract only works on polygon mainnet and its test forks");  //quickswap router/factory
     }
 
@@ -40,6 +40,7 @@ contract Magnetite is Ownable, IMagnetite {
     }
 
     function findAndSavePath(address _router, IERC20 a, IERC20 b) external returns (IERC20[] memory path) {
+
         IUniRouter router = IUniRouter(_router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
 
@@ -111,7 +112,7 @@ contract Magnetite is Ownable, IMagnetite {
     }
     
     function generatePath(IUniRouter router, IERC20 a, IERC20 b) internal view returns (IERC20[] memory path) {
-    
+        require(gasleft() > 800000, "magnetite: need more gas");
         //console.log("magnetite generatePath");
         if (a == b) {
             path = new IERC20[](1);
@@ -226,7 +227,7 @@ contract Magnetite is Ownable, IMagnetite {
         return yLiquidity > xLiquidity;
     }
 
-    function commonTokens(IUniRouter router) private pure returns (IERC20[] memory tokens) {
+    function commonTokens(IUniRouter router) internal pure virtual returns (IERC20[] memory tokens) {
         tokens = new IERC20[](6);
         tokens[0] = router.WETH();
         tokens[1] = IERC20(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174); //usdc
