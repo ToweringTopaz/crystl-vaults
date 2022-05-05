@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../interfaces/IMasterHealer.sol";
 
-contract AmysStakingCo {
+library AmysStakingCo {
     using Address for address;
 
     error UnknownChefType(address chef);
@@ -117,7 +117,7 @@ contract AmysStakingCo {
         valid = success && data.length == 32;
     }
 
-    function addressFrom(address _origin, uint _nonce) private pure returns (address) {
+    function addressFrom(address _origin, uint _nonce) internal pure returns (address) {
         bytes32 data;
         if(_nonce == 0x00)          data = keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _origin, bytes1(0x80)));
         else if(_nonce <= 0x7f)     data = keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _origin, uint8(_nonce)));

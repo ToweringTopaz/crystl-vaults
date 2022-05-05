@@ -6,9 +6,17 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 contract VaultHealerAuth is AccessControlEnumerable {
 
     bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
+    bytes32 constant CREATE_ADMIN = keccak256("CREATE_ADMIN");
+    bytes32 constant PAUSE_ADMIN = keccak256("PAUSE_ADMIN");
 
     constructor(address owner) {
         _setAccess(owner, 3);
+        _setRoleAdmin(bytes4(keccak256("createVault(address,bytes)")), CREATE_ADMIN);
+        _setRoleAdmin(bytes4(keccak256("createMaximizer(uint256,bytes)")), CREATE_ADMIN);
+        _setRoleAdmin(bytes4(keccak256("createBoost(uint256,address,bytes)")), CREATE_ADMIN);
+        _setRoleAdmin(bytes4(keccak256("pause(uint256,bool)")), PAUSE_ADMIN);
+        _setRoleAdmin(bytes4(keccak256("setAutoEarn(uint256,bool,bool)")), PAUSE_ADMIN);
+        _setRoleAdmin(bytes4(keccak256("unpause(uint256)")), PAUSE_ADMIN);
     }
 
     function setAccess(address account, uint level) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -25,6 +33,8 @@ contract VaultHealerAuth is AccessControlEnumerable {
         if (level == 3) update = _grantRole; //Owner-level access, controlling fees and permissions
 
         update(DEFAULT_ADMIN_ROLE, account);
+        update(CREATE_ADMIN, account);
+        update(PAUSE_ADMIN, account);
         update(FEE_SETTER, account);
         update(bytes4(keccak256("setURI(string)")), account);
 
@@ -42,5 +52,4 @@ contract VaultHealerAuth is AccessControlEnumerable {
 
     }
 
-    function _noop(address, uint) private pure {}
 }
