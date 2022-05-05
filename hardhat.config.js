@@ -50,7 +50,7 @@ task("deployChonk", "Deploys VaultChonk library")
 	console.log("VaultChonk deployed at: ", vaultChonk.address);
 });
 
-task("vaultDeploy", "Deploys everything")
+task("vaultHealer", "Deploys everything")
   .addParam("chonk", "The vaultChonk library address")
   .setAction(async ({ chonk }) => {
 
@@ -79,9 +79,9 @@ task("vaultVerify", "Verifies everything")
 	  
     vaultDeploy = await ethers.getContractAt("VaultDeploy", deploy);
 
-//	await hre.run("verify:verify", {
-//		address: chonk
-//	})	
+	await hre.run("verify:verify", {
+		address: chonk
+	})	
 	
 //	await hre.run("verify:verify", {
 //		address: vaultDeploy.address,
@@ -97,10 +97,10 @@ task("vaultVerify", "Verifies everything")
 //		address: vhAuth.address,
 //		constructorArguments: [vaultDeploy.address],
 //	})
-//await hre.run("verify:verify", {
-//		address: await vaultHealer.vaultFeeManager(),
-//		constructorArguments: [vhAuth.address],
-//	})	
+    await hre.run("verify:verify", {
+		address: await vaultHealer.vaultFeeManager(),
+		constructorArguments: [vhAuth.address],
+	})	
 	await hre.run("verify:verify", {
 		address: await vaultHealer.zap(),
 		constructorArguments: [ vaultHealer.address ],
@@ -199,16 +199,48 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.13",
-    settings: {
-	  viaIR: false,
-      optimizer: {
-        enabled: true,
-        runs: 1,
-      },
-	  debug: {
-	  }
-    },
+	compilers: [{
+		version: "0.8.13",
+		settings: {
+		  viaIR: true,
+		  optimizer: {
+			enabled: true,
+			runs: 1000000,
+			details: {
+				peephole: true,
+				inliner: true,
+				jumpdestRemover: true,
+				orderLiterals: true,
+				deduplicate: true,
+				cse: true,
+				constantOptimizer: true,
+				yul: true
+			}
+		  },
+		},
+	}],
+	overrides: {
+		"contracts/VaultHealer.sol": {
+			version: "0.8.13",
+			settings: {
+			  viaIR: true,
+			  optimizer: {
+				enabled: true,
+				runs: 1,
+				details: {
+					peephole: true,
+					inliner: true,
+					jumpdestRemover: true,
+					orderLiterals: true,
+					deduplicate: true,
+					cse: true,
+					constantOptimizer: true,
+					yul: true
+				}
+			  },
+			},
+		}
+	},
   },
   mocha: {
     timeout: 90000,
