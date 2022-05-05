@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT
+///@author ToweringTopaz
+
 pragma solidity ^0.8.0;
 
 contract MosesFS {
@@ -92,7 +94,6 @@ contract MosesFS {
         unchecked {
             if (covenant.length + 32 != size) revert BadRead(covenant.length, size);
         }
-    
     }
 
 }
