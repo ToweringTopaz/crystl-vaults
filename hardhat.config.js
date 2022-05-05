@@ -41,7 +41,7 @@ if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
-task("deployChonk", "Deploys VaultChonk library")
+task("chonkDeploy", "Deploys VaultChonk library and other linked contracts")
     .setAction(async (taskArgs) => {
 	
 	vaultChonk = await ethers.getContractFactory("VaultChonk");
@@ -49,26 +49,31 @@ task("deployChonk", "Deploys VaultChonk library")
 	
 	console.log("VaultChonk deployed at: ", vaultChonk.address);
 });
-
-task("vaultHealer", "Deploys everything")
-  .addParam("chonk", "The vaultChonk library address")
-  .setAction(async ({ chonk }) => {
-
-    vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
-    vaultHealer = await vaultDeploy.deploy();
-    
-    console.log("New VaultDeploy address: ", vaultDeploy.address);
+task("prepareDeploy", "Deploys VaultChonk library and other linked contracts")
+    .setAction(async (taskArgs) => {
 	
-  });
+	vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+	
+	[user0, _] = await ethers.getSigners();
+	console.log("User account is ", user0.address);
+	
+	nonce = await user0.getTransactionCount()
+	vaultDeploy = await vaultDeploy.deploy(nonce);
+	
+	console.log("VaultDeploy deployed at :", vaultDeploy.address);
+	console.log("Constructor parameter was a nonce of", nonce);
+});
 
-task("testVaultDeploy", "Deploys everything and initializes it as a test VaultHealer")
+task("vaultHealer", "Deploys vaulthealer")
   .addParam("chonk", "The vaultChonk library address")
-  .setAction(async ({ chonk }) => {
+  .addParam("depl", "VaultDeploy address")
+  .setAction(async ({ chonk, depl }) => {
 
-    vaultDeploy = await ethers.getContractFactory("TestVaultDeploy", {libraries: { VaultChonk: chonk }});
-    vaultDeploy = await vaultDeploy.deploy();
+	vaultDeploy = await ethers.getContractAt("VaultDeploy", depl);
+    vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
+    vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), await vaultDeploy.vaultFeeManager(), await vaultDeploy.zap());
     
-    console.log("New deploy address: ", vaultDeploy.address);
+    console.log("New VaultHealer address: ", vaultHealer.address);
 	
   });
 
@@ -83,23 +88,27 @@ task("vaultVerify", "Verifies everything")
 		address: chonk
 	})	
 	
-//	await hre.run("verify:verify", {
-//		address: vaultDeploy.address,
-//		libraries: { VaultChonk: chonk }
-//	})
 	const vaultHealer = await ethers.getContractAt("VaultHealer", await vaultDeploy.vaultHealer());
-	const vhAuth = await ethers.getContractAt("VaultHealerAuth", await vaultHealer.vhAuth());
+	const vhAuth = await vaultHealer.vhAuth();
 	
-//	await hre.run("verify:verify", {
-//		address: vaultHealer.address
+	//await hre.run("verify:verify", {
+		//address: vaultHealer.address,
+	//	libraries: { VaultChonk: chonk }
 //	})
-//	await hre.run("verify:verify", {
-//		address: vhAuth.address,
-//		constructorArguments: [vaultDeploy.address],
-//	})
+	
+	[user0, _] = await ethers.getSigners();
+	await hre.run("verify:verify", {
+		address: vaultDeploy.address,
+		constructorArguments: [await user0.getTransactionCount()]
+	})
+
+	await hre.run("verify:verify", {
+		address: vhAuth,
+		constructorArguments: [user0.address],
+	})
     await hre.run("verify:verify", {
 		address: await vaultHealer.vaultFeeManager(),
-		constructorArguments: [vhAuth.address],
+		constructorArguments: [vhAuth],
 	})	
 	await hre.run("verify:verify", {
 		address: await vaultHealer.zap(),
