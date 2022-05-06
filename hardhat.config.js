@@ -7,6 +7,7 @@ require("solidity-coverage");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-solhint");
 
+const { getContractFactory } = require('@nomiclabs/hardhat-ethers/types');
 const { accounts } = require('./configs/addresses.js');
 // const { ethers } = require('hardhat');
 const { dfynVaults } = require('./configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
@@ -20,25 +21,45 @@ const chainIds = {
 /// Ensure that we have all the environment variables we need.///
 /////////////////////////////////////////////////////////////////
 
-// Ensure that we have mnemonic phrase set as an environment variable
+//Deployer Info
 const mnemonic = process.env.MNEMONIC;
 if (!mnemonic) {
   throw new Error("Please set your MNEMONIC in a .env file");
 }
-// Ensure that we have archive mainnet node URL set as an environment variable
-const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
-if (!archiveMainnetNodeURL) {
-  throw new Error("Please set your PRIVATE_RPC in a .env file");
-}
-
-const myPrivateKey = process.env.MY_PRIVATE_KEY;
+const myPrivateKey = process.env.PRIVATE_KEY;
 if (!myPrivateKey) {
   throw new Error("Please set your MY_PRIVATE_KEY in a .env file");
 }
 
+//NODE ENDPOINTS 
+const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
+if (!archiveMainnetNodeURL) {
+  throw new Error("Please set your  SPEEDY_ARCHIVE_RPC in a .env file, ensuring it's for the relevant blockchain");
+}
+const polygonMainnetNodeURL = process.env.POLYGON_PRIVATE_RPC;
+if (!polygonMainnetNodeURL) {
+  throw new Error("Please set your POLYGON_PRIVATE_RPC in a .env file");
+}
+const bscMainnetNodeURL = process.env.BNB_PRIVATE_RPC;
+if (!bscMainnetNodeURL) {
+  throw new Error("Please set your BNB_PRIVATE_RPC in a .env file")
+}
+const cronosMainnetNodeURL = process.env.CRONOS_PRIVATE_RPC;
+if (!cronosMainnetNodeURL) {
+  throw new Error("Please set your CRONOS_PRIVATE_RPC in a .env file")
+}
+//API Keys
 const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
 if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
+}
+const bscScanApiKey = process.env.POLYGONSCAN_API_KEY;
+if (!bscScanApiKey) {
+  throw new Error("Please set your BSCSCAN_API_KEY in a .env file");
+}
+const cronoScanApiKey = process.env.CRONOSCAN_API_KEY;
+if (!cronoScanApiKey) {
+  throw new Error("Please set your CRONOSCAN_API_KEY in a .env file");
 }
 
 task("chonkDeploy", "Deploys VaultChonk library and other linked contracts")
@@ -203,9 +224,17 @@ module.exports = {
       hardfork: "london",
     },
     polygon: {
-      url: archiveMainnetNodeURL,
-      accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
+      url: polygonMainnetNodeURL,
+      accounts: [`0x${myPrivateKey}`],
     },
+    bsc: {
+      url: bscMainnetNodeURL,
+      accounts: [`0x${myPrivateKey}`], 
+    },
+    cronos: {
+      url: cronosMainnetNodeURL,
+      accounts: [`0x${myPrivateKey}`],
+    }
   },
   solidity: {
 	compilers: [{
@@ -257,6 +286,8 @@ module.exports = {
   etherscan: {
 	apiKey: {
 	  polygon: polygonScanApiKey,
+    bsc: bscScanApiKey,
+    cronos: cronoScanApiKey
 	}
   }
 };

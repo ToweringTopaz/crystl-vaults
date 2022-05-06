@@ -19,12 +19,7 @@ contract VaultDeploy {
 
     constructor(uint nonce) {
         require(address(this) == AmysStakingCo.addressFrom(msg.sender, nonce), "wrong nonce");
-		
-		vhAuth = VaultHealerAuth(0xA12a010D1bdeCA241F9FC08B5EFc8A023E1E0769);
-			
-		/*
-		
-		
+				
         vhAuth = new VaultHealerAuth(address(this));
 
         vhAuth.setAccess(0xCE34Ccb6481fdc85953fd870343b24816A325351, 3);
@@ -39,10 +34,7 @@ contract VaultDeploy {
 
         vaultFeeManager.setDefaultEarnFees([0x5386881b46C37CdD30A748f7771CF95D7B213637, address(0), address(0)], [block.chainid == 137 ? 300 : 500, 0, 0]);
         vaultFeeManager.setDefaultWithdrawFee(0x5386881b46C37CdD30A748f7771CF95D7B213637, 10);
-		*/
-		
-		vaultFeeManager = VaultFeeManager(0x053D85cC954ECc22EB4175538E1f467a51D28Fdc);
-		
+
         vaultHealer = VaultHealer(AmysStakingCo.addressFrom(msg.sender, nonce+1));
         require(address(vaultHealer).code.length == 0, "vh/wrong nonce");
         zap = new QuartzUniV2Zap(address(vaultHealer));
@@ -50,7 +42,7 @@ contract VaultDeploy {
         strategy = new Strategy(vaultHealer);
         boostPoolImpl = new BoostPool(address(vaultHealer));
 
-        //vhAuth.setAccess(address(this), 0);
+        vhAuth.setAccess(address(this), 0);
     }
 
 

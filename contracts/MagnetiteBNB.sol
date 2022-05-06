@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "./Magnetite.sol";
 
 //Automatically generates and stores paths
-contract MagnetiteCronos is Magnetite {
+contract MagnetiteBNB is Magnetite {
 
     function commonTokens(IUniRouter router) internal pure override returns (IERC20[] memory tokens) {
         tokens = new IERC20[](6);
