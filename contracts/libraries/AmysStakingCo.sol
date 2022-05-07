@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./interfaces/IMasterHealer.sol";
-import "./libraries/StrategyConfig.sol";
-import "./libraries/VaultChonk.sol";
+import "../interfaces/IMasterHealer.sol";
+import "./StrategyConfig.sol";
+import "./VaultChonk.sol";
 
 library AmysStakingCo {
     using Address for address;

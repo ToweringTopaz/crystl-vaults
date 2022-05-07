@@ -234,9 +234,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
 
         (IERC20 want, uint wantDust) = config.wantToken();
-        uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
-        address masterchef = address(uint160(_tacticsA >> 96));
-        uint24 pid = uint24(_tacticsA >> 64);
+        bytes32 _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
+        address masterchef = address(bytes20(_tacticsA));
+        uint24 pid = uint24(bytes3(_tacticsA << 160));
 
         uint len = config.earnedLength();
 

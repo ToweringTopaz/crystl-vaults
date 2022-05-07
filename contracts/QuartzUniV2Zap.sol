@@ -59,7 +59,7 @@ contract QuartzUniV2Zap {
 
     function quartzOut (uint vid, uint256 withdrawAmount) external {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
-        vaultHealer.withdraw(vid, type(uint256).max, msg.sender, address(pair), "");
+        vaultHealer.withdraw(vid, withdrawAmount, msg.sender, address(pair), "");
 
         IWETH weth = router.WETH();
 
