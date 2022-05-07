@@ -59,16 +59,16 @@ contract QuartzUniV2Zap {
 
     function quartzOut (uint vid, uint256 withdrawAmount) external {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
-        vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
-        vaultHealer.withdraw(vid, type(uint256).max, "");
+        vaultHealer.withdraw(vid, withdrawAmount, msg.sender, address(pair), "");
 
         IWETH weth = router.WETH();
 
         if (pair.token0() != weth && pair.token1() != weth) {
-            return LibQuartz.removeLiquidity(pair, msg.sender);
+            pair.burn(msg.sender);
+			return;
         }
 
-        LibQuartz.removeLiquidity(pair, address(this));
+        pair.burn(address(this));
 
         IERC20[] memory tokens = new IERC20[](2);
         tokens[0] = pair.token0();
@@ -158,7 +158,7 @@ contract QuartzUniV2Zap {
         if (!approvals[keccak256(abi.encodePacked(token,router))]) {
             token.safeApprove(address(router), type(uint256).max);
             approvals[keccak256(abi.encodePacked(token,router))] = true;
-        }
+        } 
     }
 
 }
