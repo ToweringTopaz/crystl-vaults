@@ -16,4 +16,8 @@ contract MagnetiteCronos is Magnetite {
         tokens[5] = IERC20(0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3); //dai
     }
 
+    function _init() internal view override {
+        require(block.chainid == 56, "not bnb chain");
+    }
+
 }
