@@ -41,22 +41,8 @@ if (!polygonScanApiKey) {
   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
 }
 
-task("deploy", "Deploys a named contract")
-  .addParam("contract", "contract to deploy")
-  .setAction(async ({ contract }) => {
 
-    contractFactory = await ethers.getContractFactory(contract);
-    contract = await contractFactory.deploy();
-	
-	console.log("Contract deployed at: ", contract.address);
-
-	await hre.run("verify:verify", {
-		address: contract.address,
-	})
-	
-  });
-
-task("deployChonk", "Deploys VaultChonk library")
+task("chonkDeploy", "Deploys VaultChonk library and other linked contracts")
     .setAction(async (taskArgs) => {
 	
 	vaultChonk = await ethers.getContractFactory("VaultChonk");
@@ -64,15 +50,31 @@ task("deployChonk", "Deploys VaultChonk library")
 	
 	console.log("VaultChonk deployed at: ", vaultChonk.address);
 });
+task("prepareDeploy", "Deploys VaultChonk library and other linked contracts")
+    .setAction(async (taskArgs) => {
+	
+	vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+	
+	[user0, _] = await ethers.getSigners();
+	console.log("User account is ", user0.address);
+	
+	nonce = await user0.getTransactionCount()
+	vaultDeploy = await vaultDeploy.deploy(nonce);
+	
+	console.log("VaultDeploy deployed at :", vaultDeploy.address);
+	console.log("Constructor parameter was a nonce of", nonce);
+});
 
-task("vaultDeploy", "Deploys everything")
+task("vaultHealer", "Deploys vaulthealer")
   .addParam("chonk", "The vaultChonk library address")
-  .setAction(async ({ chonk }) => {
+  .addParam("depl", "VaultDeploy address")
+  .setAction(async ({ chonk, depl }) => {
 
+	vaultDeploy = await ethers.getContractAt("VaultDeploy", depl);
     vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
-    vaultHealer = await vaultDeploy.deploy();
+    vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), await vaultDeploy.vaultFeeManager(), await vaultDeploy.zap());
     
-    console.log("New VaultDeploy address: ", vaultDeploy.address);
+    console.log("New VaultHealer address: ", vaultHealer.address);
 	
   });
 
@@ -83,28 +85,32 @@ task("vaultVerify", "Verifies everything")
 	  
     vaultDeploy = await ethers.getContractAt("VaultDeploy", deploy);
 
-//	await hre.run("verify:verify", {
-//		address: chonk
-//	})	
+	await hre.run("verify:verify", {
+		address: chonk
+	})	
 	
-//	await hre.run("verify:verify", {
-//		address: vaultDeploy.address,
-//		libraries: { VaultChonk: chonk }
-//	})
 	const vaultHealer = await ethers.getContractAt("VaultHealer", await vaultDeploy.vaultHealer());
-	const vhAuth = await ethers.getContractAt("VaultHealerAuth", await vaultHealer.vhAuth());
+	const vhAuth = await vaultHealer.vhAuth();
 	
-//	await hre.run("verify:verify", {
-//		address: vaultHealer.address
+	//await hre.run("verify:verify", {
+		//address: vaultHealer.address,
+	//	libraries: { VaultChonk: chonk }
 //	})
-//	await hre.run("verify:verify", {
-//		address: vhAuth.address,
-//		constructorArguments: [vaultDeploy.address],
-//	})
-//await hre.run("verify:verify", {
-//		address: await vaultHealer.vaultFeeManager(),
-//		constructorArguments: [vhAuth.address],
-//	})	
+	
+	[user0, _] = await ethers.getSigners();
+	await hre.run("verify:verify", {
+		address: vaultDeploy.address,
+		constructorArguments: [await user0.getTransactionCount()]
+	})
+
+	await hre.run("verify:verify", {
+		address: vhAuth,
+		constructorArguments: [user0.address],
+	})
+    await hre.run("verify:verify", {
+		address: await vaultHealer.vaultFeeManager(),
+		constructorArguments: [vhAuth],
+	})	
 	await hre.run("verify:verify", {
 		address: await vaultHealer.zap(),
 		constructorArguments: [ vaultHealer.address ],
@@ -192,7 +198,7 @@ module.exports = {
       },
       forking: {
         url: archiveMainnetNodeURL,
-        blockNumber: 25326200,
+        //blockNumber: 25326200,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",
@@ -203,26 +209,48 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.8.13",
-    settings: {
-	  viaIR: false,
-      optimizer: {
-        enabled: true,
-        runs: 1,
-		details: {
-			peephole: true,
-			inliner: true,
-			jumpdestRemover: true,
-			orderLiterals: true,
-			deduplicate: true,
-			cse: true,
-			constantOptimizer: true,
-			yul: true
+	compilers: [{
+		version: "0.8.13",
+		settings: {
+		  viaIR: true,
+		  optimizer: {
+			enabled: true,
+			runs: 1000000,
+			details: {
+				peephole: true,
+				inliner: true,
+				jumpdestRemover: true,
+				orderLiterals: true,
+				deduplicate: true,
+				cse: true,
+				constantOptimizer: true,
+				yul: true
+			}
+		  },
+		},
+	}],
+	overrides: {
+		"contracts/VaultHealer.sol": {
+			version: "0.8.13",
+			settings: {
+			  viaIR: true,
+			  optimizer: {
+				enabled: true,
+				runs: 1,
+				details: {
+					peephole: true,
+					inliner: true,
+					jumpdestRemover: true,
+					orderLiterals: true,
+					deduplicate: true,
+					cse: true,
+					constantOptimizer: true,
+					yul: true
+				}
+			  },
+			},
 		}
-      },
-	  debug: {
-	  }
-    },
+	},
   },
   mocha: {
     timeout: 90000,

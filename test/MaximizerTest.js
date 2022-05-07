@@ -44,21 +44,21 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
 		
-        // const from = user1.address;
-        // const nonce = 1 + await user1.getTransactionCount();
-		// vaultHealer = await getContractAddress({from, nonce});
+		vaultChonk = await ethers.getContractFactory("VaultChonk");
+		vaultChonk = await vaultChonk.deploy();	
+		
+		vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+		
+		nonce = await user1.getTransactionCount()
+		vaultDeploy = await vaultDeploy.deploy(nonce);
+		 
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
 
-		VaultChonk = await ethers.getContractFactory("VaultChonk");
-		vaultChonk = await VaultChonk.deploy();
-		VaultHealer = await ethers.getContractFactory("VaultHealer", {
-			libraries: {
-				VaultChonk: vaultChonk.address,
-			},
-		});
-        vaultHealer = await VaultHealer.deploy();
-		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultHealer.vaultFeeManager());
+		vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: vaultChonk.address }});
+		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultDeploy.vaultFeeManager());
+		vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), vaultFeeManager.address, await vaultDeploy.zap());		
+		
 		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
 		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
 		

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.13;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "./interfaces/IUniPair.sol";
@@ -18,20 +17,28 @@ contract Magnetite is Ownable, IMagnetite {
         uint liquidity;
     }
     
+    struct Path {
+        IERC20[] tokens;
+        bool manual;
+    }
+
     uint constant private WNATIVE_MULTIPLIER = 3; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 10; // Token B direct swap weighted 10x
 
     event SetPath(bool manual, address router, IERC20[] path);
 
-    mapping(bytes32 => IERC20[]) private _paths;
-    mapping(bytes32 => bool) private _manualPath;
+    mapping(bytes32 => Path) private _paths;
 
 
     constructor() {
+        _init();
+    }
+
+    function _init() internal virtual {
+        require(block.chainid > 30000 || block.chainid == 137, "magnetite polygon version");
         require (IUniRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff).factory() == IUniFactory(0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32), 
             "This contract only works on polygon mainnet and its test forks");  //quickswap router/factory
     }
-
 
     //Adds or modifies a swap path
     function overridePath(address router, IERC20[] calldata _path) external {
@@ -40,6 +47,7 @@ contract Magnetite is Ownable, IMagnetite {
     }
 
     function findAndSavePath(address _router, IERC20 a, IERC20 b) external returns (IERC20[] memory path) {
+
         IUniRouter router = IUniRouter(_router);
         path = getPathFromStorage(_router, a, b); // [A C E D B]
 
@@ -64,54 +72,29 @@ contract Magnetite is Ownable, IMagnetite {
             path[0] = a;
             return path;
         }
-        path = _paths[keccak256(abi.encodePacked(router, a, b))];
+        path = _paths[keccak256(abi.encodePacked(router, a, b))].tokens;
     }
 
     function _setPath(address router, IERC20[] memory _path, bool _manual) internal { 
         uint len = _path.length;
 
         bytes32 hashAB = keccak256(abi.encodePacked(router,_path[0], _path[len - 1]));
-        bytes32 hashBA = keccak256(abi.encodePacked(router,_path[len - 1], _path[0]));
-        IERC20[] storage pathAB = _paths[hashAB];
+        IERC20[] storage pathAB = _paths[hashAB].tokens;
         if (_manual) {
-            _manualPath[hashAB] = true;
-            _manualPath[hashBA] = true;
+            _paths[hashAB].manual = true;
         } else {
             if (pathAB.length > 0) return;
         }
-        //console.log("setting path", address(_path[0]), address(_path[len - 1]));
-        IERC20[] storage pathBA = _paths[hashBA];
         
         for (uint i; i < len; i++) {
             pathAB.push() = _path[i];
-            pathBA.push() = _path[len - i - 1];
         }
             
         emit SetPath(_manual, router, pathAB);
-        emit SetPath(_manual, router, pathBA);
-        
-        //fill sub-paths
-        if (len > 2) {
-            assembly { 
-                mstore(_path, sub(len,1)) //reduce length by 1 (_we want _path[:len-1])
-            } 
-            _setPath(router, _path, false);
-            IERC20 path0 = _path[0]; //temp to restore array after slicing
-            assembly {
-                _path := add(0x20,_path) // shift right in memory (we want _path[1:])
-                mstore(_path, sub(len,1))
-            }
-            _setPath(router, _path, false);
-            assembly {
-                mstore(_path, path0) //restore path[0]
-                _path := sub(_path,0x20) //shift to initial start
-                mstore(_path, len) //correct length
-            }
-        }
     }
     
     function generatePath(IUniRouter router, IERC20 a, IERC20 b) internal view returns (IERC20[] memory path) {
-    
+        require(gasleft() > 800000, "magnetite: need more gas");
         //console.log("magnetite generatePath");
         if (a == b) {
             path = new IERC20[](1);
@@ -226,7 +209,7 @@ contract Magnetite is Ownable, IMagnetite {
         return yLiquidity > xLiquidity;
     }
 
-    function commonTokens(IUniRouter router) private pure returns (IERC20[] memory tokens) {
+    function commonTokens(IUniRouter router) internal pure virtual returns (IERC20[] memory tokens) {
         tokens = new IERC20[](6);
         tokens[0] = router.WETH();
         tokens[1] = IERC20(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174); //usdc
@@ -235,12 +218,13 @@ contract Magnetite is Ownable, IMagnetite {
         tokens[4] = IERC20(0xc2132D05D31c914a87C6611C10748AEb04B58e8F); //usdt
         tokens[5] = IERC20(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063); //dai
     }
-    function setlength(IERC20[] memory array, uint n) internal pure {
+    //dangerous operation, only use if you know what you're doing
+    function setlength(IERC20[] memory array, uint n) private pure {
         assembly { mstore(array, n) }
     }
 
     function isManualPath(IUniRouter router, IERC20 tokenA, IERC20 tokenB) external view returns (bool) {
         bytes32 hash = keccak256(abi.encodePacked(router,tokenA,tokenB));
-        return _manualPath[hash];
+        return _paths[hash].manual;
     }
 }

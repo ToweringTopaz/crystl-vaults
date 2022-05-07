@@ -6,11 +6,14 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
-import "./libraries/LibQuartz.sol";
 
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
+
+    error IdenticalAddresses(IERC20 a, IERC20 b);
+    error ZeroAddress();
+    error InsufficientOutputAmount(uint amountOut, uint amountOutMin);
 
     uint constant FEE_MAX = 10000;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
@@ -141,38 +144,121 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         safeSwap(_amountIn, path);
     }
 
+    // returns sorted token addresses, used to handle return values from pairs sorted in this order
+    function sortTokens(IERC20 tokenA, IERC20 tokenB) internal pure returns (IERC20 token0, IERC20 token1) {
+        if (tokenA == tokenB) revert IdenticalAddresses(tokenA, tokenB);
+        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        if (address(token0) == address(0)) revert ZeroAddress();
+    }
+
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
     ) internal {
         IUniRouter _router = config.router();
+        IUniFactory factory = _router.factory();
 
-        //allow router to pull the correct amount in
-        path[0].safeIncreaseAllowance(address(_router), _amountIn);
+        uint amountOutMin = config.feeOnTransfer() ? _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256 : 0;
 
-        _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            _amountIn, 
-            config.feeOnTransfer() ? _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256 : 0,
-            path,
-            address(this), 
-            block.timestamp
-        );
+        path[0].safeTransfer(address(factory.getPair(path[0], path[1])), _amountIn);
+        uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
+        for (uint i; i < path.length - 1; i++) {
+            (IERC20 input, IERC20 output) = (path[i], path[i + 1]);
+            (IERC20 token0,) = sortTokens(input, output);
+            bool inputIsToken0 = input == token0;
+            
+            IUniPair pair = factory.getPair(input, output);
+            (uint reserve0, uint reserve1,) = pair.getReserves();
+
+            (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
+            uint amountInput = input.balanceOf(address(pair)) - reserveInput;
+            uint amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
+
+            (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
+
+            address to = i < path.length - 2 ? address(factory.getPair(output, path[i + 2])) : address(this);
+            pair.swap(amount0Out, amount1Out, to, "");
+        }
+        
+        if (amountOutMin > 0 && path[path.length - 1].balanceOf(address(this)) < amountOutMin + balanceBefore) {
+            unchecked {
+                revert InsufficientOutputAmount(path[path.length - 1].balanceOf(address(this)) - balanceBefore, amountOutMin);
+            }
+        }
     }
 
     function swapToWantToken(uint256 _amountIn, IERC20 _tokenA) internal {
         (IERC20 want,) = config.wantToken();
         if (config.isPairStake()) {
             (IERC20 token0, IERC20 token1) = config.token0And1();
-            safeSwap(_amountIn / 2, _tokenA, token0);
-            safeSwap(_amountIn / 2, _tokenA, token1);
-            LibQuartz.optimalMint(IUniPair(address(want)), token0, token1);
+            if (block.timestamp % 2 == 0) {
+                safeSwap(_amountIn / 2, _tokenA, token0);
+                safeSwap(_amountIn / 2, _tokenA, token1);
+            } else {
+                safeSwap(_amountIn / 2, _tokenA, token1);
+                safeSwap(_amountIn / 2, _tokenA, token0);            
+            }
+
+            optimalMint(IUniPair(address(want)), token0, token1);
+            
         } else {
             safeSwap(_amountIn, _tokenA, want);
         }
     }
 
-    function configInfo() external view returns (ConfigInfo memory info) {
-        return StrategyConfig.configInfo(this);
+    function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
+        (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
+        
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+        uint totalSupply = pair.totalSupply();
+        
+        uint balance0 = token0.balanceOf(address(this));
+        uint balance1 = token1.balanceOf(address(this));
+
+        uint liquidity0 = balance0 * totalSupply / reserve0;
+        uint liquidity1 = balance1 * totalSupply / reserve1;
+
+        if (liquidity0 < liquidity1) {
+            balance1 = reserve1 * balance0 / reserve0;
+        } else {
+            balance0 = reserve0 * balance1 / reserve1;
+        }
+
+        token0.safeTransfer(address(pair), balance0);
+        token1.safeTransfer(address(pair), balance1);
+        liquidity = pair.mint(address(this));
+    }
+
+
+
+    function configInfo() external view getConfig returns (ConfigInfo memory info) {
+
+        (IERC20 want, uint wantDust) = config.wantToken();
+        uint _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
+        address masterchef = address(uint160(_tacticsA >> 96));
+        uint24 pid = uint24(_tacticsA >> 64);
+
+        uint len = config.earnedLength();
+
+        IERC20[] memory earned = new IERC20[](len);
+        uint[] memory earnedDust = new uint[](len);
+        for (uint i; i < len; i++) {
+            (earned[i], earnedDust[i]) = config.earned(i);
+        }
+
+        info = ConfigInfo({
+            vid: config.vid(),
+            want: want,
+            wantDust: wantDust,
+            masterchef: masterchef,
+            pid: pid,
+            _router: config.router(),
+            _magnetite: config.magnetite(),
+            earned: earned,
+            earnedDust: earnedDust,
+            slippageFactor: config.slippageFactor(),
+            feeOnTransfer: config.feeOnTransfer()
+        });
     }
 
 

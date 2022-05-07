@@ -22,9 +22,9 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
     mapping(uint => VaultInfo) public vaultInfo; // Info of each vault.
 	mapping(uint => uint) private panicLockExpiry;
 
-    constructor() {
-        vhAuth = new VaultHealerAuth(msg.sender);
-        vaultFeeManager = new VaultFeeManager(address(vhAuth));
+    constructor(address _vhAuth, address _feeMan) {
+        vhAuth = VaultHealerAuth(_vhAuth);
+        vaultFeeManager = VaultFeeManager(_feeMan);
     }
 
     modifier auth {

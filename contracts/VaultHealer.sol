@@ -8,14 +8,13 @@ import "./VaultDeploy.sol";
 
 contract VaultHealer is VaultHealerBoostedPools, Multicall {
 
-    QuartzUniV2Zap immutable public zap;
+    address immutable public zap;
 
-    constructor()
+    constructor(address _vhAuth, address _feeMan, address _zap)
+        VaultHealerBase(_vhAuth, _feeMan)
         ERC1155("")
     {
-        zap = new QuartzUniV2Zap(address(this));
-
-        address(new VaultDeploy());
+        zap = _zap;
     }
 
    function isApprovedForAll(address account, address operator) public view override(ERC1155, IERC1155) returns (bool) {

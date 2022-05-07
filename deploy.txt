@@ -1,0 +1,35 @@
+To deploy:
+
+Deploy the VaultChonk:
+
+	>	npx hardhat chonkDeploy --network polygon
+	
+	VaultChonk deployed at:  0x89Ca5Dab7E2cFAA9013157A38ea8457247Bb9d19
+
+Deploy the VaultDeploy:
+
+	>	npx hardhat prepareDeploy --network polygon
+	
+	User account is  0x0894417Dfc569328617FC25DCD6f0B5F4B0eb323
+	VaultDeploy deployed at : 0x1ba8315169DE2a3b6eCB26437336fa6189CDB87c
+	Please set runs to a low value and recompile
+
+
+Now actually do this, because the VaultHealer won't deploy if it's too large.
+
+WARNING: If your next transaction on this account is anything other than deploying the vaultHealer, the vaultDeploy will be trash, and you'll have to deploy a new one. The VaultDeploy pattern relies on the assumption that your nonce increases by one and no more.
+
+Deploy the VaultHealer:
+
+	>	npx hardhat vaultHealer --chonk 0x89Ca5Dab7E2cFAA9013157A38ea8457247Bb9d19 --depl 0x1ba8315169DE2a3b6eCB26437336fa6189CDB87c --network polygon
+	
+	
+Verifying:
+
+	Recommend verifying each contract after it is deployed:
+	
+	>	npx hardhat verify 0x89Ca5Dab7E2cFAA9013157A38ea8457247Bb9d19 --network polygon
+	
+	For contracts with constructor parameters:
+	
+	>	npx hardhat verify 0x89Ca5Dab7E2cFAA9013157A38ea8457247Bb9d19 --network polygon <parameters go here>
