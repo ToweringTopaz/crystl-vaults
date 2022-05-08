@@ -44,21 +44,21 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		Magnetite = await ethers.getContractFactory("Magnetite");
 		magnetite = await Magnetite.deploy();
 		
-        // const from = user1.address;
-        // const nonce = 1 + await user1.getTransactionCount();
-		// vaultHealer = await getContractAddress({from, nonce});
+		vaultChonk = await ethers.getContractFactory("VaultChonk");
+		vaultChonk = await vaultChonk.deploy();	
+		
+		vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+		
+		nonce = await user1.getTransactionCount()
+		vaultDeploy = await vaultDeploy.deploy(nonce);
+		 
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
 
-		VaultChonk = await ethers.getContractFactory("VaultChonk");
-		vaultChonk = await VaultChonk.deploy();
-		VaultHealer = await ethers.getContractFactory("VaultHealer", {
-			libraries: {
-				VaultChonk: vaultChonk.address,
-			},
-		});
-        vaultHealer = await VaultHealer.deploy();
-		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultHealer.vaultFeeManager());
+		vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: vaultChonk.address }});
+		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultDeploy.vaultFeeManager());
+		vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), vaultFeeManager.address, await vaultDeploy.zap());		
+		
 		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
 		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
 		
@@ -74,22 +74,26 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		//DINO to WETH
 		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
 
+		console.debug("paths set")
 
         //create the factory for the strategy implementation contract
-        Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
+        //Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
-		strategyImplementation = await Strategy.deploy(vaultHealer.address);
-        
-		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
+		//strategyImplementation = await Strategy.deploy(vaultHealer.address);
+        strategyImplementation = await ethers.getContractAt("Strategy", await vaultDeploy.strategy())
+		
+		let tacticsA = ethers.utils.solidityPack(['address', 'uint24', 'uint8', 'uint64'], [
 			dfynVaults[0]['masterchef'],
             dfynVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
+		]);
+		let tacticsB = ethers.utils.solidityPack(['uint64', 'uint64', 'uint64', 'uint64'], [
             ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
             ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
             ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
             ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
-        );
+        ]);
 
         DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
             tacticsA,
@@ -110,16 +114,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         TOKEN_OTHER = USDC;
 
-        let [crystlTacticsA, crystlTacticsB] = await strategyImplementation.generateTactics(
+		let crystlTacticsA = ethers.utils.solidityPack(['address', 'uint24', 'uint8', 'uint64'], [
 			apeSwapVaults[0]['masterchef'],
             apeSwapVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
+		])	
+		let crystlTacticsB = ethers.utils.solidityPack(['uint64', 'uint64', 'uint64', 'uint64'], [
             ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
-        );
+        ]);
 
 		TARGET_WANT_COMPOUNDER_DATA = await strategyImplementation.generateConfig(
             crystlTacticsA,
@@ -140,10 +146,15 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         vaultHealerOwnerSigner = user1
         
         zapAddress = await vaultHealer.zap()
-
+		console.debug("zapAddress", zapAddress);
+		
 		quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
-       
+    if (quartzUniV2Zap.vaultHealer() != vaultHealer.address) console.error("zap has wrong VH address!")
+	
+		console.debug("strategyImp", await strategyImplementation.implementation())
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+		
+		
 		strat1_pid = await vaultHealer.numVaultsBase();
 		strat1 = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(strat1_pid))
         console.log("strat1 address: ",strat1.address);
