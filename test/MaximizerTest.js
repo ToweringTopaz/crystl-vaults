@@ -46,40 +46,48 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		vaultChonk = await ethers.getContractFactory("VaultChonk");
 		vaultChonk = await vaultChonk.deploy();	
+
+		vhAuth = await ethers.getContractFactory("VaultHealerAuth")
+		vhAuth = await vhAuth.deploy(user1.address);
+		vaultFeeManager = await ethers.getContractFactory("VaultFeeManager")
+		vaultFeeManager = await vaultFeeManager.deploy(vhAuth.address);
+		zap = await ethers.getContractFactory("QuartzUniV2Zap");
 		
-		vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+		vaultHealer = await getContractAddress({from: user1.address, nonce: 1 + await user1.getTransactionCount()});
 		
-		nonce = await user1.getTransactionCount()
-		vaultDeploy = await vaultDeploy.deploy(nonce);
-		 
-		withdrawFee = ethers.BigNumber.from(10);
-        earnFee = ethers.BigNumber.from(500);
+		
+		
+		zap = await zap.deploy(vaultHealer);
 
 		vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: vaultChonk.address }});
-		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultDeploy.vaultFeeManager());
-		vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), vaultFeeManager.address, await vaultDeploy.zap());		
 		
+		vaultHealer = await vaultHealer.deploy(vhAuth.address, vaultFeeManager.address, zap.address);		
+				console.info("B"); 
+		withdrawFee = ethers.BigNumber.from(10);
+        earnFee = ethers.BigNumber.from(500);
+		console.info("C");
 		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
 		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
-		
+		console.info("D");
         vaultHealer.on("FailedEarn", (vid, reason) => {
 			console.log("FailedEarn: ", vid, reason);
 		});
 		vaultHealer.on("FailedEarnBytes", (vid, reason) => {
 			console.log("FailedEarnBytes: ", vid, reason);
 		});
-		
+	console.info("E");	
 		//DINO to MATIC
 		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
 		//DINO to WETH
 		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
 
+		console.debug("paths set")
 
         //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy(vaultHealer.address);
-        
+		
 		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
 			MASTERCHEF,
             PID,
@@ -140,10 +148,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         vaultHealerOwnerSigner = user1
         
         zapAddress = await vaultHealer.zap()
-
+		console.debug("zapAddress", zapAddress);
+		
 		quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
-       
+
+
+	
+		console.debug("strategyImp", await strategyImplementation.implementation())
 		await vaultHealer.connect(vaultHealerOwnerSigner).createVault(strategyImplementation.address, DEPLOYMENT_DATA);
+		
+		
 		strat1_pid = await vaultHealer.numVaultsBase();
 		strat1 = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(strat1_pid))
         console.log("strat1 address: ",strat1.address);

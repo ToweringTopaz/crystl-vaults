@@ -45,10 +45,11 @@ if (!polygonScanApiKey) {
 task("chonkDeploy", "Deploys VaultChonk library and other linked contracts")
     .setAction(async (taskArgs) => {
 	
-	vaultChonk = await ethers.getContractFactory("VaultChonk");
-	vaultChonk = await vaultChonk.deploy();	
+	vaultChonk = await ethers.getContractFactory("Strategy");
+	vaultChonk = await vaultChonk.deploy("0xe5b5da7b82a3057b21c2b0dcef34c25eaa45fe4f");	
 	
 	console.log("VaultChonk deployed at: ", vaultChonk.address);
+	
 });
 task("prepareDeploy", "Deploys VaultChonk library and other linked contracts")
     .setAction(async (taskArgs) => {
@@ -198,7 +199,7 @@ module.exports = {
       },
       forking: {
         url: archiveMainnetNodeURL,
-        //blockNumber: 25326200,
+        blockNumber: 25326200,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./BaseStrategy.sol";
+import "./libraries/VaultChonk.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./libraries/VaultChonk.sol";
 
@@ -17,11 +18,16 @@ contract Strategy is BaseStrategy {
     function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
+        
+        IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
+		uint targetWantBefore = config.isMaximizer() ? targetWant.balanceOf(address(this)) : wantBalanceBefore;
+
         _vaultHarvest();
 
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
 
+        bool earnedTargetWant;
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
@@ -30,15 +36,23 @@ contract Strategy is BaseStrategy {
             if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
             
             success = true; //We have something worth compounding
-            safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
+            if (targetWant != earnedToken || targetWant == weth) {
+                safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
+            }
+            else earnedTargetWant = true;
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
         uint wethAdded = weth.balanceOf(address(this));
+        uint targetWantAdded;
         if (_wantToken == weth) wethAdded -= wantBalanceBefore; //ignore pre-existing want tokens
+        else if (earnedTargetWant) {
+            targetWantAdded = (config.isMaximizer() ? targetWant.balanceOf(address(this)) : wantBalanceBefore)
+                                    - targetWantBefore;
+        }
         if (config.isMaximizer()) {
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, "") {} //deposit the rest
+            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), targetWantAdded, "") {} //deposit the rest, and any targetWant tokens
             catch {  //compound want instead if maximizer doesn't work
                 weth.deposit{value: ethToTarget}();
                 swapToWantToken(ethToTarget, weth);
@@ -51,6 +65,13 @@ contract Strategy is BaseStrategy {
         }
 
         __wantLockedTotal = _wantLockedTotal();
+    }
+
+    function contains(IERC20[] memory arr, IERC20 token) internal pure returns (bool) {
+        for (uint i; i < arr.length; i++) {
+            if (arr[i] == token) return true;
+        }
+        return false;
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
@@ -95,7 +116,7 @@ contract Strategy is BaseStrategy {
             }
         }
 
-		uint withdrawSlippage;
+		uint withdrawSlippage = 0;
         if (_wantAmt > wantBal) {
             uint toWithdraw = _wantAmt - wantBal;
             _vaultWithdraw(_wantToken, toWithdraw); //Withdraw from the masterchef, staking pool, etc.
@@ -104,8 +125,6 @@ contract Strategy is BaseStrategy {
 			
 			//Account for reflect, pool withdraw fee, etc; charge these to user
 			withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
-		} else {
-			withdrawSlippage = 0;
 		}
 		
 		//Calculate shares to remove
