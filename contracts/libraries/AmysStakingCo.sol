@@ -177,6 +177,10 @@ library AmysStakingCo {
         });
     }
 
+    function lpTokenInfo(IVaultHealer vaultHealer, uint vid) public view returns (LPTokenInfo memory info) {
+        return lpTokenInfo(address(VaultChonk.strat(vaultHealer, vid).wantToken()));
+    }
+
     function getSymbol(address token) internal view returns (bytes32) {
         if (token == address(0)) return bytes32(0);
         (bool success, bytes memory data) = token.staticcall(abi.encodeWithSignature("symbol()"));
