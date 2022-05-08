@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 
 import "../interfaces/IWETH.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 using Fee for Fee.Data global;
 using Fee for Fee.Data[3] global;
 
@@ -38,11 +40,36 @@ library Fee {
         }
     }
 
+    //Token amount is all fees
+    function payTokenFeeAll(Data[3] calldata _fees, IERC20 _token, uint _tokenAmt) internal {
+        if (_tokenAmt == 0) return;
+        uint feeTotalRate = totalRate(_fees);
+        for (uint i; i < 3; i++) {
+            (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
+            if (_receiver == address(0) || _rate == 0) break;
+            SafeERC20.safeTransfer(_token, _receiver, _tokenAmt * _rate / feeTotalRate);
+        }
+    }
+    //Amount includes fee and non-fee portions
+    function payTokenFeePortion(Data[3] calldata _fees, IERC20 _token, uint _tokenAmt) internal returns (uint amtAfter) {
+        if (_tokenAmt == 0) return 0;
+        amtAfter = _tokenAmt;
+        uint feeTotalRate = totalRate(_fees);
+        uint feeTotalAmt = feeTotalRate * _tokenAmt / 10000;
+
+        for (uint i; i < 3; i++) {
+            (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
+            if (_receiver == address(0) || _rate == 0) break;
+            uint amount = _tokenAmt * _rate / 10000;
+            SafeERC20.safeTransfer(_token, _receiver, amount);
+        }
+        return _tokenAmt - feeTotalAmt;
+    }
+
     //Use this if ethAmt is all fees
     function payEthAll(Data[3] calldata _fees, uint _ethAmt) internal {
         if (_ethAmt == 0) return;
         uint feeTotalRate = totalRate(_fees);
-        assert(feeTotalRate > 0);
         for (uint i; i < 3; i++) {
             (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
             if (_receiver == address(0) || _rate == 0) break;

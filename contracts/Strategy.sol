@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./BaseStrategy.sol";
+import "./libraries/VaultChonk.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 //This is a strategy contract which can be expected to support 99% of pools. Tactic contracts provide the pool interface.
 contract Strategy is BaseStrategy {
@@ -18,7 +19,7 @@ contract Strategy is BaseStrategy {
 
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
-
+        IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
@@ -27,7 +28,11 @@ contract Strategy is BaseStrategy {
             if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
             
             success = true; //We have something worth compounding
-            safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
+            if (targetWant != earnedToken || targetWant == weth) {
+                safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
+            } else {
+                fees.payTokenFeePortion(earnedToken, earnedAmt);
+            }
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
         uint wethAdded = weth.balanceOf(address(this));
@@ -48,6 +53,13 @@ contract Strategy is BaseStrategy {
         }
 
         __wantLockedTotal = _wantLockedTotal();
+    }
+
+    function contains(IERC20[] memory arr, IERC20 token) internal pure returns (bool) {
+        for (uint i; i < arr.length; i++) {
+            if (arr[i] == token) return true;
+        }
+        return false;
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
