@@ -46,10 +46,12 @@ library Tactics {
     function masterchef(TacticsA tacticsA) internal pure returns (address) {
         return address(bytes20(TacticsA.unwrap(tacticsA)));
     }  
-
+    function pid(TacticsA tacticsA) internal pure returns (uint24) {
+        return uint24(bytes3(TacticsA.unwrap(tacticsA) << 160));
+    }  
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
         uint returnvarPosition = uint8(uint(TacticsA.unwrap(tacticsA)) >> 64); //where is our vaultshares in the return data
-        bytes memory data = _generateCall(uint24(uint(TacticsA.unwrap(tacticsA)) >> 72), uint64(uint(TacticsA.unwrap(tacticsA))), 0); //pid, vst call, 0
+        bytes memory data = _generateCall(pid(tacticsA), uint64(uint(TacticsA.unwrap(tacticsA))), 0); //pid, vst call, 0
         data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
         assembly ("memory-safe") {
             amountStaked := mload(add(data, add(0x20,returnvarPosition)))
@@ -69,19 +71,19 @@ library Tactics {
         _doCall(tacticsA, tacticsB, 0, 0);
     }
     function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
-        bytes memory generatedCall = _generateCall(uint24(uint(TacticsA.unwrap(tacticsA)) >> 72), uint64(uint(TacticsB.unwrap(tacticsB)) >> offset), amount);
+        bytes memory generatedCall = _generateCall(pid(tacticsA), uint64(uint(TacticsB.unwrap(tacticsB)) >> offset), amount);
         masterchef(tacticsA).functionCall(generatedCall, "Tactics: call failed");
         
     }
 
-    function _generateCall(uint24 pid, uint64 encodedCall, uint amount) private view returns (bytes memory generatedCall) {
+    function _generateCall(uint24 _pid, uint64 encodedCall, uint amount) private view returns (bytes memory generatedCall) {
         generatedCall = abi.encodePacked(bytes4(bytes8(encodedCall)));
 
         for (bytes4 params = bytes4(bytes8(encodedCall) << 32); params != 0; params <<= 4) {
             bytes4 p = params & 0xf0000000;
             uint256 word;
             if (p == 0x20000000) {
-                word = pid;
+                word = _pid;
             } else if (p == 0x30000000) {
                 word = uint(uint160(address(this)));
             } else if (p == 0x40000000) {
