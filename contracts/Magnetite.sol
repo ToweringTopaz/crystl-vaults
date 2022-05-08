@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "./interfaces/IUniPair.sol";
 import "./interfaces/IUniRouter.sol";
@@ -9,7 +9,8 @@ import "./interfaces/IUniFactory.sol";
 import "./interfaces/IMagnetite.sol";
 
 //Automatically generates and stores paths
-contract Magnetite is Ownable, IMagnetite {
+contract Magnetite is OwnableUpgradeable, IMagnetite {
+
 
     struct PairData {
         IERC20 token;
@@ -29,20 +30,46 @@ contract Magnetite is Ownable, IMagnetite {
 
     mapping(bytes32 => Path) private _paths;
 
+    address immutable implementation = address(this);
 
     constructor() {
         _init();
+        (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = block.chainid == 25 ? ( //cronos
+            0xc21223249CA28397B4B6541dfFaEcC539BfF0c59,
+            0xe44Fd7fCb2b1581822D0c862B68222998a0c299a,
+            0x062E66477Faf219F25D27dCED647BF57C3107d52,
+            0x66e428c3f67a68878562e79A0234c1F83c208770,
+            0xF2001B145b43032AAF5Ee2884e456CCd805F677D
+        ) : ( block.chainid == 56 ? ( //bsc
+            0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d, //usdc
+            0x2170Ed0880ac9A755fd29B2688956BD959F933F8, //weth
+            0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c, //wbtc: actually btcb on BNB Chain
+            0x55d398326f99059fF775485246999027B3197955, //usdt
+            0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3 //dai
+        ) : ( //polygon
+            0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
+            0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
+            0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
+            0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
+            0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 //dai
+
+        ));
+
     }
 
-    function _init() internal virtual {
-        require(block.chainid > 30000 || block.chainid == 137, "magnetite polygon version");
-        require (IUniRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff).factory() == IUniFactory(0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32), 
-            "This contract only works on polygon mainnet and its test forks");  //quickswap router/factory
+    function _init() public virtual initializer {
+        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56, "unsupported chain");
+        _transferOwnership(msg.sender);
+    }
+
+    function _nuke() external onlyOwner {
+        require(address(this) != implementation);
+        selfdestruct(payable(tx.origin));
     }
 
     //Adds or modifies a swap path
     function overridePath(address router, IERC20[] calldata _path) external {
-        require(msg.sender == owner() || IAccessControl(owner()).hasRole(keccak256("PATH_SETTER"), msg.sender), "!auth");
+        require(IAccessControl(owner()).hasRole(keccak256("PATH_SETTER"), msg.sender), "!auth");
         _setPath(router, _path, true);
     }
 
@@ -209,14 +236,20 @@ contract Magnetite is Ownable, IMagnetite {
         return yLiquidity > xLiquidity;
     }
 
-    function commonTokens(IUniRouter router) internal pure virtual returns (IERC20[] memory tokens) {
+    address immutable COMMON_1;
+    address immutable COMMON_2;
+    address immutable COMMON_3;
+    address immutable COMMON_4;
+    address immutable COMMON_5;
+
+    function commonTokens(IUniRouter router) internal view returns (IERC20[] memory tokens) {
         tokens = new IERC20[](6);
         tokens[0] = router.WETH();
-        tokens[1] = IERC20(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174); //usdc
-        tokens[2] = IERC20(0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619); //weth
-        tokens[3] = IERC20(0x831753DD7087CaC61aB5644b308642cc1c33Dc13); //quick
-        tokens[4] = IERC20(0xc2132D05D31c914a87C6611C10748AEb04B58e8F); //usdt
-        tokens[5] = IERC20(0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063); //dai
+        tokens[1] = IERC20(COMMON_1);
+        tokens[2] = IERC20(COMMON_2);
+        tokens[3] = IERC20(COMMON_3);
+        tokens[4] = IERC20(COMMON_4);
+        tokens[5] = IERC20(COMMON_5);
     }
     //dangerous operation, only use if you know what you're doing
     function setlength(IERC20[] memory array, uint n) private pure {
