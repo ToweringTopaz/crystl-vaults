@@ -43,7 +43,7 @@ contract VaultDeploy {
         strategy = new Strategy(vaultHealer);
         boostPoolImpl = new BoostPool(address(vaultHealer));
 
-        //vhAuth.setAccess(address(this), 0);
+        vhAuth.setAccess(address(this), 0);
     }
 
 
