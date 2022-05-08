@@ -15,11 +15,16 @@ contract Strategy is BaseStrategy {
     function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
         (IERC20 _wantToken,) = config.wantToken();
         uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
+        
+        IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
+		uint targetWantBefore = config.isMaximizer() ? targetWant.balanceOf(address(this)) : wantBalanceBefore;
+
         _vaultHarvest();
 
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
-        IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
+
+        bool earnedTargetWant;
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
@@ -30,17 +35,21 @@ contract Strategy is BaseStrategy {
             success = true; //We have something worth compounding
             if (targetWant != earnedToken || targetWant == weth) {
                 safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
-            } else {
-                fees.payTokenFeePortion(earnedToken, earnedAmt);
             }
+            else earnedTargetWant = true;
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
         uint wethAdded = weth.balanceOf(address(this));
+        uint targetWantAdded;
         if (_wantToken == weth) wethAdded -= wantBalanceBefore; //ignore pre-existing want tokens
+        else if (earnedTargetWant) {
+            targetWantAdded = (config.isMaximizer() ? targetWant.balanceOf(address(this)) : wantBalanceBefore)
+                                    - targetWantBefore;
+        }
         if (config.isMaximizer()) {
             weth.withdraw(wethAdded); //unwrap wnative token
             uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), 0, "") {} //deposit the rest
+            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), targetWantAdded, "") {} //deposit the rest, and any targetWant tokens
             catch {  //compound want instead if maximizer doesn't work
                 weth.deposit{value: ethToTarget}();
                 swapToWantToken(ethToTarget, weth);
