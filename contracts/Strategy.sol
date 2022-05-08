@@ -104,7 +104,7 @@ contract Strategy is BaseStrategy {
             }
         }
 
-		uint withdrawSlippage;
+		uint withdrawSlippage = 0;
         if (_wantAmt > wantBal) {
             uint toWithdraw = _wantAmt - wantBal;
             _vaultWithdraw(_wantToken, toWithdraw); //Withdraw from the masterchef, staking pool, etc.
@@ -113,8 +113,6 @@ contract Strategy is BaseStrategy {
 			
 			//Account for reflect, pool withdraw fee, etc; charge these to user
 			withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
-		} else {
-			withdrawSlippage = 0;
 		}
 		
 		//Calculate shares to remove

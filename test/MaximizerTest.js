@@ -46,29 +46,36 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		vaultChonk = await ethers.getContractFactory("VaultChonk");
 		vaultChonk = await vaultChonk.deploy();	
+
+		vhAuth = await ethers.getContractFactory("VaultHealerAuth")
+		vhAuth = await vhAuth.deploy(user1.address);
+		vaultFeeManager = await ethers.getContractFactory("VaultFeeManager")
+		vaultFeeManager = await vaultFeeManager.deploy(vhAuth.address);
+		zap = await ethers.getContractFactory("QuartzUniV2Zap");
 		
-		vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+		vaultHealer = await getContractAddress({from: user1.address, nonce: 1 + await user1.getTransactionCount()});
 		
-		nonce = await user1.getTransactionCount()
-		vaultDeploy = await vaultDeploy.deploy(nonce);
-		 
-		withdrawFee = ethers.BigNumber.from(10);
-        earnFee = ethers.BigNumber.from(500);
+		
+		
+		zap = await zap.deploy(vaultHealer);
 
 		vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: vaultChonk.address }});
-		vaultFeeManager = await ethers.getContractAt("VaultFeeManager", await vaultDeploy.vaultFeeManager());
-		vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), vaultFeeManager.address, await vaultDeploy.zap());		
 		
+		vaultHealer = await vaultHealer.deploy(vhAuth.address, vaultFeeManager.address, zap.address);		
+				console.info("B"); 
+		withdrawFee = ethers.BigNumber.from(10);
+        earnFee = ethers.BigNumber.from(500);
+		console.info("C");
 		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
 		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
-		
+		console.info("D");
         vaultHealer.on("FailedEarn", (vid, reason) => {
 			console.log("FailedEarn: ", vid, reason);
 		});
 		vaultHealer.on("FailedEarnBytes", (vid, reason) => {
 			console.log("FailedEarnBytes: ", vid, reason);
 		});
-		
+	console.info("E");	
 		//DINO to MATIC
 		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
 		//DINO to WETH
@@ -77,23 +84,20 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		console.debug("paths set")
 
         //create the factory for the strategy implementation contract
-        //Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
+        Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
-		//strategyImplementation = await Strategy.deploy(vaultHealer.address);
-        strategyImplementation = await ethers.getContractAt("Strategy", await vaultDeploy.strategy())
+		strategyImplementation = await Strategy.deploy(vaultHealer.address);
 		
-		let tacticsA = ethers.utils.solidityPack(['address', 'uint24', 'uint8', 'uint64'], [
+		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
 			dfynVaults[0]['masterchef'],
             dfynVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
-		]);
-		let tacticsB = ethers.utils.solidityPack(['uint64', 'uint64', 'uint64', 'uint64'], [
             ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
             ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
             ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
             ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
-        ]);
+        );
 
         DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
             tacticsA,
@@ -114,18 +118,16 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         TOKEN_OTHER = USDC;
 
-		let crystlTacticsA = ethers.utils.solidityPack(['address', 'uint24', 'uint8', 'uint64'], [
+        let [crystlTacticsA, crystlTacticsB] = await strategyImplementation.generateTactics(
 			apeSwapVaults[0]['masterchef'],
             apeSwapVaults[0]['PID'],
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
             ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-		])	
-		let crystlTacticsB = ethers.utils.solidityPack(['uint64', 'uint64', 'uint64', 'uint64'], [
             ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
             ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
-        ]);
+        );
 
 		TARGET_WANT_COMPOUNDER_DATA = await strategyImplementation.generateConfig(
             crystlTacticsA,
@@ -150,7 +152,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		quartzUniV2Zap = await ethers.getContractAt('QuartzUniV2Zap', await vaultHealer.zap());
 
-		if (await quartzUniV2Zap.vaultHealer() != vaultHealer.address) console.error("zap has wrong VH address!")
 
 	
 		console.debug("strategyImp", await strategyImplementation.implementation())
