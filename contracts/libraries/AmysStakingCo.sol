@@ -177,8 +177,8 @@ library AmysStakingCo {
         });
     }
 
-    function lpTokenInfo(IVaultHealer vaultHealer, uint vid) public view returns (LPTokenInfo memory info) {
-        return lpTokenInfo(address(VaultChonk.strat(vaultHealer, vid).wantToken()));
+    function lpTokenInfo(address vaultHealer, uint vid) public view returns (LPTokenInfo memory info) {
+        return lpTokenInfo(address(VaultChonk.strat(IVaultHealer(vaultHealer), vid).wantToken()));
     }
 
     function getSymbol(address token) internal view returns (bytes32) {
