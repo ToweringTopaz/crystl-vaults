@@ -11,7 +11,7 @@ const BNB_SPEEDY_RPC = process.env.BNB_SPEEDY_RPC;
 module.exports = {
   networks: {
     polygon: {
-      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, POLYGON_PUBLIC_RPC),
+      provider: () => new HDWalletProvider(MY_PRIVATE_KEY, SPEEDY_RPC),
       //provider: () => new HDWalletProvider(POLYGON_DEPLOYER_KEY, `https://matic-mainnet.chainstacklabs.com`),
       //provider: () => new HDWalletProvider(POLYGON_DEPLOYER_KEY, `https://rpc-mainnet.matic.network`),
       network_id: 137,
@@ -19,7 +19,7 @@ module.exports = {
       confirmations: 2,
       timeoutBlocks: 200,
       skipDryRun: true,
-      // gasPrice: 250000000000
+      gasPrice: 250000000000
     },
     bnb: {
       provider: () => new HDWalletProvider(MY_PRIVATE_KEY, BNB_SPEEDY_RPC),
