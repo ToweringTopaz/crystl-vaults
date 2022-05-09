@@ -40,16 +40,18 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
     `, () => {
     before(async () => {
         [user1, user2, user3, user4, _] = await ethers.getSigners();
-		
-		Magnetite = await ethers.getContractFactory("Magnetite");
-		magnetite = await Magnetite.deploy();
+	
 		
 		vaultChonk = await ethers.getContractFactory("VaultChonk");
 		vaultChonk = await vaultChonk.deploy();	
 
 		vhAuth = await ethers.getContractFactory("VaultHealerAuth")
 		vhAuth = await vhAuth.deploy(user1.address);
-		vaultFeeManager = await ethers.getContractFactory("VaultFeeManager")
+		MagnetiteD = await ethers.getContractFactory("MagnetiteDeploy");
+		magnetiteD = await MagnetiteD.deploy(vhAuth.address);	
+		magnetite = await ethers.getContractAt("Magnetite", magnetiteD.proxy())
+
+	vaultFeeManager = await ethers.getContractFactory("VaultFeeManager")
 		vaultFeeManager = await vaultFeeManager.deploy(vhAuth.address);
 		zap = await ethers.getContractFactory("QuartzUniV2Zap");
 		

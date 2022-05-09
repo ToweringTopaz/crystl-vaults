@@ -8,6 +8,7 @@ import "./interfaces/IUniRouter.sol";
 import "./interfaces/IUniFactory.sol";
 import "./interfaces/IMagnetite.sol";
 
+
 //Automatically generates and stores paths
 contract Magnetite is OwnableUpgradeable, IMagnetite {
 
@@ -27,13 +28,12 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
     uint constant private B_MULTIPLIER = 10; // Token B direct swap weighted 10x
 
     event SetPath(bool manual, address router, IERC20[] path);
-
     mapping(bytes32 => Path) private _paths;
 
-    address immutable implementation = address(this);
+    constructor(address vhAuth) {
+        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56, "unsupported chain");
+        _init(vhAuth);
 
-    constructor() {
-        _init();
         (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = block.chainid == 25 ? ( //cronos
             0xc21223249CA28397B4B6541dfFaEcC539BfF0c59,
             0xe44Fd7fCb2b1581822D0c862B68222998a0c299a,
@@ -57,14 +57,8 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
 
     }
 
-    function _init() public virtual initializer {
-        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56, "unsupported chain");
-        _transferOwnership(msg.sender);
-    }
-
-    function _nuke() external onlyOwner {
-        require(address(this) != implementation);
-        selfdestruct(payable(tx.origin));
+    function _init(address vhAuth) public virtual initializer {
+        _transferOwnership(vhAuth);
     }
 
     //Adds or modifies a swap path
