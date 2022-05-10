@@ -27,7 +27,7 @@ contract Strategy is BaseStrategy {
         IWETH weth = config.weth();
         uint earnedLength = config.earnedLength();
 
-        bool earnedTargetWant;
+        uint targetWantAdded;
         for (uint i; i < earnedLength; i++) {
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
@@ -39,31 +39,35 @@ contract Strategy is BaseStrategy {
             if (targetWant != earnedToken || targetWant == weth) {
                 safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
             }
-            else earnedTargetWant = true;
+            else {
+                targetWantAdded = fees.payTokenFeePortion(earnedToken, earnedAmt);
+            } 
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
         uint wethAdded = weth.balanceOf(address(this));
-        uint targetWantAdded;
+        
         if (_wantToken == weth) wethAdded -= wantBalanceBefore; //ignore pre-existing want tokens
-        else if (earnedTargetWant) {
-            targetWantAdded = (config.isMaximizer() ? targetWant.balanceOf(address(this)) : wantBalanceBefore)
-                                    - targetWantBefore;
-        }
-        if (config.isMaximizer()) {
-            weth.withdraw(wethAdded); //unwrap wnative token
-            uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-            try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), targetWantAdded, "") {} //deposit the rest, and any targetWant tokens
-            catch {  //compound want instead if maximizer doesn't work
-                weth.deposit{value: ethToTarget}();
-                swapToWantToken(ethToTarget, weth);
+        bool maximizerSuccess;
+        
+        if (wethAdded > 0) {
+            if (config.isMaximizer()) {
+                weth.withdraw(wethAdded); //unwrap wnative token
+                uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
+                try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), targetWantAdded, "") { //deposit the rest, and any targetWant tokens
+                    maximizerSuccess = true;
+                } 
+                catch {  //compound want instead if maximizer doesn't work
+                    weth.deposit{value: ethToTarget}();
+                    swapToWantToken(ethToTarget, weth);
+                }
             }
-        } else {
-            wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
-            swapToWantToken(wethAdded, weth);
-
-            _farm();
+            if (!maximizerSuccess) {
+                wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
+                swapToWantToken(wethAdded, weth);
+            }
         }
 
+        _farm();        
         __wantLockedTotal = _wantLockedTotal();
     }
 
