@@ -25,21 +25,42 @@ const mnemonic = process.env.MNEMONIC;
 if (!mnemonic) {
   throw new Error("Please set your MNEMONIC in a .env file");
 }
-// Ensure that we have archive mainnet node URL set as an environment variable
-const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
-if (!archiveMainnetNodeURL) {
-  throw new Error("Please set your PRIVATE_RPC in a .env file");
-}
 
 const myPrivateKey = process.env.MY_PRIVATE_KEY;
 if (!myPrivateKey) {
   throw new Error("Please set your MY_PRIVATE_KEY in a .env file");
 }
 
-const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
-if (!polygonScanApiKey) {
-  throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
-}
+ //NODE ENDPOINTS 
+ const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
+ if (!archiveMainnetNodeURL) {
+   throw new Error("Please set your  SPEEDY_ARCHIVE_RPC in a .env file, ensuring it's for the relevant blockchain");
+ }
+ const polygonMainnetNodeURL = process.env.POLYGON_PRIVATE_RPC;
+ if (!polygonMainnetNodeURL) {
+   throw new Error("Please set your POLYGON_PRIVATE_RPC in a .env file");
+ }
+ const bscMainnetNodeURL = process.env.BNB_PRIVATE_RPC;
+ if (!bscMainnetNodeURL) {
+   throw new Error("Please set your BNB_PRIVATE_RPC in a .env file")
+ }
+ const cronosMainnetNodeURL = process.env.CRONOS_PRIVATE_RPC;
+ if (!cronosMainnetNodeURL) {
+   throw new Error("Please set your CRONOS_PRIVATE_RPC in a .env file")
+ }
+ //API Keys
+ const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
+ if (!polygonScanApiKey) {
+   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
+ }
+ const bscScanApiKey = process.env.BSCSCAN_API_KEY;
+ if (!bscScanApiKey) {
+   throw new Error("Please set your BSCSCAN_API_KEY in a .env file");
+ }
+ const cronoScanApiKey = process.env.CRONOSCAN_API_KEY;
+ if (!cronoScanApiKey) {
+   throw new Error("Please set your CRONOSCAN_API_KEY in a .env file");
+ }
 
 
 task("chonkDeploy", "Deploys VaultChonk library and other linked contracts")
@@ -133,13 +154,12 @@ task("vaultVerify", "Verifies everything")
 
 
 task("deployImplementation", "Deploys a strategy implementation contract")
-  .addParam("name", "The contract's name")
-  .setAction(async (taskArgs) => {
-    vaultHealer = await ethers.getContractAs(vaultHealer_abi, accounts.polygon.VAULTHEALER)
-    console.log("vaultHealer Instantiated")
+  .setAction(async (name) => {
+    //vaultHealer = await ethers.getContractAt(vaultHealer_abi, '0x41900A479FcdFe5808eDF12aa22136f98E08C803')
+    //console.log("vaultHealer Instantiated")
 	
     StrategyImplementation = await ethers.getContractFactory("Strategy");
-    strategyImplementation = await StrategyImplementation.deploy();
+    strategyImplementation = await StrategyImplementation.deploy('0x41900A479FcdFe5808eDF12aa22136f98E08C803');
     
     console.log("New strategy impl address: ", strategyImplementation.address);
   });
@@ -198,16 +218,24 @@ module.exports = {
         accountsBalance: "10000000000000000000000",
       },
       forking: {
-        url: archiveMainnetNodeURL,
-        blockNumber: 25326200,
+        url: process.env.SPEEDY_ARCHIVE_RPC//archiveMainnetNodeURL,
+        //blockNumber: 25326200,
       },
       chainId: chainIds.hardhat,
       hardfork: "london",
     },
-    polygon: {
-      url: archiveMainnetNodeURL,
-      accounts: [`0x${myPrivateKey}`], //do I really need to put my private key in here?
-    },
+     polygon: {
+       url: polygonMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`],
+     },
+     bsc: {
+       url: bscMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`], 
+     },
+     cronos: {
+       url: cronosMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`],
+     }
   },
   solidity: {
 	compilers: [{
@@ -259,6 +287,7 @@ module.exports = {
   etherscan: {
 	apiKey: {
 	  polygon: polygonScanApiKey,
+     bsc: bscScanApiKey,
 	}
   }
 };
