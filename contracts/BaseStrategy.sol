@@ -25,7 +25,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     receive() external payable virtual { if (!Address.isContract(msg.sender)) revert Strategy_ImproperEthDeposit(msg.sender, msg.value); }
 
-
     modifier onlyVaultHealer {
         _requireVaultHealer();
         _;
@@ -35,6 +34,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     modifier getConfig() {
+        if (implementation == this) revert Muppet(msg.sender);
         uint ptr = _getConfig();
         if (ptr != CONFIG_POINTER) revert Strategy_CriticalMemoryError(ptr);
         _;

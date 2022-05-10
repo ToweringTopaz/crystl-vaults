@@ -11,6 +11,7 @@ import "./IVaultHealer.sol";
 
 interface IStrategy is IERC165 {
 
+    error Muppet(address caller);
     error IdenticalAddresses(IERC20 a, IERC20 b);
     error ZeroAddress();
     error InsufficientOutputAmount(uint amountOut, uint amountOutMin);
@@ -23,6 +24,7 @@ interface IStrategy is IERC165 {
     error Strategy_ExcessiveFarmSlippage();
 	error Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
 	error Strategy_DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
+    
 
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address
