@@ -11,12 +11,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
 
-    error IdenticalAddresses(IERC20 a, IERC20 b);
-    error ZeroAddress();
-    error InsufficientOutputAmount(uint amountOut, uint amountOutMin);
-
     uint constant FEE_MAX = 10000;
-    StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(0x80);
+    uint16 constant CONFIG_POINTER = 0x200;
+    StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(CONFIG_POINTER);
     IVaultHealer public immutable vaultHealer;
     IStrategy public immutable implementation;
 
@@ -39,7 +36,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     modifier getConfig() {
         uint ptr = _getConfig();
-        if (ptr != StrategyConfig.MemPointer.unwrap(config)) revert Strategy_CriticalMemoryError(ptr);
+        if (ptr != CONFIG_POINTER) revert Strategy_CriticalMemoryError(ptr);
         _;
     }
 
@@ -48,6 +45,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         assembly ("memory-safe") {
             let len := sub(extcodesize(configAddr), 1) //get length, subtracting 1 for the invalid opcode
             ptr := mload(0x40)
+            if lt(ptr, CONFIG_POINTER) { ptr := CONFIG_POINTER }
             mstore(0x40, add(ptr, len)) //update free memory pointer
             extcodecopy(configAddr, ptr, 1, len) //get the data
         }
@@ -235,8 +233,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         (IERC20 want, uint wantDust) = config.wantToken();
         Tactics.TacticsA tacticsA = config.tacticsA();
-        address masterchef = Tactics.masterchef(tacticsA);
-        uint24 pid = Tactics.pid(tacticsA);
 
         uint len = config.earnedLength();
 
@@ -250,8 +246,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             vid: config.vid(),
             want: want,
             wantDust: wantDust,
-            masterchef: masterchef,
-            pid: pid,
+            masterchef: Tactics.masterchef(tacticsA),
+            pid: Tactics.pid(tacticsA),
             _router: config.router(),
             _magnetite: config.magnetite(),
             earned: earned,

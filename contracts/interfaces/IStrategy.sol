@@ -11,6 +11,9 @@ import "./IVaultHealer.sol";
 
 interface IStrategy is IERC165 {
 
+    error IdenticalAddresses(IERC20 a, IERC20 b);
+    error ZeroAddress();
+    error InsufficientOutputAmount(uint amountOut, uint amountOutMin);
     error Strategy_CriticalMemoryError(uint ptr);
     error Strategy_Improper1155Deposit(address operator, address from, uint id);
     error Strategy_Improper1155BatchDeposit(address operator, address from, uint[] ids);
