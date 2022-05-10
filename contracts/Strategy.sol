@@ -36,12 +36,12 @@ contract Strategy is BaseStrategy {
             if (earnedToken == _wantToken) earnedAmt -= wantBalanceBefore; //ignore pre-existing want tokens
             
             success = true; //We have something worth compounding
-            if (targetWant != earnedToken || targetWant == weth) {
-                safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
+            if (targetWant == earnedToken && targetWant != weth) {
+                targetWantAdded = fees.payTokenFeePortion(earnedToken, earnedAmt - targetWantBefore);
             }
             else {
-                targetWantAdded = fees.payTokenFeePortion(earnedToken, earnedAmt);
-            } 
+                safeSwap(earnedAmt, earnedToken, weth); //swap all earned tokens to weth (native token)
+            }
         }
         if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
         uint wethAdded = weth.balanceOf(address(this));
