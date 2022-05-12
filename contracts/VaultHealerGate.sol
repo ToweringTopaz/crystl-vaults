@@ -69,11 +69,13 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     // Want tokens moved from user -> this -> Strat (compounding
     function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
+        pretransferCheck(vaultInfo[_vid].want, msg.sender, _wantAmt);
         _deposit(_vid, _wantAmt, msg.sender, msg.sender, _data);
     }
 
     // For depositing for other users
     function deposit(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
+        pretransferCheck(vaultInfo[_vid].want, msg.sender, _wantAmt);
         _deposit(_vid, _wantAmt, msg.sender, _to, _data);
     }
 

@@ -41,6 +41,8 @@ interface IVaultHealer is IERC1155 {
     error RestrictedFunction(bytes4 selector);
     error NotStrategyImpl(IStrategy implementation);
     error ImplWrongHealer(IVaultHealer implHealer); //Attempting to use a strategy configured for another VH, not this one
+    error InsufficientBalance(IERC20 token, address from, uint balance, uint requested);
+    error InsufficientApproval(IERC20 token, address from, uint available, uint requested);
 
 	error NotApprovedToEnableBoost(address account, address operator);
 	error BoostPoolNotActive(uint256 _boostID);

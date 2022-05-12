@@ -72,6 +72,12 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
         emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
     }
 
+    function pretransferCheck(IERC20 token, address from, uint amount) internal view {
+        uint balance = token.balanceOf(from);
+        if (balance < amount) revert InsufficientBalance(token, from, balance, amount);
+        uint approval = token.allowance(from, address(this));
+        if (approval < amount) revert InsufficientApproval(token, from, approval, amount);
+    }
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
