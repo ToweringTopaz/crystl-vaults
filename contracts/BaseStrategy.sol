@@ -117,9 +117,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     modifier guardPrincipal {
         (IERC20 _wantToken, uint dust) = config.wantToken();
-        uint wantBalanceBefore = _wantToken.balanceOf(address(this));
+        uint wantLockedBefore = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
         _;
-        if (_wantToken.balanceOf(address(this)) < wantBalanceBefore + dust) revert Strategy_WantLockedLoss();
+        if (_wantToken.balanceOf(address(this)) + _vaultSharesTotal() < wantLockedBefore + dust) revert Strategy_WantLockedLoss();
     }
 
     //Safely deposits want tokens in farm
