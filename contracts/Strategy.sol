@@ -13,76 +13,80 @@ contract Strategy is BaseStrategy {
     using Fee for Fee.Data[3];
     using VaultChonk for IVaultHealer;
 
-    constructor(IVaultHealer _vaultHealer) BaseStrategy(_vaultHealer) {}
+    uint immutable WETH_DUST;
+    constructor(IVaultHealer _vaultHealer) BaseStrategy(_vaultHealer) {
+        WETH_DUST = (block.chainid == 137 || block.chainid == 25) ? 1e18 : (block.chainid == 56 ? 1e16 : 1e14);
+    }
 
-    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
+    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
         (IERC20 _wantToken,) = config.wantToken();
-        uint wantBalanceBefore = _wantToken.balanceOf(address(this)); //Don't sell starting want balance (anti-rug)
-        
+
+        //targetWant is the want token for standard vaults, or the want token of a maximizer's target
         IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
-		uint targetWantBefore = config.isMaximizer() ? targetWant.balanceOf(address(this)) : wantBalanceBefore;
+		uint targetWantBefore = targetWant.balanceOf(address(this)); 
 
-        _vaultHarvest();
-
+        _vaultHarvest(); //Perform the harvest of earned reward tokens
+        
         IWETH weth = config.weth();
-        uint earnedLength = config.earnedLength();
-
-        uint targetWantAdded;
-        for (uint i; i < earnedLength; i++) {
+        bool earnedTargetWant;
+        for (uint i; i < config.earnedLength(); i++) { //In case of multiple reward vaults, process each reward token
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
             uint256 earnedAmt = earnedToken.balanceOf(address(this));
-            if (earnedAmt < dust) continue; //not enough of this token earned to continue with a swap
-            
-            success = true; //We have something worth compounding
+            if (earnedAmt > dust) { //don't waste gas swapping minuscule rewards
+                success = true; //We have something worth compounding
 
-            if (targetWant == earnedToken && weth != earnedToken) {
-                if (config.isMaximizer()) targetWantAdded = fees.payTokenFeePortion(earnedToken, earnedAmt - targetWantBefore);
-                else earnedAmt = fees.payTokenFeePortion(earnedToken, earnedAmt - wantBalanceBefore);
-            } else {
-                if (config.isMaximizer()) {
-                    safeSwap(earnedAmt, earnedToken, weth);    
-                } else {
-                    earnedAmt = fees.payTokenFeePortion(earnedToken, earnedAmt);
-                    safeSwap(earnedAmt, earnedToken, targetWant);
-                }   
+                if (earnedToken == targetWant) earnedTargetWant = true;
+                else safeSwap(earnedAmt, earnedToken, weth); //swap to the native gas token if not the targetwant token
             }
         }
-        if (!success) return (false, _wantLockedTotal()); //Nothing to do because harvest
-        uint wethAdded = weth.balanceOf(address(this));
+        if (!success) return (false, _wantLockedTotal());
+        uint wethAmt = weth.balanceOf(address(this));
 
-        if (wethAdded > 0 || address(this).balance > 0) {
-            if (config.isMaximizer()) {
-                weth.withdraw(wethAdded); //unwrap wnative token
-                uint ethToTarget = fees.payEthPortion(address(this).balance); //pays the fee portion, returns the amount after fees
-                try IVaultHealer(msg.sender).maximizerDeposit{value: ethToTarget}(config.vid(), targetWantAdded, "") { //deposit the rest, and any targetWant tokens
-                } 
-                catch {  //compound want instead if maximizer doesn't work
-                    success = false;
-                    weth.deposit{value: ethToTarget}();
-                    swapToWantToken(ethToTarget, weth);
-                }
-            }
-            if (!success) {
-                wethAdded = fees.payWethPortion(weth, wethAdded); //pay fee portion
-                swapToWantToken(wethAdded, weth);
-            }
+        //pay fees on new targetWant tokens
+        uint targetWantAmt;
+        if (earnedTargetWant) {
+            targetWantAmt = targetWant.balanceOf(address(this));
+            targetWantAmt = fees.payTokenFeePortion(targetWant, targetWantAmt - targetWantBefore) + targetWantBefore;
+        } else {
+            targetWantAmt = targetWantBefore;
         }
 
-        _farm();        
-        __wantLockedTotal = _wantLockedTotal();
+        if (config.isMaximizer() && unwrapAll(weth)) {
+            fees.payEthPortion(address(this).balance); //pays the fee portion
+            try IVaultHealer(msg.sender).maximizerDeposit{value: address(this).balance}(config.vid(), targetWantAmt, "") { //deposit the rest, and any targetWant tokens
+                return (true, _wantLockedTotal());
+            }
+            catch {  //compound want instead if maximizer doesn't work
+                wethAmt = 0;
+                success = false;
+            }
+        }
+        //standard autocompound behavior
+        wethAmt += wrapAll(weth);
+        wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
+        swapToWantToken(wethAmt, weth);
+        __wantLockedTotal = _wantToken.balanceOf(address(this)) + _farm();
     }
 
-    function contains(IERC20[] memory arr, IERC20 token) internal pure returns (bool) {
-        for (uint i; i < arr.length; i++) {
-            if (arr[i] == token) return true;
+    function wrapAll(IWETH weth) private returns (uint amountWrapped) {
+         if (address(this).balance > WETH_DUST) {
+             amountWrapped = address(this).balance;
+             weth.deposit{value: address(this).balance}();
+         }
+    }
+    function unwrapAll(IWETH weth) private returns (bool hasEth) {
+        uint wethBal = weth.balanceOf(address(this));
+        if (wethBal > WETH_DUST) {
+            weth.withdraw(wethBal);
+            return true;
         }
-        return false;
+        return address(this).balance > WETH_DUST;
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
-        (IERC20 _wantToken, uint dust) = config.wantToken();
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer guardPrincipal returns (uint256 wantAdded, uint256 sharesAdded) {
+        (IERC20 _wantToken,) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
 
@@ -96,15 +100,11 @@ contract Strategy is BaseStrategy {
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
         if (_wantAmt > 0) IVaultHealer(msg.sender).executePendingDeposit(address(this), uint192(_wantAmt));
-        _farm(); //deposits the tokens in the pool
+        uint vaultSharesAfter = _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
 
-        wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
-        sharesAdded = wantAdded;
-        if (_sharesTotal > 0) { 
-            sharesAdded = Math.ceilDiv(sharesAdded * _sharesTotal, wantLockedBefore);
-        }
-        if (wantAdded < dust) revert Strategy_DustDeposit(wantAdded);
+        wantAdded = _wantToken.balanceOf(address(this)) + vaultSharesAfter - wantLockedBefore;
+        sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
     }
 
 

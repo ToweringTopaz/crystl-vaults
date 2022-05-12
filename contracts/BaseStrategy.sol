@@ -6,16 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
-
+import "./libraries/Fee.sol";
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
+    using Fee for Fee.Data[3];
 
     uint constant FEE_MAX = 10000;
     uint16 constant CONFIG_POINTER = 0x200;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(CONFIG_POINTER);
     IVaultHealer public immutable vaultHealer;
     IStrategy public immutable implementation;
+    uint constant LP_DUST = 2**16;
 
     constructor(IVaultHealer _vaultHealer) { 
         vaultHealer = _vaultHealer;
@@ -113,22 +115,27 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         return _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
     }
 
+    modifier guardPrincipal {
+        (IERC20 _wantToken, uint dust) = config.wantToken();
+        uint wantBalanceBefore = _wantToken.balanceOf(address(this));
+        _;
+        if (_wantToken.balanceOf(address(this)) < wantBalanceBefore + dust) revert Strategy_WantLockedLoss();
+    }
 
     //Safely deposits want tokens in farm
-    function _farm() internal virtual {
+    function _farm() internal virtual returns (uint256 vaultSharesAfter) {
         (IERC20 _wantToken, uint dust) = config.wantToken();
         uint256 wantAmt = _wantToken.balanceOf(address(this));
-        if (wantAmt == 0) return;
+        if (wantAmt == 0) return _vaultSharesTotal();
         
         uint256 sharesBefore = _vaultSharesTotal();
         _vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
-        uint256 sharesAfter = _vaultSharesTotal();
+        vaultSharesAfter = _vaultSharesTotal();
         
         //including dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        if (sharesAfter + _wantToken.balanceOf(address(this)) + dust < (sharesBefore + wantAmt) * config.slippageFactor() / 256)
+        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + dust < (sharesBefore + wantAmt) * config.slippageFactor() / 256)
             revert Strategy_ExcessiveFarmSlippage();
-        return;
     }
 
     function safeSwap(
@@ -152,7 +159,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
-    ) internal {
+    ) internal returns (uint amountOutput) {
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 
@@ -170,7 +177,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
             (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
             uint amountInput = input.balanceOf(address(pair)) - reserveInput;
-            uint amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
+            amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
 
             (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
 
@@ -185,10 +192,14 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
     }
 
+
+
     function swapToWantToken(uint256 _amountIn, IERC20 _tokenA) internal {
         (IERC20 want,) = config.wantToken();
+
         if (config.isPairStake()) {
             (IERC20 token0, IERC20 token1) = config.token0And1();
+
             if (block.timestamp % 2 == 0) {
                 safeSwap(_amountIn / 2, _tokenA, token0);
                 safeSwap(_amountIn / 2, _tokenA, token1);
@@ -197,14 +208,14 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 safeSwap(_amountIn / 2, _tokenA, token0);            
             }
 
-            optimalMint(IUniPair(address(want)), token0, token1);
+            mintPair(IUniPair(address(want)), token0, token1);
             
         } else {
             safeSwap(_amountIn, _tokenA, want);
         }
     }
 
-    function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
+    function mintPair(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
         
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
@@ -217,17 +228,22 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         uint liquidity1 = balance1 * totalSupply / reserve1;
 
         if (liquidity0 < liquidity1) {
-            balance1 = reserve1 * balance0 / reserve0;
+            liquidity1 = reserve1 * balance0 / reserve0;
+            balance0 = 0;
+            balance1 -= liquidity1;
         } else {
-            balance0 = reserve0 * balance1 / reserve1;
+            liquidity0 = reserve0 * balance1 / reserve1;
+            balance0 -= liquidity0;
+            balance1 = 0;
         }
 
-        token0.safeTransfer(address(pair), balance0);
-        token1.safeTransfer(address(pair), balance1);
+        token0.safeTransfer(address(pair), liquidity0);
+        token1.safeTransfer(address(pair), liquidity1);
         liquidity = pair.mint(address(this));
+
+        if (balance0 > LP_DUST) safeSwap(balance0 / 3, token0, token1);
+        else if (balance1 > LP_DUST) safeSwap(balance1 / 3, token1, token0);
     }
-
-
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
 

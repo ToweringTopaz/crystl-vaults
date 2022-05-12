@@ -22,6 +22,7 @@ interface IStrategy is IERC165 {
     error Strategy_NotVaultHealer(address sender);
     error Strategy_InitializeOnlyByProxy();
     error Strategy_ExcessiveFarmSlippage();
+    error Strategy_WantLockedLoss();
 	error Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
 	error Strategy_DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
     
