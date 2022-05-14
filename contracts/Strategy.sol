@@ -18,17 +18,15 @@ contract Strategy is BaseStrategy {
         WETH_DUST = (block.chainid == 137 || block.chainid == 25) ? 1e18 : (block.chainid == 56 ? 1e16 : 1e14);
     }
 
-    function earn(Fee.Data[3] memory fees, address, bytes memory) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
+    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
         (IERC20 _wantToken,) = config.wantToken();
 
         //targetWant is the want token for standard vaults, or the want token of a maximizer's target
         IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
-		uint targetWantBefore = targetWant.balanceOf(address(this)); 
+		uint targetWantAmt = targetWant.balanceOf(address(this)); 
 
         _vaultHarvest(); //Perform the harvest of earned reward tokens
         
-        IWETH weth = config.weth();
-        bool earnedTargetWant;
         for (uint i; i < config.earnedLength(); i++) { //In case of multiple reward vaults, process each reward token
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
@@ -36,43 +34,37 @@ contract Strategy is BaseStrategy {
             if (earnedAmt > dust) { //don't waste gas swapping minuscule rewards
                 success = true; //We have something worth compounding
 
-                if (earnedToken == targetWant) earnedTargetWant = true;
-                else safeSwap(earnedAmt, earnedToken, weth); //swap to the native gas token if not the targetwant token
+                if (earnedToken != targetWant) safeSwap(earnedAmt, earnedToken, config.weth()); //swap to the native gas token if not the targetwant token
             }
         }
-        if (!success && tx.origin != address(1)) return (false, _wantLockedTotal()); //a call from address(1) is for gas estimation
-        uint wethAmt = weth.balanceOf(address(this));
+        if (!success && tx.origin != address(1)) return (false, _wantLockedTotal()); //a call from address(1) is for gas estimation and will never be executed
 
         //pay fees on new targetWant tokens
-        uint targetWantAmt;
-        if (earnedTargetWant) {
-            targetWantAmt = targetWant.balanceOf(address(this));
-            targetWantAmt = fees.payTokenFeePortion(targetWant, targetWantAmt - targetWantBefore) + targetWantBefore;
-        } else {
-            targetWantAmt = targetWantBefore;
-        }
+        targetWantAmt = fees.payTokenFeePortion(targetWant, targetWant.balanceOf(address(this)) - targetWantAmt) + targetWantAmt;
 
-        if (config.isMaximizer() && unwrapAll(weth)) {
+        if (config.isMaximizer() && (targetWantAmt > 0 || unwrapAll(config.weth()))) {
             fees.payEthPortion(address(this).balance); //pays the fee portion
             try IVaultHealer(msg.sender).maximizerDeposit{value: address(this).balance}(config.vid(), targetWantAmt, "") { //deposit the rest, and any targetWant tokens
                 return (true, _wantLockedTotal());
             }
             catch {  //compound want instead if maximizer doesn't work
-                wethAmt = 0;
                 success = false;
             }
         }
         //standard autocompound behavior
-        wethAmt += wrapAll(weth);
-        wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
-        swapToWantToken(wethAmt, weth);
+        wrapAllEth();
+        IWETH weth = config.weth();
+        uint wethAmt = weth.balanceOf(address(this));
+        if (wethAmt > WETH_DUST) {
+            wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
+            swapToWantToken(wethAmt, weth);
+        }
         __wantLockedTotal = _wantToken.balanceOf(address(this)) + _farm();
     }
 
-    function wrapAll(IWETH weth) private returns (uint amountWrapped) {
+    function wrapAllEth() private {
          if (address(this).balance > WETH_DUST) {
-             amountWrapped = address(this).balance;
-             weth.deposit{value: address(this).balance}();
+             config.weth().deposit{value: address(this).balance}();
          }
     }
     function unwrapAll(IWETH weth) private returns (bool hasEth) {
@@ -161,8 +153,8 @@ contract Strategy is BaseStrategy {
         address _magnetite,
         uint8 _slippageFactor,
         bool _feeOnTransfer,
-        address[] memory _earned,
-        uint8[] memory _earnedDust
+        address[] calldata _earned,
+        uint8[] calldata _earnedDust
     ) external view returns (bytes memory configData) {
         require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");

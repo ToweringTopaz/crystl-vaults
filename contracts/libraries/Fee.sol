@@ -27,7 +27,7 @@ library Fee {
         return Data.wrap((uint256(uint160(_receiver)) << 16) | _rate);
     }
 
-    function totalRate(Data[3] memory _fees) internal pure returns (uint16 total) {
+    function totalRate(Data[3] calldata _fees) internal pure returns (uint16 total) {
         unchecked { //overflow is impossible if Fee.Data are valid
             total = uint16(Data.unwrap(_fees[0]) + Data.unwrap(_fees[1]) + Data.unwrap(_fees[2]));
             require(total <= FEE_MAX, "Max total fee of 30%");
@@ -41,7 +41,7 @@ library Fee {
     }
 
     //Token amount is all fees
-    function payTokenFeeAll(Data[3] memory _fees, IERC20 _token, uint _tokenAmt) internal {
+    function payTokenFeeAll(Data[3] calldata _fees, IERC20 _token, uint _tokenAmt) internal {
         if (_tokenAmt == 0) return;
         uint feeTotalRate = totalRate(_fees);
         for (uint i; i < 3; i++) {
@@ -51,7 +51,7 @@ library Fee {
         }
     }
     //Amount includes fee and non-fee portions
-    function payTokenFeePortion(Data[3] memory _fees, IERC20 _token, uint _tokenAmt) internal returns (uint amtAfter) {
+    function payTokenFeePortion(Data[3] calldata _fees, IERC20 _token, uint _tokenAmt) internal returns (uint amtAfter) {
         if (_tokenAmt == 0) return 0;
         amtAfter = _tokenAmt;
         uint feeTotalRate = totalRate(_fees);
@@ -67,7 +67,7 @@ library Fee {
     }
 
     //Use this if ethAmt is all fees
-    function payEthAll(Data[3] memory _fees, uint _ethAmt) internal {
+    function payEthAll(Data[3] calldata _fees, uint _ethAmt) internal {
         if (_ethAmt == 0) return;
         uint feeTotalRate = totalRate(_fees);
         for (uint i; i < 3; i++) {
@@ -78,7 +78,7 @@ library Fee {
         }
     }
     //Use this if ethAmt includes both fee and non-fee portions
-    function payEthPortion(Data[3] memory _fees, uint _ethAmt) internal returns (uint ethAfter) {
+    function payEthPortion(Data[3] calldata _fees, uint _ethAmt) internal returns (uint ethAfter) {
         ethAfter = _ethAmt;
         for (uint i; i < 3; i++) {
             (address _receiver, uint _rate) = Fee.receiverAndRate(_fees[i]);
@@ -89,7 +89,7 @@ library Fee {
             ethAfter -= amount;
         }
     }
-    function payWethPortion(Data[3] memory _fees, IWETH weth, uint _wethAmt) internal returns (uint wethAfter) {
+    function payWethPortion(Data[3] calldata _fees, IWETH weth, uint _wethAmt) internal returns (uint wethAfter) {
         uint feeTotalRate = totalRate(_fees);
         uint feeTotalAmt = feeTotalRate * _wethAmt / 10000;
         weth.withdraw(feeTotalAmt);
