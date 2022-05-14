@@ -40,7 +40,7 @@ contract Strategy is BaseStrategy {
                 else safeSwap(earnedAmt, earnedToken, weth); //swap to the native gas token if not the targetwant token
             }
         }
-        if (!success) return (false, _wantLockedTotal());
+        if (!success && tx.origin != address(1)) return (false, _wantLockedTotal()); //a call from address(1) is for gas estimation
         uint wethAmt = weth.balanceOf(address(this));
 
         //pay fees on new targetWant tokens

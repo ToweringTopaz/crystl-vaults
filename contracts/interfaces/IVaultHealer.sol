@@ -66,12 +66,14 @@ interface IVaultHealer is IERC1155 {
     ///@notice Standard withdraw for msg.sender
     function withdraw(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external;
 
-    ///@notice Withdraw with custom from/to accounts. The caller must equal or be approved by the _from address
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) external;
+    ///@notice Withdraw with custom to account
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external;
 
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external payable;
     function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable;
 
+	function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) external;
+    function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external;
+    function totalSupply(uint256 vid) external view returns (uint256);
 
     ///@notice This returns the strategy address for any vid.
     ///@dev For dapp or contract usage, it may be better to calculate strategy addresses locally. The formula is in the function Cavendish.computeAddress

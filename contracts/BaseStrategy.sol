@@ -169,8 +169,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
         for (uint i; i < path.length - 1; i++) {
             (IERC20 input, IERC20 output) = (path[i], path[i + 1]);
-            (IERC20 token0,) = sortTokens(input, output);
-            bool inputIsToken0 = input == token0;
+            bool inputIsToken0 = input < output;
             
             IUniPair pair = factory.getPair(input, output);
             (uint reserve0, uint reserve1,) = pair.getReserves();
@@ -241,8 +240,22 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         token1.safeTransfer(address(pair), liquidity1);
         liquidity = pair.mint(address(this));
 
-        if (balance0 > LP_DUST) safeSwap(balance0 / 3, token0, token1);
-        else if (balance1 > LP_DUST) safeSwap(balance1 / 3, token1, token0);
+        if (balance0 > LP_DUST) fastSwap(pair, token0, token1, balance0 / 3);
+        else if (balance1 > LP_DUST) fastSwap(pair, token1, token0, balance1 / 3);
+    }
+
+    function fastSwap(IUniPair pair, IERC20 input, IERC20 output, uint amount) internal {
+        input.safeTransfer(address(pair), amount);
+        bool inputIsToken0 = input < output;
+        (uint reserve0, uint reserve1,) = pair.getReserves();
+
+        (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
+        uint amountInput = input.balanceOf(address(pair)) - reserveInput;
+        uint amountOutput = config.router().getAmountOut(amountInput, reserveInput, reserveOutput);
+
+        (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
+
+        pair.swap(amount0Out, amount1Out, address(this), "");
     }
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {

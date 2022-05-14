@@ -45,7 +45,7 @@ abstract contract VaultHealerGate is VaultHealerBase {
 
     function _earn(uint256 vid, Fee.Data[3] memory fees, bytes calldata data) internal returns (bool) {
         VaultInfo storage vault = vaultInfo[vid];
-        if (paused(vid) || vault.lastEarnBlock == block.number) return false;
+        if (paused(vid) || vault.lastEarnBlock == block.number) if (msg.sender != address(1)) return false; //calls from address(1) can be used to estimate gas
 
         vault.lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees, msg.sender, data) returns (bool success, uint256 wantLockedTotal) {
@@ -71,12 +71,6 @@ abstract contract VaultHealerGate is VaultHealerBase {
     function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
         pretransferCheck(vaultInfo[_vid].want, msg.sender, _wantAmt);
         _deposit(_vid, _wantAmt, msg.sender, msg.sender, _data);
-    }
-
-    // For depositing for other users
-    function deposit(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
-        pretransferCheck(vaultInfo[_vid].want, msg.sender, _wantAmt);
-        _deposit(_vid, _wantAmt, msg.sender, _to, _data);
     }
 
     function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
@@ -117,12 +111,8 @@ abstract contract VaultHealerGate is VaultHealerBase {
         _withdraw(_vid, _wantAmt, msg.sender, msg.sender, _data);
     }
 
-    function withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) external nonReentrant {
-        require(
-            _from == msg.sender || isApprovedForAll(_from, msg.sender),
-            "ERC1155: caller is not owner nor approved"
-        );
-        _withdraw(_vid, _wantAmt, _from, _to, _data);
+    function withdraw(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external nonReentrant {
+        _withdraw(_vid, _wantAmt, msg.sender, _to, _data);
     }
 
     function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesRemoved) {
