@@ -56,4 +56,8 @@ contract VaultHealer is VaultHealerBoostedPools, Multicall {
     function wantLockedTotal(uint vid) public view returns (uint) {
         return strat(vid).wantLockedTotal();
     }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, IERC165) returns (bool) {
+        return ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
+    }
 }

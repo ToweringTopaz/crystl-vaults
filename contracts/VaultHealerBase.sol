@@ -10,7 +10,7 @@ import "./VaultHealerAuth.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./libraries/VaultChonk.sol";
 
-abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
+abstract contract VaultHealerBase is IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
 
@@ -44,10 +44,6 @@ abstract contract VaultHealerBase is ERC1155, IVaultHealer, ReentrancyGuard {
 	
     function createMaximizer(uint targetVid, bytes calldata data) external requireValidVid(targetVid) auth nonReentrant returns (uint vid) {
         return VaultChonk.createMaximizer(vaultInfo, targetVid, data);
-    }
-
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, IERC165) returns (bool) {
-        return ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
 
     //Computes the strategy address for any vid based on this contract's address and the vid's numeric value

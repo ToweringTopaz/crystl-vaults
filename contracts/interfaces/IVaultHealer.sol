@@ -71,8 +71,6 @@ interface IVaultHealer is IERC1155 {
 
     function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable;
 
-	function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data) external;
-    function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) external;
     function totalSupply(uint256 vid) external view returns (uint256);
 
     ///@notice This returns the strategy address for any vid.

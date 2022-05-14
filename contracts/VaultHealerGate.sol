@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract VaultHealerGate is VaultHealerBase {
+abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
     using SafeERC20 for IERC20;
 
     struct PendingDeposit {
