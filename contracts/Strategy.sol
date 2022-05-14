@@ -42,7 +42,7 @@ contract Strategy is BaseStrategy {
         //pay fees on new targetWant tokens
         targetWantAmt = fees.payTokenFeePortion(targetWant, targetWant.balanceOf(address(this)) - targetWantAmt) + targetWantAmt;
 
-        if (config.isMaximizer() && (targetWantAmt > 0 || unwrapAll(config.weth()))) {
+        if (config.isMaximizer() && (targetWantAmt > 0 || unwrapAllWeth())) {
             fees.payEthPortion(address(this).balance); //pays the fee portion
             try IVaultHealer(msg.sender).maximizerDeposit{value: address(this).balance}(config.vid(), targetWantAmt, "") { //deposit the rest, and any targetWant tokens
                 return (true, _wantLockedTotal());
@@ -67,7 +67,8 @@ contract Strategy is BaseStrategy {
              config.weth().deposit{value: address(this).balance}();
          }
     }
-    function unwrapAll(IWETH weth) private returns (bool hasEth) {
+    function unwrapAllWeth() private returns (bool hasEth) {
+        IWETH weth = config.weth();
         uint wethBal = weth.balanceOf(address(this));
         if (wethBal > WETH_DUST) {
             weth.withdraw(wethBal);
@@ -77,10 +78,10 @@ contract Strategy is BaseStrategy {
     }
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
-    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer guardPrincipal returns (uint256 wantAdded, uint256 sharesAdded) {
-        (IERC20 _wantToken,) = config.wantToken();
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
+        (IERC20 _wantToken, uint dust) = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
-        uint wantLockedBefore = wantBal + _vaultSharesTotal();
+        uint wantLockedBefore = (wantBal > dust) ? _vaultSharesTotal() + wantBal : _farm() + _wantToken.balanceOf(address(this));
 
         if (msg.value > 0) {
             IWETH weth = config.weth();
@@ -97,6 +98,7 @@ contract Strategy is BaseStrategy {
 
         wantAdded = _wantToken.balanceOf(address(this)) + vaultSharesAfter - wantLockedBefore;
         sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
+        if (wantAdded < dust || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
     }
 
 
