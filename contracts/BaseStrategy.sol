@@ -72,8 +72,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     //should only happen when this contract deposits as a maximizer
     function onERC1155Received(
-        address operator, address from, uint256 id, uint256, bytes calldata) external view onlyVaultHealer getConfig returns (bytes4) {
-        if (operator != address(this) || from != address(0) || id != config.vid() >> 16) revert Strategy_Improper1155Deposit(operator, from, id);
+        address operator, address from, uint256 id, uint256, bytes calldata) external view returns (bytes4) {
+        if (operator != address(this)) revert Strategy_Improper1155Deposit(operator, from, id);
         return 0xf23a6e61;
     }
 
