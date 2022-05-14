@@ -22,7 +22,8 @@ contract QuartzUniV2Zap {
     using LibQuartz for IVaultHealer;
     using LibQuartz for IUniRouter;
     using LibQuartz for IUniPair;
-    
+    using VaultChonk for IVaultHealer;
+
     uint256 public constant MINIMUM_AMOUNT = 1000;
     IVaultHealer public immutable vaultHealer;
 
@@ -57,24 +58,41 @@ contract QuartzUniV2Zap {
         _swapAndStake(vid, tokenAmountOutMin, tokenIn);
     }
 
+    //should only happen when this contract deposits as a maximizer
+    function onERC1155Received(
+        address operator, address from, uint256 id, uint256 amount, bytes calldata) external view returns (bytes4) {
+        //if (msg.sender != address(vaultHealer)) revert("Quartz: Incorrect ERC1155 issuer");
+        if (operator != address(this)) revert("Quartz: Improper ERC1155 transfer"); 
+        return 0xf23a6e61;
+    }
+
     function quartzOut (uint vid, uint256 withdrawAmount) external {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
-        vaultHealer.withdraw(vid, withdrawAmount, msg.sender, address(pair), "");
+        withdrawAmount = withdrawAmount * vaultHealer.totalSupply(vid) / vaultHealer.strat(vid).wantLockedTotal();
+        uint fullBalance = vaultHealer.balanceOf(msg.sender, vid);
+        if (withdrawAmount > fullBalance) withdrawAmount = fullBalance;
+
+        vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
+        vaultHealer.withdraw(vid, type(uint).max, "");
+
 
         IWETH weth = router.WETH();
 
-        if (pair.token0() != weth && pair.token1() != weth) {
-            pair.burn(msg.sender);
-			return;
+        IERC20 token0;
+        IERC20 token1;
+        try pair.token0() returns (IERC20 _token0) {
+            token0 = _token0;
+            token1 = pair.token1();
+            if (token0 != weth && token1 != weth) {
+                pair.burn(msg.sender);
+            } else {
+                pair.burn(address(this));
+                router.returnAsset(token0); //returns any leftover tokens to user
+                router.returnAsset(token1); //returns any leftover tokens to user
+            }
+        } catch {
+            router.returnAsset(pair);
         }
-
-        pair.burn(address(this));
-
-        IERC20[] memory tokens = new IERC20[](2);
-        tokens[0] = pair.token0();
-        tokens[1] = pair.token1();
-
-        router.returnAssets(tokens); //returns any leftover tokens to user
     }
     
     function estimateSwap(uint vid, IERC20 tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
@@ -119,16 +137,13 @@ contract QuartzUniV2Zap {
         }
         
         pair.optimalMint(IERC20(token0), IERC20(token1));
-        uint256 amountLiquidity = pair.balanceOf(address(this));
 
         _approveTokenIfNeeded(pair);
-        vaultHealer.deposit(vid, amountLiquidity, msg.sender, "");
-
-        IERC20[] memory tokens = new IERC20[](3);
-        tokens[0] = token0;
-        tokens[1] = token1;
-        tokens[2] = tokenIn;
-        router.returnAssets(tokens);
+        vaultHealer.deposit(vid, pair.balanceOf(address(this)), "");
+        vaultHealer.safeTransferFrom(address(this), msg.sender, vid, vaultHealer.balanceOf(address(this), vid), "");
+        router.returnAsset(token0);
+        router.returnAsset(token1);
+        router.returnAsset(tokenIn);
     }
 
     function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, IERC20 tokenIn, IERC20 tokenOut, IUniRouter router) private {

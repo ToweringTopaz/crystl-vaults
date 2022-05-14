@@ -27,13 +27,12 @@ library LibQuartz {
     uint256 constant MINIMUM_AMOUNT = 1000;
     
     function getRouter(IVaultHealer vaultHealer, uint vid) internal view returns (IUniRouter) {
-        IStrategy strat = vaultHealer.strat(vid);
-        return strat.router();
+        return vaultHealer.strat(vid).router();
     }
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
-        (IERC20 want,,,,,) = vaultHealer.vaultInfo(_vid);
         strat = vaultHealer.strat(_vid);
+        IERC20 want = strat.wantToken();
 
         pair = IUniPair(address(want));
         router = strat.router();
@@ -47,21 +46,35 @@ library LibQuartz {
     }
     function returnAssets(IUniRouter router, IERC20[] memory tokens) internal {
         IWETH weth = router.WETH();
-        uint256 balance;
+        
         
         for (uint256 i; i < tokens.length; i++) {
-            balance = tokens[i].balanceOf(address(this));
-            if (balance > 0) {
-                if (tokens[i] == weth) {
-                    weth.withdraw(balance);
-                    (bool success,) = msg.sender.call{value: balance}(new bytes(0));
-                    require(success, 'Quartz: ETH transfer failed');
-                } else {
-                    tokens[i].safeTransfer(msg.sender, balance);
-                }
+            uint256 balance = tokens[i].balanceOf(address(this));
+            if (balance == 0) continue;
+            if (tokens[i] == weth) {
+                weth.withdraw(balance);
+                (bool success,) = msg.sender.call{value: balance}(new bytes(0));
+                require(success, 'Quartz: ETH transfer failed');
+            } else {
+                tokens[i].safeTransfer(msg.sender, balance);
             }
         }
     }
+    function returnAsset(IUniRouter router, IERC20 token) internal {
+        
+        uint256 balance = token.balanceOf(address(this));
+        if (balance > 0) {
+            IWETH weth = router.WETH();
+            if (token == weth) {
+                weth.withdraw(balance);
+                (bool success,) = msg.sender.call{value: balance}(new bytes(0));
+                require(success, 'Quartz: ETH transfer failed');
+            } else {
+                token.safeTransfer(msg.sender, balance);
+            }
+        }
+    }
+    
     function estimateSwap(IVaultHealer vaultHealer, uint pid, IERC20 tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
         (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
         
