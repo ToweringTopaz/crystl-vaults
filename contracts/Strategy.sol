@@ -18,7 +18,7 @@ contract Strategy is BaseStrategy {
         WETH_DUST = (block.chainid == 137 || block.chainid == 25) ? 1e18 : (block.chainid == 56 ? 1e16 : 1e14);
     }
 
-    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
+    function earn(Fee.Data[3] memory fees, address, bytes memory) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
         (IERC20 _wantToken,) = config.wantToken();
 
         //targetWant is the want token for standard vaults, or the want token of a maximizer's target
