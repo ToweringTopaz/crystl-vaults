@@ -44,7 +44,7 @@ contract QuartzUniV2Zap {
         
         weth.deposit{value: msg.value}();
 
-        _swapAndStake(vid, tokenAmountOutMin, IERC20(weth));
+        _swapAndStake(vid, tokenAmountOutMin, weth);
     }
 
     function quartzIn (uint vid, uint256 tokenAmountOutMin, address tokenInAddress, uint256 tokenInAmount) external {
@@ -66,15 +66,18 @@ contract QuartzUniV2Zap {
         return 0xf23a6e61;
     }
 
-    function quartzOut (uint vid, uint256 withdrawAmount) external {
+    function quartzOut (uint vid, uint256 withdrawAmount) public {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
-        withdrawAmount = withdrawAmount * vaultHealer.totalSupply(vid) / vaultHealer.strat(vid).wantLockedTotal();
-        uint fullBalance = vaultHealer.balanceOf(msg.sender, vid);
-        if (withdrawAmount > fullBalance) withdrawAmount = fullBalance;
+        if (withdrawAmount > 0) {
+            withdrawAmount = withdrawAmount * vaultHealer.totalSupply(vid) / vaultHealer.strat(vid).wantLockedTotal();
+            uint fullBalance = vaultHealer.balanceOf(msg.sender, vid);
+            if (withdrawAmount > fullBalance) withdrawAmount = fullBalance;
+            vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
+        }
 
-        vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
-        vaultHealer.withdraw(vid, type(uint).max, "");
-
+        if (vaultHealer.balanceOf(address(this), vid) > 0) vaultHealer.withdraw(vid, type(uint).max, "");
+        uint targetVid = vid >> 16;
+        if (targetVid > 0) quartzOut(targetVid, 0);
 
         IWETH weth = router.WETH();
 
