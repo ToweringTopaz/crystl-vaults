@@ -278,7 +278,7 @@ module.exports = {
 				}
 			  },
 			},
-		}
+		},
 		"contracts/QuartzUniV2Zap.sol": {
 			version: "0.8.13",
 			settings: {
