@@ -58,22 +58,86 @@ library LibQuartz {
                 tokens[i].safeTransfer(msg.sender, balance);
             }
         }
+    
     }
-    function returnAsset(IUniRouter router, IERC20 token) internal {
+
+    function swapDirect(
+        IUniRouter _router,
+        uint256 _amountIn,
+        IERC20 input,
+        IERC20 output,
+        uint amountOutMin
+    ) internal returns (uint amountOutput) {
+        IUniFactory factory = _router.factory();
+
+        IUniPair pair = factory.getPair(input, output);
+        input.safeTransfer(address(pair), _amountIn);
+        uint balanceBefore = output.balanceOf(address(this));
+
+        bool inputIsToken0 = input < output;
         
-        uint256 balance = token.balanceOf(address(this));
-        if (balance > 0) {
-            IWETH weth = router.WETH();
-            if (token == weth) {
-                weth.withdraw(balance);
-                (bool success,) = msg.sender.call{value: balance}(new bytes(0));
-                require(success, 'Quartz: ETH transfer failed');
-            } else {
-                token.safeTransfer(msg.sender, balance);
+        (uint reserve0, uint reserve1,) = pair.getReserves();
+
+        (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
+        uint amountInput = input.balanceOf(address(pair)) - reserveInput;
+        amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
+
+        (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
+        
+        pair.swap(amount0Out, amount1Out, address(this), "");
+    
+        if (output.balanceOf(address(this)) <= amountOutMin + balanceBefore) {
+            unchecked {
+                revert IStrategy.InsufficientOutputAmount(output.balanceOf(address(this)) - balanceBefore, amountOutMin);
             }
         }
     }
-    
+
+    function swapViaToken(
+        IUniRouter _router,
+        uint256 _amountIn,
+        IERC20 input,
+        IERC20 middle,
+        IERC20 output,
+        uint amountOutMin
+    ) internal returns (uint amountOutput) {
+        IUniFactory factory = _router.factory();
+
+        IUniPair pairA = factory.getPair(input, middle);
+        IUniPair pairB = factory.getPair(middle, output);        
+        input.safeTransfer(address(pairA), _amountIn);
+
+        uint balanceBefore = output.balanceOf(address(this));
+
+        {
+            {
+                (uint reserve0, uint reserve1,) = pairA.getReserves();        
+                (uint reserveInput, uint reserveOutput) = (input < middle) ? (reserve0, reserve1) : (reserve1, reserve0);
+                uint amountInput = input.balanceOf(address(pairA)) - reserveInput;
+                amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
+            }
+            (uint amount0Out, uint amount1Out) = (input < middle) ? (uint(0), amountOutput) : (amountOutput, uint(0));
+            pairA.swap(amount0Out, amount1Out, address(pairB), "");
+        }
+        {
+            {
+                (uint reserve0, uint reserve1,) = pairB.getReserves();
+                (uint reserveInput, uint reserveOutput) = (middle < output) ? (reserve0, reserve1) : (reserve1, reserve0);
+                uint amountInput = middle.balanceOf(address(pairB)) - reserveInput;
+                amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
+            }
+
+            (uint amount0Out, uint amount1Out) = (middle < output) ? (uint(0), amountOutput) : (amountOutput, uint(0));
+            pairB.swap(amount0Out, amount1Out, address(this), "");
+        }
+
+        if (output.balanceOf(address(this)) <= amountOutMin + balanceBefore) {
+            unchecked {
+                revert IStrategy.InsufficientOutputAmount(output.balanceOf(address(this)) - balanceBefore, amountOutMin);
+            }
+        }
+    }
+
     function estimateSwap(IVaultHealer vaultHealer, uint pid, IERC20 tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
         (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
         

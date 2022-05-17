@@ -88,11 +88,11 @@ contract QuartzUniV2Zap {
                 pair.burn(msg.sender);
             } else {
                 pair.burn(address(this));
-                router.returnAsset(token0); //returns any leftover tokens to user
-                router.returnAsset(token1); //returns any leftover tokens to user
+                returnAsset(token0, weth); //returns any leftover tokens to user
+                returnAsset(token1, weth); //returns any leftover tokens to user
             }
         } catch {
-            router.returnAsset(pair);
+            returnAsset(pair, weth);
         }
     }
     
@@ -105,39 +105,36 @@ contract QuartzUniV2Zap {
         
         IERC20 token0 = pair.token0();
         IERC20 token1 = pair.token1();
-        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
-        uint256 swapAmountIn;
-        uint256 fullInvestment = tokenIn.balanceOf(address(this));
         _approveTokenIfNeeded(tokenIn, router);
 
+        IWETH weth = router.WETH();
+
         if (token0 == tokenIn) {
-            require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
-            swapAmountIn = router.getSwapAmount(fullInvestment, reserveA, reserveB);
-            swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
+            (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+            swapDirect(LibQuartz.getSwapAmount(router, tokenIn.balanceOf(address(this)), reserveA, reserveB), tokenAmountOutMin, tokenIn, token1, router);
 
         } else if (token1 == tokenIn) {
-            require(LibQuartz.hasSufficientLiquidity(token0, token1, router, MINIMUM_AMOUNT), 'Quartz: Liquidity pair reserves too low');
-            swapAmountIn = router.getSwapAmount(fullInvestment, reserveB, reserveA);
-            swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
+            (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+            swapDirect(LibQuartz.getSwapAmount(router, tokenIn.balanceOf(address(this)), reserveB, reserveA), tokenAmountOutMin, tokenIn, token0, router);
             
         } else {
-            swapAmountIn = fullInvestment/2;
+            uint swapAmountIn = tokenIn.balanceOf(address(this))/2;
             
             if(LibQuartz.hasSufficientLiquidity(token0, tokenIn, router, MINIMUM_AMOUNT)) {
                 swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
             } else {
-                swapViaWETH(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
+                swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, token0, router);
             }
             
             if(LibQuartz.hasSufficientLiquidity(token1, tokenIn, router, MINIMUM_AMOUNT)) {
                 swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
             } else {
-                swapViaWETH(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
+                swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, token1, router);
             }
         }
         
-        LibQuartz.optimalMint(pair, IERC20(token0), IERC20(token1));
+        LibQuartz.optimalMint(pair, token0, token1);
 
         _approveTokenIfNeeded(pair);
         uint balance = pair.balanceOf(address(this));
@@ -145,39 +142,43 @@ contract QuartzUniV2Zap {
         
         balance = vaultHealer.balanceOf(address(this), vid);
         vaultHealer.safeTransferFrom(address(this), msg.sender, vid, balance, "");
-        router.returnAsset(token0);
-        router.returnAsset(token1);
-        router.returnAsset(tokenIn);
+        returnAsset(token0, weth);
+        returnAsset(token1, weth);
+        returnAsset(tokenIn, weth);
     }
 
     function swapDirect(uint256 swapAmountIn, uint256 tokenAmountOutMin, IERC20 tokenIn, IERC20 tokenOut, IUniRouter router) private {
-        IERC20[] memory path = new IERC20[](2);
-        path[0] = tokenIn;
-        path[1] = tokenOut;
-        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
+        LibQuartz.swapDirect(router, swapAmountIn, tokenIn, tokenOut, tokenAmountOutMin);
     }
 
-    function swapViaWETH(uint256 swapAmountIn, uint256 tokenAmountOutMin, IERC20 tokenIn, IERC20 tokenOut, IUniRouter router) private {
-        require(LibQuartz.hasSufficientLiquidity(IERC20(tokenIn), router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from tokenIn to WNATIVE');
-        require(LibQuartz.hasSufficientLiquidity(IERC20(tokenOut), router.WETH(), router, MINIMUM_AMOUNT), 'Quartz: Insufficient Liquidity to swap from WNATIVE to tokenOut');
-        IERC20[] memory path = new IERC20[](3);
-        path[0] = tokenIn;
-        path[1] = router.WETH();
-        path[2] = tokenOut;
-        router.swapExactTokensForTokens(swapAmountIn, tokenAmountOutMin, path, address(this), type(uint256).max);
+    function swapViaToken(uint256 swapAmountIn, uint256 tokenAmountOutMin, IERC20 tokenIn, IERC20 middleToken, IERC20 tokenOut, IUniRouter router) private {
+        LibQuartz.swapViaToken(router, swapAmountIn, tokenIn, middleToken, tokenOut, tokenAmountOutMin);
+    }
+    function returnAsset(IERC20 token, IWETH weth) internal {
+        uint256 balance = token.balanceOf(address(this));
+        if (balance == 0) return;
+        
+        if (token == weth) {
+            weth.withdraw(balance);
+            (bool success,) = msg.sender.call{value: balance}(new bytes(0));
+            require(success, 'Quartz: ETH transfer failed');
+        } else {
+            token.safeTransfer(msg.sender, balance);
+        }
     }
 
     function _approveTokenIfNeeded(IERC20 token) private {
-        if (!approvals[keccak256(abi.encodePacked(token,vaultHealer))]) {
-            token.safeApprove(address(vaultHealer), type(uint256).max);
-            approvals[keccak256(abi.encodePacked(token,vaultHealer))] = true;
-        }
+        _approveTokenIfNeeded(token, address(vaultHealer));
     }
     function _approveTokenIfNeeded(IERC20 token, IUniRouter router) private {
-        if (!approvals[keccak256(abi.encodePacked(token,router))]) {
-            token.safeApprove(address(router), type(uint256).max);
-            approvals[keccak256(abi.encodePacked(token,router))] = true;
-        } 
+        _approveTokenIfNeeded(token, address(router));
+    }
+    function _approveTokenIfNeeded(IERC20 token, address spender) private {
+        bytes32 data = keccak256(abi.encodePacked(token,spender));
+        if (!approvals[data]) {
+            token.safeApprove(address(vaultHealer), type(uint256).max);
+            approvals[data] = true;
+        }
     }
 
 }
