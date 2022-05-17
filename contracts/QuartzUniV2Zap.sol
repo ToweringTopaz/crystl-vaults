@@ -25,7 +25,7 @@ contract QuartzUniV2Zap {
     uint256 public constant MINIMUM_AMOUNT = 1000;
     IVaultHealer public immutable vaultHealer;
 
-    mapping(bytes32 => bool) private approvals;
+    mapping(IERC20 => bool) private approvals;
 
     constructor(address _vaultHealer) {
         vaultHealer = IVaultHealer(_vaultHealer);
@@ -174,14 +174,7 @@ contract QuartzUniV2Zap {
     }
 
     function _approveTokenIfNeeded(IERC20 token) private {
-        _approveTokenIfNeeded(token, address(vaultHealer));
-    }
-    function _approveTokenIfNeeded(IERC20 token, IUniRouter router) private {
-        _approveTokenIfNeeded(token, address(router));
-    }
-    function _approveTokenIfNeeded(IERC20 token, address spender) private {
-        bytes32 data = keccak256(abi.encodePacked(token,spender));
-        if (!approvals[data]) {
+        if (!approvals[token]) {
             token.safeApprove(address(vaultHealer), type(uint256).max);
             approvals[data] = true;
         }
