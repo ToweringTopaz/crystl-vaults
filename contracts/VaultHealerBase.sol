@@ -14,7 +14,7 @@ abstract contract VaultHealerBase is IVaultHealer, ReentrancyGuard {
 
     uint constant PANIC_LOCK_DURATION = 6 hours;
 
-    VaultFeeManager immutable public vaultFeeManager;
+    IVaultFeeManager immutable public vaultFeeManager;
     VaultHealerAuth immutable public vhAuth;
     
     uint16 public numVaultsBase; //number of non-maximizer vaults
@@ -24,7 +24,7 @@ abstract contract VaultHealerBase is IVaultHealer, ReentrancyGuard {
 
     constructor(address _vhAuth, address _feeMan) {
         vhAuth = VaultHealerAuth(_vhAuth);
-        vaultFeeManager = VaultFeeManager(_feeMan);
+        vaultFeeManager = IVaultFeeManager(_feeMan);
     }
 
     modifier auth {
