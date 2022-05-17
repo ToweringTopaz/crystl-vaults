@@ -51,7 +51,9 @@ library Tactics {
     }  
     function vaultSharesTotal(TacticsA tacticsA) internal view returns (uint256 amountStaked) {
         uint returnvarPosition = uint8(uint(TacticsA.unwrap(tacticsA)) >> 64); //where is our vaultshares in the return data
-        bytes memory data = _generateCall(pid(tacticsA), uint64(uint(TacticsA.unwrap(tacticsA))), 0); //pid, vst call, 0
+        uint64 encodedCall = uint64(uint(TacticsA.unwrap(tacticsA)));
+        if (encodedCall == 0) return 0;
+        bytes memory data = _generateCall(pid(tacticsA), encodedCall, 0); //pid, vst call, 0
         data = masterchef(tacticsA).functionStaticCall(data, "Tactics: staticcall failed");
         assembly ("memory-safe") {
             amountStaked := mload(add(data, add(0x20,returnvarPosition)))
@@ -71,24 +73,27 @@ library Tactics {
         _doCall(tacticsA, tacticsB, 0, 0);
     }
     function _doCall(TacticsA tacticsA, TacticsB tacticsB, uint256 amount, uint256 offset) private {
-        bytes memory generatedCall = _generateCall(pid(tacticsA), uint64(uint(TacticsB.unwrap(tacticsB)) >> offset), amount);
+        uint64 encodedCall = uint64(uint(TacticsB.unwrap(tacticsB)) >> offset);
+        if (encodedCall == 0) return;
+        bytes memory generatedCall = _generateCall(pid(tacticsA), encodedCall, amount);
         masterchef(tacticsA).functionCall(generatedCall, "Tactics: call failed");
         
     }
 
     function _generateCall(uint24 _pid, uint64 encodedCall, uint amount) private view returns (bytes memory generatedCall) {
+
         generatedCall = abi.encodePacked(bytes4(bytes8(encodedCall)));
 
         for (bytes4 params = bytes4(bytes8(encodedCall) << 32); params != 0; params <<= 4) {
-            bytes4 p = params & 0xf0000000;
+            bytes1 p = bytes1(params) & bytes1(0xf0);
             uint256 word;
-            if (p == 0x20000000) {
+            if (p == 0x20) {
                 word = _pid;
-            } else if (p == 0x30000000) {
+            } else if (p == 0x30) {
                 word = uint(uint160(address(this)));
-            } else if (p == 0x40000000) {
+            } else if (p == 0x40) {
                 word = amount;
-            } else if (p != 0xf0000000) {
+            } else if (p != 0xf0) {
                 revert("Tactics: invalid tactic");
             }
             generatedCall = abi.encodePacked(generatedCall, word);
