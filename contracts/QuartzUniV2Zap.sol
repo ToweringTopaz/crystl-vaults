@@ -20,8 +20,6 @@ import "./libraries/LibQuartz.sol";
 contract QuartzUniV2Zap {
     using SafeERC20 for IERC20;
     using LibQuartz for IVaultHealer;
-    using LibQuartz for IUniRouter;
-    using LibQuartz for IUniPair;
     using VaultChonk for IVaultHealer;
 
     uint256 public constant MINIMUM_AMOUNT = 1000;
@@ -139,7 +137,7 @@ contract QuartzUniV2Zap {
             }
         }
         
-        pair.optimalMint(IERC20(token0), IERC20(token1));
+        LibQuartz.optimalMint(pair, IERC20(token0), IERC20(token1));
 
         _approveTokenIfNeeded(pair);
         uint balance = pair.balanceOf(address(this));

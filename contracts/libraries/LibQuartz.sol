@@ -32,10 +32,9 @@ library LibQuartz {
     
     function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
         strat = vaultHealer.strat(_vid);
-        IERC20 want = strat.wantToken();
-
-        pair = IUniPair(address(want));
         router = strat.router();
+        pair = IUniPair(address(strat.wantToken()));
+
         require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
     }
     function getSwapAmount(IUniRouter router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
