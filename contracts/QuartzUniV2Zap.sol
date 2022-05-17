@@ -60,7 +60,7 @@ contract QuartzUniV2Zap {
 
     //should only happen when this contract deposits as a maximizer
     function onERC1155Received(
-        address operator, address from, uint256 id, uint256 amount, bytes calldata) external view returns (bytes4) {
+        address operator, address /*from*/, uint256 /*id*/, uint256 /*amount*/, bytes calldata) external view returns (bytes4) {
         //if (msg.sender != address(vaultHealer)) revert("Quartz: Incorrect ERC1155 issuer");
         if (operator != address(this)) revert("Quartz: Improper ERC1155 transfer"); 
         return 0xf23a6e61;
@@ -142,8 +142,11 @@ contract QuartzUniV2Zap {
         pair.optimalMint(IERC20(token0), IERC20(token1));
 
         _approveTokenIfNeeded(pair);
-        vaultHealer.deposit(vid, pair.balanceOf(address(this)), "");
-        vaultHealer.safeTransferFrom(address(this), msg.sender, vid, vaultHealer.balanceOf(address(this), vid), "");
+        uint balance = pair.balanceOf(address(this));
+        vaultHealer.deposit(vid, balance, "");
+        
+        balance = vaultHealer.balanceOf(address(this), vid);
+        vaultHealer.safeTransferFrom(address(this), msg.sender, vid, balance, "");
         router.returnAsset(token0);
         router.returnAsset(token1);
         router.returnAsset(tokenIn);
