@@ -37,6 +37,7 @@ library LibQuartz {
 
         try pair.factory() returns (IUniFactory _f) {
             valid = _f == router.factory();
+            require(valid, "Quartz: This vault cannot be zapped"); //Risk of illiquid pair loss here, so we shouldn't zap
         } catch {
 
         }
