@@ -120,5 +120,7 @@ interface IVaultHealer is IERC1155 {
         IERC20 rewardToken;
         uint pendingReward;
     }
+
+    function vaultFeeManager() external view returns (IVaultFeeManager);
 }
 

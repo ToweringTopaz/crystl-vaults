@@ -185,4 +185,12 @@ contract QuartzUniV2Zap {
         tempArray[0] = n;
     }
 
+    //This contract should not hold ERC20 tokens at the end of a transaction. If this happens due to some error, this will send the tokens to the treasury, where they
+    //can be disbursed.
+    function rescue(address token) external {
+        (address receiver,) = vaultHealer.vaultFeeManager().getWithdrawFee(0);
+        if (receiver == address(0)) receiver = msg.sender;
+        IERC20(token).transfer(receiver, IERC20(token).balanceOf(address(this)));
+    }
+
 }
