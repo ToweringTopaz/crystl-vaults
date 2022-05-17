@@ -176,7 +176,7 @@ contract QuartzUniV2Zap {
     function _approveTokenIfNeeded(IERC20 token) private {
         if (!approvals[token]) {
             token.safeApprove(address(vaultHealer), type(uint256).max);
-            approvals[data] = true;
+            approvals[token] = true;
         }
     }
 
