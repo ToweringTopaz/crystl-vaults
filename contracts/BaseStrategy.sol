@@ -165,13 +165,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         uint amountOutMin = config.feeOnTransfer() ? _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256 : 0;
 
-        path[0].safeTransfer(address(factory.getPair(path[0], path[1])), _amountIn);
         uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
         for (uint i; i < path.length - 1; i++) {
             (IERC20 input, IERC20 output) = (path[i], path[i + 1]);
             bool inputIsToken0 = input < output;
             
             IUniPair pair = factory.getPair(input, output);
+            if (i == 0) input.safeTransfer(address(pair), _amountIn);
             (uint reserve0, uint reserve1,) = pair.getReserves();
 
             (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
