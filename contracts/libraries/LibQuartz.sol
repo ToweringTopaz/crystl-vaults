@@ -30,12 +30,16 @@ library LibQuartz {
         return vaultHealer.strat(vid).router();
     }
     
-    function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair) {
+    function getRouterAndPair(IVaultHealer vaultHealer, uint _vid) internal view returns (IUniRouter router, IStrategy strat, IUniPair pair, bool valid) {
         strat = vaultHealer.strat(_vid);
         router = strat.router();
         pair = IUniPair(address(strat.wantToken()));
 
-        require(pair.factory() == router.factory(), 'Quartz: Incompatible liquidity pair factory');
+        try pair.factory() returns (IUniFactory _f) {
+            valid = _f == router.factory();
+        } catch {
+
+        }
     }
     function getSwapAmount(IUniRouter router, uint256 investmentA, uint256 reserveA, uint256 reserveB) internal pure returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
@@ -139,8 +143,10 @@ library LibQuartz {
     }
 
     function estimateSwap(IVaultHealer vaultHealer, uint pid, IERC20 tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
-        (IUniRouter router,,IUniPair pair) = getRouterAndPair(vaultHealer, pid);
+        (IUniRouter router,,IUniPair pair,bool isPair) = getRouterAndPair(vaultHealer, pid);
         
+        require(isPair, "Quartz: Cannot estimate swap for non-LP token");
+
         bool isInputA = pair.token0() == tokenIn;
         require(isInputA || pair.token1() == tokenIn, 'Quartz: Input token not present in liquidity pair');
 

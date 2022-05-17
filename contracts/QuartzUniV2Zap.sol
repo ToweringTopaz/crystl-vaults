@@ -65,26 +65,25 @@ contract QuartzUniV2Zap {
     }
 
     function quartzOut (uint vid, uint256 withdrawAmount) public {
-        (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
+        (IUniRouter router,, IUniPair pair, bool isPair) = vaultHealer.getRouterAndPair(vid);
+        uint balance;
         if (withdrawAmount > 0) {
             uint[4] memory data = vaultHealer.tokenData(msg.sender, asSingletonArray(vid))[0];
             withdrawAmount = withdrawAmount * data[3] / data[2]; //amt*supply/wlt
-            uint fullBalance = data[1]; //shares
-            if (withdrawAmount > fullBalance) withdrawAmount = fullBalance;
+            balance = data[1]; //shares
+            withdrawAmount = withdrawAmount > balance ? balance : withdrawAmount;
             vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
         }
 
-        if (vaultHealer.balanceOf(address(this), vid) > 0) vaultHealer.withdraw(vid, type(uint).max, "");
+        if (balance > 0) vaultHealer.withdraw(vid, type(uint).max, "");
         uint targetVid = vid >> 16;
         if (targetVid > 0) quartzOut(targetVid, 0);
 
         IWETH weth = router.WETH();
 
-        IERC20 token0;
-        IERC20 token1;
-        try pair.token0() returns (IERC20 _token0) {
-            token0 = _token0;
-            token1 = pair.token1();
+        if (isPair) {
+            IERC20 token0 = pair.token0();
+            IERC20 token1 = pair.token1();
             if (token0 != weth && token1 != weth) {
                 pair.burn(msg.sender);
             } else {
@@ -92,50 +91,57 @@ contract QuartzUniV2Zap {
                 returnAsset(token0, weth); //returns any leftover tokens to user
                 returnAsset(token1, weth); //returns any leftover tokens to user
             }
-        } catch {
+        } else {
             returnAsset(pair, weth);
         }
     }
-    
-    function estimateSwap(uint vid, IERC20 tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
-        return vaultHealer.estimateSwap(vid, tokenIn, fullInvestmentIn);
-    }
 
     function _swapAndStake(uint vid, uint256 tokenAmountOutMin, IERC20 tokenIn) private {
-        (IUniRouter router,,IUniPair pair) = vaultHealer.getRouterAndPair(vid);        
+        (IUniRouter router,,IUniPair pair, bool isPair) = vaultHealer.getRouterAndPair(vid);        
         
-        IERC20 token0 = pair.token0();
-        IERC20 token1 = pair.token1();
-
-        _approveTokenIfNeeded(tokenIn, router);
-
         IWETH weth = router.WETH();
 
-        if (token0 == tokenIn) {
-            (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
-            swapDirect(LibQuartz.getSwapAmount(router, tokenIn.balanceOf(address(this)), reserveA, reserveB), tokenAmountOutMin, tokenIn, token1, router);
+        if (isPair) {
+            IERC20 token0 = pair.token0();
+            IERC20 token1 = pair.token1();
 
-        } else if (token1 == tokenIn) {
-            (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
-            swapDirect(LibQuartz.getSwapAmount(router, tokenIn.balanceOf(address(this)), reserveB, reserveA), tokenAmountOutMin, tokenIn, token0, router);
-            
-        } else {
-            uint swapAmountIn = tokenIn.balanceOf(address(this))/2;
-            
-            if(LibQuartz.hasSufficientLiquidity(token0, tokenIn, router, MINIMUM_AMOUNT)) {
-                swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
+        //_approveTokenIfNeeded(tokenIn, router);
+
+            if (token0 == tokenIn) {
+                (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+                swapDirect(LibQuartz.getSwapAmount(router, tokenIn.balanceOf(address(this)), reserveA, reserveB), tokenAmountOutMin, tokenIn, token1, router);
+
+            } else if (token1 == tokenIn) {
+                (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+                swapDirect(LibQuartz.getSwapAmount(router, tokenIn.balanceOf(address(this)), reserveB, reserveA), tokenAmountOutMin, tokenIn, token0, router);
+                
             } else {
-                swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, token0, router);
+                uint swapAmountIn = tokenIn.balanceOf(address(this))/2;
+                
+                if(LibQuartz.hasSufficientLiquidity(token0, tokenIn, router, MINIMUM_AMOUNT)) {
+                    swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token0, router);
+                } else {
+                    swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, token0, router);
+                }
+                
+                if(LibQuartz.hasSufficientLiquidity(token1, tokenIn, router, MINIMUM_AMOUNT)) {
+                    swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
+                } else {
+                    swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, token1, router);
+                }
             }
             
-            if(LibQuartz.hasSufficientLiquidity(token1, tokenIn, router, MINIMUM_AMOUNT)) {
-                swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, token1, router);
+            LibQuartz.optimalMint(pair, token0, token1);
+            returnAsset(token0, weth);
+            returnAsset(token1, weth);
+        } else {
+            uint swapAmountIn = tokenIn.balanceOf(address(this));
+            if(LibQuartz.hasSufficientLiquidity(pair, tokenIn, router, MINIMUM_AMOUNT)) {
+                swapDirect(swapAmountIn, tokenAmountOutMin, tokenIn, pair, router);
             } else {
-                swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, token1, router);
+                swapViaToken(swapAmountIn, tokenAmountOutMin, tokenIn, weth, pair, router);
             }
         }
-        
-        LibQuartz.optimalMint(pair, token0, token1);
 
         _approveTokenIfNeeded(pair);
         uint balance = pair.balanceOf(address(this));
@@ -143,8 +149,7 @@ contract QuartzUniV2Zap {
         
         balance = vaultHealer.balanceOf(address(this), vid);
         vaultHealer.safeTransferFrom(address(this), msg.sender, vid, balance, "");
-        returnAsset(token0, weth);
-        returnAsset(token1, weth);
+
         returnAsset(tokenIn, weth);
     }
 
@@ -161,7 +166,7 @@ contract QuartzUniV2Zap {
         
         if (token == weth) {
             weth.withdraw(balance);
-            (bool success,) = msg.sender.call{value: balance}(new bytes(0));
+            (bool success,) = msg.sender.call{value: address(this).balance}(new bytes(0));
             require(success, 'Quartz: ETH transfer failed');
         } else {
             token.safeTransfer(msg.sender, balance);
