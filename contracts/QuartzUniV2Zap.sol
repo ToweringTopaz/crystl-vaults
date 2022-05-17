@@ -67,8 +67,9 @@ contract QuartzUniV2Zap {
     function quartzOut (uint vid, uint256 withdrawAmount) public {
         (IUniRouter router,, IUniPair pair) = vaultHealer.getRouterAndPair(vid);
         if (withdrawAmount > 0) {
-            withdrawAmount = withdrawAmount * vaultHealer.totalSupply(vid) / vaultHealer.strat(vid).wantLockedTotal();
-            uint fullBalance = vaultHealer.balanceOf(msg.sender, vid);
+            uint[4] memory data = vaultHealer.tokenData(msg.sender, asSingletonArray(vid))[0];
+            withdrawAmount = withdrawAmount * data[3] / data[2]; //amt*supply/wlt
+            uint fullBalance = data[1]; //shares
             if (withdrawAmount > fullBalance) withdrawAmount = fullBalance;
             vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
         }
@@ -179,6 +180,11 @@ contract QuartzUniV2Zap {
             token.safeApprove(address(vaultHealer), type(uint256).max);
             approvals[data] = true;
         }
+    }
+
+    function asSingletonArray(uint256 n) internal pure returns (uint256[] memory tempArray) {
+        tempArray = new uint256[](1);
+        tempArray[0] = n;
     }
 
 }

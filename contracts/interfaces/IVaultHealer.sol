@@ -87,7 +87,9 @@ interface IVaultHealer is IERC1155 {
     }
 
     function vaultInfo(uint vid) external view returns (IERC20, uint8, bool, uint48,uint16,uint16);
-    
+
+    function tokenData(address account, uint[] calldata vids) external view returns (uint[4][] memory data);
+
     //@notice Returns the number of non-maximizer vaults, where the want token is compounded within one strategy
     function numVaultsBase() external view returns (uint16);
 
