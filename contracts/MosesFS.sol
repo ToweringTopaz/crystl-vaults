@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 ///@author ToweringTopaz
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.14;
 
 contract MosesFS {
 

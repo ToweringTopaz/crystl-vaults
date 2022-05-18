@@ -13,7 +13,7 @@
 // @author Wivern for Beefy.Finance, ToweringTopaz for Crystl.Finance
 // @notice This contract adds liquidity to Uniswap V2 compatible liquidity pair pools and stake.
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.14;
 
 import "./libraries/LibQuartz.sol";
 
