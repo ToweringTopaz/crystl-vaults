@@ -45,6 +45,10 @@ contract QuartzUniV2Zap {
         _swapAndStake(vid, tokenAmountOutMin, weth);
     }
 
+    function estimateSwap(uint vid, IERC20 tokenIn, uint256 fullInvestmentIn) external view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
+        return LibQuartz.estimateSwap(vaultHealer, vid, tokenIn, fullInvestmentIn);
+    }
+
     function quartzIn (uint vid, uint256 tokenAmountOutMin, address tokenInAddress, uint256 tokenInAmount) external {
         require(tokenInAmount >= MINIMUM_AMOUNT, 'Quartz: Insignificant input amount');
         

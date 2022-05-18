@@ -72,7 +72,7 @@ library LibQuartz {
         IERC20 input,
         IERC20 output,
         uint amountOutMin
-    ) internal returns (uint amountOutput) {
+    ) public returns (uint amountOutput) {
         IUniFactory factory = _router.factory();
 
         IUniPair pair = factory.getPair(input, output);
@@ -105,7 +105,7 @@ library LibQuartz {
         IERC20 middle,
         IERC20 output,
         uint amountOutMin
-    ) internal returns (uint amountOutput) {
+    ) public returns (uint amountOutput) {
         IUniFactory factory = _router.factory();
 
         IUniPair pairA = factory.getPair(input, middle);
@@ -143,20 +143,24 @@ library LibQuartz {
         }
     }
 
-    function estimateSwap(IVaultHealer vaultHealer, uint pid, IERC20 tokenIn, uint256 fullInvestmentIn) internal view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
+    function estimateSwap(IVaultHealer vaultHealer, uint pid, IERC20 tokenIn, uint256 fullInvestmentIn) public view returns(uint256 swapAmountIn, uint256 swapAmountOut, IERC20 swapTokenOut) {
         (IUniRouter router,,IUniPair pair,bool isPair) = getRouterAndPair(vaultHealer, pid);
         
         require(isPair, "Quartz: Cannot estimate swap for non-LP token");
 
-        bool isInputA = pair.token0() == tokenIn;
-        require(isInputA || pair.token1() == tokenIn, 'Quartz: Input token not present in liquidity pair');
+        IERC20 token0 = pair.token0();
 
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
-        (reserveA, reserveB) = isInputA ? (reserveA, reserveB) : (reserveB, reserveA);
+        if (token0 == tokenIn) {
+            swapTokenOut = pair.token1();
+        } else {
+            require(pair.token1() == tokenIn, 'Quartz: Input token not present in liquidity pair');
+            swapTokenOut = token0;
+            (reserveA, reserveB) = (reserveB, reserveA);
+        }
 
         swapAmountIn = getSwapAmount(router, fullInvestmentIn, reserveA, reserveB);
         swapAmountOut = router.getAmountOut(swapAmountIn, reserveA, reserveB);
-        swapTokenOut = isInputA ? pair.token1() : pair.token0();
     }
 
     function removeLiquidity(IUniPair pair, address to) internal {
@@ -199,11 +203,7 @@ library LibQuartz {
 		
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
-        if (reserveA > min_amount && reserveB > min_amount) {
-            return hasLiquidity = true;
-        } else {
-            return hasLiquidity = false;
-        }
+        return reserveA > min_amount && reserveB > min_amount;
     }
 
     // credit for this implementation goes to
