@@ -239,7 +239,7 @@ module.exports = {
   },
   solidity: {
 	compilers: [{
-		version: "0.8.13",
+		version: "0.8.14",
 		settings: {
 		  viaIR: true,
 		  optimizer: {
@@ -260,7 +260,7 @@ module.exports = {
 	}],
 	overrides: {
 		"contracts/VaultHealer.sol": {
-			version: "0.8.13",
+			version: "0.8.14",
 			settings: {
 			  viaIR: true,
 			  optimizer: {
@@ -280,7 +280,7 @@ module.exports = {
 			},
 		},
 		"contracts/QuartzUniV2Zap.sol": {
-			version: "0.8.13",
+			version: "0.8.14",
 			settings: {
 			  viaIR: false,
 			  optimizer: {
