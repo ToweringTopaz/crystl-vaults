@@ -4,10 +4,9 @@ pragma solidity ^0.8.14;
 import "../interfaces/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-using Fee for Fee.Data global;
-using Fee for Fee.Data[3] global;
-
 library Fee {
+    using Fee for Data;
+    using Fee for Data[3];
 
     type Data is uint256;
 
