@@ -78,22 +78,24 @@ abstract contract VaultHealerBase is IVaultHealer, ReentrancyGuard {
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer
 
     function pause(uint vid, bool panic) external auth requireValidVid(vid) {
-        if (!vaultInfo[vid].active) revert PausedError(vid); //use direct variable; paused(vid) also may be true due to maximizer
-        if (panic) {
-            uint expiry = panicLockExpiry[vid];
-            if (expiry > block.timestamp) revert PanicCooldown(expiry);
-            expiry = block.timestamp + PANIC_LOCK_DURATION;
-            strat(vid).panic();
+        if (vaultInfo[vid].active) { //use direct variable; paused(vid) also may be true due to maximizer
+            if (panic) {
+                uint expiry = panicLockExpiry[vid];
+                if (expiry > block.timestamp) revert PanicCooldown(expiry);
+                expiry = block.timestamp + PANIC_LOCK_DURATION;
+                strat(vid).panic();
+            }
+            vaultInfo[vid].active = false;
+            emit Paused(vid);
         }
-        vaultInfo[vid].active = false;
-        emit Paused(vid);
     }
     function unpause(uint vid) external auth requireValidVid(vid) {
         if ((vid >> 16) > 0 && paused(vid >> 16)) revert PausedError(vid >> 16); // if maximizer's target is paused, it must be unpaused first
-        if (vaultInfo[vid].active) revert PausedError(vid); //use direct variable
-        vaultInfo[vid].active = true;
-        strat(vid).unpanic();
-        emit Unpaused(vid);
+        if (!vaultInfo[vid].active) { //use direct variable
+            vaultInfo[vid].active = true;
+            strat(vid).unpanic();
+            emit Unpaused(vid);
+        }
     }
     function paused(uint vid) public view returns (bool) {
         return !vaultInfo[vid].active || ((vid >> 16) > 0 && paused(vid >> 16));
