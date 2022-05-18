@@ -164,7 +164,10 @@ library LibQuartz {
     }
 
     function removeLiquidity(IUniPair pair, address to) internal {
-        pair.safeTransfer(address(pair), pair.balanceOf(address(this)));
+        uint balance = pair.balanceOf(address(this));
+
+        if (balance == 0) return;
+        pair.safeTransfer(address(pair), balance);
         (uint256 amount0, uint256 amount1) = pair.burn(to);
 
         require(amount0 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_A_AMOUNT');

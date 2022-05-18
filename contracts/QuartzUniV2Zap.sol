@@ -49,11 +49,17 @@ contract QuartzUniV2Zap {
         return LibQuartz.estimateSwap(vaultHealer, vid, tokenIn, fullInvestmentIn);
     }
 
-    function quartzIn (uint vid, uint256 tokenAmountOutMin, address tokenInAddress, uint256 tokenInAmount) external {
+    function quartzIn (uint vid, uint256 tokenAmountOutMin, IERC20 tokenIn, uint256 tokenInAmount) external {
+        uint allowance = tokenIn.allowance(msg.sender, address(this));
+        uint balance = tokenIn.balanceOf(msg.sender);
+
+        if (tokenInAmount == type(uint256).max) tokenInAmount = allowance < balance ? allowance : balance;
+        else {
+            require(allowance >= tokenInAmount, 'Quartz: Input token is not approved');
+            require(balance >= tokenInAmount, 'Quartz: Input token has insufficient balance');
+        }
         require(tokenInAmount >= MINIMUM_AMOUNT, 'Quartz: Insignificant input amount');
         
-        IERC20 tokenIn = IERC20(tokenInAddress);
-        require(tokenIn.allowance(msg.sender, address(this)) >= tokenInAmount, 'Quartz: Input token is not approved');
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenInAmount);
         require(tokenIn.balanceOf(address(this)) >= tokenInAmount, 'Quartz: Fee-on-transfer/reflect tokens not yet supported');
 
@@ -77,6 +83,8 @@ contract QuartzUniV2Zap {
             balance = data[1]; //shares
             withdrawAmount = withdrawAmount > balance ? balance : withdrawAmount;
             vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
+        } else {
+            balance = vaultHealer.balanceOf(address(this), vid);
         }
 
         if (balance > 0) vaultHealer.withdraw(vid, type(uint).max, "");
@@ -86,19 +94,14 @@ contract QuartzUniV2Zap {
         IWETH weth = router.WETH();
 
         if (isPair) {
-            uint lpBalance = pair.balanceOf(address(this));
-            if (lpBalance > 0) {
-                pair.transfer(address(pair), lpBalance);
-
-                IERC20 token0 = pair.token0();
-                IERC20 token1 = pair.token1();
-                if (token0 != weth && token1 != weth) {
-                    LibQuartz.removeLiquidity(pair, msg.sender);
-                } else {
-                    LibQuartz.removeLiquidity(pair, address(this));
-                    returnAsset(token0, weth); //returns any leftover tokens to user
-                    returnAsset(token1, weth); //returns any leftover tokens to user
-                }
+            IERC20 token0 = pair.token0();
+            IERC20 token1 = pair.token1();
+            if (token0 != weth && token1 != weth) {
+                LibQuartz.removeLiquidity(pair, msg.sender);
+            } else {
+                LibQuartz.removeLiquidity(pair, address(this));
+                returnAsset(token0, weth); //returns any leftover tokens to user
+                returnAsset(token1, weth); //returns any leftover tokens to user
             }
         } else {
             returnAsset(pair, weth);
