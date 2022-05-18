@@ -82,14 +82,19 @@ contract QuartzUniV2Zap {
         IWETH weth = router.WETH();
 
         if (isPair) {
-            IERC20 token0 = pair.token0();
-            IERC20 token1 = pair.token1();
-            if (token0 != weth && token1 != weth) {
-                pair.burn(msg.sender);
-            } else {
-                pair.burn(address(this));
-                returnAsset(token0, weth); //returns any leftover tokens to user
-                returnAsset(token1, weth); //returns any leftover tokens to user
+            uint lpBalance = pair.balanceOf(address(this));
+            if (lpBalance > 0) {
+                pair.transfer(address(pair), lpBalance);
+
+                IERC20 token0 = pair.token0();
+                IERC20 token1 = pair.token1();
+                if (token0 != weth && token1 != weth) {
+                    pair.burn(msg.sender);
+                } else {
+                    pair.burn(address(this));
+                    returnAsset(token0, weth); //returns any leftover tokens to user
+                    returnAsset(token1, weth); //returns any leftover tokens to user
+                }
             }
         } else {
             returnAsset(pair, weth);
