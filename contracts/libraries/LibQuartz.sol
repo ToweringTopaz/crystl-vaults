@@ -171,7 +171,7 @@ library LibQuartz {
         require(amount1 >= MINIMUM_AMOUNT, 'Quartz: INSUFFICIENT_B_AMOUNT');
     }
 
-    function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
+    function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) public returns (uint liquidity) {
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
         
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
@@ -196,8 +196,6 @@ library LibQuartz {
 
     function hasSufficientLiquidity(IERC20 token0, IERC20 token1, IUniRouter router, uint256 min_amount) internal view returns (bool hasLiquidity) {
         IUniFactory factory = router.factory();
-        require(address(token0) != address(0), "LibQuartz: token0 cannot be the zero address");
-        require(address(token1) != address(0), "LibQuartz: token1 cannot be the zero address");
         IUniPair pair = IUniPair(factory.getPair(token0, token1));
         if (address(pair) == address(0)) return false; //pair hasn't been created, so zero liquidity
 		
