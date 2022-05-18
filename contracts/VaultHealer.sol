@@ -60,4 +60,12 @@ contract VaultHealer is VaultHealerBoostedPools, Multicall {
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, IERC165) returns (bool) {
         return ERC1155.supportsInterface(interfaceId) || interfaceId == type(IVaultHealer).interfaceId;
     }
+
+    //This contract should not hold ERC20 tokens at the end of a transaction. If this happens due to some error, this will send the 
+    //tokens to the treasury if it is set. Contact the team for help, and maybe they can return your missing token!
+    function rescue(address token) external {
+        (address receiver,) = vaultFeeManager.getWithdrawFee(0);
+        if (receiver == address(0)) receiver = msg.sender;
+        IERC20(token).transfer(receiver, IERC20(token).balanceOf(address(this)));
+    }
 }
