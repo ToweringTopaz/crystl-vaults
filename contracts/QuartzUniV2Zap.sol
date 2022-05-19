@@ -76,20 +76,21 @@ contract QuartzUniV2Zap {
 
     function quartzOut (uint vid, uint256 withdrawAmount) public {
         (IUniRouter router,, IUniPair pair, bool isPair) = vaultHealer.getRouterAndPair(vid);
-        uint balance;
         if (withdrawAmount > 0) {
             uint[4] memory data = vaultHealer.tokenData(msg.sender, asSingletonArray(vid))[0];
-            withdrawAmount = withdrawAmount * data[3] / data[2]; //amt*supply/wlt
-            balance = data[1]; //shares
-            withdrawAmount = withdrawAmount > balance ? balance : withdrawAmount;
-            vaultHealer.safeTransferFrom(msg.sender, address(this), vid, withdrawAmount, "");
-        } else {
-            balance = vaultHealer.balanceOf(address(this), vid);
-        }
+            vaultHealer.safeTransferFrom(
+                msg.sender, 
+                address(this), 
+                vid, 
+                withdrawAmount > data[0] ? //user want tokens
+                    data[1] : //user shares
+                    withdrawAmount * data[3] / data[2], //amt * totalShares / wantLockedTotal
+                ""
+            );
+        } else if (vaultHealer.balanceOf(address(this), vid) == 0) return;
 
-        if (balance > 0) vaultHealer.withdraw(vid, type(uint).max, "");
-        uint targetVid = vid >> 16;
-        if (targetVid > 0) quartzOut(targetVid, 0);
+        vaultHealer.withdraw(vid, type(uint).max, "");
+        if (vid > 2**16) quartzOut(vid >> 16, 0);
 
         IWETH weth = router.WETH();
 
@@ -192,10 +193,10 @@ contract QuartzUniV2Zap {
 
     //This contract should not hold ERC20 tokens at the end of a transaction. If this happens due to some error, this will send the 
     //tokens to the treasury if it is set. Contact the team for help, and maybe they can return your missing token!
-    function rescue(address token) external {
+    function rescue(IERC20 token) external {
         (address receiver,) = vaultHealer.vaultFeeManager().getWithdrawFee(0);
         if (receiver == address(0)) receiver = msg.sender;
-        IERC20(token).transfer(receiver, IERC20(token).balanceOf(address(this)));
+        token.transfer(receiver, token.balanceOf(address(this)));
     }
 
 }
