@@ -216,24 +216,21 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function mintPair(IUniPair pair, IERC20 token0, IERC20 token1) internal returns (uint liquidity) {
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
-        
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        uint totalSupply = pair.totalSupply();
+        pair.skim(address(this));
         
         uint balance0 = token0.balanceOf(address(this));
         uint balance1 = token1.balanceOf(address(this));
 
-        uint liquidity0 = balance0 * totalSupply / reserve0;
-        uint liquidity1 = balance1 * totalSupply / reserve1;
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
 
-        if (liquidity0 < liquidity1) {
-            liquidity1 = reserve1 * balance0 / reserve0;
+        if (balance0 * reserve1 < balance1 * reserve0) {
+            balance1 = balance0 * reserve1 / reserve0;
         } else {
-            liquidity0 = reserve0 * balance1 / reserve1;
+            balance0 = balance1 * reserve0 / reserve1;
         }
 
-        token0.safeTransfer(address(pair), liquidity0);
-        token1.safeTransfer(address(pair), liquidity1);
+        token0.safeTransfer(address(pair), balance0);
+        token1.safeTransfer(address(pair), balance1);
         liquidity = pair.mint(address(this));
 
         balance0 = token0.balanceOf(address(this));
