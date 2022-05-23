@@ -177,19 +177,16 @@ library LibQuartz {
     function optimalMint(IUniPair pair, IERC20 token0, IERC20 token1) public returns (uint liquidity) {
         (token0, token1) = token0 < token1 ? (token0, token1) : (token1, token0);
         
+        pair.skim(address(this));
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        uint totalSupply = pair.totalSupply();
         
         uint balance0 = token0.balanceOf(address(this));
         uint balance1 = token1.balanceOf(address(this));
 
-        uint liquidity0 = balance0 * totalSupply / reserve0;
-        uint liquidity1 = balance1 * totalSupply / reserve1;
-
-        if (liquidity0 < liquidity1) {
-            balance1 = reserve1 * balance0 / reserve0;
+        if (balance0 * reserve1 < balance1 * reserve0) {
+            balance1 = balance0 * reserve1 / reserve0;
         } else {
-            balance0 = reserve0 * balance1 / reserve1;
+            balance0 = balance1 * reserve0 / reserve1;
         }
 
         token0.safeTransfer(address(pair), balance0);
