@@ -228,17 +228,16 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         if (liquidity0 < liquidity1) {
             liquidity1 = reserve1 * balance0 / reserve0;
-            balance0 = 0;
-            balance1 -= liquidity1;
         } else {
             liquidity0 = reserve0 * balance1 / reserve1;
-            balance0 -= liquidity0;
-            balance1 = 0;
         }
 
         token0.safeTransfer(address(pair), liquidity0);
         token1.safeTransfer(address(pair), liquidity1);
         liquidity = pair.mint(address(this));
+
+        balance0 = token0.balanceOf(address(this));
+        balance1 = token1.balanceOf(address(this));
 
         if (balance0 > LP_DUST) fastSwap(pair, token0, token1, balance0 / 3);
         else if (balance1 > LP_DUST) fastSwap(pair, token1, token0, balance1 / 3);
