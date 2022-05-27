@@ -12,7 +12,7 @@ contract VaultDeploy {
 
     VaultHealer public immutable vaultHealer;
     Strategy public immutable strategy;
-    //BoostPool immutable public boostPoolImpl;
+    BoostPool immutable public boostPoolImpl;
     VaultHealerAuth immutable public vhAuth;
     VaultFeeManager immutable public vaultFeeManager;
     QuartzUniV2Zap immutable public zap;
@@ -45,10 +45,10 @@ contract VaultDeploy {
         zap = new QuartzUniV2Zap(address(vaultHealer));
 		
         strategy = new Strategy(vaultHealer);
-        //boostPoolImpl = new BoostPool(address(vaultHealer));
+        boostPoolImpl = new BoostPool(address(vaultHealer));
 
 
-        //vhAuth.setAccess(address(this), 0);
+        vhAuth.setAccess(address(this), 0);
     }
 
 
