@@ -82,7 +82,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
             uint32 _delayBlocks,
             uint32 _durationBlocks
         ) = abi.decode(initdata,(address,uint112,uint32,uint32));
-        require(IERC20(_rewardToken).balanceOf(address(this)) >= _durationBlocks * rewardPerBlock, "Can't activate pool without sufficient rewards");
+        require(IERC20(_rewardToken).balanceOf(address(this)) >= _durationBlocks * _rewardPerBlock, "Can't activate pool without sufficient rewards");
         BOOST_ID = _boostID;
 
         _transferOwnership(_owner);
@@ -94,8 +94,8 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
 
         rewardPerBlock = _rewardPerBlock;
         
-        startBlock = uint32(block.number + _delayBlocks);
-        bonusEndBlock = uint32(block.number + _durationBlocks);
+        startBlock = uint32(block.number) + _delayBlocks;
+        bonusEndBlock = startBlock + _durationBlocks;
         lastRewardBlock = startBlock;
     }
 

@@ -16,7 +16,7 @@ abstract contract VaultHealerBoostedPools is VaultHealerGate {
     }
     
     function nextBoostPool(uint vid) external view returns (uint, IBoostPool) {
-        return boostPoolVid(vid, vaultInfo[vid].numBoosts + 1);
+        return boostPoolVid(vid, vaultInfo[vid].numBoosts);
     }
 
     function boostPoolVid(uint vid, uint16 n) public view returns (uint, IBoostPool) {

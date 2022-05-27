@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.14;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "../interfaces/IMasterHealer.sol";
-import "./StrategyConfig.sol";
-import "./VaultChonk.sol";
+import "./libraries/AmysStakingLib.sol";
 
-library AmysStakingCo {
+contract AmysStakingCo {
     using Address for address;
     using StrategyConfig for StrategyConfig.MemPointer;
+    using AmysStakingLib for AmysStakingLib.WantPid;
 
     error UnknownChefType(address chef);
     error PoolLengthZero(address chef);
+    error BadChefType(address chef, uint8 chefType);
 
     uint8 constant CHEF_UNKNOWN = 0;
     uint8 constant CHEF_MASTER = 1;
@@ -20,68 +18,104 @@ library AmysStakingCo {
     uint8 constant CHEF_STAKING_REWARDS = 3;
     uint8 constant OPERATOR = 255;
 
-    function getMCPoolData(address chef) external view returns (uint8 chefType, address[] memory lpTokens, uint256[] memory allocPoint, uint256[] memory endTime) {
+    struct ChefContract {
+        uint8 chefType;
+        uint64 pidLast;
+        mapping(address => AmysStakingLib.WantPid) wantPid;
+    }
+
+    mapping(address => ChefContract) public chefs;
+
+    function findPool(address chef, address wantToken) external view returns (AmysStakingLib.WantPid memory) {
+        return chefs[chef].wantPid[wantToken];
+    }
+
+    function sync(address _chef) external returns (uint64 endIndex) {
+        uint64 len = getLength(_chef, _identifyChefType(_chef));
+        ChefContract storage chef = chefs[_chef];
+        string memory wantSig;
+        if (chef.chefType == CHEF_MASTER)
+            wantSig = "poolInfo(uint256)";
+        else if (chef.chefType == CHEF_MINI)
+            wantSig = "lpToken(uint256)";
+        else
+             revert BadChefType(_chef, chef.chefType);
+        
+        uint64 i = chef.pidLast;
+        for (; i < len && gasleft() > 2**16; i++) {
+
+            (bool success, bytes memory data) = _chef.staticcall(abi.encodeWithSignature(wantSig, i));
+            if (success) {
+                address wantAddr = abi.decode(data,(address));
+                chef.wantPid[wantAddr].push(i);
+            }
+        }
+        return chef.pidLast = i;
+    }
+
+
+    function getMCPoolData(address chef) public view returns (uint startIndex, uint endIndex, uint8 chefType, address[] memory lpTokens, uint256[] memory allocPoint, uint256[] memory endTime) {
 
         chefType = identifyChefType(chef);
         uint len = getLength(chef, chefType);
         if (len == 0) revert PoolLengthZero(chef);
+        if (len > endIndex) len = endIndex;
 
         lpTokens = new address[](len);
         allocPoint = new uint256[](len);
 
         if (chefType == CHEF_MASTER) {
-            for (uint i; i < len; i++) {
+            for (uint i = startIndex; i < len; i++) {
                 (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", i));
-                if (success) (lpTokens[i], allocPoint[i]) = abi.decode(data,(address, uint256));
+                if (success) (lpTokens[i - startIndex], allocPoint[i - startIndex]) = abi.decode(data,(address, uint256));
             }
         } else if (chefType == CHEF_MINI) {
-            for (uint i; i < len; i++) {
+            for (uint i = startIndex; i < len; i++) {
                 (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("lpToken(uint256)", i));
                 if (!success) continue;
                 lpTokens[i] = abi.decode(data,(address));
 
                 (success, data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", i));
-                if (success) (,, allocPoint[i]) = abi.decode(data,(uint128,uint64,uint64));
+                if (success) (,, allocPoint[i - startIndex]) = abi.decode(data,(uint128,uint64,uint64));
             }
         } else if (chefType == CHEF_STAKING_REWARDS) {
             endTime = new uint256[](len);
-            for (uint i; i < len; i++) {
+            for (uint i = startIndex; i < len; i++) {
                 address spawn = addressFrom(chef, i + 1);
-                assembly {
-                    if iszero(extcodesize(spawn)) {
-                        spawn := 0
-                    }
-                }
-                if (spawn == address(0)) continue;
+                if (spawn.code.length == 0) continue;
 
                 (bool success, bytes memory data) = spawn.staticcall(abi.encodeWithSignature("stakingToken()"));
                 if (!success) continue;
-                lpTokens[i] = abi.decode(data,(address));
+                lpTokens[i - startIndex] = abi.decode(data,(address));
 
                 (success, data) = spawn.staticcall(abi.encodeWithSignature("periodFinish()"));
                 if (!success) continue;
                 uint _endTime = abi.decode(data,(uint256));
-                endTime[i] = _endTime;
+                endTime[i - startIndex] = _endTime;
                 if (_endTime < block.timestamp) continue;
 
                 (success, data) = spawn.staticcall(abi.encodeWithSignature("rewardRate()"));
-                if (success) (,, allocPoint[i]) = abi.decode(data,(uint128,uint64,uint64));
+                if (success) (,, allocPoint[i - startIndex]) = abi.decode(data,(uint128,uint64,uint64));
             }
         }
-
     }
 
-    function getLength(address chef, uint8 chefType) public view returns (uint len) {
+    function getLength(address chef, uint8 chefType) public view returns (uint32 len) {
         if (chefType == CHEF_MASTER || chefType == CHEF_MINI) {
-                len = IMasterHealer(chef).poolLength();
+                len = uint32(IMasterHealer(chef).poolLength());
             } else if (chefType == CHEF_STAKING_REWARDS) {
-                len = createFactoryNonce(chef) - 1;
+                len = uint32(createFactoryNonce(chef) - 1);
             }
+    }
+
+
+    function _identifyChefType(address chef) internal returns (uint8 chefType) {
+        return chefs[chef].chefType = identifyChefType(chef);
     }
 
     //assumes at least one pool exists i.e. chef.poolLength() > 0
     function identifyChefType(address chef) public view returns (uint8 chefType) {
-
+        if (chefs[chef].chefType != 0) return chefs[chef].chefType;
         (bool success,) = chef.staticcall(abi.encodeWithSignature("lpToken(uint256)", 0));
 
         if (success && checkMiniChef(chef)) {
