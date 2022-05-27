@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.14;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "../interfaces/IMasterHealer.sol";
-import "./StrategyConfig.sol";
-import "./VaultChonk.sol";
+import "./libraries/AmysStakingLib.sol";
 
 contract AmysStakingCo {
     using Address for address;
     using StrategyConfig for StrategyConfig.MemPointer;
+    using AmysStakingLib for AmysStakingLib.WantPid;
 
     error UnknownChefType(address chef);
     error PoolLengthZero(address chef);
@@ -24,27 +21,12 @@ contract AmysStakingCo {
     struct ChefContract {
         uint8 chefType;
         uint64 pidLast;
-        mapping(address => WantPid) wantPid;
-    }
-
-    struct WantPid {
-        uint64 current;
-        uint64[] old;
-    }
-
-    function push(WantPid storage self, uint64 pid) internal {
-        if (self.current < pid) {
-
-            if (self.current > 0) 
-                self.old.push(self.current);
-
-            self.current = pid;
-        }
+        mapping(address => AmysStakingLib.WantPid) wantPid;
     }
 
     mapping(address => ChefContract) public chefs;
 
-    function findPool(address chef, address wantToken) external view returns (WantPid memory) {
+    function findPool(address chef, address wantToken) external view returns (AmysStakingLib.WantPid memory) {
         return chefs[chef].wantPid[wantToken];
     }
 
@@ -52,13 +34,12 @@ contract AmysStakingCo {
         uint64 len = getLength(_chef, _identifyChefType(_chef));
         ChefContract storage chef = chefs[_chef];
         string memory wantSig;
-        if (chef.chefType == CHEF_MASTER) {
+        if (chef.chefType == CHEF_MASTER)
             wantSig = "poolInfo(uint256)";
-        } else if (chef.chefType == CHEF_MINI) {
+        else if (chef.chefType == CHEF_MINI)
             wantSig = "lpToken(uint256)";
-        } else {
+        else
              revert BadChefType(_chef, chef.chefType);
-        }
         
         uint64 i = chef.pidLast;
         for (; i < len && gasleft() > 2**16; i++) {
@@ -66,7 +47,7 @@ contract AmysStakingCo {
             (bool success, bytes memory data) = _chef.staticcall(abi.encodeWithSignature(wantSig, i));
             if (success) {
                 address wantAddr = abi.decode(data,(address));
-                push(chef.wantPid[wantAddr], i);
+                chef.wantPid[wantAddr].push(i);
             }
         }
         return chef.pidLast = i;
@@ -117,7 +98,6 @@ contract AmysStakingCo {
                 if (success) (,, allocPoint[i - startIndex]) = abi.decode(data,(uint128,uint64,uint64));
             }
         }
-
     }
 
     function getLength(address chef, uint8 chefType) public view returns (uint32 len) {
