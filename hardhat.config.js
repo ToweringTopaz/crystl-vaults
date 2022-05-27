@@ -63,15 +63,18 @@ if (!myPrivateKey) {
  }
 
 
-task("chonkDeploy", "Deploys VaultChonk library and other linked contracts")
+task("libDeploy", "Deploys a library")
+	.addParam("lib", "The library's name")
     .setAction(async (taskArgs) => {
 	
-	vaultChonk = await ethers.getContractFactory("Strategy");
-	vaultChonk = await vaultChonk.deploy("0xe5b5da7b82a3057b21c2b0dcef34c25eaa45fe4f");	
+	vaultChonk = await ethers.getContractFactory(name);
+	vaultChonk = await vaultChonk.deploy();	
 	
-	console.log("VaultChonk deployed at: ", vaultChonk.address);
+	console.log(name, "deployed at: ", vaultChonk.address);
 	
 });
+
+
 task("prepareDeploy", "Deploys VaultChonk library and other linked contracts")
     .setAction(async (taskArgs) => {
 	
@@ -158,7 +161,7 @@ task("deployImplementation", "Deploys a strategy implementation contract")
     //vaultHealer = await ethers.getContractAt(vaultHealer_abi, '0x41900A479FcdFe5808eDF12aa22136f98E08C803')
     //console.log("vaultHealer Instantiated")
 	
-    StrategyImplementation = await ethers.getContractFactory("Strategy");
+    StrategyImplementation = await ethers.getContractFactory("BoostPool");
     strategyImplementation = await StrategyImplementation.deploy('0x41900A479FcdFe5808eDF12aa22136f98E08C803');
     
     console.log("New strategy impl address: ", strategyImplementation.address);
