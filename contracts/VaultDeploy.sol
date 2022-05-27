@@ -5,9 +5,8 @@ import "./StrategyQuick.sol";
 import "./BoostPool.sol";
 import "./VaultHealer.sol";
 import "./VaultHealerAuth.sol";
-import "./libraries/AmysStakingCo.sol";
+import "./libraries/AddrCalc.sol";
 import "./QuartzUniV2Zap.sol";
-import "hardhat/console.sol";
 
 contract VaultDeploy {
 
@@ -20,7 +19,7 @@ contract VaultDeploy {
 
     constructor(uint nonce) {
 		
-        require(address(this) == AmysStakingCo.addressFrom(msg.sender, nonce), "wrong nonce");
+        require(address(this) == AddrCalc.addressFrom(msg.sender, nonce), "wrong nonce");
 		
         vhAuth = new VaultHealerAuth(address(this));
 		
@@ -39,7 +38,7 @@ contract VaultDeploy {
         vaultFeeManager.setDefaultEarnFees([0x5386881b46C37CdD30A748f7771CF95D7B213637, address(0), address(0)], [block.chainid == 137 ? 300 : 500, 0, 0]);
         vaultFeeManager.setDefaultWithdrawFee(0x5386881b46C37CdD30A748f7771CF95D7B213637, 10);
 		
-        vaultHealer = VaultHealer(AmysStakingCo.addressFrom(msg.sender, nonce+1));
+        vaultHealer = VaultHealer(AddrCalc.addressFrom(msg.sender, nonce+1));
 		
         require(address(vaultHealer).code.length == 0, "vh/wrong nonce");
 		
