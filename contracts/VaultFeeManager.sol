@@ -38,7 +38,7 @@ contract VaultFeeManager is IVaultFeeManager {
         _auth();
         _;
     }
-    function _auth() internal virtual {
+    function _auth() internal view virtual {
         require(vhAuth.hasRole(FEE_SETTER, msg.sender), "!auth");
     }
 

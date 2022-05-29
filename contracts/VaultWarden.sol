@@ -21,7 +21,7 @@ contract VaultWarden is VaultHealerAuth, VaultFeeManager {
 
     }
 
-    function _auth() internal override {
+    function _auth() internal view override {
         require(hasRole(FEE_SETTER, msg.sender), "!auth");
     }
 
