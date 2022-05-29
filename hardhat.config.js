@@ -268,7 +268,7 @@ module.exports = {
 			  viaIR: true,
 			  optimizer: {
 				enabled: true,
-				runs: 1,
+				runs: 255,
 				details: {
 					peephole: true,
 					inliner: true,
@@ -282,16 +282,6 @@ module.exports = {
 			  },
 			},
 		},
-		"contracts/QuartzUniV2Zap.sol": {
-			version: "0.8.14",
-			settings: {
-			  viaIR: false,
-			  optimizer: {
-				enabled: true,
-				runs: 1000000,
-			  },
-			},
-		}
 	},
   },
   mocha: {
