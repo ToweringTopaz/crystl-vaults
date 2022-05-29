@@ -2,15 +2,14 @@
 pragma solidity ^0.8.14;
 
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "./libraries/Constants.sol";
 
 contract VaultHealerAuth is AccessControlEnumerable {
 
-    bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
     bytes32 constant CREATE_ADMIN = keccak256("CREATE_ADMIN");
     bytes32 constant PAUSE_ADMIN = keccak256("PAUSE_ADMIN");
 
-    constructor(address owner) {
-        _setAccess(owner, 3);
+    constructor() {
         _setRoleAdmin(bytes4(keccak256("createVault(address,bytes)")), CREATE_ADMIN);
         _setRoleAdmin(bytes4(keccak256("createMaximizer(uint256,bytes)")), CREATE_ADMIN);
         _setRoleAdmin(bytes4(keccak256("createBoost(uint256,address,bytes)")), CREATE_ADMIN);
@@ -24,7 +23,7 @@ contract VaultHealerAuth is AccessControlEnumerable {
     }
 
     //Sets an account's roles to match a predefined tiered list, with 3 being the highest level. These correspond to VaultHealer function selectors.
-    function _setAccess(address account, uint level) private {
+    function _setAccess(address account, uint level) internal {
 
         if (level > 3) revert("Invalid access level");
 

@@ -5,12 +5,12 @@ import "@openzeppelin/contracts/access/IAccessControl.sol";
 import "./interfaces/IVaultHealer.sol";
 import "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import "./interfaces/IVaultFeeManager.sol";
+import "./libraries/Constants.sol";
 
 contract VaultFeeManager is IVaultFeeManager {
     using BitMaps for BitMaps.BitMap;
     using Fee for *;
 
-    bytes32 constant FEE_SETTER = keccak256("FEE_SETTER");
     address constant public TX_ORIGIN = address(bytes20(keccak256("TX_ORIGIN"))); // if this address is used for earn fee, substitute tx.origin to pay the account providing the gas
 
     IAccessControl immutable public vhAuth;
@@ -35,8 +35,11 @@ contract VaultFeeManager is IVaultFeeManager {
     }
 
     modifier auth {
-        require(vhAuth.hasRole(FEE_SETTER, msg.sender), "!auth");
+        _auth();
         _;
+    }
+    function _auth() internal virtual {
+        require(vhAuth.hasRole(FEE_SETTER, msg.sender), "!auth");
     }
 
     function getEarnFees(uint _vid) external view returns (Fee.Data[3] memory _fees) {
@@ -73,7 +76,7 @@ contract VaultFeeManager is IVaultFeeManager {
         }
     }
 
-     function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) external auth {
+     function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) public auth {
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
         Fee.check(defaultWithdrawFee, 300);
         emit SetDefaultEarnFees(defaultEarnFees);
@@ -92,7 +95,7 @@ contract VaultFeeManager is IVaultFeeManager {
         emit ResetEarnFees(_vid);
     }
     
-    function setDefaultEarnFees(address[3] calldata earnReceivers, uint16[3] calldata earnRates) external auth {
+    function setDefaultEarnFees(address[3] memory earnReceivers, uint16[3] memory earnRates) public auth {
         defaultEarnFees.set(earnReceivers, earnRates);
         Fee.check(defaultEarnFees, 3000);
         emit SetDefaultEarnFees(defaultEarnFees);
