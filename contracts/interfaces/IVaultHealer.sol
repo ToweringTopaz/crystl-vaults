@@ -17,7 +17,7 @@ interface IVaultHealer is IERC1155 {
     event Paused(uint indexed vid);
     event Unpaused(uint indexed vid);
 
-    event Deposit(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
+    event Deposit(address indexed account, uint256 indexed vid, uint256 amount);
     event Withdraw(address indexed from, address indexed to, uint256 indexed vid, uint256 amount);
 
     event Earned(uint256 indexed vid, uint256 wantLockedTotal, uint256 totalSupply);

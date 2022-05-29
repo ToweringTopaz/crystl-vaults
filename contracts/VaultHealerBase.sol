@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.14;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "./libraries/Cavendish.sol";
 import "./interfaces/IVaultHealer.sol";
 import "./VaultFeeManager.sol";
@@ -66,13 +65,6 @@ abstract contract VaultHealerBase is IVaultHealer, ReentrancyGuard {
     function setAutoEarn(uint vid, bool earnBeforeDeposit, bool earnBeforeWithdraw) external auth requireValidVid(vid) {
         vaultInfo[vid].noAutoEarn = (earnBeforeDeposit ? 0 : 1) | (earnBeforeWithdraw ? 0 : 2);
         emit SetAutoEarn(vid, earnBeforeDeposit, earnBeforeWithdraw);
-    }
-
-    function pretransferCheck(IERC20 token, address from, uint amount) internal view {
-        uint balance = token.balanceOf(from);
-        if (balance < amount) revert InsufficientBalance(token, from, balance, amount);
-        uint approval = token.allowance(from, address(this));
-        if (approval < amount) revert InsufficientApproval(token, from, approval, amount);
     }
 
 //Like OpenZeppelin Pausable, but centralized here at the vaulthealer

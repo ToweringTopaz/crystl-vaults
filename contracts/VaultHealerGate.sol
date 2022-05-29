@@ -3,6 +3,7 @@ pragma solidity ^0.8.14;
 
 import "./VaultHealerBase.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./ERC1155.sol";
 
 abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
     using SafeERC20 for IERC20;
@@ -36,8 +37,8 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
         if (data.length != len) revert ArrayMismatch(len, data.length);
         Fee.Data[3][] memory fees = vaultFeeManager.getEarnFees(vids);
         
-        successGas = new uint[](vids.length);
-        for (uint i; i < vids.length; i++) {
+        successGas = new uint[](len);
+        for (uint i; i < len; i++) {
             uint gasBefore = gasleft();
             if (_earn(vids[i], fees[i], data[i])) successGas[i] = gasBefore - gasleft();
         }
@@ -45,7 +46,7 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
 
     function _earn(uint256 vid, Fee.Data[3] memory fees, bytes calldata data) internal returns (bool) {
         VaultInfo storage vault = vaultInfo[vid];
-        if (paused(vid) || vault.lastEarnBlock == block.number) if (msg.sender != address(1)) return false; //calls from address(1) can be used to estimate gas
+        if (paused(vid) || vault.lastEarnBlock == block.number) return false;
 
         vault.lastEarnBlock = uint48(block.number);
         try strat(vid).earn(fees, msg.sender, data) returns (bool success, uint256 wantLockedTotal) {
@@ -64,16 +65,21 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
     //Allows maximizers to make reentrant calls, only to deposit to their target
     function maximizerDeposit(uint _vid, uint _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) {
         require(address(strat(_vid)) == msg.sender, "VH: sender does not match vid");
-        totalMaximizerEarnings[_vid] += _deposit(_vid >> 16, _wantAmt, msg.sender, msg.sender, _data);
+        totalMaximizerEarnings[_vid] += _deposit(_vid >> 16, _wantAmt, _data);
     }
 
     // Want tokens moved from user -> this -> Strat (compounding
     function deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external payable whenNotPaused(_vid) nonReentrant {
-        pretransferCheck(vaultInfo[_vid].want, msg.sender, _wantAmt);
-        _deposit(_vid, _wantAmt, msg.sender, msg.sender, _data);
+        IERC20 token = vaultInfo[_vid].want;
+        uint balance = token.balanceOf(msg.sender);
+        if (balance < _wantAmt) revert InsufficientBalance(token, msg.sender, balance, _wantAmt);
+        uint approval = token.allowance(msg.sender, address(this));
+        if (approval < _wantAmt) revert InsufficientApproval(token, msg.sender, approval, _wantAmt);
+
+        _deposit(_vid, _wantAmt, _data);
     }
 
-    function _deposit(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesAdded) {
+    function _deposit(uint256 _vid, uint256 _wantAmt, bytes calldata _data) private returns (uint256 vidSharesAdded) {
         uint totalSupplyBefore = totalSupply[_vid];
         // If enabled, we call an earn on the vault before we action the _deposit
         if (totalSupplyBefore > 0 && vaultInfo[_vid].noAutoEarn & 1 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
@@ -86,16 +92,16 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
         if (_wantAmt > 0 && address(vaultWant) != address(0)) pendingDeposits[address(strat(_vid))] = PendingDeposit({
             token: vaultWant,
             amount0: uint96(_wantAmt >> 96),
-            from: _from,
+            from: msg.sender,
             amount1: uint96(_wantAmt)
         });
 
         // we make the deposit
-        (_wantAmt, vidSharesAdded) = strat(_vid).deposit{value: msg.value}(_wantAmt, totalSupplyBefore, abi.encode(msg.sender, _from, _to, _data));
+        (_wantAmt, vidSharesAdded) = strat(_vid).deposit{value: msg.value}(_wantAmt, totalSupplyBefore, abi.encode(msg.sender, msg.sender, msg.sender, _data));
 
         //we mint tokens for the user via the 1155 contract
         _mint(
-            _to,
+            msg.sender,
             _vid, //use the vid of the strategy 
             vidSharesAdded,
             _data
@@ -103,30 +109,30 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
 
         delete pendingDeposits[address(strat(_vid))]; //In case the pending deposit was not used, don't store it
 
-        emit Deposit(_from, _to, _vid, _wantAmt);
+        emit Deposit(msg.sender, _vid, _wantAmt);
     }
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _vid, uint256 _wantAmt, bytes calldata _data) external nonReentrant {
-        _withdraw(_vid, _wantAmt, msg.sender, msg.sender, _data);
+        _withdraw(_vid, _wantAmt, msg.sender, _data);
     }
 
     function withdraw(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) external nonReentrant {
-        _withdraw(_vid, _wantAmt, msg.sender, _to, _data);
+        _withdraw(_vid, _wantAmt, _to, _data);
     }
 
-    function _withdraw(uint256 _vid, uint256 _wantAmt, address _from, address _to, bytes calldata _data) private returns (uint256 vidSharesRemoved) {
-		uint fromBalance = balanceOf(_from, _vid);
-        if (fromBalance == 0) revert WithdrawZeroBalance(_from);
+    function _withdraw(uint256 _vid, uint256 _wantAmt, address _to, bytes calldata _data) private returns (uint256 vidSharesRemoved) {
+		uint fromBalance = balanceOf(msg.sender, _vid);
+        if (fromBalance == 0) revert WithdrawZeroBalance(msg.sender);
 
         // we call an earn on the vault before we action the _deposit
         if (vaultInfo[_vid].noAutoEarn & 2 == 0) _earn(_vid, vaultFeeManager.getEarnFees(_vid), _data); 
 
-        (vidSharesRemoved, _wantAmt) = strat(_vid).withdraw(_wantAmt, fromBalance, totalSupply[_vid], abi.encode(msg.sender, _from, _to, _data));
+        (vidSharesRemoved, _wantAmt) = strat(_vid).withdraw(_wantAmt, fromBalance, totalSupply[_vid], abi.encode(msg.sender, msg.sender, _to, _data));
 		
         //burn the tokens equal to vidSharesRemoved
         _burn(
-            _from,
+            msg.sender,
             _vid,
             vidSharesRemoved
         );
@@ -148,7 +154,7 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
             _wantToken.safeTransferFrom(vaultStrat, _to, _wantAmt);
         }
 
-        emit Withdraw(_from, _to, _vid, _wantAmt);
+        emit Withdraw(msg.sender, _to, _vid, _wantAmt);
     }
 
     //called by strategy, cannot be nonReentrant
@@ -189,8 +195,7 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
             for (uint i; i < ids.length; i++) {
                 uint vid = ids[i];
                 uint amount = amounts[i];
-                uint supplyBefore = totalSupply[vid];
-                uint supplyAfter = supplyBefore - amount;
+                uint supplyAfter = totalSupply[vid] - amount;
                 totalSupply[vid] = supplyAfter;
 
                 if (vid > 2**16 && amount > 0) {
@@ -206,7 +211,7 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
                         emit MaximizerHarvest(from, vid, remainingTargetShares);
                     } else {
                         uint bal = balanceOf(from, vid);
-                        _maximizerHarvest(from, vid, bal, bal - amount, supplyBefore, supplyAfter);
+                        _maximizerHarvest(from, vid, bal, bal - amount, supplyAfter + amount, supplyAfter);
                     }
                 }
             }
@@ -254,18 +259,14 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
 		maximizerEarningsOffset[_account][_vid] = _balanceAfter * totalBefore / _supplyBefore;
         totalMaximizerEarnings[_vid] = _supplyAfter * totalBefore / _supplyBefore;
 
-        //payHarvest(_account, _vid, _balanceBefore, _supplyBefore, accountOffset);
-        payHarvest(_account, _vid, _balanceBefore * totalBefore / _supplyBefore, accountOffset);
-    }
-
-
-     function payHarvest(address _account, uint _vid, uint targetShares, uint offset) private {
-        if (targetShares > offset) {
-            uint sharesEarned = targetShares - offset;
+        uint targetShares = _balanceBefore * totalBefore / _supplyBefore;
+        if (targetShares > accountOffset) {
+            uint sharesEarned = targetShares - accountOffset;
             _safeTransferFrom(address(strat(_vid)), _account, _vid >> 16, sharesEarned, "");
             emit MaximizerHarvest(_account, _vid, sharesEarned);
         }
     }
+
 	
 	function maximizerPendingTargetShares(address _account, uint256 _vid) public view returns (uint256) {
         uint userVaultBalance = balanceOf(_account, _vid);
@@ -300,14 +301,10 @@ abstract contract VaultHealerGate is VaultHealerBase, ERC1155 {
 		_maximizerHarvest(msg.sender, _vid, balanceOf(msg.sender, _vid), totalSupply[_vid]);
 	}
 	
-	function _targetHarvest(address _account, uint256 _vid) private {
+	function harvestTarget(uint256 _vid) external nonReentrant {
 		uint lastMaximizer = (_vid << 16) + vaultInfo[_vid].numMaximizers;
 		for (uint i = (_vid << 16) + 1; i <= lastMaximizer; i++) {
-			_maximizerHarvest(_account, i, balanceOf(msg.sender, i), totalSupply[i]);
+			_maximizerHarvest(msg.sender, i, balanceOf(msg.sender, i), totalSupply[i]);
 		}		
-	}
-	
-	function harvestTarget(uint256 _vid) external nonReentrant {
-		_targetHarvest(msg.sender, _vid);
 	}
 }
