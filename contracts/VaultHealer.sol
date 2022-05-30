@@ -4,7 +4,6 @@ pragma solidity ^0.8.14;
 import "./QuartzUniV2Zap.sol";
 import "./VaultHealerBoostedPools.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./VaultDeploy.sol";
 
 contract VaultHealer is VaultHealerBoostedPools, Multicall {
 

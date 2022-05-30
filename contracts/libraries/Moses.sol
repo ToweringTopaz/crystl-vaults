@@ -124,7 +124,6 @@ contract MosesFS {
             tablet := create2(0, covenant, add(len,32), PILLAR) //sending zero value, initcode starts at "covenant", length is that of the data plus one word
             mstore(covenant, len)
         }
-        emit Moses.TabletCarved(tablet);
     }
 
     function readString(address tablet) external view returns (string memory covenant) {
