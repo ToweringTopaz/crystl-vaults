@@ -16,8 +16,8 @@ contract VaultWarden is VaultHealerAuth, VaultFeeManager {
         _setAccess(0x9D7F6d3CD9793282a604DA7dC7fD02b4cAE84198, 1);
         _setAccess(0xaE2F96f3c43443a648bf35E1064AD7457778C585, 1);
 		
-        setDefaultEarnFees([0x5386881b46C37CdD30A748f7771CF95D7B213637, address(0), address(0)], [block.chainid == 137 ? 300 : 500, 0, 0]);
-        setDefaultWithdrawFee(0x5386881b46C37CdD30A748f7771CF95D7B213637, 10);
+        _setDefaultEarnFees([0x5386881b46C37CdD30A748f7771CF95D7B213637, address(0), address(0)], [block.chainid == 137 ? 300 : 500, 0, 0]);
+        _setDefaultWithdrawFee(0x5386881b46C37CdD30A748f7771CF95D7B213637, 10);
 
     }
 
