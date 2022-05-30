@@ -6,14 +6,11 @@ pragma solidity ^0.8.14;
 library Moses {
 
     error AddressCollision();
-    error BadRead(uint len, uint size);
+    error BadRead();
     error BadWrite(address deployed, address calculated);
     error CovenantTooLarge();
     error ZeroTablet();
 
-    event TabletCarved(address tablet);
-
-    uint16 constant MAX_DEPLOYED_BYTECODE = 24576;
     bytes32 constant EMPTY_HASH  = hex'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470';
     bytes32 constant PILLAR = hex'18beb7d392d5692fcddc3d86a7e1585a3a33802c18b15735d1bd43a26901b05c'; //keccak256("Lot's wife");
 
@@ -43,8 +40,15 @@ library Moses {
         }
     }
 
-    function computeAddress(bytes32 hash) internal pure returns (address) {
-        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(MOSES_FS), PILLAR, hash)))));
+    function computeAddress(bytes32 hash) public pure returns (address addr) {
+        assembly {
+            let ptr := mload(0x40) //free memory pointer, which is temporarily overwritten
+            mstore(0x40, hash) 
+            mstore(0x20, PILLAR) //solidity scratch space
+            mstore(0x00, 0xff7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c)
+            addr := keccak256(11,85)
+            mstore(0x40, ptr)
+        }
     }
 
     function write(string memory covenant) internal returns (address tablet) {
@@ -70,34 +74,32 @@ library Moses {
             mstore(0x40, add(covenant, size))
             
             extcodecopy(tablet, covenant, 0, size)
+            size := sub(size, 32)
             let len := xor(TABLET_CODE, mload(covenant))
             mstore(covenant, len)
         }
-        unchecked {
-            if (covenant.length + 32 != size) revert BadRead(covenant.length, size);
-        }
+        
+        if (covenant.length != size) revert BadRead();
     }
 
 }
 
 contract MosesFS {
 
-    event TabletCarved(address tablet);
-
     uint16 constant MAX_DEPLOYED_BYTECODE = 24576;
     uint16 constant MAX_LENGTH = MAX_DEPLOYED_BYTECODE - 32;
     bytes32 constant PILLAR = hex'18beb7d392d5692fcddc3d86a7e1585a3a33802c18b15735d1bd43a26901b05c'; //keccak256("Lot's wife");
     bytes32 constant TABLET_CODE = hex'383D3D39383Df3fe7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7cffff8000';
-    
+
     function find(string memory covenant) external view returns (address tablet, bool carved) {
-        return find(bytes(covenant));
+        return Moses.find(covenant);
     }
-    function find(bytes memory covenant) public view returns (address tablet, bool carved) {
+    function find(bytes memory covenant) external view returns (address tablet, bool carved) {
         return Moses.find(covenant);
     }
 
-    function computeAddress(bytes32 hash) private view returns (address) {
-        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), PILLAR, hash)))));
+    function computeAddress(bytes32 hash) external pure returns (address) {
+        return Moses.computeAddress(hash);
     }
 
     function write(string memory covenant) external returns (address tablet) {
@@ -108,11 +110,11 @@ contract MosesFS {
         if (covenant.length > MAX_LENGTH) revert Moses.CovenantTooLarge();
         
         bool carved;
-        (tablet, carved) = find(covenant);
-        if (carved) return tablet;
-
-        address addr = _write(covenant);
-        if (addr != tablet) revert Moses.BadWrite(addr, tablet);
+        (tablet, carved) = Moses.find(covenant);
+        if (!carved) {
+            address addr = _write(covenant);
+            if (addr != tablet) revert Moses.BadWrite(addr, tablet);
+        }
     }
 
     function _write(bytes memory covenant) public returns (address tablet) {
