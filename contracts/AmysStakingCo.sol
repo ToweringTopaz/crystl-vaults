@@ -77,7 +77,7 @@ contract AmysStakingCo {
                 lpTokens[i] = abi.decode(data,(address));
 
                 (success, data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", i));
-                if (success) (,, allocPoint[i - startIndex]) = abi.decode(data,(uint128,uint64,uint64));
+                if (success) (,, allocPoint[i - startIndex]) = abi.decode(data,(uint256,uint256,uint256));
             }
         } else if (chefType == CHEF_STAKING_REWARDS) {
             endTime = new uint256[](len);
