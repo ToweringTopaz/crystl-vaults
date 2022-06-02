@@ -16,6 +16,7 @@ contract AmysStakingCo {
     uint8 constant CHEF_MASTER = 1;
     uint8 constant CHEF_MINI = 2;
     uint8 constant CHEF_STAKING_REWARDS = 3;
+    uint8 constant CHEF_PANCAKE = 4;
     uint8 constant OPERATOR = 255;
 
     struct ChefContract {
@@ -36,7 +37,7 @@ contract AmysStakingCo {
         string memory wantSig;
         if (chef.chefType == CHEF_MASTER)
             wantSig = "poolInfo(uint256)";
-        else if (chef.chefType == CHEF_MINI)
+        else if (chef.chefType == CHEF_MINI || chef.chefType == CHEF_PANCAKE)
             wantSig = "lpToken(uint256)";
         else
              revert BadChefType(_chef, chef.chefType);
@@ -69,7 +70,7 @@ contract AmysStakingCo {
                 (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", i));
                 if (success) (lpTokens[i - startIndex], allocPoint[i - startIndex]) = abi.decode(data,(address, uint256));
             }
-        } else if (chefType == CHEF_MINI) {
+        } else if (chefType == CHEF_MINI || chefType == CHEF_PANCAKE) {
             for (uint i = startIndex; i < len; i++) {
                 (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("lpToken(uint256)", i));
                 if (!success) continue;
@@ -101,7 +102,7 @@ contract AmysStakingCo {
     }
 
     function getLength(address chef, uint8 chefType) public view returns (uint32 len) {
-        if (chefType == CHEF_MASTER || chefType == CHEF_MINI) {
+        if (chefType == CHEF_MASTER || chefType == CHEF_MINI || chefType == CHEF_PANCAKE) {
                 len = uint32(IMasterHealer(chef).poolLength());
             } else if (chefType == CHEF_STAKING_REWARDS) {
                 len = uint32(createFactoryNonce(chef) - 1);
@@ -118,10 +119,13 @@ contract AmysStakingCo {
         if (chefs[chef].chefType != 0) return chefs[chef].chefType;
         (bool success,) = chef.staticcall(abi.encodeWithSignature("lpToken(uint256)", 0));
 
-        if (success && checkMiniChef(chef)) {
-            return CHEF_MINI;
+
+
+        if (success) {
+            (bool valid, bool usesTime) = checkMiniChef(chef);
+            if (valid) return usesTime ? CHEF_MINI : CHEF_PANCAKE;
         }
-        if (!success && checkMasterChef(chef)) {
+        else if (checkMasterChef(chef)) {
             return CHEF_MASTER;
         }
         if (checkStakingRewardsFactory(chef)) {
@@ -139,14 +143,16 @@ contract AmysStakingCo {
             lastRewardBlock <= block.number;
     }
 
-    function checkMiniChef(address chef) internal view returns (bool valid) { 
+    function checkMiniChef(address chef) internal view returns (bool valid, bool time) { //time as opposed to lastRewardBlock
         (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", 0));
-        if (!success) return false;
+        if (!success) return (false, false);
         (success,) = chef.staticcall(abi.encodeWithSignature("lpToken(uint256)", 0));
-        if (!success || data.length < 0x40) return false;
+        if (!success || data.length < 0x40) return (false, false);
 
         (,uint lastRewardTime) = abi.decode(data,(uint256,uint256));
-        valid = lastRewardTime <= block.timestamp && lastRewardTime > 2**30;
+        valid = time = lastRewardTime <= block.timestamp && lastRewardTime > 2**30;
+
+        if (!valid) valid = lastRewardTime > block.number * 15 / 16 && lastRewardTime <= block.number;
     }
 
     function checkStakingRewardsFactory(address chef) internal view returns (bool valid) {
