@@ -37,7 +37,7 @@ contract Strategy is BaseStrategy {
                 if (earnedToken != targetWant) safeSwap(earnedAmt, earnedToken, config.weth()); //swap to the native gas token if not the targetwant token
             }
         }
-        if (!success && tx.origin != address(1)) return (false, _wantLockedTotal()); //a call from address(1) is for gas estimation and will never be executed
+        if (!success) return (false, _wantLockedTotal());
 
         //pay fees on new targetWant tokens
         targetWantAmt = fees.payTokenFeePortion(targetWant, targetWant.balanceOf(address(this)) - targetWantAmt) + targetWantAmt;
@@ -55,7 +55,7 @@ contract Strategy is BaseStrategy {
         wrapAllEth();
         IWETH weth = config.weth();
         uint wethAmt = weth.balanceOf(address(this));
-        if (wethAmt > WETH_DUST) {
+        if (wethAmt > WETH_DUST && success) { //success is only false here if maximizerDeposit was attempted and failed
             wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
             swapToWantToken(wethAmt, weth);
         }
