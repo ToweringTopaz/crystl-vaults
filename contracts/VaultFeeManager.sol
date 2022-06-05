@@ -76,12 +76,14 @@ contract VaultFeeManager is IVaultFeeManager {
         }
     }
 
-     function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) public auth {
+    function setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) external auth {
+         _setDefaultWithdrawFee(withdrawReceiver, withdrawRate);
+    }
+    function _setDefaultWithdrawFee(address withdrawReceiver, uint16 withdrawRate) internal {
         defaultWithdrawFee = Fee.create(withdrawReceiver, withdrawRate);
         Fee.check(defaultWithdrawFee, 300);
-        emit SetDefaultEarnFees(defaultEarnFees);
         emit SetDefaultWithdrawFee(defaultWithdrawFee);
-    }   
+    }
 
     function setEarnFees(uint _vid, address[3] calldata earnReceivers, uint16[3] calldata earnRates) external auth {
         _overrideDefaultEarnFees.set(_vid);
@@ -95,11 +97,14 @@ contract VaultFeeManager is IVaultFeeManager {
         emit ResetEarnFees(_vid);
     }
     
-    function setDefaultEarnFees(address[3] memory earnReceivers, uint16[3] memory earnRates) public auth {
+    function setDefaultEarnFees(address[3] memory earnReceivers, uint16[3] memory earnRates) external auth {
+        _setDefaultEarnFees(earnReceivers, earnRates);
+    }
+    function _setDefaultEarnFees(address[3] memory earnReceivers, uint16[3] memory earnRates) internal {
         defaultEarnFees.set(earnReceivers, earnRates);
         Fee.check(defaultEarnFees, 3000);
         emit SetDefaultEarnFees(defaultEarnFees);
-    }   
+    }
 
     function setWithdrawFee(uint _vid, address withdrawReceiver, uint16 withdrawRate) external auth {
         _overrideDefaultWithdrawFee.set(_vid);

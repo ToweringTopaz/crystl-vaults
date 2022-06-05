@@ -157,12 +157,13 @@ task("vaultVerify", "Verifies everything")
 
 
 task("deployImplementation", "Deploys a strategy implementation contract")
-  .setAction(async (name) => {
+  .addParam("name", "the contract name to deploy")
+  .setAction(async ({name}) => {
     //vaultHealer = await ethers.getContractAt(vaultHealer_abi, '0x41900A479FcdFe5808eDF12aa22136f98E08C803')
     //console.log("vaultHealer Instantiated")
 	
-    StrategyImplementation = await ethers.getContractFactory("BoostPool");
-    strategyImplementation = await StrategyImplementation.deploy('0x41900A479FcdFe5808eDF12aa22136f98E08C803');
+    StrategyImplementation = await ethers.getContractFactory(name);
+    strategyImplementation = await StrategyImplementation.deploy('0x9Fe22630DE9Ec654256AB103adD153D93c4D329C');
     
     console.log("New strategy impl address: ", strategyImplementation.address);
   });

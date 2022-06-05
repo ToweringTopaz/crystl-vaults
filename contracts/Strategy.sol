@@ -19,7 +19,7 @@ contract Strategy is BaseStrategy {
     }
 
     function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
-        (IERC20 _wantToken,) = config.wantToken();
+        IERC20 _wantToken = config.wantToken();
 
         //targetWant is the want token for standard vaults, or the want token of a maximizer's target
         IERC20 targetWant = config.isMaximizer() ? VaultChonk.strat(vaultHealer, config.vid() >> 16).wantToken() : _wantToken;
@@ -37,7 +37,7 @@ contract Strategy is BaseStrategy {
                 if (earnedToken != targetWant) safeSwap(earnedAmt, earnedToken, config.weth()); //swap to the native gas token if not the targetwant token
             }
         }
-        if (!success && tx.origin != address(1)) return (false, _wantLockedTotal()); //a call from address(1) is for gas estimation and will never be executed
+        if (!success) return (false, _wantLockedTotal());
 
         //pay fees on new targetWant tokens
         targetWantAmt = fees.payTokenFeePortion(targetWant, targetWant.balanceOf(address(this)) - targetWantAmt) + targetWantAmt;
@@ -55,7 +55,7 @@ contract Strategy is BaseStrategy {
         wrapAllEth();
         IWETH weth = config.weth();
         uint wethAmt = weth.balanceOf(address(this));
-        if (wethAmt > WETH_DUST) {
+        if (wethAmt > WETH_DUST && success) { //success is only false here if maximizerDeposit was attempted and failed
             wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
             swapToWantToken(wethAmt, weth);
         }
@@ -79,9 +79,9 @@ contract Strategy is BaseStrategy {
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
-        (IERC20 _wantToken, uint dust) = config.wantToken();
+        IERC20 _wantToken = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
-        uint wantLockedBefore = (wantBal > dust) ? _vaultSharesTotal() + wantBal : _farm() + _wantToken.balanceOf(address(this));
+        uint wantLockedBefore = (wantBal > config.wantDust()) ? _vaultSharesTotal() + wantBal : _farm() + _wantToken.balanceOf(address(this));
 
         if (msg.value > 0) {
             IWETH weth = config.weth();
@@ -98,25 +98,26 @@ contract Strategy is BaseStrategy {
 
         wantAdded = _wantToken.balanceOf(address(this)) + vaultSharesAfter - wantLockedBefore;
         sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
-        if (wantAdded < dust || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
+        if (wantAdded < config.wantDust() || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
     }
 
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) external virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
-        (IERC20 _wantToken, uint dust) = config.wantToken();
+        IERC20 _wantToken = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this)); 
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal; //User's balance, in want tokens
         
         // user requested all, very nearly all, or more than their balance, so withdraw all
         unchecked { //overflow is caught and handled in the second condition
+            uint dust = config.wantDust();
             if (_wantAmt + dust > userWant || _wantAmt + dust < _wantAmt) {
 				_wantAmt = userWant;
             }
         }
 
-		uint withdrawSlippage = 0;
+		uint withdrawSlippage;
         if (_wantAmt > wantBal) {
             uint toWithdraw = _wantAmt - wantBal;
             _vaultWithdraw(_wantToken, toWithdraw); //Withdraw from the masterchef, staking pool, etc.
