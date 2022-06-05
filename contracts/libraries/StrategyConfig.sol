@@ -44,9 +44,13 @@ library StrategyConfig {
     function masterchef(MemPointer config) internal pure returns (address) {
         return Tactics.masterchef(tacticsA(config));
     }
-    function wantToken(MemPointer config) internal pure returns (IERC20 want, uint256 dust) {
+    function wantToken(MemPointer config) internal pure returns (IERC20 want) {
         assembly ("memory-safe") {
             want := and(mload(add(config,0x54)), MASK_160)
+        }
+    }
+    function wantDust(MemPointer config) internal pure returns (uint256 dust) {
+        assembly ("memory-safe") {
             dust := shl(and(mload(add(config,0x55)), 0xff),1)
         }
     }
@@ -82,7 +86,7 @@ library StrategyConfig {
         }
     }
     function token0And1(MemPointer config) internal pure returns (IERC20 _token0, IERC20 _token1) {
-        assert(isPairStake(config));
+        //assert(isPairStake(config));
         assembly ("memory-safe") {
             _token0 := and(mload(add(config,0x93)), MASK_160)
             _token1 := and(mload(add(config,0xA7)), MASK_160)
@@ -122,7 +126,7 @@ library StrategyConfig {
     function configAddress(IStrategy strategy) internal pure returns (address configAddr) {
         assembly ("memory-safe") {
             mstore(0, or(0xd694000000000000000000000000000000000000000001000000000000000000, shl(80,strategy)))
-            configAddr := and(0xffffffffffffffffffffffffffffffffffffffff, keccak256(0, 23)) //create address, nonce 1
+            configAddr := and(MASK_160, keccak256(0, 23)) //create address, nonce 1
         }
     }
 
@@ -143,7 +147,8 @@ library StrategyConfig {
             mstore(0x40,add(config, size))
         }
 
-        (IERC20 want, uint wantDust) = config.wantToken();
+        IERC20 want = config.wantToken();
+        uint dust = config.wantDust();
         bytes32 _tacticsA = Tactics.TacticsA.unwrap(config.tacticsA());
         address _masterchef = address(bytes20(_tacticsA));
         uint24 pid = uint24(uint(_tacticsA) >> 72);
@@ -159,7 +164,7 @@ library StrategyConfig {
         return IStrategy.ConfigInfo({
             vid: config.vid(),
             want: want,
-            wantDust: wantDust,
+            wantDust: dust,
             masterchef: _masterchef,
             pid: pid,
             _router: config.router(),

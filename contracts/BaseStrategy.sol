@@ -65,8 +65,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             }
         }
 		StrategyConfig.MemPointer config_ = StrategyConfig.MemPointer.wrap(_getConfig());
-		(IERC20 _wantToken,) = config_.wantToken();
-		_wantToken.safeIncreaseAllowance(msg.sender, type(uint256).max);
+		config_.wantToken().safeIncreaseAllowance(msg.sender, type(uint256).max);
 
     }
 
@@ -96,7 +95,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
 
     function wantToken() external view getConfig returns (IERC20 _token) {
-        (_token,) = config.wantToken();
+        return config.wantToken();
     }
 
 
@@ -111,12 +110,11 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         return _wantLockedTotal();
     }
     function _wantLockedTotal() internal view virtual returns (uint256) {
-        (IERC20 _wantToken, ) = config.wantToken();
-        return _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        return config.wantToken().balanceOf(address(this)) + _vaultSharesTotal();
     }
 
     modifier guardPrincipal {
-        (IERC20 _wantToken, uint dust) = config.wantToken();
+        IERC20 _wantToken = config.wantToken();
         uint wantLockedBefore = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
         _;
         if (_wantToken.balanceOf(address(this)) + _vaultSharesTotal() < wantLockedBefore) revert Strategy_WantLockedLoss();
@@ -124,7 +122,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     //Safely deposits want tokens in farm
     function _farm() internal virtual returns (uint256 vaultSharesAfter) {
-        (IERC20 _wantToken, uint dust) = config.wantToken();
+        IERC20 _wantToken = config.wantToken();
         uint256 wantAmt = _wantToken.balanceOf(address(this));
         if (wantAmt == 0) return _vaultSharesTotal();
         
@@ -134,7 +132,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         
         //including dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + dust < (sharesBefore + wantAmt) * config.slippageFactor() / 256)
+        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + config.wantDust() < (sharesBefore + wantAmt) * config.slippageFactor() / 256)
             revert Strategy_ExcessiveFarmSlippage();
     }
 
@@ -194,7 +192,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
 
     function swapToWantToken(uint256 _amountIn, IERC20 _tokenA) internal {
-        (IERC20 want,) = config.wantToken();
+        IERC20 want = config.wantToken();
 
         if (config.isPairStake()) {
             (IERC20 token0, IERC20 token1) = config.token0And1();
@@ -256,7 +254,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
 
-        (IERC20 want, uint wantDust) = config.wantToken();
         Tactics.TacticsA tacticsA = config.tacticsA();
 
         uint len = config.earnedLength();
@@ -269,8 +266,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         info = ConfigInfo({
             vid: config.vid(),
-            want: want,
-            wantDust: wantDust,
+            want: config.wantToken(),
+            wantDust: config.wantDust(),
             masterchef: Tactics.masterchef(tacticsA),
             pid: Tactics.pid(tacticsA),
             _router: config.router(),
