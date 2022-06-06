@@ -123,16 +123,16 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     //Safely deposits want tokens in farm
     function _farm() internal virtual returns (uint256 vaultSharesAfter) {
         IERC20 _wantToken = config.wantToken();
+        uint dust = config.wantDust();
         uint256 wantAmt = _wantToken.balanceOf(address(this));
-        if (wantAmt == 0) return _vaultSharesTotal();
+        if (wantAmt < dust) return _vaultSharesTotal();
         
         uint256 sharesBefore = _vaultSharesTotal();
         _vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
         vaultSharesAfter = _vaultSharesTotal();
         
-        //including dust to reduce the chance of false positives
         //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + config.wantDust() < (sharesBefore + wantAmt) * config.slippageFactor() / 256)
+        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + dust < sharesBefore + wantAmt * config.slippageFactor() / 256)
             revert Strategy_ExcessiveFarmSlippage();
     }
 

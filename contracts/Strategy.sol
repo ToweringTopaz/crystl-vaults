@@ -80,8 +80,7 @@ contract Strategy is BaseStrategy {
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) external virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         IERC20 _wantToken = config.wantToken();
-        uint wantBal = _wantToken.balanceOf(address(this));
-        uint wantLockedBefore = (wantBal > config.wantDust()) ? _vaultSharesTotal() + wantBal : _farm() + _wantToken.balanceOf(address(this));
+        uint wantLockedBefore = _farm() + _wantToken.balanceOf(address(this));
 
         if (msg.value > 0) {
             IWETH weth = config.weth();
