@@ -65,7 +65,21 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             }
         }
 		StrategyConfig.MemPointer config_ = StrategyConfig.MemPointer.wrap(_getConfig());
-		config_.wantToken().safeIncreaseAllowance(msg.sender, type(uint256).max);
+        IERC20 want = config_.wantToken();
+		want.safeIncreaseAllowance(msg.sender, type(uint256).max);
+
+        if (config_.isMaximizer()) {
+
+            (IERC20 targetWant,,,,,) = vaultHealer.vaultInfo(config_.vid() >> 16);
+            
+            for (uint i; i < config_.earnedLength(); i++) {
+                (IERC20 earned,) = config_.earned(i);
+                if (earned == targetWant && earned != want) {
+                    earned.safeIncreaseAllowance(msg.sender, type(uint256).max);
+                    return;
+                }
+            }
+        }
 
     }
 
