@@ -76,7 +76,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 (IERC20 earned,) = config_.earned(i);
                 if (earned == targetWant && earned != want) {
                     earned.safeIncreaseAllowance(msg.sender, type(uint256).max);
-                    return;
+                    break;
                 }
             }
         }
