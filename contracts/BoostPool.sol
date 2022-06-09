@@ -74,8 +74,7 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         data = abi.encode(rewardToken, _rewardPerBlock, delayBlocks, durationBlocks);
     }
 
-    function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external initializer {
-        require(address(VAULTHEALER) == msg.sender, "Wrong vaulthealer for pool implementation");
+    function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external onlyVaultHealer initializer {
         (
             address _rewardToken,
             uint112 _rewardPerBlock,
@@ -106,12 +105,10 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
 
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256 multiplier) {
         if (_to <= bonusEndBlock) {
             return _to - _from;
-        } else if (_from >= bonusEndBlock) {
-            return 0;
-        } else {
+        } else if (_from < bonusEndBlock) {
             return bonusEndBlock - _from;
         }
     }
