@@ -19,6 +19,9 @@ contract AmysStakingCo {
     uint8 constant CHEF_PANCAKE = 4;
     uint8 constant OPERATOR = 255;
 
+    uint constant SYNC_GAS_PER_PID = 300000;
+    uint constant SYNC_GAS = 7000000;
+
     struct ChefContract {
         uint8 chefType;
         uint64 pidLast;
@@ -40,8 +43,11 @@ contract AmysStakingCo {
     }
 
     function sync(address _chef) external returns (uint64 endIndex) {
-        uint64 len = getLength(_chef, _identifyChefType(_chef));
         ChefContract storage chef = chefs[_chef];
+        endIndex = chef.pidLast;
+        uint len = getLength(_chef, _identifyChefType(_chef));
+        require(gasleft() > SYNC_GAS_PER_PID * (len - endIndex) || gasleft() > SYNC_GAS, "ASC: insufficient gas");
+
         string memory wantSig;
         if (chef.chefType == CHEF_MASTER)
             wantSig = "poolInfo(uint256)";
@@ -50,16 +56,15 @@ contract AmysStakingCo {
         else
              revert BadChefType(_chef, chef.chefType);
         
-        uint64 i = chef.pidLast;
-        for (; i < len && gasleft() > 2**16; i++) {
+        for (; endIndex < len && gasleft() > 2**16; endIndex++) {
 
-            (bool success, bytes memory data) = _chef.staticcall(abi.encodeWithSignature(wantSig, i));
+            (bool success, bytes memory data) = _chef.staticcall(abi.encodeWithSignature(wantSig, endIndex));
             if (success) {
                 address wantAddr = abi.decode(data,(address));
-                chef.wantPid[wantAddr].push(i);
+                chef.wantPid[wantAddr].push(endIndex);
             }
         }
-        return chef.pidLast = i;
+        endIndex = chef.pidLast;
     }
 
 
