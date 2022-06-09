@@ -13,6 +13,7 @@ contract StrategyQuick is Strategy {
 
     function _vaultHarvest() internal override {
         super._vaultHarvest();
-        D_QUICK.leave(D_QUICK.balanceOf(address(this)));
+        uint balance = D_QUICK.balanceOf(address(this));
+        if (balance > 0) D_QUICK.leave(balance);
     }
 }
