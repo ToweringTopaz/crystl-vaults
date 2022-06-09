@@ -27,8 +27,16 @@ contract AmysStakingCo {
 
     mapping(address => ChefContract) public chefs;
 
-    function findPool(address chef, address wantToken) external view returns (AmysStakingLib.WantPid memory) {
-        return chefs[chef].wantPid[wantToken];
+    function findPool(address chef, address wantToken) external view returns (AmysStakingLib.WantPid memory pid) {
+
+        if (chefs[chef].chefType == CHEF_STAKING_REWARDS) {
+            (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("stakingRewardsInfoByStakingToken(address)", wantToken));
+            require(success, "ASC: failed call to stakingRewardsInfoByStakingToken");
+            (pid.current,,) = abi.decode(data,(uint,uint,uint));
+            return pid; // will be an address but returned as a uint in the (uint, uint64[]) tuple
+        }
+
+        return chefs[chef].wantPid[wantToken];  
     }
 
     function sync(address _chef) external returns (uint64 endIndex) {
