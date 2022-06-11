@@ -28,6 +28,7 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
     uint constant private B_MULTIPLIER = 10; // Token B direct swap weighted 10x
 
     event SetPath(bool manual, address router, IERC20[] path);
+    bytes32[1] private __RESERVED__;
     mapping(bytes32 => Path) private _paths;
 
     constructor(address vhAuth) {
