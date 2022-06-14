@@ -104,7 +104,8 @@ contract Strategy is BaseStrategy {
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) external virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
         IERC20 _wantToken = config.wantToken();
-        uint wantBal = _wantToken.balanceOf(address(this)); 
+        uint wantBal = _wantToken.balanceOf(address(this));
+        _vaultSync(); //updates balance on underlying pool, if necessary
         uint wantLockedBefore = wantBal + _vaultSharesTotal();
         uint256 userWant = _userShares * wantLockedBefore / _sharesTotal; //User's balance, in want tokens
         
@@ -142,6 +143,7 @@ contract Strategy is BaseStrategy {
 		wantAmt -= withdrawSlippage;
 		if (wantAmt > wantBal) wantAmt = wantBal;
 		
+        _vaultSwim();
         return (sharesRemoved, wantAmt);
 
     }
@@ -155,6 +157,7 @@ contract Strategy is BaseStrategy {
         address _magnetite,
         uint8 _slippageFactor,
         bool _feeOnTransfer,
+        bool _metaVault,
         address[] calldata _earned,
         uint8[] calldata _earnedDust
     ) external view returns (bytes memory configData) {
@@ -162,6 +165,7 @@ contract Strategy is BaseStrategy {
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
         uint8 vaultType = uint8(_earned.length);
         if (_feeOnTransfer) vaultType += 0x80;
+        if (_metaVault) vaultType += 0x40;
         configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
 		
 		IERC20 _targetWant = IERC20(_wantToken);

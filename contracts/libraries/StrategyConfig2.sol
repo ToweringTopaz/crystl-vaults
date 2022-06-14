@@ -6,9 +6,40 @@ import "../interfaces/IUniRouter.sol";
 import "../interfaces/IMagnetite.sol";
 import "../interfaces/IVaultHealer.sol";
 
-library StrategyConfig {
-    using StrategyConfig for MemPointer;
+library StrategyConfig2 {
+    using StrategyConfig2 for MemPointer;
     using Tactics for bytes32[3];
+
+    struct ConfigPacked {
+
+        uint256 vid;
+        address router;
+        address[8] addresses;
+        bytes32[3] tactics;
+        uint16 wantOffset;
+        uint8 wantDust;
+        uint8 numEarned;
+        uint16[4] earnedOffset;
+        uint8[4] earnedDust;
+    }
+
+    struct ConfigUnpacked {
+
+        IERC20 wantToken;
+        uint wantDust;
+        IERC20
+        Tactics.TacticalData tactics;
+
+    }
+
+    struct TokenInfo {
+        IERC20 token;
+        uint256 dust;
+        bool isLP;
+        bool isEarned;
+        bool isWant;
+        bool is
+    }
 
     type MemPointer is uint256;
 

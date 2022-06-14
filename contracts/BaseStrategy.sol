@@ -11,6 +11,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
+    using Tactics for bytes32[3];
 
     uint constant FEE_MAX = 10000;
     uint16 constant CONFIG_POINTER = 0x200;
@@ -80,7 +81,12 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 }
             }
         }
+        _postInitCheck();
+    }
 
+    //Tests to ensure the strategy works; no guarantees at this time
+    function _postInitCheck() internal virtual {
+        this.vaultSharesTotal();
     }
 
     //should only happen when this contract deposits as a maximizer
@@ -139,7 +145,10 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         IERC20 _wantToken = config.wantToken();
         uint dust = config.wantDust();
         uint256 wantAmt = _wantToken.balanceOf(address(this));
-        if (wantAmt < dust) return _vaultSharesTotal();
+        if (wantAmt < dust) {
+            _vaultSync();
+            return _vaultSharesTotal();
+        }
         
         uint256 sharesBefore = _vaultSharesTotal();
         _vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
@@ -268,8 +277,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
 
-        Tactics.TacticsA tacticsA = config.tacticsA();
-
         uint len = config.earnedLength();
 
         IERC20[] memory earned = new IERC20[](len);
@@ -282,8 +289,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             vid: config.vid(),
             want: config.wantToken(),
             wantDust: config.wantDust(),
-            masterchef: Tactics.masterchef(tacticsA),
-            pid: Tactics.pid(tacticsA),
+            masterchef: config.tactics().masterchef(),
+            pid: config.tactics().pid(),
             _router: config.router(),
             _magnetite: config.magnetite(),
             earned: earned,
@@ -294,8 +301,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
 
-    function tactics() external view getConfig returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) {
-        (tacticsA, tacticsB) = config.tactics();
+    function tactics() external view getConfig returns (bytes32[3] memory) {
+        return config.tactics();
     }
 
     function isMaximizer() external view getConfig returns (bool) {
@@ -317,26 +324,37 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         return _vaultSharesTotal();
     }
 
-
     function _vaultSharesTotal() internal view virtual returns (uint256) {
-        return Tactics.vaultSharesTotal(config.tacticsA());
+        return config.tactics().vaultSharesTotal();
     }
+
+    //For building atop lending protocols, external vaults, etc. Updates the underlying pool if needed
+    function _vaultSync() internal view virtual returns (uint256) {
+        return config.tactics().sync();
+    }
+    function _vaultSwim() internal view virtual returns (uint256) {
+        return config.tactics().swim();
+    }
+    function _vaultFlip() internal view virtual returns (uint256) {
+        return config.tactics().flip();
+    }
+    function _vaultFlop() internal view virtual returns (uint256) {
+        return config.tactics().flop();
+    }
+
     function _vaultDeposit(IERC20 _wantToken, uint256 _amount) internal virtual {   
         //token allowance for the pool to pull the correct amount of funds only
-        (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-        _wantToken.safeIncreaseAllowance(Tactics.masterchef(tacticsA), _amount);      
-        Tactics.deposit(tacticsA, tacticsB, _amount);
+
+        _wantToken.safeIncreaseAllowance(config.tactics.masterchef(), _amount);      
+        config.tactics().deposit(_amount);
     }
     function _vaultWithdraw(IERC20 /*_wantToken*/, uint256 _amount) internal virtual {
-        (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-        Tactics.withdraw(tacticsA, tacticsB, _amount);
+        config.tactics().withdraw(_amount);
     }
     function _vaultHarvest() internal virtual {
-        (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-        Tactics.harvest(tacticsA, tacticsB); // Harvest farm tokens
+        config.tactics().harvest();
     }
     function _vaultEmergencyWithdraw() internal virtual {
-        (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
-        Tactics.emergencyVaultWithdraw(tacticsA, tacticsB);
+        config.tactics().emergencyVaultWithdraw();
     }
 }

@@ -60,6 +60,6 @@ interface IStrategy is IERC165 {
     }
 
     function configInfo() external view returns (ConfigInfo memory);
-    function tactics() external view returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB);
+    function tactics() external view returns (bytes32[3] memory);
     
 }
