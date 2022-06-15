@@ -64,23 +64,29 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 revert(0, 0)
             }
         }
-		StrategyConfig.MemPointer config_ = StrategyConfig.MemPointer.wrap(_getConfig());
-        IERC20 want = config_.wantToken();
+
+        this.initialize2(); //must be called by this contract externally
+
+    }
+
+    function initialize2() public virtual getConfig {
+        require(msg.sender == address(this));
+
+        IERC20 want = config.wantToken();
 		want.safeIncreaseAllowance(msg.sender, type(uint256).max);
 
-        if (config_.isMaximizer()) {
+        if (config.isMaximizer()) {
 
-            (IERC20 targetWant,,,,,) = vaultHealer.vaultInfo(config_.vid() >> 16);
+            (IERC20 targetWant,,,,,) = vaultHealer.vaultInfo(config.targetVid());
             
-            for (uint i; i < config_.earnedLength(); i++) {
-                (IERC20 earned,) = config_.earned(i);
+            for (uint i; i < config.earnedLength(); i++) {
+                (IERC20 earned,) = config.earned(i);
                 if (earned == targetWant && earned != want) {
                     earned.safeIncreaseAllowance(msg.sender, type(uint256).max);
                     break;
                 }
             }
         }
-
     }
 
     //should only happen when this contract deposits as a maximizer
@@ -159,6 +165,28 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         IERC20[] memory path = config.magnetite().findAndSavePath(address(config.router()), _tokenA, _tokenB);
         require(path[0] == _tokenA && path[path.length - 1] == _tokenB, "Strategy: received invalid path for swap");
         safeSwap(_amountIn, path);
+    }
+
+    //returns true if the path from A to B contains weth; if true, path from tokenA to weth
+    //otherwise, path from tokenA to tokenB
+    function wethOnPath(IERC20 _tokenA, IERC20 _tokenB) internal returns (bool containsWeth, IERC20[] memory path) {
+        IERC20 weth = config.weth();
+        if (_tokenA == weth) {
+            path = new IERC20[](1);
+            path[0] = weth;
+            return (true, path);
+        } else {
+            path = config.magnetite().findAndSavePath(address(config.router()), _tokenA, _tokenB);
+            if (_tokenB == weth) return (true, path);
+            else {
+                for (uint i = 1; i < path.length - 1; i++) {
+                    if (path[i] == weth) {
+                        assembly("memory-safe") { mstore(path, add(i,1)) } //truncate path at weth
+                        return (true, path);
+                    }
+                }
+            }
+        }
     }
 
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
