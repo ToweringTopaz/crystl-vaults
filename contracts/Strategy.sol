@@ -74,7 +74,7 @@ contract Strategy is BaseStrategy {
 
     function _earnMaximizer(Fee.Data[3] calldata fees, address, bytes calldata) internal returns (bool success, uint256 __wantLockedTotal) {
         //targetWant is the want token for standard vaults, or the want token of a maximizer's target
-        ConfigInfo memory targetConfig = VaultChonk.strat(vaultHealer, config.vid() >> 16).configInfo();
+        ConfigInfo memory targetConfig = VaultChonk.strat(msg.sender/*vaultHealer*/, config.vid() >> 16).configInfo();
         IERC20 targetWant = targetConfig.want;
 		uint targetWantAmt = targetWant.balanceOf(address(this)); 
 
