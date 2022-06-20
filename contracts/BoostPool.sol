@@ -70,18 +70,31 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         return block.number < bonusEndBlock;
     }
 
-    function generateInitData(address rewardToken, uint112 _rewardPerBlock, uint32 delayBlocks, uint32 durationBlocks) external pure returns (bytes memory data) {
-        data = abi.encode(rewardToken, _rewardPerBlock, delayBlocks, durationBlocks);
+    function generateInitData(address _payer, address rewardToken, uint112 _rewardPerBlock, uint32 delayBlocks, uint32 durationBlocks) external pure returns (bytes memory data) {
+        data = abi.encode(_payer, rewardToken, _rewardPerBlock, delayBlocks, durationBlocks);
+    }
+
+    struct InitData {
+        address payer;
+        IERC20 rewardToken;
+        uint112 rewardPerBlock;
+        uint32 delayBlocks;
+        uint32 durationBlocks;
     }
 
     function initialize(address _owner, uint256 _boostID, bytes calldata initdata) external onlyVaultHealer initializer {
-        (
-            address _rewardToken,
-            uint112 _rewardPerBlock,
-            uint32 _delayBlocks,
-            uint32 _durationBlocks
-        ) = abi.decode(initdata,(address,uint112,uint32,uint32));
-        require(IERC20(_rewardToken).balanceOf(address(this)) >= _durationBlocks * _rewardPerBlock, "Can't activate pool without sufficient rewards");
+
+        InitData memory init = abi.decode(initdata,(InitData));
+
+        uint _rewardBalance = init.rewardToken.balanceOf(address(this));
+        uint rewardsNeeded = init.durationBlocks * init.rewardPerBlock;
+
+        if (rewardsNeeded > _rewardBalance) {
+            init.rewardToken.safeTransferFrom(init.payer, address(this), rewardsNeeded - _rewardBalance);
+            require(init.rewardToken.balanceOf(address(this)) >= rewardsNeeded, "Can't activate pool without sufficient rewards");
+        } else if (rewardsNeeded < _rewardBalance) {
+            init.rewardToken.safeTransfer(init.payer, _rewardBalance - rewardsNeeded);
+        }
         BOOST_ID = _boostID;
 
         _transferOwnership(_owner);
@@ -89,12 +102,12 @@ contract BoostPool is IBoostPool, Initializable, Ownable {
         IERC20 vaultWant = IVaultHealer(msg.sender).strat(uint256(_boostID & type(uint224).max)).wantToken();
         require(address(vaultWant) != address(0), "bad want/strat for stake_token_vid");
 
-        REWARD_TOKEN = IERC20(_rewardToken);
+        REWARD_TOKEN = init.rewardToken;
 
-        rewardPerBlock = _rewardPerBlock;
+        rewardPerBlock = init.rewardPerBlock;
         
-        startBlock = uint32(block.number) + _delayBlocks;
-        bonusEndBlock = startBlock + _durationBlocks;
+        startBlock = uint32(block.number) + init.delayBlocks;
+        bonusEndBlock = startBlock + init.durationBlocks;
         lastRewardBlock = startBlock;
     }
 

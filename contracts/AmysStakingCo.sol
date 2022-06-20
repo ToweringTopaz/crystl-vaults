@@ -10,13 +10,14 @@ contract AmysStakingCo {
 
     error UnknownChefType(address chef);
     error PoolLengthZero(address chef);
-    error BadChefType(address chef, uint8 chefType);
+    error BadChefType(uint8 chefType);
 
     uint8 constant CHEF_UNKNOWN = 0;
     uint8 constant CHEF_MASTER = 1;
     uint8 constant CHEF_MINI = 2;
     uint8 constant CHEF_STAKING_REWARDS = 3;
     uint8 constant CHEF_PANCAKE = 4;
+    uint8 constant CHEF_ANNEX = 5; //masterchef but with "getPoolInfo(uint256)" 
     uint8 constant OPERATOR = 255;
 
     uint constant SYNC_GAS_PER_PID = 300000;
@@ -48,17 +49,11 @@ contract AmysStakingCo {
         uint len = getLength(_chef, _identifyChefType(_chef));
         require(gasleft() > SYNC_GAS_PER_PID * (len - endIndex) || gasleft() > SYNC_GAS, "ASC: insufficient gas");
 
-        string memory wantSig;
-        if (chef.chefType == CHEF_MASTER)
-            wantSig = "poolInfo(uint256)";
-        else if (chef.chefType == CHEF_MINI || chef.chefType == CHEF_PANCAKE)
-            wantSig = "lpToken(uint256)";
-        else
-             revert BadChefType(_chef, chef.chefType);
+        bytes4 wantSel = getWantSelector(chef.chefType);
         
         for (; endIndex < len && gasleft() > 2**16; endIndex++) {
 
-            (bool success, bytes memory data) = _chef.staticcall(abi.encodeWithSignature(wantSig, endIndex));
+            (bool success, bytes memory data) = _chef.staticcall(abi.encodeWithSelector(wantSel, endIndex));
             if (success) {
                 address wantAddr = abi.decode(data,(address));
                 chef.wantPid[wantAddr].push(endIndex);
@@ -67,6 +62,18 @@ contract AmysStakingCo {
         endIndex = chef.pidLast;
     }
 
+    function getWantSelector(uint8 chefType) internal pure returns (bytes4 sel) {
+        if (chefType == CHEF_MASTER)
+            sel = bytes4(keccak256("poolInfo(uint256)"));
+        else if (chefType == CHEF_ANNEX)
+            sel = bytes4(keccak256("getPoolInfo(uint256)"));
+        else if (chefType == CHEF_MINI || chefType == CHEF_PANCAKE)
+            sel = bytes4(keccak256("lpToken(uint256)"));
+        else if (chefType == CHEF_STAKING_REWARDS)
+            sel = bytes4(keccak256("stakingToken()"));
+        else
+             revert BadChefType(chefType);
+    }
 
     function getMCPoolData(address chef) public view returns (uint startIndex, uint endIndex, uint8 chefType, address[] memory lpTokens, uint256[] memory allocPoint, uint256[] memory endTime) {
 
@@ -78,18 +85,20 @@ contract AmysStakingCo {
         lpTokens = new address[](len);
         allocPoint = new uint256[](len);
 
-        if (chefType == CHEF_MASTER) {
+        bytes4 wantSel = getWantSelector(chefType);
+
+        if (chefType == CHEF_MASTER || chefType == CHEF_ANNEX) {
             for (uint i = startIndex; i < len; i++) {
-                (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", i));
+                (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSelector(wantSel, i));
                 if (success) (lpTokens[i - startIndex], allocPoint[i - startIndex]) = abi.decode(data,(address, uint256));
             }
         } else if (chefType == CHEF_MINI || chefType == CHEF_PANCAKE) {
             for (uint i = startIndex; i < len; i++) {
-                (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("lpToken(uint256)", i));
+                (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSelector(wantSel, i));
                 if (!success) continue;
                 lpTokens[i] = abi.decode(data,(address));
 
-                (success, data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", i));
+                (success, data) = chef.staticcall(abi.encodeWithSelector(wantSel, i));
                 if (success) (,, allocPoint[i - startIndex]) = abi.decode(data,(uint256,uint256,uint256));
             }
         } else if (chefType == CHEF_STAKING_REWARDS) {
@@ -98,7 +107,7 @@ contract AmysStakingCo {
                 address spawn = addressFrom(chef, i + 1);
                 if (spawn.code.length == 0) continue;
 
-                (bool success, bytes memory data) = spawn.staticcall(abi.encodeWithSignature("stakingToken()"));
+                (bool success, bytes memory data) = spawn.staticcall(abi.encodeWithSelector(wantSel));
                 if (!success) continue;
                 lpTokens[i - startIndex] = abi.decode(data,(address));
 
@@ -138,8 +147,9 @@ contract AmysStakingCo {
             (bool valid, bool usesTime) = checkMiniChef(chef);
             if (valid) return usesTime ? CHEF_MINI : CHEF_PANCAKE;
         }
-        else if (checkMasterChef(chef)) {
-            return CHEF_MASTER;
+        else {
+            (bool valid, uint8 chefType) = checkMasterChef(chef);
+            if (valid) return chefType;
         }
         if (checkStakingRewardsFactory(chef)) {
             return CHEF_STAKING_REWARDS;
@@ -148,9 +158,15 @@ contract AmysStakingCo {
         revert UnknownChefType(chef);
     }
 
-    function checkMasterChef(address chef) internal view returns (bool valid) { 
+    function checkMasterChef(address chef) internal view returns (bool valid, uint8 chefType) { 
         (bool success, bytes memory data) = chef.staticcall(abi.encodeWithSignature("poolInfo(uint256)", 0));
-        if (!success) return false;
+        if (success) {
+            chefType = CHEF_MASTER;
+        } else {
+            (success, data) = chef.staticcall(abi.encodeWithSignature("getPoolInfo(uint256)", 0));
+            if (success) chefType = CHEF_ANNEX;
+            else return (false, 0);
+        }
         (uint lpTokenAddress,,uint lastRewardBlock) = abi.decode(data,(uint256,uint256,uint256));
         valid = ((lpTokenAddress > type(uint96).max && lpTokenAddress < type(uint160).max) || lpTokenAddress == 0) && 
             lastRewardBlock <= block.number;
@@ -174,37 +190,13 @@ contract AmysStakingCo {
     }
 
     function addressFrom(address _origin, uint _nonce) internal pure returns (address) {
-        bytes32 data;
-        if(_nonce == 0x00)          data = keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _origin, bytes1(0x80)));
-        else if(_nonce <= 0x7f)     data = keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _origin, uint8(_nonce)));
-        else if(_nonce <= 0xff)     data = keccak256(abi.encodePacked(bytes1(0xd7), bytes1(0x94), _origin, bytes1(0x81), uint8(_nonce)));
-        else if(_nonce <= 0xffff)   data = keccak256(abi.encodePacked(bytes1(0xd8), bytes1(0x94), _origin, bytes1(0x82), uint16(_nonce)));
-        else if(_nonce <= 0xffffff) data = keccak256(abi.encodePacked(bytes1(0xd9), bytes1(0x94), _origin, bytes1(0x83), uint24(_nonce)));
-        else                        data = keccak256(abi.encodePacked(bytes1(0xda), bytes1(0x94), _origin, bytes1(0x84), uint32(_nonce))); // more than 2^32 nonces not realistic
-
-        return address(uint160(uint256(data)));
+        return AddrCalc.addressFrom(_origin, _nonce);
     }
 
     //The nonce of a factory contract that uses CREATE, assuming no child contracts have selfdestructed
     function createFactoryNonce(address _origin) public view returns (uint) {
 
-        uint n = 1;
-        uint top = 2**32;
-    
-        unchecked {
-            for (uint p = 1; p < top && p > 0;) {
-                address spawn = addressFrom(_origin, n + p); //
-                if (spawn.isContract()) {
-                    n += p;
-                    p *= 2;
-                    if (n + p > top) p = (top - n) / 2;
-                } else {
-                    top = n + p;
-                    p /= 2;
-                }
-            }
-            return n;
-        }
+        return AddrCalc.createFactoryNonce(_origin);
     }
 
     struct LPTokenInfo {

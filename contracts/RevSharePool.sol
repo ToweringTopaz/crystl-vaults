@@ -98,17 +98,14 @@ contract RevSharePool is Ownable, ReentrancyGuard {
 
     // Update reward variables of the given pool to be up-to-date.
     function _updatePool() internal {
-        if (block.timestamp <= lastRewardTime) {
-            return;
-        }
-        if (totalStaked == 0) {
+        if (block.timestamp > lastRewardTime) {
+            if (totalStaked > 0) {
+                (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), lastRewardTime, rewardHalflife);
+                rewardsPending += toUint128(tokenReward);
+                accRewardPerShare = toUint176(accRewardPerShare + tokenReward * 1e30 / totalStaked);
+            }
             lastRewardTime = uint40(block.timestamp);
-            return;
         }
-        (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), lastRewardTime, rewardHalflife);
-        rewardsPending += toUint128(tokenReward);
-        accRewardPerShare = toUint176(accRewardPerShare + tokenReward * 1e30 / totalStaked);
-        lastRewardTime = uint40(block.timestamp);
     }
 
 
@@ -118,7 +115,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     /// @param _amount The amount of staking tokens to deposit
     function deposit(bool _wrapReward, uint256 _amount) external nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
-        uint128 finalDepositAmount = 0;
+        uint128 finalDepositAmount;
         _updatePool();
         if (user.amount > 0) {
             uint256 pending = user.amount * accRewardPerShare / 1e30 - user.rewardDebt;
