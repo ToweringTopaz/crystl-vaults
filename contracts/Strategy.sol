@@ -21,16 +21,12 @@ contract Strategy is BaseStrategy {
         WETH_DUST = (block.chainid == 137 || block.chainid == 25) ? 1e18 : (block.chainid == 56 ? 1e16 : 1e14);
     }
 
-    function _sync() internal virtual {}
-
     function earn(Fee.Data[3] calldata fees, address op, bytes calldata data) public virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
-        _sync();
-        if (config.earnedLength() == 0) {}
         return config.isMaximizer() ? _earnMaximizer(fees, op, data) : _earnAutocompound(fees, op, data);
     }
 
     function _earnAutocompound(Fee.Data[3] calldata fees, address, bytes calldata) internal returns (bool success, uint256 __wantLockedTotal) {
-        
+        _vaultSync();
         IERC20 _wantToken = config.wantToken();
 		uint wantAmt = _wantToken.balanceOf(address(this)); 
 
@@ -70,6 +66,7 @@ contract Strategy is BaseStrategy {
             success = true;
         }
         __wantLockedTotal = _wantToken.balanceOf(address(this)) + (success ? _farm() : _vaultSharesTotal());
+        _vaultSwim();
     }
 
     function _earnMaximizer(Fee.Data[3] calldata fees, address, bytes calldata) internal returns (bool success, uint256 __wantLockedTotal) {
@@ -119,6 +116,7 @@ contract Strategy is BaseStrategy {
         }
 
         __wantLockedTotal = config.wantToken().balanceOf(address(this)) + _farm();
+        _vaultSwim();
     }
 
     function wrapAllEth() private {
@@ -138,7 +136,7 @@ contract Strategy is BaseStrategy {
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) public virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
-        _sync();
+        _vaultSync();
         IERC20 _wantToken = config.wantToken();
         uint wantLockedBefore = _farm() + _wantToken.balanceOf(address(this));
 
@@ -158,12 +156,12 @@ contract Strategy is BaseStrategy {
         wantAdded = _wantToken.balanceOf(address(this)) + vaultSharesAfter - wantLockedBefore;
         sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
         if (wantAdded < config.wantDust() || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
+        _vaultSwim();
     }
 
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) public virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
-        _sync();
         IERC20 _wantToken = config.wantToken();
         uint wantBal = _wantToken.balanceOf(address(this));
         _vaultSync(); //updates balance on underlying pool, if necessary

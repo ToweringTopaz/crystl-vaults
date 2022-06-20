@@ -356,23 +356,23 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     //For building atop lending protocols, external vaults, etc. Updates the underlying pool if needed
-    function _vaultSync() internal view virtual returns (uint256) {
-        return config.tactics().sync();
+    function _vaultSync() internal virtual {
+        config.tactics().sync();
     }
-    function _vaultSwim() internal view virtual returns (uint256) {
-        return config.tactics().swim();
+    function _vaultSwim() internal virtual {
+        config.tactics().swim();
     }
-    function _vaultFlip() internal view virtual returns (uint256) {
-        return config.tactics().flip();
+    function _vaultFlip(uint amount) internal virtual {
+        config.tactics().flip(amount);
     }
-    function _vaultFlop() internal view virtual returns (uint256) {
-        return config.tactics().flop();
+    function _vaultFlop(uint amount) internal virtual {
+        config.tactics().flop(amount);
     }
 
     function _vaultDeposit(IERC20 _wantToken, uint256 _amount) internal virtual {   
         //token allowance for the pool to pull the correct amount of funds only
 
-        _wantToken.safeIncreaseAllowance(config.tactics.masterchef(), _amount);      
+        _wantToken.safeIncreaseAllowance(config.tactics().masterchef(), _amount);      
         config.tactics().deposit(_amount);
     }
     function _vaultWithdraw(IERC20 /*_wantToken*/, uint256 _amount) internal virtual {

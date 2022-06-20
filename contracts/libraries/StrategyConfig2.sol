@@ -25,20 +25,24 @@ library StrategyConfig2 {
 
     struct ConfigUnpacked {
 
-        IERC20 wantToken;
-        uint wantDust;
-        IERC20
-        Tactics.TacticalData tactics;
-
+        uint256 vid;
+        WantData want;
+        bytes32[3] tactics;
+        EarnedData earned;
     }
 
-    struct TokenInfo {
+    struct WantData {
         IERC20 token;
-        uint256 dust;
-        bool isLP;
-        bool isEarned;
-        bool isWant;
-        bool is
+        uint dust;
+        bool isPair;
+        IERC20 token0;
+        IERC20 token1;
+    }
+    struct EarnedData {
+        IERC20 token;
+        uint dust;
+        bool feeOnTransfer;
+        
     }
 
     type MemPointer is uint256;
