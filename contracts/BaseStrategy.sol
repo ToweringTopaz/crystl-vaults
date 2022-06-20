@@ -17,12 +17,24 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(CONFIG_POINTER);
     IStrategy public immutable implementation;
     uint constant LP_DUST = 2**16;
+    IVaultHealer private _vaultHealer;
 
     constructor() { 
         implementation = this;
     }
 
     receive() external payable virtual { if (!Address.isContract(msg.sender)) revert Strategy_ImproperEthDeposit(msg.sender, msg.value); }
+
+    function vaultHealer() external view returns (IVaultHealer) {
+        if (implementation == this) {
+            require(IERC165(msg.sender).supportsInterface(type(IERC1155).interfaceId), "Strategy implementations are no longer locked to a vaulthealer");
+            return IVaultHealer(msg.sender);
+        }
+        else {
+            return _vaultHealer;
+        }
+        
+    }
 
     modifier onlyVaultHealer { //must come after getConfig
         _requireVaultHealer();
@@ -63,30 +75,31 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
         if (configAddr != configAddress()) revert Strategy_AlreadyInitialized(); //also checks that create didn't fail
 
-        this.initialize_(IVaultHealer(msg.sender)); //must be called by this contract externally
+        _vaultHealer = IVaultHealer(msg.sender);
+        this.initialize_(); //must be called by this contract externally
 
     }
 
-    function initialize_(IVaultHealer vaultHealer) external getConfig {
+    function initialize_() external getConfig {
         require(msg.sender == address(this));
-        _initialSetup(vaultHealer);
+        _initialSetup();
     }
     
-    function _initialSetup(IVaultHealer vaultHealer) internal virtual {
+    function _initialSetup() internal virtual {
         IERC20 want = config.wantToken();
 
         _vaultSharesTotal;
 
-		want.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
+		want.safeIncreaseAllowance(address(_vaultHealer), type(uint256).max);
 
         if (config.isMaximizer()) {
 
-            (IERC20 targetWant,,,,,) = vaultHealer.vaultInfo(config.targetVid());
+            (IERC20 targetWant,,,,,) = _vaultHealer.vaultInfo(config.targetVid());
             if (want != targetWant) {
                 for (uint i; i < config.earnedLength(); i++) {
                     (IERC20 earned,) = config.earned(i);
                     if (earned == targetWant) {
-                        earned.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
+                        earned.safeIncreaseAllowance(address(_vaultHealer), type(uint256).max);
                         break;
                     }
                 }

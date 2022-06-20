@@ -17,7 +17,7 @@ contract Strategy is BaseStrategy {
 
     event Strategy_MaximizerDepositFailure();
 
-    constructor(IVaultHealer _vaultHealer) BaseStrategy(_vaultHealer) {
+    constructor() {
         WETH_DUST = (block.chainid == 137 || block.chainid == 25) ? 1e18 : (block.chainid == 56 ? 1e16 : 1e14);
     }
 
@@ -25,7 +25,6 @@ contract Strategy is BaseStrategy {
 
     function earn(Fee.Data[3] calldata fees, address op, bytes calldata data) public virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
         _sync();
-        if (config.earnedLength() == 0) {}
         return config.isMaximizer() ? _earnMaximizer(fees, op, data) : _earnAutocompound(fees, op, data);
     }
 
@@ -74,8 +73,9 @@ contract Strategy is BaseStrategy {
 
     function _earnMaximizer(Fee.Data[3] calldata fees, address, bytes calldata) internal returns (bool success, uint256 __wantLockedTotal) {
         //targetWant is the want token for standard vaults, or the want token of a maximizer's target
-        ConfigInfo memory targetConfig = VaultChonk.strat(msg.sender/*vaultHealer*/, config.vid() >> 16).configInfo();
+        ConfigInfo memory targetConfig = VaultChonk.strat(IVaultHealer(msg.sender), config.vid() >> 16).configInfo();
         IERC20 targetWant = targetConfig.want;
+        uint targetWantDust = targetConfig.wantDust;
 		uint targetWantAmt = targetWant.balanceOf(address(this)); 
 
         _vaultHarvest(); //Perform the harvest of earned reward tokens
@@ -92,7 +92,7 @@ contract Strategy is BaseStrategy {
         }
 
         uint targetWantBalance = targetWant.balanceOf(address(this));        
-        if (targetWantBalance > targetConfig.wantDust) {
+        if (targetWantBalance > targetWantDust) {
             targetWantAmt = fees.payTokenFeePortion(targetWant, targetWantBalance - targetWantAmt) + targetWantAmt;
             success = true;
         }

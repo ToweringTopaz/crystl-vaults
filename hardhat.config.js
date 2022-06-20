@@ -248,7 +248,7 @@ module.exports = {
 		  viaIR: true,
 		  optimizer: {
 			enabled: true,
-			runs: 1000000,
+			runs: 255,
 			details: {
 				peephole: true,
 				inliner: true,
