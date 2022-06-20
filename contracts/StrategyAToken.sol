@@ -26,18 +26,18 @@ contract StrategyAToken is Strategy {
 
     function _vaultEmergencyWithdraw() internal override {
 
-        IERC20 want = config.wantToken();
+        IAToken want = IAToken(address(config.wantToken()));
         uint balance = want.balanceOf(address(this));
-        if (balance > 0) IAToken(address(want)).redeem(balance);
+        if (balance > 0) want.redeem(balance);
     }
 
     function _sync() internal override {
         IAToken(address(config.wantToken())).accrueInterest();        
     }
 
-    function initialize2() public override {
-        super.initialize2();
-        require(!config.isMaximizer(), "StrategyAnnex cannot be a maximizer");
+    function _initialSetup() internal override {
+        require(!config.isMaximizer(), "StrategyAToken cannot be a maximizer");
+        super._initialSetup();
     }
 
 }

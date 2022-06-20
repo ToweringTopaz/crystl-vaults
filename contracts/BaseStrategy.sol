@@ -65,15 +65,18 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             }
         }
 
-        this.initialize2(); //must be called by this contract externally
+        this.initialize_(); //must be called by this contract externally
 
     }
 
-    function initialize2() public virtual getConfig {
+    function initialize_() external getConfig {
         require(msg.sender == address(this));
-
+        _initialSetup();
+    }
+    
+    function _initialSetup() internal virtual {
         IERC20 want = config.wantToken();
-		want.safeIncreaseAllowance(msg.sender, type(uint256).max);
+		want.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
 
         if (config.isMaximizer()) {
 
@@ -82,7 +85,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             for (uint i; i < config.earnedLength(); i++) {
                 (IERC20 earned,) = config.earned(i);
                 if (earned == targetWant && earned != want) {
-                    earned.safeIncreaseAllowance(msg.sender, type(uint256).max);
+                    earned.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
                     break;
                 }
             }
