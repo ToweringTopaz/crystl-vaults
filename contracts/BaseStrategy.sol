@@ -16,24 +16,24 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     uint constant FEE_MAX = 10000;
     uint16 constant CONFIG_POINTER = 0x200;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(CONFIG_POINTER);
-    IVaultHealer public immutable vaultHealer;
     IStrategy public immutable implementation;
     uint constant LP_DUST = 2**16;
 
-    constructor(IVaultHealer _vaultHealer) { 
-        vaultHealer = _vaultHealer;
+    constructor() { 
         implementation = this;
     }
 
-
     receive() external payable virtual { if (!Address.isContract(msg.sender)) revert Strategy_ImproperEthDeposit(msg.sender, msg.value); }
 
-    modifier onlyVaultHealer {
+    modifier onlyVaultHealer { //must come after getConfig
         _requireVaultHealer();
         _;
     }
     function _requireVaultHealer() private view {
-        if (msg.sender != address(vaultHealer)) revert Strategy_NotVaultHealer(msg.sender);
+        //The address of this contract is a Cavendish create2 address with salt equal to the vid, and the VaultHealer is the deployer.
+        //Address collisions are theoretically possible, but exceedingly rare. If one such false VaultHealer
+        //address were calculated, it could not be used by anyone for the same reason that address(0) remains unclaimed.
+        if (address(this) != Cavendish.computeAddress(bytes32(config.vid()), msg.sender)) revert Strategy_NotVaultHealer(msg.sender);
     }
 
     modifier getConfig() {
@@ -54,40 +54,42 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
     }
 
-    function initialize(bytes memory _config) public virtual onlyVaultHealer {
+    function initialize(bytes memory _config) external virtual {
         if (this == implementation) revert Strategy_InitializeOnlyByProxy();
+        address configAddr;
         assembly ("memory-safe") {
             let len := mload(_config) //get length of config
             mstore(_config, 0x600c80380380823d39803df3fe) //simple bytecode which saves everything after the f3
-
-            let configAddr := create(0, add(_config, 19), add(len,13)) //0 value; send 13 bytes plus _config
-            if iszero(configAddr) { //create failed?
-                revert(0, 0)
-            }
+            configAddr := create(0, add(_config, 19), add(len,13)) //0 value; send 13 bytes plus _config
         }
+        if (configAddr != configAddress()) revert Strategy_AlreadyInitialized(); //also checks that create didn't fail
 
-        this.initialize_(); //must be called by this contract externally
+        this.initialize_(IVaultHealer(msg.sender)); //must be called by this contract externally
 
     }
 
-    function initialize_() external getConfig {
+    function initialize_(IVaultHealer vaultHealer) external getConfig {
         require(msg.sender == address(this));
-        _initialSetup();
+        _initialSetup(vaultHealer);
     }
     
-    function _initialSetup() internal virtual {
+    function _initialSetup(IVaultHealer vaultHealer) internal virtual {
         IERC20 want = config.wantToken();
+
+        _vaultSharesTotal;
+
 		want.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
 
         if (config.isMaximizer()) {
 
             (IERC20 targetWant,,,,,) = vaultHealer.vaultInfo(config.targetVid());
-            
-            for (uint i; i < config.earnedLength(); i++) {
-                (IERC20 earned,) = config.earned(i);
-                if (earned == targetWant && earned != want) {
-                    earned.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
-                    break;
+            if (want != targetWant) {
+                for (uint i; i < config.earnedLength(); i++) {
+                    (IERC20 earned,) = config.earned(i);
+                    if (earned == targetWant) {
+                        earned.safeIncreaseAllowance(address(vaultHealer), type(uint256).max);
+                        break;
+                    }
                 }
             }
         }
