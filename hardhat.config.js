@@ -6,6 +6,9 @@ require('dotenv').config()
 require("solidity-coverage");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-solhint");
+require("./tasks/manualDeploy");
+require("./tasks/verify");
+require("./tasks/vhFunc");
 
 const { accounts } = require('./configs/addresses.js');
 // const { ethers } = require('hardhat');
@@ -48,6 +51,14 @@ if (!myPrivateKey) {
  if (!cronosMainnetNodeURL) {
    throw new Error("Please set your CRONOS_PRIVATE_RPC in a .env file")
  }
+ const bttcMainnetNodeUrl = process.env.BTTC_PRIVATE_RPC;
+ if (!bttcMainnetNodeUrl) {
+  throw new Error("Please set your BTTC_PRIVATE_RPC in a .env file")
+}
+const moonbeamMainnetNodeUrl = process.env.MOONBEAM_PRIVATE_RPC;
+if (!moonbeamMainnetNodeUrl) {
+  throw new Error("Please set your MOONBEAM_PRIVATE_RPC in a .env file")
+}
  //API Keys
  const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
  if (!polygonScanApiKey) {
@@ -60,6 +71,14 @@ if (!myPrivateKey) {
  const cronoScanApiKey = process.env.CRONOSCAN_API_KEY;
  if (!cronoScanApiKey) {
    throw new Error("Please set your CRONOSCAN_API_KEY in a .env file");
+ }
+ const bttcScanApiKey = process.env.BTTCSCAN_API_KEY;
+ if (!bttcScanApiKey) {
+   throw new Error("Please set your BTTCSCAN_API_KEY in a .env file");
+ }
+ const moonScanApiKey = process.env.MOONSCAN_API_KEY
+ if (!moonScanApiKey) {
+   throw new Error("Please set your MOONSCAN_API_KEY in a .env file")
  }
 
 
@@ -239,6 +258,14 @@ module.exports = {
      cronos: {
        url: cronosMainnetNodeURL,
        accounts: [`0x${myPrivateKey}`],
+     },
+     bttc: {
+       url: bttcMainnetNodeUrl,
+       accounts: [`0x${myPrivateKey}`],
+     },
+     moonbeam: {
+       url: moonbeamMainnetNodeUrl,
+       accounts: [`0x${myPrivateKey}`]
      }
   },
   solidity: {
@@ -292,6 +319,9 @@ module.exports = {
 	apiKey: {
 	  polygon: polygonScanApiKey,
      bsc: bscScanApiKey,
+     cronos: cronoScanApiKey,
+     bttc: bttcScanApiKey,
+     moonbeam: moonScanApiKey
 	}
   }
 };

@@ -31,7 +31,7 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
     mapping(bytes32 => Path) private _paths;
 
     constructor(address vhAuth) {
-        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56, "unsupported chain");
+        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56 || block.chainid == 1284, "unsupported chain");
         _init(vhAuth);
 
         (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = block.chainid == 25 ? ( //cronos
@@ -46,15 +46,20 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
             0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c, //wbtc: actually btcb on BNB Chain
             0x55d398326f99059fF775485246999027B3197955, //usdt
             0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3 //dai
+        ) : ( block.chainid == 1284 ? ( //moonbeam
+            0x8f552a71EFE5eeFc207Bf75485b356A0b3f01eC9, //usdc.mad
+            0x30D2a9F5FDf90ACe8c17952cbb4eE48a55D916A7, //weth.mad
+            0x1DC78Acda13a8BC4408B207c9E48CDBc096D95e0, //wbtc.mad
+            0x8e70cD5B4Ff3f62659049e74b6649c6603A0E594, //usdt.mad
+            0xc234A67a4F840E61adE794be47de455361b52413 //dai.mad
         ) : ( //polygon
             0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
             0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
             0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
             0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
             0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 //dai
-
+            )
         ));
-
     }
 
     function _init(address vhAuth) public virtual initializer {
