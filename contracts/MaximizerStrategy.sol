@@ -7,18 +7,13 @@ import "./BaseStrategy.sol";
 contract MaximizerStrategy is BaseStrategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
-    using VaultChonk for IVaultHealer;
 
     function getMaximizerImplementation() external override view returns (IStrategy) {
         return implementation;
     }
-    function _isMaximizer() internal override view returns (bool) { 
-        assert(config.isMaximizer() || this == implementation);
+    function _isMaximizer() internal override pure returns (bool) { 
+        assert(config.isMaximizer());
         return true; 
-    }
-    function _isBaseVault() internal override view returns (bool) { 
-        assert(config.isMaximizer() || this == implementation);
-        return false;
     }
 
     function getTargetWant() internal view returns (IERC20 targetWant, uint dust, uint balance) {
@@ -26,7 +21,7 @@ contract MaximizerStrategy is BaseStrategy {
         return (targetConfig.want, targetConfig.wantDust, targetWant.balanceOf(address(this)));
     }
 
-    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success, uint256 __wantLockedTotal) {
         _sync();
         (IERC20 targetWant, uint targetWantDust, uint targetWantAmt) = getTargetWant();
 
@@ -61,10 +56,9 @@ contract MaximizerStrategy is BaseStrategy {
                 IWETH weth = config.weth();
                 uint wethAmt = weth.balanceOf(address(this));
                 if (wethAmt > WETH_DUST) {
-                    wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
                     swapToWantToken(wethAmt, weth);
                 }
-                if (targetWantAmt > targetWantDust && targetWant != config.wantToken()) {
+                if (targetWantAmt > targetWantDust) {
                     swapToWantToken(targetWantAmt, targetWant);
                 }
                 emit Strategy_MaximizerDepositFailure();

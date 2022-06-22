@@ -3,12 +3,11 @@ pragma solidity ^0.8.14;
 
 import "./Strategy.sol";
 import "./interfaces/IDragonLair.sol";
+import "./MaximizerStrategyX.sol";
 
+contract StrategyX is Strategy {
 
-contract StrategyXRewards is Strategy {
-    using StrategyConfig for StrategyConfig.MemPointer;
-
-    function _deployMaximizerImplementation() internal virtual returns (IStrategy) {
-        return new MaximizerStrategyXRewards();
+    function _deployMaximizerImplementation() internal override returns (IStrategy) {
+        return new MaximizerStrategyX();
     }
 }

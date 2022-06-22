@@ -8,21 +8,14 @@ contract StrategyAToken is Strategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using Tactics for Tactics.TacticsA;
 
-    IStrategy immutable _maximizerImplementation;
-
-    //IMPORTANT: The argument here is the STANDARD STRATEGY IMPLEMENTATION
-    constructor(address _maxiImpl) {
-        _maximizerImplementation = IStrategy(_maxiImpl);
-    }
-
-    function earn(Fee.Data[3] calldata fees, address op, bytes calldata data) public override getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
+    function _earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) internal override returns (bool success, uint256 __wantLockedTotal) {
         if (isBasicATokenStrategy()) {
             _sync();
             uint wantBalance = config.wantToken().balanceOf(address(this));
             success = wantBalance > config.wantDust();
             __wantLockedTotal = wantBalance + (success ? _farm() : _wantLockedTotal());
         } else {
-            return super.earn(fees, op, data);
+            return super._earn(fees, operator, data);
         }
     }
 
@@ -30,16 +23,7 @@ contract StrategyAToken is Strategy {
         (,Tactics.TacticsB tacticsB) = config.tactics();
         return Tactics.TacticsB.unwrap(tacticsB) << 128 == 0   //zero harvest/emergency vault withdraw tactic
             && config.earnedLength() == 1   //only one earned token
-            && earnedZeroIsWantToken(); //only earning the want token
-    }
-
-    function earnedZeroIsWantToken() private pure returns (bool) {
-        (IERC20 earned0,) = config.earned(0);
-        return earned0 == config.wantToken();
-    }
-
-    function getMaximizerImplementation() external view override returns (IStrategy) {
-        return _maximizerImplementation;
+            && config.earnedToken(0) == config.wantToken(); //only earning the want token
     }
 
     function _vaultSharesTotal() internal view override returns (uint256) {

@@ -148,8 +148,8 @@ contract AmysStakingCo {
             if (valid) return usesTime ? CHEF_MINI : CHEF_PANCAKE;
         }
         else {
-            (bool valid, uint8 chefType) = checkMasterChef(chef);
-            if (valid) return chefType;
+            (bool valid, uint8 _chefType) = checkMasterChef(chef);
+            if (valid) return _chefType;
         }
         if (checkStakingRewardsFactory(chef)) {
             return CHEF_STAKING_REWARDS;

@@ -163,7 +163,7 @@ task("deployImplementation", "Deploys a strategy implementation contract")
     //console.log("vaultHealer Instantiated")
 	
     StrategyImplementation = await ethers.getContractFactory(name);
-    strategyImplementation = await StrategyImplementation.deploy('0x9Fe22630DE9Ec654256AB103adD153D93c4D329C');
+    strategyImplementation = await StrategyImplementation.deploy();
     
     console.log("New strategy impl address: ", strategyImplementation.address);
   });

@@ -6,10 +6,11 @@ import "./MaximizerStrategy.sol";
 contract MaximizerStrategyX is MaximizerStrategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
-    using VaultChonk for IVaultHealer;
 
-    function earn(Fee.Data[3] calldata fees, address, bytes calldata) external override getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal override returns (bool success, uint256 __wantLockedTotal) {
         _sync();
+        
+        //Get balances 
         (IERC20 targetWant, uint targetWantDust, uint targetWantAmt) = getTargetWant();
         IERC20 _wantToken = config.wantToken();
         uint wantAmt = _wantToken.balanceOf(address(this)); 
@@ -19,7 +20,7 @@ contract MaximizerStrategyX is MaximizerStrategy {
         for (uint i; i < config.earnedLength(); i++) { //In case of multiple reward vaults, process each reward token
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
-            //Don't swap targetWant (goes to maximizer) or want (compounded)
+            //Don't swap targetWant (goes to maximizer) or want (kept)
             if (earnedToken != targetWant && earnedToken != _wantToken) {
                 uint256 earnedAmt = earnedToken.balanceOf(address(this));
                 if (earnedAmt > dust) { //Only swap if enough has been earned
@@ -53,6 +54,7 @@ contract MaximizerStrategyX is MaximizerStrategy {
         }
         uint targetWantBalance = targetWant.balanceOf(address(this));        
         if (targetWantBalance > targetWantDust) {
+
             targetWantAmt = fees.payTokenFeePortion(targetWant, targetWantBalance - targetWantAmt) + targetWantAmt;
             success = true;
             

@@ -13,8 +13,6 @@ contract Strategy is BaseStrategy {
 
     IStrategy immutable _maximizerImplementation;
 
-    event Strategy_MaximizerDepositFailure();
-
     constructor() {
         _maximizerImplementation = _deployMaximizerImplementation();
     }
@@ -23,7 +21,7 @@ contract Strategy is BaseStrategy {
         return new MaximizerStrategy();
     }
 
-    function getMaximizerImplementation() external override view returns (IStrategy) {
+    function getMaximizerImplementation() external virtual override view returns (IStrategy) {
         return _maximizerImplementation;
     }
 
@@ -42,7 +40,9 @@ contract Strategy is BaseStrategy {
         else swapToWantToken(amount, tokenOut);
     }
 
-    function earn(Fee.Data[3] calldata fees, address, bytes calldata) public virtual getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
+
+
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success, uint256 __wantLockedTotal) {
         _sync();        
         IERC20 _wantToken = config.wantToken();
 		uint wantAmt = _wantToken.balanceOf(address(this)); 

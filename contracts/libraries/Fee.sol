@@ -39,6 +39,10 @@ library Fee {
         }
     }
 
+    function getFeePortion(Data[3] calldata _fees, uint _amount) internal pure returns (uint amtPayable) {
+        return _amount == 0 ? 0 : totalRate(_fees) * _amount;
+    }
+
     //Token amount is all fees
     function payTokenFeeAll(Data[3] calldata _fees, IERC20 _token, uint _tokenAmt) internal {
         if (_tokenAmt == 0) return;
