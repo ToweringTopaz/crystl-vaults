@@ -26,6 +26,9 @@ interface IStrategy is IERC165 {
 	error Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
 	error Strategy_DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
     error Strategy_AlreadyInitialized();
+    error Strategy_MaximizersNotSupported();
+
+    event Strategy_MaximizerDepositFailure();
 
     function initialize (bytes calldata data) external;
     function wantToken() external view returns (IERC20); // Want address

@@ -49,9 +49,13 @@ contract StrategyAToken is Strategy {
 
     function _vaultEmergencyWithdraw() internal override {
 
-        IAToken aToken = IAToken(address(config.tacticsA().masterchef()));
-        uint balance = aToken.balanceOf(address(this));
-        if (balance > 0) aToken.redeem(balance);
+        (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
+        if (Tactics.TacticsB.unwrap(tacticsB) << 196 == 0) {
+
+            IAToken aToken = IAToken(address(tacticsA.masterchef()));
+            uint balance = aToken.balanceOf(address(this));
+            if (balance > 0) aToken.redeem(balance);
+        }
     }
 
     function _sync() internal override {
