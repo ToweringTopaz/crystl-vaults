@@ -25,10 +25,8 @@ contract RadioactiveRevShare is Ownable {
         uint128 rewardDebt; // Reward debt. See explanation below.
     }
 
-    // Info of each pool.
     IERC20 public immutable lpToken;           // Address of LP token contract.
 
-    // The stake token
     IWETH public immutable WNATIVE;
 
     uint40 public lastRewardTime;  // Last timestamp that Rewards distribution occurred.
@@ -55,7 +53,8 @@ contract RadioactiveRevShare is Ownable {
     event LogUpdatePool(uint256 rewardHalflife);
     event EmergencyRewardWithdraw(address indexed user, uint256 amount);
     event EmergencySweepWithdraw(address indexed user, IERC20 indexed token, uint256 amount);
-
+	event Harvest(address indexed user, uint256 amount);
+	
     constructor(
         IERC20 _stakeToken,
         IWETH _wnative,
@@ -73,8 +72,22 @@ contract RadioactiveRevShare is Ownable {
 
     function decayHalflife(uint amountStart, uint timeElapsed, uint halflife) public pure returns (uint amountAfter, uint amountDecayed) {
 
-        amountAfter = amountStart * 1e18 / PRBMath.exp2((timeElapsed << 64) / halflife);
-        amountDecayed = amountStart - amountAfter;
+		amountAfter = amountStart;
+
+		//A halflife of zero here indicates zero decay activity (disabled pool)
+		if (halflife > 0) {
+
+			//perform simple halvings if possible, preventing overflow conditions
+			if (amountAfter > 0 && timeElapsed >= halflife) {
+				amountAfter >>= timeElapsed / halflife;
+				timeElapsed %= halflife;
+			}
+			
+			if (amountAfter > 0 && timeElapsed > 0) {
+				amountAfter = amountAfter * 1e18 / PRBMath.exp2((timeElapsed << 64) / halflife);
+			}
+			amountDecayed = amountStart - amountAfter;
+		}
     }
 
     // View function to see pending Reward on frontend.
@@ -92,6 +105,12 @@ contract RadioactiveRevShare is Ownable {
     function updatePool() public {
         _updatePool(rewardsPending);
     }
+
+	modifier updateRewardDebt {
+		_;
+		UserInfo storage user = userInfo[msg.sender];
+		user.rewardDebt = toUint128(uint256(user.amount) * accRewardPerShare / 1e30);
+	}
 
     function _updatePool(uint _rewardsPending) internal {
         if (block.timestamp > lastRewardTime) {
@@ -111,56 +130,51 @@ contract RadioactiveRevShare is Ownable {
     /// @dev Since this contract needs to be supplied with rewards we are
     ///  sending the balance of the contract if the pending rewards are higher
     /// @param _amount The amount of staking tokens to deposit
-    function deposit(bool _wrapReward, uint256 _amount) public {
-        UserInfo storage user = userInfo[msg.sender];
-        uint128 finalDepositAmount;
-        updatePool();
-        if (user.amount > 0) {
-            uint256 pending = user.amount * accRewardPerShare / 1e30 - user.rewardDebt;
-            if(pending > 0) {
-                uint256 currentRewardBalance = rewardBalance();
-                if(currentRewardBalance > 0) {
-                    safeTransferReward(_wrapReward, msg.sender, pending > currentRewardBalance ? currentRewardBalance : pending);
-                }
-            }
-        }
+    function deposit(bool _wrapReward, uint256 _amount) public updateRewardDebt {
+		UserInfo storage user = _harvest(_wrapReward);
         if (_amount > 0) {
-            uint128 preStakeBalance = toUint128(lpToken.balanceOf(address(this)));
             lpToken.safeTransferFrom(msg.sender, address(this), _amount);
-            finalDepositAmount = toUint128(lpToken.balanceOf(address(this))) - preStakeBalance;
-            user.amount += finalDepositAmount;
-            totalStaked += finalDepositAmount;
+            totalStaked = toUint128(totalStaked + _amount);
+            user.amount = uint128(user.amount + _amount);
         }
-        user.rewardDebt = toUint128(user.amount * accRewardPerShare / 1e30);
 
-        emit Deposit(msg.sender, finalDepositAmount);
+        emit Deposit(msg.sender, _amount);
     }
 
     /// Withdraw rewards and/or staked tokens. Pass a 0 amount to withdraw only rewards
     /// @param _amount The amount of staking tokens to withdraw
-    function withdraw(bool _wrapReward, uint256 _amount) public {
-        UserInfo storage user = userInfo[msg.sender];
+    function withdraw(bool _wrapReward, uint256 _amount) public updateRewardDebt {
+		UserInfo storage user = _harvest(_wrapReward);
+		
         if (user.amount < _amount) {
             if (user.amount == 0) revert("RevSharePool: withdraw zero balance");
             _amount = user.amount; 
         }
-        uint256 pending = user.amount * accRewardPerShare / 1e30 - user.rewardDebt;
-        if(pending > 0) {
-            uint256 currentRewardBalance = rewardBalance();
-            if(currentRewardBalance > 0) {
-                safeTransferReward(_wrapReward, msg.sender, pending > currentRewardBalance ? currentRewardBalance : pending);
-            }
-        }
         if(_amount > 0) {
-            user.amount -= uint128(_amount);
+            user.amount -= toUint128(_amount);
             lpToken.safeTransfer(msg.sender, _amount);
-            totalStaked = totalStaked - uint128(_amount);
+            totalStaked -= uint128(_amount);
         }
-
-        user.rewardDebt = toUint128(user.amount * accRewardPerShare / 1e30);
 
         emit Withdraw(msg.sender, _amount);
     }
+	
+	function harvest(bool _wrapReward) external updateRewardDebt {
+		_harvest(_wrapReward);
+	}
+	
+	function _harvest(bool _wrapReward) internal returns (UserInfo storage user) {
+		updatePool();
+		user = userInfo[msg.sender];
+		uint256 pending = uint256(user.amount) * accRewardPerShare / 1e30 - user.rewardDebt;
+		if(pending > 0) {
+			uint256 currentRewardBalance = rewardBalance();
+			if(currentRewardBalance > 0) {
+				safeTransferReward(_wrapReward, msg.sender, pending > currentRewardBalance ? currentRewardBalance : pending);
+			}
+		}
+		emit Harvest(msg.sender, pending);
+	}
 
     /// Obtain the reward balance of this contract
     /// @return wei balace of conract
