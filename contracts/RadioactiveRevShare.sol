@@ -90,9 +90,13 @@ contract RadioactiveRevShare is Ownable {
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
+        _updatePool(rewardsPending);
+    }
+
+    function _updatePool(uint _rewardsPending) internal {
         if (block.timestamp > lastRewardTime) {
             if (totalStaked > 0) {
-                (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), block.timestamp - lastRewardTime, rewardHalflife);
+                (,uint256 tokenReward) = decayHalflife(address(this).balance - _rewardsPending, block.timestamp - lastRewardTime, rewardHalflife);
                 rewardsPending += toUint128(tokenReward);
                 accRewardPerShare = toUint176(accRewardPerShare + tokenReward * 1e30 / totalStaked);
             }
@@ -100,12 +104,14 @@ contract RadioactiveRevShare is Ownable {
         }
     }
 
+    function deposit(uint256 _amount) external { deposit(false, _amount); }
+    function withdraw(uint256 _amount) external { withdraw(false, _amount); }
 
     /// Deposit staking token into the contract to earn rewards.
     /// @dev Since this contract needs to be supplied with rewards we are
     ///  sending the balance of the contract if the pending rewards are higher
     /// @param _amount The amount of staking tokens to deposit
-    function deposit(bool _wrapReward, uint256 _amount) external {
+    function deposit(bool _wrapReward, uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
         uint128 finalDepositAmount;
         updatePool();
@@ -132,7 +138,7 @@ contract RadioactiveRevShare is Ownable {
 
     /// Withdraw rewards and/or staked tokens. Pass a 0 amount to withdraw only rewards
     /// @param _amount The amount of staking tokens to withdraw
-    function withdraw(bool _wrapReward, uint128 _amount) external {
+    function withdraw(bool _wrapReward, uint256 _amount) public {
         UserInfo storage user = userInfo[msg.sender];
         if (user.amount < _amount) {
             if (user.amount == 0) revert("RevSharePool: withdraw zero balance");
@@ -146,9 +152,9 @@ contract RadioactiveRevShare is Ownable {
             }
         }
         if(_amount > 0) {
-            user.amount -= _amount;
+            user.amount -= uint128(_amount);
             lpToken.safeTransfer(msg.sender, _amount);
-            totalStaked = totalStaked - _amount;
+            totalStaked = totalStaked - uint128(_amount);
         }
 
         user.rewardDebt = toUint128(user.amount * accRewardPerShare / 1e30);
@@ -164,9 +170,7 @@ contract RadioactiveRevShare is Ownable {
 
     // Deposit Rewards into contract
     function depositRewards() public payable {
-        rewardsPending += toUint128(msg.value);
-        updatePool();
-        rewardsPending -= toUint128(msg.value);
+        _updatePool(rewardsPending + msg.value); //excludes the newly deposited rewards from the decay-since-last-update
         emit DepositRewards(msg.value);
     }
 
