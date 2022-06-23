@@ -1,6 +1,6 @@
 {
   "name": "polycrystal-vaults",
-  "version": "1.0.0",
+  "version": "3.0.1",
   "main": "index.js",
   "scripts": {
     "migrate:polygon": "truffle migrate --network polygon --reset",
@@ -13,9 +13,9 @@
     "@truffle/hdwallet-provider": "^2.0.9",
     "dotenv": "^8.6.0",
     "path": "^0.12.7",
-    "truffle": "^5.5.17",
+    "truffle": "^5.5.18",
     "truffle-flattener": "^1.6.0",
-    "typescript": "^4.7.3"
+    "typescript": "^4.7.4"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.7",
@@ -30,7 +30,7 @@
     "@types/mocha": "^9.1.1",
     "chai": "^4.3.6",
     "ethereum-waffle": "^4.0.0",
-    "ethers": "^5.6.8",
+    "ethers": "^5.6.9",
     "hardhat": "^2.9.9",
     "hardhat-console": "^1.0.0",
     "solidity-coverage": "^0.7.21",
