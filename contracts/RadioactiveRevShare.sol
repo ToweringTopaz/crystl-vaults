@@ -12,10 +12,10 @@ Join us at PolyCrystal.Finance!
 import "./interfaces/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@prb/math/contracts/PRBMathUD60x18.sol";
+import "@prb/math/contracts/PRBMath.sol";
+import "./libraries/MoneyBomb.sol";
 
-contract RevSharePool is Ownable, ReentrancyGuard {
+contract RadioactiveRevShare is Ownable {
     using SafeERC20 for IERC20;
     using SafeERC20 for IWETH;
 
@@ -67,18 +67,13 @@ contract RevSharePool is Ownable, ReentrancyGuard {
         rewardHalflife = _rewardHalflife;
 
         lpToken = _stakeToken;
-        lastRewardTime = _startTime;
+        lastRewardTime = _startTime > block.timestamp ? _startTime : uint40(block.timestamp);
 
     }
 
-    function decayHalflife(uint128 amountStart, uint48 timeLastUpdate, uint48 halflife) public view returns (uint128 amountAfter, uint128 amountDecayed) {
+    function decayHalflife(uint amountStart, uint timeElapsed, uint halflife) public pure returns (uint amountAfter, uint amountDecayed) {
 
-        if (timeLastUpdate >= block.timestamp) return (amountStart, 0);
-// todo fix
-//        amountAfter = toUint128(ABDKMath64x64.toUInt(ABDKMath64x64.div(
-//            ABDKMath64x64.fromUInt(amountStart),
-//            PRBMath.exp2(((block.timestamp - timeLastUpdate) << 64) / halflife)
-//        )));
+        amountAfter = amountStart * 1e18 / PRBMath.exp2((timeElapsed << 64) / halflife);
         amountDecayed = amountStart - amountAfter;
     }
 
@@ -87,21 +82,17 @@ contract RevSharePool is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_user];
         uint256 _accRewardPerShare = accRewardPerShare;
         if (block.timestamp > lastRewardTime && totalStaked != 0) {
-            (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), lastRewardTime, rewardHalflife);
+            (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), block.timestamp - lastRewardTime, rewardHalflife);
             _accRewardPerShare += tokenReward * 1e30 / totalStaked;
         }
         return user.amount * _accRewardPerShare / 1e30 - user.rewardDebt;
     }
 
-    function updatePool() external nonReentrant {
-        _updatePool();
-    }
-
     // Update reward variables of the given pool to be up-to-date.
-    function _updatePool() internal {
+    function updatePool() public {
         if (block.timestamp > lastRewardTime) {
             if (totalStaked > 0) {
-                (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), lastRewardTime, rewardHalflife);
+                (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), block.timestamp - lastRewardTime, rewardHalflife);
                 rewardsPending += toUint128(tokenReward);
                 accRewardPerShare = toUint176(accRewardPerShare + tokenReward * 1e30 / totalStaked);
             }
@@ -114,10 +105,10 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     /// @dev Since this contract needs to be supplied with rewards we are
     ///  sending the balance of the contract if the pending rewards are higher
     /// @param _amount The amount of staking tokens to deposit
-    function deposit(bool _wrapReward, uint256 _amount) external nonReentrant {
+    function deposit(bool _wrapReward, uint256 _amount) external {
         UserInfo storage user = userInfo[msg.sender];
         uint128 finalDepositAmount;
-        _updatePool();
+        updatePool();
         if (user.amount > 0) {
             uint256 pending = user.amount * accRewardPerShare / 1e30 - user.rewardDebt;
             if(pending > 0) {
@@ -141,13 +132,12 @@ contract RevSharePool is Ownable, ReentrancyGuard {
 
     /// Withdraw rewards and/or staked tokens. Pass a 0 amount to withdraw only rewards
     /// @param _amount The amount of staking tokens to withdraw
-    function withdraw(bool _wrapReward, uint128 _amount) external nonReentrant {
+    function withdraw(bool _wrapReward, uint128 _amount) external {
         UserInfo storage user = userInfo[msg.sender];
         if (user.amount < _amount) {
             if (user.amount == 0) revert("RevSharePool: withdraw zero balance");
             _amount = user.amount; 
         }
-        _updatePool();
         uint256 pending = user.amount * accRewardPerShare / 1e30 - user.rewardDebt;
         if(pending > 0) {
             uint256 currentRewardBalance = rewardBalance();
@@ -173,10 +163,9 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     }
 
     // Deposit Rewards into contract
-    function depositRewards() public nonReentrant payable {
-        require(msg.value > 0, 'Deposit value must be greater than 0.');
+    function depositRewards() public payable {
         rewardsPending += toUint128(msg.value);
-        _updatePool();
+        updatePool();
         rewardsPending -= toUint128(msg.value);
         emit DepositRewards(msg.value);
     }
@@ -194,8 +183,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
 			WNATIVE.deposit{value: _amount}();
 			WNATIVE.safeTransfer(_to, _amount);
 		} else {
-			(bool success,) = _to.call{value: _amount}("");
-			require(success, "Reward transfer failed");
+			MoneyBomb.safePay(payable(_to), _amount);
 		}
     }
 
@@ -212,14 +200,14 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     /* Admin Functions */
 
     /// @param _rewardHalflife The time in seconds in which half of rewards will be paid out
-    function setRewardHalflife(uint40 _rewardHalflife) external nonReentrant onlyOwner {
-        _updatePool();
+    function setRewardHalflife(uint40 _rewardHalflife) external onlyOwner {
+        updatePool();
         rewardHalflife = _rewardHalflife;
         emit LogUpdatePool(_rewardHalflife);
     }
 
         /// @dev Remove excess stake tokens earned by reflect fees
-    function skimStakeTokenFees() external nonReentrant onlyOwner {
+    function skimStakeTokenFees() external onlyOwner {
         uint256 stakeTokenFeeBalance = getStakeTokenFeeBalance();
         lpToken.safeTransfer(msg.sender, stakeTokenFeeBalance);
         emit SkimStakeTokenFees(msg.sender, stakeTokenFeeBalance);
@@ -228,7 +216,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     /* Emergency Functions */
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw() external nonReentrant {
+    function emergencyWithdraw() external {
         UserInfo storage user = userInfo[msg.sender];
         lpToken.safeTransfer(msg.sender, user.amount);
         totalStaked = totalStaked - user.amount;
@@ -238,8 +226,8 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     }
 
     // Withdraw reward. EMERGENCY ONLY.
-    function emergencyRewardWithdraw(uint256 _amount) external nonReentrant onlyOwner {
-        _updatePool();
+    function emergencyRewardWithdraw(uint256 _amount) external onlyOwner {
+        updatePool();
         require(_amount <= address(this).balance - rewardsPending, 'not enough rewards');
         // Withdraw rewards
         (bool success,) = msg.sender.call{value: _amount}("");
@@ -250,7 +238,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
     /// @notice A public function to sweep accidental BEP20 transfers to this contract.
     ///   Tokens are sent to owner
     /// @param token The address of the BEP20 token to sweep
-    function sweepToken(IERC20 token) external nonReentrant onlyOwner {
+    function sweepToken(IERC20 token) external onlyOwner {
         require(token != lpToken, "cannot sweep staked token");
         uint256 balance = token.balanceOf(address(this));
         token.transfer(msg.sender, balance);
