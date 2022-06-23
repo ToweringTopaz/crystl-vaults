@@ -17,6 +17,7 @@ import "@prb/math/contracts/PRBMathUD60x18.sol";
 
 contract RevSharePool is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH;
 
     // Info of each user.
     struct UserInfo {
@@ -191,7 +192,7 @@ contract RevSharePool is Ownable, ReentrancyGuard {
         rewardsPending -= toUint128(_amount);
 		if (_wrap) {
 			WNATIVE.deposit{value: _amount}();
-			IERC20(WNATIVE).safeTransfer(_to, _amount);
+			WNATIVE.safeTransfer(_to, _amount);
 		} else {
 			(bool success,) = _to.call{value: _amount}("");
 			require(success, "Reward transfer failed");
