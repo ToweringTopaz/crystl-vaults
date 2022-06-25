@@ -269,29 +269,7 @@ module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.14",
-        settings: {
-          viaIR: true,
-          optimizer: {
-            enabled: true,
-            runs: 1000000,
-            details: {
-              peephole: true,
-              inliner: true,
-              jumpdestRemover: true,
-              orderLiterals: true,
-              deduplicate: true,
-              cse: true,
-              constantOptimizer: true,
-              yul: true,
-            },
-          },
-        },
-      },
-    ],
-    overrides: {
-      "contracts/VaultHealer.sol": {
-        version: "0.8.14",
+        version: "0.8.15",
         settings: {
           viaIR: true,
           optimizer: {
@@ -310,7 +288,7 @@ module.exports = {
           },
         },
       },
-    },
+    ],
   },
   mocha: {
     timeout: 90000,
