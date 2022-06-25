@@ -182,13 +182,16 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         
         if (config.feeOnTransfer()) {
             uint balanceBefore = path[path.length - 1].balanceOf(address(this));
-            IERC20[] memory subpath = new IERC20[](2);
+            IERC20[] memory subpath;
+            if (path.length == 2) {
+                subpath = new IERC20[](2);
+                (subpath[0], subpath[1]) = (input, output);
+            } else subpath = path;
 
             for (uint i; i < path.length - 1; i++) {
                 (uint reserve0, uint reserve1,) = pair.getReserves();
                 uint amountInput = input.balanceOf(address(pair)) - (input < output ? reserve0 : reserve1);
                 
-                (subpath[0], subpath[1]) = (input, output);
                 amountOutput = _router.getAmountsOut(amountInput, subpath)[0];
 
                 (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amountOutput) : (amountOutput, uint(0));
@@ -274,22 +277,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         balance0 = token0.balanceOf(address(this));
         balance1 = token1.balanceOf(address(this));
 
-        if (balance0 > LP_DUST) fastSwap(pair, token0, token1, balance0 / 3);
-        else if (balance1 > LP_DUST) fastSwap(pair, token1, token0, balance1 / 3);
-    }
-
-    function fastSwap(IUniPair pair, IERC20 input, IERC20 output, uint amount) internal {
-        input.safeTransfer(address(pair), amount);
-        bool inputIsToken0 = input < output;
-        (uint reserve0, uint reserve1,) = pair.getReserves();
-
-        (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
-        uint amountInput = input.balanceOf(address(pair)) - reserveInput;
-        uint amountOutput = config.router().getAmountOut(amountInput, reserveInput, reserveOutput);
-
-        (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-
-        pair.swap(amount0Out, amount1Out, address(this), "");
+        IERC20[] memory path = new IERC20[](2);
+        (path[0], path[1]) = balance0 > LP_DUST ? (token0, token1) : (token1, token0);
+        if (balance0 > LP_DUST || balance1 > LP_DUST) safeSwap(balance0 / 3, path);
     }
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
