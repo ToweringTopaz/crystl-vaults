@@ -6,6 +6,8 @@ require("dotenv").config();
 require("solidity-coverage");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-solhint");
+require("hardhat-tracer");
+
 const { task } = require("hardhat/config");
 const { accounts } = require("./configs/addresses.js");
 // const { ethers } = require('hardhat');
@@ -295,9 +297,19 @@ module.exports = {
   },
   etherscan: {
     apiKey: {
-      polygon: polygonScanApiKey,
-      bsc: bscScanApiKey,
-      cronos: process.env.CRONOSCAN_API_KEY
+      "polygon": polygonScanApiKey,
+      "bsc": bscScanApiKey,
+      "cronos": process.env.CRONOSCAN_API_KEY
     },
+	customChains: [
+    {
+      network: "cronos",
+      chainId: 25,
+      urls: {
+        apiURL: "https://api.cronoscan.com/api",
+        browserURL: "https://www.cronoscan.com"
+      }
+    }
+	]
   },
 };
