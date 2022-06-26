@@ -171,7 +171,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
-    ) internal returns (uint amountOutput) {
+    ) internal virtual returns (uint amountOutput) {
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 
@@ -183,7 +183,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         if (config.feeOnTransfer()) {
             uint balanceBefore = path[path.length - 1].balanceOf(address(this));
             IERC20[] memory subpath;
-            if (path.length == 2) {
+            if (path.length > 2) {
                 subpath = new IERC20[](2);
                 (subpath[0], subpath[1]) = (input, output);
             } else subpath = path;
@@ -226,12 +226,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             }
 
         }
-
-
-
-
-        
-
     }
 
     function swapToWantToken(uint256 _amountIn, IERC20 _tokenA) internal {
