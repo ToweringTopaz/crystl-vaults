@@ -171,39 +171,62 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
-    ) internal returns (uint amountOutput) {
+    ) internal virtual returns (uint amountOutput) {
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 
-        uint amountOutMin = config.feeOnTransfer() ? _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256 : 0;
-
-        uint balanceBefore = IERC20(path[path.length - 1]).balanceOf(address(this));
-        for (uint i; i < path.length - 1; i++) {
-            (IERC20 input, IERC20 output) = (path[i], path[i + 1]);
-            bool inputIsToken0 = input < output;
-            
-            IUniPair pair = factory.getPair(input, output);
-            if (i == 0) input.safeTransfer(address(pair), _amountIn);
-            (uint reserve0, uint reserve1,) = pair.getReserves();
-
-            (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
-            uint amountInput = input.balanceOf(address(pair)) - reserveInput;
-            amountOutput = _router.getAmountOut(amountInput, reserveInput, reserveOutput);
-
-            (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-
-            address to = i < path.length - 2 ? address(factory.getPair(output, path[i + 2])) : address(this);
-            pair.swap(amount0Out, amount1Out, to, "");
-        }
+        uint[] memory amounts = _router.getAmountsOut(_amountIn, path);
+        (IERC20 input, IERC20 output) = (path[0], path[1]);
+        IUniPair pair = factory.getPair(input, output);
+        input.safeTransfer(address(pair), _amountIn);
         
-        if (amountOutMin > 0 && path[path.length - 1].balanceOf(address(this)) < amountOutMin + balanceBefore) {
-            unchecked {
-                revert InsufficientOutputAmount(path[path.length - 1].balanceOf(address(this)) - balanceBefore, amountOutMin);
+        if (config.feeOnTransfer()) {
+            uint balanceBefore = path[path.length - 1].balanceOf(address(this));
+            IERC20[] memory subpath;
+            if (path.length > 2) {
+                subpath = new IERC20[](2);
+                (subpath[0], subpath[1]) = (input, output);
+            } else subpath = path;
+
+            for (uint i; i < path.length - 1; i++) {
+                (uint reserve0, uint reserve1,) = pair.getReserves();
+                uint amountInput = input.balanceOf(address(pair)) - (input < output ? reserve0 : reserve1);
+                
+                amountOutput = _router.getAmountsOut(amountInput, subpath)[0];
+
+                (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amountOutput) : (amountOutput, uint(0));
+
+                if (i == path.length - 2) {
+                    pair.swap(amount0Out, amount1Out, address(this), "");
+                } else {
+                    IUniPair nextPair = factory.getPair(output, path[i + 2]);
+                    pair.swap(amount0Out, amount1Out, address(nextPair), "");
+                    (pair, input, output) = (nextPair, path[i+1], path[i+2]);
+                }
             }
+            uint amountOutMin = amounts[amounts.length - 1] * config.slippageFactor() / 256;
+            if (output.balanceOf(address(this)) < amountOutMin + balanceBefore) {
+                unchecked {
+                    revert InsufficientOutputAmount(output.balanceOf(address(this)) - balanceBefore, amountOutMin);
+                }
+            }
+        } else {
+            
+            for (uint i; i < path.length - 1; i++) {
+                (input, output) = (path[i], path[i + 1]);
+                (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amounts[i]) : (amounts[i], uint(0));
+                
+                if (i == path.length - 2) {
+                    pair.swap(amount0Out, amount1Out, address(this), "");
+                } else {
+                    IUniPair nextPair = factory.getPair(output, path[i + 2]);
+                    pair.swap(amount0Out, amount1Out, address(nextPair), "");
+                    pair = nextPair;
+                }
+            }
+
         }
     }
-
-
 
     function swapToWantToken(uint256 _amountIn, IERC20 _tokenA) internal {
         IERC20 want = config.wantToken();
@@ -248,22 +271,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         balance0 = token0.balanceOf(address(this));
         balance1 = token1.balanceOf(address(this));
 
-        if (balance0 > LP_DUST) fastSwap(pair, token0, token1, balance0 / 3);
-        else if (balance1 > LP_DUST) fastSwap(pair, token1, token0, balance1 / 3);
-    }
-
-    function fastSwap(IUniPair pair, IERC20 input, IERC20 output, uint amount) internal {
-        input.safeTransfer(address(pair), amount);
-        bool inputIsToken0 = input < output;
-        (uint reserve0, uint reserve1,) = pair.getReserves();
-
-        (uint reserveInput, uint reserveOutput) = inputIsToken0 ? (reserve0, reserve1) : (reserve1, reserve0);
-        uint amountInput = input.balanceOf(address(pair)) - reserveInput;
-        uint amountOutput = config.router().getAmountOut(amountInput, reserveInput, reserveOutput);
-
-        (uint amount0Out, uint amount1Out) = inputIsToken0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-
-        pair.swap(amount0Out, amount1Out, address(this), "");
+        IERC20[] memory path = new IERC20[](2);
+        (path[0], path[1]) = balance0 > LP_DUST ? (token0, token1) : (token1, token0);
+        if (balance0 > LP_DUST || balance1 > LP_DUST) safeSwap(balance0 / 3, path);
     }
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
