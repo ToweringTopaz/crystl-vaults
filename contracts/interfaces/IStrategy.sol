@@ -11,20 +11,20 @@ import "./IVaultHealer.sol";
 
 interface IStrategy is IERC165 {
 
-    error Muppet(address caller);
+    error Muppet(address caller); //1bfef483
     error IdenticalAddresses(IERC20 a, IERC20 b);
     error ZeroAddress();
     error InsufficientOutputAmount(uint amountOut, uint amountOutMin);
-    error Strategy_CriticalMemoryError(uint ptr);
+    error Strategy_CriticalMemoryError(uint ptr); //decbcfd4
     error Strategy_Improper1155Deposit(address operator, address from, uint id);
     error Strategy_Improper1155BatchDeposit(address operator, address from, uint[] ids);
     error Strategy_ImproperEthDeposit(address sender, uint amount);
-    error Strategy_NotVaultHealer(address sender);
-    error Strategy_InitializeOnlyByProxy();
+    error Strategy_NotVaultHealer(address sender); //3da8f0c0
+    error Strategy_InitializeOnlyByProxy(); //2ebab949
     error Strategy_ExcessiveFarmSlippage();
     error Strategy_WantLockedLoss();
 	error Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
-	error Strategy_DustDeposit(uint256 wantAdded); //Deposit amount is insignificant after slippage
+	error Strategy_DustDeposit(uint256 wantAdded); //eaf3800a - Deposit amount is insignificant after slippage
     error Strategy_AlreadyInitialized();
     error Strategy_MaximizersNotSupported();
 
