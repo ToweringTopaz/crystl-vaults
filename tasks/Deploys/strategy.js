@@ -29,7 +29,7 @@ task("strategySaharaDeploy","Deploys a Strategy suited for the unique Sahara far
   .addParam("vh", "VaultHealer Address")
   .setAction(async ({ vh }) => {
     const StrategySahara = await ethers.getContractFactory("StrategySahara");
-    const strategyCustomRouter = await StrategyCustomRouter.deploy(vh);
+    const strategySahara = await StrategySahara.deploy(vh);
 
-    console.log("StrategySahara deployed at address:", StrategySahara.address);
+    console.log("StrategySahara deployed at address:", strategySahara.address);
   })
