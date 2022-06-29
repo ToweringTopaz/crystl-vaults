@@ -8,8 +8,6 @@ contract StrategyCustomRouter is Strategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using SafeERC20 for IERC20;
 
-    constructor(IVaultHealer _vaultHealer) Strategy(_vaultHealer) {}
-
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path

@@ -234,13 +234,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         } else {
             
             for (uint i; i < path.length - 1; i++) {
-                (input, output) = (path[i], path[i + 1]);
                 (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amounts[i]) : (amounts[i], uint(0));
                 
                 if (i == path.length - 2) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
                 } else {
-                    IUniPair nextPair = factory.getPair(output, path[i + 2]);
+                    (input, output) = (output, path[i + 2]);
+                    IUniPair nextPair = factory.getPair(input, output);
                     pair.swap(amount0Out, amount1Out, address(nextPair), "");
                     pair = nextPair;
                 }

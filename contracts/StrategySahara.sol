@@ -8,8 +8,6 @@ contract StrategySahara is StrategyCustomRouter {
 
     ISaharaDaoStaking public constant SaharaStaking = ISaharaDaoStaking(0x6F132536069F8E35ED029CEd563710CF68fE8E54);
 
-    constructor(IVaultHealer _vaultHealer) StrategyCustomRouter(_vaultHealer) {}
-
     function _vaultHarvest() internal override {
         super._vaultHarvest();
         SaharaStaking.emergencyWithdraw();
