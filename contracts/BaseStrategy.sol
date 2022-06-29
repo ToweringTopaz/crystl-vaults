@@ -203,19 +203,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         
         if (config.feeOnTransfer()) {
             uint balanceBefore = path[path.length - 1].balanceOf(address(this));
-            IERC20[] memory subpath;
-            if (path.length > 2) {
-                subpath = new IERC20[](2);
-                (subpath[0], subpath[1]) = (input, output);
-            } else subpath = path;
 
             for (uint i; i < path.length - 1; i++) {
                 (uint reserve0, uint reserve1,) = pair.getReserves();
-                uint amountInput = input.balanceOf(address(pair)) - (input < output ? reserve0 : reserve1);
                 
-                amountOutput = _router.getAmountsOut(amountInput, subpath)[0];
-
-                (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amountOutput) : (amountOutput, uint(0));
+                (uint amount0Out, uint amount1Out) = input < output ? 
+                    (uint(0), _router.getAmountOut(input.balanceOf(address(pair)) - reserve0, reserve0, reserve1)) :
+                    (_router.getAmountOut(input.balanceOf(address(pair)) - reserve1, reserve1, reserve0), uint(0));
 
                 if (i == path.length - 2) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
@@ -226,11 +220,9 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                 }
             }
             uint amountOutMin = amounts[amounts.length - 1] * config.slippageFactor() / 256;
-            if (output.balanceOf(address(this)) < amountOutMin + balanceBefore) {
-                unchecked {
-                    revert InsufficientOutputAmount(output.balanceOf(address(this)) - balanceBefore, amountOutMin);
-                }
-            }
+            amountOutput = output.balanceOf(address(this)) - balanceBefore;
+            if (amountOutput < amountOutMin) revert InsufficientOutputAmount(amountOutput, amountOutMin);
+
         } else {
             
             for (uint i; i < path.length - 1; i++) {
@@ -245,7 +237,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
                     pair = nextPair;
                 }
             }
-
+            amountOutput = amounts[amounts.length - 1];
         }
     }
 
