@@ -204,19 +204,20 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         if (config.feeOnTransfer()) {
             uint balanceBefore = path[path.length - 1].balanceOf(address(this));
 
-            for (uint i; i < path.length - 1; i++) {
+            for (uint i = 1; i < path.length; i++) {
                 (uint reserve0, uint reserve1,) = pair.getReserves();
                 
                 (uint amount0Out, uint amount1Out) = input < output ? 
                     (uint(0), _router.getAmountOut(input.balanceOf(address(pair)) - reserve0, reserve0, reserve1)) :
                     (_router.getAmountOut(input.balanceOf(address(pair)) - reserve1, reserve1, reserve0), uint(0));
 
-                if (i == path.length - 2) {
+                if (i == path.length - 1) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
                 } else {
-                    IUniPair nextPair = factory.getPair(output, path[i + 2]);
+                    (input, output) = (output, path[i + 1]);
+                    IUniPair nextPair = factory.getPair(input, output);
                     pair.swap(amount0Out, amount1Out, address(nextPair), "");
-                    (pair, input, output) = (nextPair, path[i+1], path[i+2]);
+                    pair = nextPair;
                 }
             }
             uint amountOutMin = amounts[amounts.length - 1] * config.slippageFactor() / 256;
@@ -225,13 +226,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         } else {
             
-            for (uint i; i < path.length - 1; i++) {
+            for (uint i = 1; i < path.length; i++) {
                 (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amounts[i]) : (amounts[i], uint(0));
                 
-                if (i == path.length - 2) {
+                if (i == path.length - 1) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
                 } else {
-                    (input, output) = (output, path[i + 2]);
+                    (input, output) = (output, path[i + 1]);
                     IUniPair nextPair = factory.getPair(input, output);
                     pair.swap(amount0Out, amount1Out, address(nextPair), "");
                     pair = nextPair;
