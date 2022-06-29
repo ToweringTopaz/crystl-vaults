@@ -192,14 +192,13 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
-    ) internal virtual returns (uint amountOutput) {
+    ) internal virtual {
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 
         uint[] memory amounts = _router.getAmountsOut(_amountIn, path);
-        (IERC20 input, IERC20 output) = (path[0], path[1]);
-        IUniPair pair = factory.getPair(input, output);
-        input.safeTransfer(address(pair), _amountIn);
+        IUniPair pair = factory.getPair(path[0], path[1]);
+        path[0].safeTransfer(address(pair), _amountIn);
         
         if (config.feeOnTransfer()) {
             uint balanceBefore = path[path.length - 1].balanceOf(address(this));
@@ -207,38 +206,35 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
             for (uint i = 1; i < path.length; i++) {
                 (uint reserve0, uint reserve1,) = pair.getReserves();
                 
-                (uint amount0Out, uint amount1Out) = input < output ? 
-                    (uint(0), _router.getAmountOut(input.balanceOf(address(pair)) - reserve0, reserve0, reserve1)) :
-                    (_router.getAmountOut(input.balanceOf(address(pair)) - reserve1, reserve1, reserve0), uint(0));
+                (uint amount0Out, uint amount1Out) = path[i - 1] < path[i] ? 
+                    (uint(0), _router.getAmountOut(path[i - 1].balanceOf(address(pair)) - reserve0, reserve0, reserve1)) :
+                    (_router.getAmountOut(path[i - 1].balanceOf(address(pair)) - reserve1, reserve1, reserve0), uint(0));
 
                 if (i == path.length - 1) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
                 } else {
-                    (input, output) = (output, path[i + 1]);
-                    IUniPair nextPair = factory.getPair(input, output);
+                    IUniPair nextPair = factory.getPair(path[i], path[i + 1]);
                     pair.swap(amount0Out, amount1Out, address(nextPair), "");
                     pair = nextPair;
                 }
             }
             uint amountOutMin = amounts[amounts.length - 1] * config.slippageFactor() / 256;
-            amountOutput = output.balanceOf(address(this)) - balanceBefore;
+            uint amountOutput = path[path.length - 1].balanceOf(address(this)) - balanceBefore;
             if (amountOutput < amountOutMin) revert InsufficientOutputAmount(amountOutput, amountOutMin);
 
         } else {
             
             for (uint i = 1; i < path.length; i++) {
-                (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amounts[i]) : (amounts[i], uint(0));
+                (uint amount0Out, uint amount1Out) = path[i - 1] < path[i] ? (uint(0), amounts[i]) : (amounts[i], uint(0));
                 
                 if (i == path.length - 1) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
                 } else {
-                    (input, output) = (output, path[i + 1]);
-                    IUniPair nextPair = factory.getPair(input, output);
+                    IUniPair nextPair = factory.getPair(path[i], path[i + 1]);
                     pair.swap(amount0Out, amount1Out, address(nextPair), "");
                     pair = nextPair;
                 }
             }
-            amountOutput = amounts[amounts.length - 1];
         }
     }
 
