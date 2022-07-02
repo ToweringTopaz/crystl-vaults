@@ -13,19 +13,18 @@ contract StrategyCustomRouter is Strategy {
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
-    ) internal override returns (uint amountOutput) {
+    ) internal override {
+        if (_amountIn == 0) return;
+
         IUniRouter _router = config.router();
 
         path[0].safeIncreaseAllowance(address(_router), _amountIn);
         
         if (config.feeOnTransfer()) {
-            uint balanceBefore = path[path.length - 1].balanceOf(address(this));
             uint amountOutMin = _router.getAmountsOut(_amountIn, path)[path.length - 2] * config.slippageFactor() / 256;
-
             _router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_amountIn, amountOutMin, path, address(this), block.timestamp);
-            amountOutput = path[path.length - 1].balanceOf(address(this)) - balanceBefore;
         } else {
-            amountOutput = _router.swapExactTokensForTokens(_amountIn, 0, path, address(this), block.timestamp)[path.length - 2];
+            _router.swapExactTokensForTokens(_amountIn, 0, path, address(this), block.timestamp)[path.length - 2];
         }
     }
 }
