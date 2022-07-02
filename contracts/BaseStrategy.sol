@@ -161,7 +161,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         IERC20 _tokenA,
         IERC20 _tokenB
     ) internal {
-        if (_tokenA == _tokenB) return; //Do nothing for one-token paths
+        if (_tokenA == _tokenB || _amountIn  == 0) return; //Do nothing for one-token paths
         IERC20[] memory path = config.magnetite().findAndSavePath(address(config.router()), _tokenA, _tokenB);
         require(path[0] == _tokenA && path[path.length - 1] == _tokenB, "Strategy: received invalid path for swap");
         safeSwap(_amountIn, path);
@@ -193,6 +193,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         uint256 _amountIn,
         IERC20[] memory path
     ) internal virtual {
+        if (_amountIn  == 0) return;
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 

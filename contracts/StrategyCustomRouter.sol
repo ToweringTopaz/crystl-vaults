@@ -12,6 +12,7 @@ contract StrategyCustomRouter is Strategy {
         uint256 _amountIn,
         IERC20[] memory path
     ) internal override {
+        if (_amountIn == 0) return;
         IUniRouter _router = config.router();
 
         path[0].safeIncreaseAllowance(address(_router), _amountIn);
