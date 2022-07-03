@@ -259,22 +259,27 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
 
-        if (balance0 * reserve1 < balance1 * reserve0) {
-            balance1 = balance0 * reserve1 / reserve0;
-        } else {
-            balance0 = balance1 * reserve0 / reserve1;
+        (uint amount0, uint amount1) = (balance0 * reserve1 < balance1 * reserve0) ?
+            (balance0, balance0 * reserve1 / reserve0) :
+            (balance1 * reserve0 / reserve1, balance1);
+
+        if (amount0 * amount1 > 0) { //if both are nonzero
+            token0.safeTransfer(address(pair), amount0);
+            token1.safeTransfer(address(pair), amount1);
+            liquidity = pair.mint(address(this));
+            balance0 -= amount0;
+            balance1 -= amount1;
         }
 
-        token0.safeTransfer(address(pair), balance0);
-        token1.safeTransfer(address(pair), balance1);
-        liquidity = pair.mint(address(this));
-
-        balance0 = token0.balanceOf(address(this));
-        balance1 = token1.balanceOf(address(this));
-
-        IERC20[] memory path = new IERC20[](2);
-        (path[0], path[1]) = balance0 > LP_DUST ? (token0, token1) : (token1, token0);
-        if (balance0 > LP_DUST || balance1 > LP_DUST) safeSwap(balance0 / 3, path);
+        if (balance0 > LP_DUST) {
+            IERC20[] memory path = new IERC20[](2);
+            (path[0], path[1]) = (token0, token1);
+            safeSwap(balance0 / 3, path);
+        } else if (balance1 > LP_DUST) {
+            IERC20[] memory path = new IERC20[](2);
+            (path[0], path[1]) = (token1, token0);
+            safeSwap(balance1 / 3, path);
+        }
     }
 
     function configInfo() external view getConfig returns (ConfigInfo memory info) {
