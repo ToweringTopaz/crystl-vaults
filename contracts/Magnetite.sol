@@ -32,30 +32,32 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
     mapping(bytes32 => Path) private _paths;
 
     constructor(address vhAuth) {
-        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56, "unsupported chain");
         _init(vhAuth);
+        (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = _commonInit();
+    }
 
-        (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = block.chainid == 25 ? ( //cronos
-            0xc21223249CA28397B4B6541dfFaEcC539BfF0c59,
-            0xe44Fd7fCb2b1581822D0c862B68222998a0c299a,
-            0x062E66477Faf219F25D27dCED647BF57C3107d52,
-            0x66e428c3f67a68878562e79A0234c1F83c208770,
-            0xF2001B145b43032AAF5Ee2884e456CCd805F677D
-        ) : ( block.chainid == 56 ? ( //bsc
-            0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d, //usdc
-            0x2170Ed0880ac9A755fd29B2688956BD959F933F8, //weth
-            0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c, //wbtc: actually btcb on BNB Chain
-            0x55d398326f99059fF775485246999027B3197955, //usdt
-            0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3 //dai
-        ) : ( //polygon
-            0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
-            0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
-            0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
-            0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
-            0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 //dai
-
-        ));
-
+    function _commonInit() internal virtual returns (address c1, address c2, address c3, address c4, address c5) {
+        if (block.chainid == 25) {
+            c1 = 0xc21223249CA28397B4B6541dfFaEcC539BfF0c59;
+            c2 = 0xe44Fd7fCb2b1581822D0c862B68222998a0c299a;
+            c3 = 0x062E66477Faf219F25D27dCED647BF57C3107d52;
+            c4 = 0x66e428c3f67a68878562e79A0234c1F83c208770;
+            c5 = 0xF2001B145b43032AAF5Ee2884e456CCd805F677D;
+        } else if (block.chainid == 56) {
+            c1 = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d; //usdc
+            c2 = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8; //weth
+            c3 = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c; //wbtc: actually btcb on BNB Chain
+            c4 = 0x55d398326f99059fF775485246999027B3197955; //usdt
+            c5 = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3; //dai
+        } else if (block.chainid == 137) {
+            c1 = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; //usdc
+            c2 = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619; //weth
+            c3 = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13; //quick
+            c4 = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F; //usdt
+            c5 = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063; //dai
+        } else {
+            revert("unsupported chain");
+        }
     }
 
     function _init(address vhAuth) public virtual initializer {
