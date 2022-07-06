@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.15;
 
 /*
 Join us at PolyCrystal.Finance!
@@ -11,6 +11,7 @@ Join us at PolyCrystal.Finance!
 
 import "./interfaces/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@prb/math/contracts/PRBMath.sol";
 import "./libraries/MoneyBomb.sol";
@@ -26,21 +27,14 @@ contract RadioactiveRevShare is Ownable {
     }
 
     IERC20 public immutable lpToken;           // Address of LP token contract.
-
     IWETH public immutable WNATIVE;
 
-    uint40 public lastRewardTime;  // Last timestamp that Rewards distribution occurred.
-
-    // Half of the rewards will be distributed over this period
-    uint40 public rewardHalflife;
-
+    uint40 public lastRewardTime = uint40(block.timestamp);  // Last timestamp that Rewards distribution occurred.
+    uint40 public rewardHalflife;     // Half of the rewards will be distributed over this period
     uint176 public accRewardPerShare; // Accumulated Rewards per share, times 1e30. See below.
-
-    //All rewards which are earned by depositors but not yet harvested
-    uint128 public rewardsPending;
-
-    // Keep track of number of tokens staked in case the contract receives an improper transfer
-    uint128 public totalStaked;
+    
+    uint128 public rewardsPending;  //All rewards which are earned by depositors but not yet harvested
+    uint128 public totalStaked;     // Keep track of number of tokens staked in case the contract receives an improper transfer
 
     // Info of each user that stakes LP tokens.
     mapping (address => UserInfo) public userInfo;
@@ -58,16 +52,13 @@ contract RadioactiveRevShare is Ownable {
     constructor(
         IERC20 _stakeToken,
         IWETH _wnative,
-        uint40 _rewardHalflife,
-        uint40 _startTime
+        uint40 _rewardHalflife
     ) 
     {
         WNATIVE = _wnative;
-        rewardHalflife = _rewardHalflife;
-
         lpToken = _stakeToken;
-        lastRewardTime = _startTime > block.timestamp ? _startTime : uint40(block.timestamp);
 
+        setRewardHalflife(_rewardHalflife);
     }
 
     function decayHalflife(uint amountStart, uint timeElapsed, uint halflife) public pure returns (uint amountAfter, uint amountDecayed) {
@@ -95,7 +86,7 @@ contract RadioactiveRevShare is Ownable {
         UserInfo storage user = userInfo[_user];
         uint256 _accRewardPerShare = accRewardPerShare;
         if (block.timestamp > lastRewardTime && totalStaked != 0) {
-            (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), block.timestamp - lastRewardTime, rewardHalflife);
+            (,uint256 tokenReward) = decayHalflife(address(this).balance - rewardsPending, block.timestamp - lastRewardTime, rewardHalflife);
             _accRewardPerShare += tokenReward * 1e30 / totalStaked;
         }
         return user.amount * _accRewardPerShare / 1e30 - user.rewardDebt;
@@ -109,15 +100,15 @@ contract RadioactiveRevShare is Ownable {
 	modifier updateRewardDebt {
 		_;
 		UserInfo storage user = userInfo[msg.sender];
-		user.rewardDebt = toUint128(uint256(user.amount) * accRewardPerShare / 1e30);
+		user.rewardDebt = SafeCast.toUint128(uint256(user.amount) * accRewardPerShare / 1e30);
 	}
 
     function _updatePool(uint _rewardsPending) internal {
         if (block.timestamp > lastRewardTime) {
             if (totalStaked > 0) {
                 (,uint256 tokenReward) = decayHalflife(address(this).balance - _rewardsPending, block.timestamp - lastRewardTime, rewardHalflife);
-                rewardsPending += toUint128(tokenReward);
-                accRewardPerShare = toUint176(accRewardPerShare + tokenReward * 1e30 / totalStaked);
+                rewardsPending += SafeCast.toUint128(tokenReward);
+                accRewardPerShare = SafeCast.toUint176(accRewardPerShare + tokenReward * 1e30 / totalStaked);
             }
             lastRewardTime = uint40(block.timestamp);
         }
@@ -134,7 +125,7 @@ contract RadioactiveRevShare is Ownable {
 		UserInfo storage user = _harvest(_wrapReward);
         if (_amount > 0) {
             lpToken.safeTransferFrom(msg.sender, address(this), _amount);
-            totalStaked = toUint128(totalStaked + _amount);
+            totalStaked = SafeCast.toUint128(totalStaked + _amount);
             user.amount = uint128(user.amount + _amount);
         }
 
@@ -146,12 +137,12 @@ contract RadioactiveRevShare is Ownable {
     function withdraw(bool _wrapReward, uint256 _amount) public updateRewardDebt {
 		UserInfo storage user = _harvest(_wrapReward);
 		
-        if (user.amount < _amount) {
+        if (_amount > user.amount) {
             if (user.amount == 0) revert("RevSharePool: withdraw zero balance");
             _amount = user.amount; 
         }
         if(_amount > 0) {
-            user.amount -= toUint128(_amount);
+            user.amount -= SafeCast.toUint128(_amount);
             lpToken.safeTransfer(msg.sender, _amount);
             totalStaked -= uint128(_amount);
         }
@@ -167,20 +158,10 @@ contract RadioactiveRevShare is Ownable {
 		updatePool();
 		user = userInfo[msg.sender];
 		uint256 pending = uint256(user.amount) * accRewardPerShare / 1e30 - user.rewardDebt;
-		if(pending > 0) {
-			uint256 currentRewardBalance = rewardBalance();
-			if(currentRewardBalance > 0) {
-				safeTransferReward(_wrapReward, msg.sender, pending > currentRewardBalance ? currentRewardBalance : pending);
-			}
-		}
+        if(pending > 0) safeTransferReward(_wrapReward, msg.sender, pending);
+
 		emit Harvest(msg.sender, pending);
 	}
-
-    /// Obtain the reward balance of this contract
-    /// @return wei balace of conract
-    function rewardBalance() public view returns (uint256) {
-        return address(this).balance;
-    }
 
     // Deposit Rewards into contract
     function depositRewards() public payable {
@@ -196,7 +177,7 @@ contract RadioactiveRevShare is Ownable {
     /// @param _to address to send reward token to
     /// @param _amount value of reward token to transfer
     function safeTransferReward(bool _wrap, address _to, uint256 _amount) internal {
-        rewardsPending -= toUint128(_amount);
+        rewardsPending -= SafeCast.toUint128(_amount);
 		if (_wrap) {
 			WNATIVE.deposit{value: _amount}();
 			WNATIVE.safeTransfer(_to, _amount);
@@ -218,13 +199,14 @@ contract RadioactiveRevShare is Ownable {
     /* Admin Functions */
 
     /// @param _rewardHalflife The time in seconds in which half of rewards will be paid out
-    function setRewardHalflife(uint40 _rewardHalflife) external onlyOwner {
+    function setRewardHalflife(uint40 _rewardHalflife) public onlyOwner {
+        require(_rewardHalflife >= 3600, "half life cannot be less than one hour");
         updatePool();
         rewardHalflife = _rewardHalflife;
         emit LogUpdatePool(_rewardHalflife);
     }
 
-        /// @dev Remove excess stake tokens earned by reflect fees
+        /// @dev Remove excess stake tokens earned by reflect fees or improperly transferred in
     function skimStakeTokenFees() external onlyOwner {
         uint256 stakeTokenFeeBalance = getStakeTokenFeeBalance();
         lpToken.safeTransfer(msg.sender, stakeTokenFeeBalance);
@@ -262,15 +244,4 @@ contract RadioactiveRevShare is Ownable {
         token.transfer(msg.sender, balance);
         emit EmergencySweepWithdraw(msg.sender, token, balance);
     }
-
-    function toUint128(uint256 value) internal pure returns (uint128) {
-        require(value <= type(uint128).max, "SafeCast: value doesn't fit in 128 bits");
-        return uint128(value);
-    }
-
-    function toUint176(uint256 value) internal pure returns (uint176) {
-        require(value <= type(uint176).max, "SafeCast: value doesn't fit in 176 bits");
-        return uint176(value);
-    }
-
 }
