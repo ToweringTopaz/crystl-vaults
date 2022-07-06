@@ -478,8 +478,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     function generateConfig(
-        Tactics.TacticsA _tacticsA,
-        Tactics.TacticsB _tacticsB,
+        bytes32[3] calldata _tactics,
         address _wantToken,
         uint8 _wantDust,
         address _router,
@@ -493,7 +492,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
         uint8 vaultType = uint8(_earned.length);
         if (_feeOnTransfer) vaultType += 0x80;
-        configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
+        configData = abi.encodePacked(_tactics, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
 		
 		IERC20 _targetWant = IERC20(_wantToken);
 
@@ -512,7 +511,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
         configData = abi.encodePacked(configData, IUniRouter(_router).WETH());
     }
-
+/* todo: fix
     function generateTactics(
         address _masterchef,
         uint24 pid, 
@@ -526,5 +525,5 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         tacticsA = Tactics.TacticsA.wrap(bytes32(abi.encodePacked(bytes20(_masterchef),bytes3(pid),bytes1(vstReturnPosition),vstCode)));
         tacticsB = Tactics.TacticsB.wrap(bytes32(abi.encodePacked(depositCode, withdrawCode, harvestCode, emergencyCode)));
     }
-
+*/
 }
