@@ -14,8 +14,8 @@ library Moses {
     bytes32 constant EMPTY_HASH  = hex'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470';
     bytes32 constant PILLAR = hex'18beb7d392d5692fcddc3d86a7e1585a3a33802c18b15735d1bd43a26901b05c'; //keccak256("Lot's wife");
 
-    MosesFS constant MOSES_FS = MosesFS(0x7C7C7c7c7C7C7c7C7c7c7C7C7c7c7C7C7c7c7c7C); //Replace 7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c with the final MosesFS contract address
-    bytes32 constant TABLET_CODE = hex'383D3D39383Df3fe7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7cffff8000'; //Replace 7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c with the final MosesFS contract address
+    MosesFS constant MOSES_FS = MosesFS(0x0000000000bC3d9ef3ec146666969151B3a9494E); 
+    bytes32 constant TABLET_CODE = hex'383D3D39383Df3fe0000000000bc3d9ef3ec146666969151b3a9494effff8000'; 
 
     function find(bytes memory covenant) internal view returns (address tablet, bool carved) {
 
@@ -45,7 +45,7 @@ library Moses {
             let ptr := mload(0x40) //free memory pointer, which is temporarily overwritten
             mstore(0x40, hash) 
             mstore(0x20, PILLAR) //solidity scratch space
-            mstore(0x00, 0xff7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c) //Replace 7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c with the final MosesFS contract address
+            mstore(0x00, 0xff0000000000bc3d9ef3ec146666969151b3a9494e)
             addr := keccak256(11,85)
             mstore(0x40, ptr)
         }
@@ -89,7 +89,7 @@ contract MosesFS {
     uint16 constant MAX_DEPLOYED_BYTECODE = 24576;
     uint16 constant MAX_LENGTH = MAX_DEPLOYED_BYTECODE - 32;
     bytes32 constant PILLAR = hex'18beb7d392d5692fcddc3d86a7e1585a3a33802c18b15735d1bd43a26901b05c'; //keccak256("Lot's wife");
-    bytes32 constant TABLET_CODE = hex'383D3D39383Df3fe7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7cffff8000'; //Replace 7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c7c with the final MosesFS contract address
+    bytes32 constant TABLET_CODE = hex'383D3D39383Df3fe0000000000bc3d9ef3ec146666969151b3a9494effff8000';
 
     function find(string memory covenant) external view returns (address tablet, bool carved) {
         return Moses.find(covenant);
