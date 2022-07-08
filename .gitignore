@@ -6,10 +6,12 @@
 /node_modules/
 /build
 **/artifacts
+/coverage
 
 # Buidler files
 cache
 artifacts
+coverage.json
 
 #Environment Variables
 .env
