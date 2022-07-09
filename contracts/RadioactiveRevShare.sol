@@ -95,7 +95,7 @@ contract RadioactiveRevShare is Ownable {
         UserInfo storage user = userInfo[_user];
         uint256 _accRewardPerShare = accRewardPerShare;
         if (block.timestamp > lastRewardTime && totalStaked != 0) {
-            (,uint256 tokenReward) = decayHalflife(toUint128(address(this).balance - rewardsPending), block.timestamp - lastRewardTime, rewardHalflife);
+            (,uint256 tokenReward) = decayHalflife(address(this).balance - rewardsPending, block.timestamp - lastRewardTime, rewardHalflife);
             _accRewardPerShare += tokenReward * 1e30 / totalStaked;
         }
         return user.amount * _accRewardPerShare / 1e30 - user.rewardDebt;
