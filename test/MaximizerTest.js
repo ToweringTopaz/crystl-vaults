@@ -88,7 +88,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
-		strategyImplementation = await Strategy.deploy(vaultHealer.address);
+		strategyImplementation = await Strategy.deploy();
 		
 		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
 			MASTERCHEF,
