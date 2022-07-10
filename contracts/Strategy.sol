@@ -15,6 +15,36 @@ contract Strategy is BaseStrategy {
 
     constructor() {
         _maximizerImplementation = _deployMaximizerImplementation();
+            uint256 earnedAmt = earnedToken.balanceOf(address(this));
+            if (earnedAmt > dust) { //don't waste gas swapping minuscule rewards
+                success = true; //We have something worth compounding
+
+                if (earnedToken != targetWant) safeSwap(earnedAmt, earnedToken, config.weth()); //swap to the native gas token if not the targetwant token
+            }
+        }
+        if (!success) return (false, _wantLockedTotal());
+
+        //pay fees on new targetWant tokens
+        targetWantAmt = fees.payTokenFeePortion(targetWant, targetWant.balanceOf(address(this)) - targetWantAmt) + targetWantAmt;
+
+        if (config.isMaximizer() && (targetWantAmt > 0 || unwrapAllWeth())) {
+            fees.payEthPortion(address(this).balance); //pays the fee portion
+            try IVaultHealer(msg.sender).maximizerDeposit{value: address(this).balance}(config.vid(), targetWantAmt, "") { //deposit the rest, and any targetWant tokens
+                return (true, _wantLockedTotal());
+            }
+            catch {  //compound want instead if maximizer doesn't work
+                success = false;
+            }
+        }
+        //standard autocompound behavior
+        wrapAllEth();
+        IWETH weth = config.weth();
+        uint wethAmt = weth.balanceOf(address(this));
+        if (wethAmt > WETH_DUST && success) { //success is only false here if maximizerDeposit was attempted and failed
+            wethAmt = fees.payWethPortion(weth, wethAmt); //pay fee portion
+            swapToWantToken(wethAmt, weth);
+        }
+        __wantLockedTotal = _wantToken.balanceOf(address(this)) + _farm();
     }
 
     function _deployMaximizerImplementation() internal virtual returns (IStrategy) {
