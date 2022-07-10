@@ -84,6 +84,141 @@ if (!cronoScanApiKey) {
 }
 
 // The following etherscan versions may require some extra configuration within the guts of the dist file of @nomiclabs/hardhat-etherscan :)
+ //NODE ENDPOINTS 
+ const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
+ if (!archiveMainnetNodeURL) {
+   throw new Error("Please set your  SPEEDY_ARCHIVE_RPC in a .env file, ensuring it's for the relevant blockchain");
+ }
+ const polygonMainnetNodeURL = process.env.POLYGON_PRIVATE_RPC;
+ if (!polygonMainnetNodeURL) {
+   throw new Error("Please set your POLYGON_PRIVATE_RPC in a .env file");
+ }
+ const bscMainnetNodeURL = process.env.BNB_PRIVATE_RPC;
+ if (!bscMainnetNodeURL) {
+   throw new Error("Please set your BNB_PRIVATE_RPC in a .env file")
+ }
+ const cronosMainnetNodeURL = process.env.CRONOS_ARCHIVE_RPC;
+ if (!cronosMainnetNodeURL) {
+   throw new Error("Please set your CRONOS_ARCHIVE_RPC in a .env file")
+ }
+ //API Keys
+ const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
+ if (!polygonScanApiKey) {
+   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
+ }
+ const bscScanApiKey = process.env.BSCSCAN_API_KEY;
+ if (!bscScanApiKey) {
+   throw new Error("Please set your BSCSCAN_API_KEY in a .env file");
+ }
+ const cronoScanApiKey = process.env.CRONOSCAN_API_KEY;
+ if (!cronoScanApiKey) {
+   throw new Error("Please set your CRONOSCAN_API_KEY in a .env file");
+ }
+
+
+task("libDeploy", "Deploys a library")
+	.addParam("lib", "The library's name")
+    .setAction(async (taskArgs) => {
+	
+	vaultChonk = await ethers.getContractFactory(name);
+	vaultChonk = await vaultChonk.deploy();	
+	
+	console.log(name, "deployed at: ", vaultChonk.address);
+	
+});
+
+
+task("prepareDeploy", "Deploys VaultChonk library and other linked contracts")
+    .setAction(async (taskArgs) => {
+	
+	vaultDeploy = await ethers.getContractFactory("VaultDeploy");
+	
+	[user0, _] = await ethers.getSigners();
+	console.log("User account is ", user0.address);
+	
+	nonce = await user0.getTransactionCount()
+	vaultDeploy = await vaultDeploy.deploy(nonce);
+	
+	console.log("VaultDeploy deployed at :", vaultDeploy.address);
+	console.log("Constructor parameter was a nonce of", nonce);
+});
+
+task("vaultHealer", "Deploys vaulthealer")
+  .addParam("chonk", "The vaultChonk library address")
+  .addParam("depl", "VaultDeploy address")
+  .setAction(async ({ chonk, depl }) => {
+
+	vaultDeploy = await ethers.getContractAt("VaultDeploy", depl);
+    vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: chonk }});
+    vaultHealer = await vaultHealer.deploy(await vaultDeploy.vhAuth(), await vaultDeploy.vaultFeeManager(), await vaultDeploy.zap());
+    
+    console.log("New VaultHealer address: ", vaultHealer.address);
+	
+  });
+
+task("vaultVerify", "Verifies everything")
+  .addParam("chonk", "The vaultChonk contract")
+  .addParam("deploy", "The vaultDeploy contract")
+  .setAction(async ({ chonk, deploy }) => {
+	  
+    vaultDeploy = await ethers.getContractAt("VaultDeploy", deploy);
+
+	await hre.run("verify:verify", {
+		address: chonk
+	})	
+	
+	const vaultHealer = await ethers.getContractAt("VaultHealer", await vaultDeploy.vaultHealer());
+	const vhAuth = await vaultHealer.vhAuth();
+	
+	//await hre.run("verify:verify", {
+		//address: vaultHealer.address,
+	//	libraries: { VaultChonk: chonk }
+//	})
+	
+	[user0, _] = await ethers.getSigners();
+	await hre.run("verify:verify", {
+		address: vaultDeploy.address,
+		constructorArguments: [await user0.getTransactionCount()]
+	})
+
+	await hre.run("verify:verify", {
+		address: vhAuth,
+		constructorArguments: [user0.address],
+	})
+    await hre.run("verify:verify", {
+		address: await vaultHealer.vaultFeeManager(),
+		constructorArguments: [vhAuth],
+	})	
+	await hre.run("verify:verify", {
+		address: await vaultHealer.zap(),
+		constructorArguments: [ vaultHealer.address ],
+	})	
+	await hre.run("verify:verify", {
+		address: await vaultDeploy.strategy(),
+		constructorArguments: [ vaultHealer.address ],
+	})
+	await hre.run("verify:verify", {
+		address: await vaultDeploy.strategyQuick(),
+		constructorArguments: [ vaultHealer.address ],
+	})	
+	await hre.run("verify:verify", {
+		address: await vaultDeploy.boostPoolImpl(),
+		constructorArguments: [ vaultHealer.address ],
+	})		
+	
+  });
+
+
+task("deployImplementation", "Deploys a strategy implementation contract")
+  .setAction(async (name) => {
+    //vaultHealer = await ethers.getContractAt(vaultHealer_abi, '0x41900A479FcdFe5808eDF12aa22136f98E08C803')
+    //console.log("vaultHealer Instantiated")
+	
+    StrategyImplementation = await ethers.getContractFactory("StrategySahara");
+    strategyImplementation = await StrategyImplementation.deploy('0xBA6f3b9bf74FbFa59d55E52fa722E6a5737070D0');
+    
+    console.log("New strategy impl address: ", strategyImplementation.address);
+  });
 
 const bttcScanApiKey = process.env.BTTCSCAN_API_KEY;
 if (!bttcScanApiKey) {
@@ -120,13 +255,14 @@ module.exports = {
         path: "m/44'/60'/0'/0",
         accountsBalance: "10000000000000000000000",
       },
-      forking: {
-        url: process.env.SPEEDY_ARCHIVE_RPC, //archiveMainnetNodeURL,
+      //forking: {
+        //url: process.env.SPEEDY_ARCHIVE_RPC//archiveMainnetNodeURL,
         //blockNumber: 25326200,
-      },
+      //},
       chainId: chainIds.hardhat,
       hardfork: "london",
     },
+
     polygon: {
       url: polygonMainnetNodeURL,
       accounts: [`0x${myPrivateKey}`],
@@ -179,6 +315,44 @@ module.exports = {
         },
       },
     ],
+     polygon: {
+       url: polygonMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`],
+     },
+     bsc: {
+       url: bscMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`], 
+     },
+     cronos: {
+       url: cronosMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`],
+     }
+	 optimism: {
+       url: optimismMainnetNodeURL,
+       accounts: [`0x${myPrivateKey}`],
+     }
+  },
+  solidity: {
+	compilers: [{
+		version: "0.8.15",
+		settings: {
+		  viaIR: true,
+		  optimizer: {
+			enabled: true,
+			runs: 255,
+			details: {
+				peephole: true,
+				inliner: true,
+				jumpdestRemover: true,
+				orderLiterals: true,
+				deduplicate: true,
+				cse: true,
+				constantOptimizer: true,
+				yul: true
+			}
+		  },
+		},
+	}],
   },
   mocha: {
     timeout: 90000,
