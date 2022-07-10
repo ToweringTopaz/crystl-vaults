@@ -45,14 +45,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		vaultChonk = await ethers.getContractFactory("VaultChonk");
 		vaultChonk = await vaultChonk.deploy();	
 
-		vhAuth = await ethers.getContractFactory("VaultHealerAuth")
-		vhAuth = await vhAuth.deploy(user1.address);
+		vaultWarden = await ethers.getContractFactory("VaultWarden")
+		vaultWarden = await vaultWarden.deploy();
 		MagnetiteD = await ethers.getContractFactory("MagnetiteDeploy");
-		magnetiteD = await MagnetiteD.deploy(vhAuth.address);	
+		magnetiteD = await MagnetiteD.deploy(vaultWarden.address);	
 		magnetite = await ethers.getContractAt("Magnetite", magnetiteD.proxy())
 
-	vaultFeeManager = await ethers.getContractFactory("VaultFeeManager")
-		vaultFeeManager = await vaultFeeManager.deploy(vhAuth.address);
 		zap = await ethers.getContractFactory("QuartzUniV2Zap");
 		
 		vaultHealer = await getContractAddress({from: user1.address, nonce: 1 + await user1.getTransactionCount()});
@@ -63,7 +61,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
 		vaultHealer = await ethers.getContractFactory("VaultHealer", {libraries: { VaultChonk: vaultChonk.address }});
 		
-		vaultHealer = await vaultHealer.deploy(vhAuth.address, vaultFeeManager.address, zap.address);		
+		vaultHealer = await vaultHealer.deploy(vaultWarden.address, vaultWarden.address, zap.address);		
 				console.info("B"); 
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
