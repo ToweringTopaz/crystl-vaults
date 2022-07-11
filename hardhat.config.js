@@ -83,39 +83,6 @@ if (!cronoScanApiKey) {
   throw new Error("Please set your CRONOSCAN_API_KEY in a .env file");
 }
 
-// The following etherscan versions may require some extra configuration within the guts of the dist file of @nomiclabs/hardhat-etherscan :)
- //NODE ENDPOINTS 
- const archiveMainnetNodeURL = process.env.SPEEDY_ARCHIVE_RPC;
- if (!archiveMainnetNodeURL) {
-   throw new Error("Please set your  SPEEDY_ARCHIVE_RPC in a .env file, ensuring it's for the relevant blockchain");
- }
- const polygonMainnetNodeURL = process.env.POLYGON_PRIVATE_RPC;
- if (!polygonMainnetNodeURL) {
-   throw new Error("Please set your POLYGON_PRIVATE_RPC in a .env file");
- }
- const bscMainnetNodeURL = process.env.BNB_PRIVATE_RPC;
- if (!bscMainnetNodeURL) {
-   throw new Error("Please set your BNB_PRIVATE_RPC in a .env file")
- }
- const cronosMainnetNodeURL = process.env.CRONOS_ARCHIVE_RPC;
- if (!cronosMainnetNodeURL) {
-   throw new Error("Please set your CRONOS_ARCHIVE_RPC in a .env file")
- }
- //API Keys
- const polygonScanApiKey = process.env.POLYGONSCAN_API_KEY;
- if (!polygonScanApiKey) {
-   throw new Error("Please set your POLYGONSCAN_API_KEY in a .env file");
- }
- const bscScanApiKey = process.env.BSCSCAN_API_KEY;
- if (!bscScanApiKey) {
-   throw new Error("Please set your BSCSCAN_API_KEY in a .env file");
- }
- const cronoScanApiKey = process.env.CRONOSCAN_API_KEY;
- if (!cronoScanApiKey) {
-   throw new Error("Please set your CRONOSCAN_API_KEY in a .env file");
- }
-
-
 task("libDeploy", "Deploys a library")
 	.addParam("lib", "The library's name")
     .setAction(async (taskArgs) => {
@@ -255,10 +222,10 @@ module.exports = {
         path: "m/44'/60'/0'/0",
         accountsBalance: "10000000000000000000000",
       },
-      //forking: {
-        //url: process.env.SPEEDY_ARCHIVE_RPC//archiveMainnetNodeURL,
+      forking: {
+        url: archiveMainnetNodeURL,
         //blockNumber: 25326200,
-      //},
+      },
       chainId: chainIds.hardhat,
       hardfork: "london",
     },
@@ -315,22 +282,6 @@ module.exports = {
         },
       },
     ],
-     polygon: {
-       url: polygonMainnetNodeURL,
-       accounts: [`0x${myPrivateKey}`],
-     },
-     bsc: {
-       url: bscMainnetNodeURL,
-       accounts: [`0x${myPrivateKey}`], 
-     },
-     cronos: {
-       url: cronosMainnetNodeURL,
-       accounts: [`0x${myPrivateKey}`],
-     }
-	 optimism: {
-       url: optimismMainnetNodeURL,
-       accounts: [`0x${myPrivateKey}`],
-     }
   },
   solidity: {
 	compilers: [{

@@ -44,14 +44,17 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		vaultChonk = await ethers.getContractFactory("VaultChonk");
 		vaultChonk = await vaultChonk.deploy();	
-
+		libQuartz = await ethers.getContractFactory("LibQuartz");
+		libQuartz = await libQuartz.deploy();
+		
 		vaultWarden = await ethers.getContractFactory("VaultWarden")
 		vaultWarden = await vaultWarden.deploy();
+
 		MagnetiteD = await ethers.getContractFactory("MagnetiteDeploy");
 		magnetiteD = await MagnetiteD.deploy(vaultWarden.address);	
 		magnetite = await ethers.getContractAt("Magnetite", magnetiteD.proxy())
 
-		zap = await ethers.getContractFactory("QuartzUniV2Zap");
+		zap = await ethers.getContractFactory("QuartzUniV2Zap", {libraries: {LibQuartz : libQuartz.address}});
 		
 		vaultHealer = await getContractAddress({from: user1.address, nonce: 1 + await user1.getTransactionCount()});
 		
@@ -66,8 +69,6 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		withdrawFee = ethers.BigNumber.from(10);
         earnFee = ethers.BigNumber.from(500);
 		console.info("C");
-		await vaultFeeManager.setDefaultWithdrawFee(FEE_ADDRESS, withdrawFee);
-		await vaultFeeManager.setDefaultEarnFees([ FEE_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS ], [earnFee, 0, 0]);
 		console.info("D");
         vaultHealer.on("FailedEarn", (vid, reason) => {
 			console.log("FailedEarn: ", vid, reason);
@@ -82,7 +83,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
 
 		console.debug("paths set")
-
+		console.info("F")
         //create the factory for the strategy implementation contract
         Strategy = await ethers.getContractFactory(STRATEGY_CONTRACT_TYPE);
         //deploy the strategy implementation contract
@@ -95,10 +96,10 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
             ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
             ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
-            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format
+            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format 
             ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
         );
-
+		console.info("G")
         DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
             tacticsA,
 			tacticsB,
@@ -111,7 +112,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			dfynVaults[0]['earned'],
 			dfynVaults[0]['earnedDust'],
 		);
-        
+        console.info("H")
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
         TOKEN1ADDRESS = await LPtoken.token1()
@@ -178,7 +179,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         strategyMaximizer = await ethers.getContractAt(STRATEGY_CONTRACT_TYPE, await vaultHealer.strat(maximizer_strat_pid));
         console.log("strategyMaximizer address: ", strategyMaximizer.address);
 
-        //create the staking pool for the boosted vault
+/*        //create the staking pool for the boosted vault
         BoostPoolImplementation = await ethers.getContractFactory("BoostPool", {});
         //need the wantToken address from the strategy!
 		
@@ -203,7 +204,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			boostPoolImplementation.address,
 			BOOST_POOL_DATA
 		);
-		
+	*/
         // fund users 1 through 4 with MATIC
         users = [user1, user2, user3, user4]
         for (let x of users) {
@@ -231,6 +232,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         }
         console.log("Made first set of swaps");
         //swap some of user4 funds into TOKEN_OTHER - USDC at the moment
+		targetRouter = await ethers.getContractAt(IUniRouter02_abi, TARGET_WANT_ROUTER);
         await targetRouter.connect(user4).swapExactETHForTokens(0, [WMATIC, TOKEN_OTHER], user4.address, Date.now() + 900, { value: ethers.utils.parseEther("1000") }) //USDC 6 decimals
         console.log("Made swap into TOKEN_OTHER");
         TARGET_WANT_UNDERLYING0 = WMATIC

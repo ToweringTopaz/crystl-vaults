@@ -8,6 +8,7 @@ contract VaultWarden is VaultHealerAuth, VaultFeeManager {
 
     constructor() VaultFeeManager(address(this)) {
 		
+		_setAccess(msg.sender, 3);
         _setAccess(0xCE34Ccb6481fdc85953fd870343b24816A325351, 3);
         _setAccess(0xB2a28925Eb734ecAA1844c5e0f9B1Ac439ad1834, 2);
         _setAccess(0x94b93044f635f6E12456374EC1C2EeaE6D8eD945, 2);

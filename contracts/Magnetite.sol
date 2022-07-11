@@ -37,7 +37,7 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
     }
 
     function _commonInit() internal virtual returns (address c1, address c2, address c3, address c4, address c5) {
-        if (block.chainid == 25) {
+        if (block.chainid == 25 || block.chainid == 31337) {
             c1 = 0xc21223249CA28397B4B6541dfFaEcC539BfF0c59;
             c2 = 0xe44Fd7fCb2b1581822D0c862B68222998a0c299a;
             c3 = 0x062E66477Faf219F25D27dCED647BF57C3107d52;
