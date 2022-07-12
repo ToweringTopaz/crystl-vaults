@@ -19,13 +19,13 @@ const STRATEGY_CONTRACT_TYPE = 'Strategy'; //<-- change strategy type to the con
 const { dfynVaults } = require('../configs/dfynVaults.js'); //<-- normal and maximizer vault(s)
 const { apeSwapVaults } = require('../configs/apeSwapVaults.js'); //<-- target vault(s)
 
-const MASTERCHEF = dfynVaults[0].masterchef;
-const VAULT_HEALER = dfynVaults[0].vaulthealer;
-const WANT = dfynVaults[0].want;
-const EARNED = dfynVaults[0].earned;
-const PID = dfynVaults[0].PID;
+const MASTERCHEF = apeSwapVaults[2].masterchef;
+const VAULT_HEALER = apeSwapVaults[2].vaulthealer;
+const WANT = apeSwapVaults[2].want;
+const EARNED = apeSwapVaults[2].earned;
+const PID = apeSwapVaults[2].PID;
 const TARGET_WANT_ROUTER = routers.polygon.APESWAP_ROUTER;
-const LP_AND_EARN_ROUTER = dfynVaults[0].router;
+const LP_AND_EARN_ROUTER = routers.polygon.APESWAP_ROUTER;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
@@ -49,6 +49,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		vaultWarden = await ethers.getContractFactory("VaultWarden")
 		vaultWarden = await vaultWarden.deploy();
+
+		vaultWarden.grantRole("0x611bdcf03638374bb647ffd290af1cba72735ef43e741d7a24041f082d8799da", user1); //PATH_SETTER role for magnetite
 
 		MagnetiteD = await ethers.getContractFactory("MagnetiteDeploy");
 		magnetiteD = await MagnetiteD.deploy(vaultWarden.address);	
@@ -78,9 +80,9 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		});
 	console.info("E");	
 		//DINO to MATIC
-		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
+//		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' ]);
 		//DINO to WETH
-		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
+//		magnetite.overridePath(LP_AND_EARN_ROUTER, [ '0xaa9654becca45b5bdfa5ac646c939c62b527d394', '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619' ]);
 
 		console.debug("paths set")
 		console.info("F")
@@ -89,30 +91,33 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         //deploy the strategy implementation contract
 		strategyImplementation = await Strategy.deploy();
 		
+		
 		let [tacticsA, tacticsB] = await strategyImplementation.generateTactics(
 			MASTERCHEF,
             PID,
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
-            ethers.BigNumber.from("0x70a0823130000000"), //vaultSharesTotal - includes selector and encoded call format
-            ethers.BigNumber.from("0xa694fc3a40000000"), //deposit - includes selector and encoded call format
-            ethers.BigNumber.from("0x2e1a7d4d40000000"), //withdraw - includes selector and encoded call format
-            ethers.BigNumber.from("0x3d18b91200000000"), //harvest - includes selector and encoded call format 
-            ethers.BigNumber.from("0xe9fad8ee00000000") //emergency withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x93f1a40b23000000"), //vaultSharesTotal - includes selector and encoded call format
+            ethers.BigNumber.from("0x8dbdbe6d24300000"), //deposit - includes selector and encoded call format
+            ethers.BigNumber.from("0x0ad58d2f24300000"), //withdraw - includes selector and encoded call format
+            ethers.BigNumber.from("0x18fccc7623000000"), //harvest - includes selector and encoded call format 
+            ethers.BigNumber.from("0x2f940c7023000000") //emergency withdraw - includes selector and encoded call format
         );
+
 		console.info("G")
         DEPLOYMENT_DATA = await strategyImplementation.generateConfig(
             tacticsA,
 			tacticsB,
-			dfynVaults[0]['want'],
-			dfynVaults[0]['wantDust'],
+			apeSwapVaults[2]['want'],
+			apeSwapVaults[2]['wantDust'],
 			LP_AND_EARN_ROUTER, //note this has to be specified at deployment time
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			dfynVaults[0]['earned'],
-			dfynVaults[0]['earnedDust'],
+			apeSwapVaults[2]['earned'],
+			apeSwapVaults[2]['earnedDust'],
 		);
         console.info("H")
+
         LPtoken = await ethers.getContractAt(IUniswapV2Pair_abi, WANT);
         TOKEN0ADDRESS = await LPtoken.token0()
         TOKEN1ADDRESS = await LPtoken.token1()
@@ -120,14 +125,14 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
         TOKEN_OTHER = USDC;
 
         let [crystlTacticsA, crystlTacticsB] = await strategyImplementation.generateTactics(
-			apeSwapVaults[0]['masterchef'],
-            apeSwapVaults[0]['PID'],
+			"0xeca4cfa1775abd561bfaf89d44b334598531ef43",
+            999,
             0, //position of return value in vaultSharesTotal returnData array - have to look at contract and see
-            ethers.BigNumber.from("0x93f1a40b23000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x8dbdbe6d24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x0ad58d2f24300000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x18fccc7623000000"), //includes selector and encoded call format
-            ethers.BigNumber.from("0x2f940c7023000000") //includes selector and encoded call format
+            ethers.BigNumber.from("0x1959a00230000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0xb3950de1e4000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x984c0450e4000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0x70a1903de0000000"), //includes selector and encoded call format
+            ethers.BigNumber.from("0xdb2e21bc00000000") //includes selector and encoded call format
         );
 
 		TARGET_WANT_COMPOUNDER_DATA = await strategyImplementation.generateConfig(
@@ -139,8 +144,8 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			magnetite.address,
 			240, //slippageFactor
 			false, //feeOnTransfer
-			apeSwapVaults[0]['earned'],
-			apeSwapVaults[0]['earnedDust'],
+			[WMATIC],
+			[8],
 		);
 		
 		TARGET_WANT = await ethers.getContractAt(token_abi, apeSwapVaults[0]['want']);		
@@ -468,7 +473,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 
         // Compound LPs (Call the earn function with this specific farm’s maximizer_strat_pid).
         // Check balance to ensure it increased as expected
-        it('Should wait 10 blocks, then compound the maximizer vault by calling earn(), resulting in an increase in maxiTarget in the maxiTarget compounder', async () => {
+        it('Should wait 1000 blocks, then compound the maximizer vault by calling earn(), resulting in an increase in maxiTarget in the maxiTarget compounder', async () => {
             const vaultSharesTotalBeforeCallingEarn = await strategyCrystlCompounder.connect(vaultHealerOwnerSigner).vaultSharesTotal()
             console.log(`We start with ${ethers.utils.formatEther(vaultSharesTotalBeforeCallingEarn)} crystl tokens in the maxiTarget compounder`)
             console.log(`We let 100 blocks pass, and then call earn...`)
@@ -478,7 +483,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarn: ${vaultSharesTotalBeforeCallingEarn}`)
 
-            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<1000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -509,7 +514,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             console.log(`vaultSharesTotalBeforeCallingEarn: ${vaultSharesTotalBeforeCallingEarn}`)
 
-            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<1000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -612,7 +617,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<1000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 
@@ -642,7 +647,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
             // console.log(`Block number before calling earn ${await ethers.provider.getBlockNumber()}`)
             // console.log(`vaultSharesTotalBeforeCallingEarnSome: ${vaultSharesTotalBeforeCallingEarnSome}`)
 
-            for (i=0; i<5000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
+            for (i=0; i<1000;i++) { //minBlocksBetweenSwaps - can use this variable as an alternate to hardcoding a value
                 await ethers.provider.send("evm_mine"); //creates a delay of 100 blocks - could adjust this to be minBlocksBetweenSwaps+1 blocks
             }
 

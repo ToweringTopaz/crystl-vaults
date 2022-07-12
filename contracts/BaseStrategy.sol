@@ -193,7 +193,7 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         uint256 _amountIn,
         IERC20[] memory path
     ) internal virtual {
-        if (_amountIn == 0) return;
+        if (_amountIn == 0 || path.length < 2) return;
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 

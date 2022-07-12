@@ -29,20 +29,21 @@ contract MaximizerStrategy is BaseStrategy {
 
         _vaultHarvest(); //Perform the harvest of earned reward tokens
         
+		IWETH weth = config.weth();
         for (uint i; i < config.earnedLength(); i++) { //Sell earned tokens
             (IERC20 earnedToken, uint dust) = config.earned(i);
             
-            if (earnedToken != targetWant) { //Don't sell targetWant tokens
+            if (earnedToken != targetWant && earnedToken != weth) { //Don't sell targetWant tokens
                 uint256 earnedAmt = earnedToken.balanceOf(address(this));
                 if (earnedAmt > dust) { //Only swap if enough has been earned
-                    safeSwap(earnedAmt, earnedToken, config.weth()); //swap to the native gas token
+                    safeSwap(earnedAmt, earnedToken, weth); //swap to the native gas token
                 }
             }
         }
 
         uint targetWantBalance = targetWant.balanceOf(address(this));        
         if (targetWantBalance > targetWantDust) {
-            targetWantAmt = fees.payTokenFeePortion(targetWant, targetWantBalance - targetWantAmt) + targetWantAmt;
+            targetWantAmt += fees.payTokenFeePortion(targetWant, targetWantBalance - targetWantAmt);
             success = true;
         }
         if (unwrapAllWeth()) {
@@ -55,7 +56,6 @@ contract MaximizerStrategy is BaseStrategy {
             try IVaultHealer(msg.sender).maximizerDeposit{value: address(this).balance}(config.vid(), targetWantAmt, "") {} //deposit the rest, and any targetWant tokens
             catch {  //compound want instead if maximizer doesn't work
                 wrapAllEth();
-                IWETH weth = config.weth();
                 uint wethAmt = weth.balanceOf(address(this));
                 if (wethAmt > WETH_DUST) {
                     swapToWantToken(wethAmt, weth);
