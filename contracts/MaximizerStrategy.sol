@@ -18,7 +18,9 @@ contract MaximizerStrategy is BaseStrategy {
 
     function getTargetWant() internal view returns (IERC20 targetWant, uint dust, uint balance) {
         ConfigInfo memory targetConfig = VaultChonk.strat(IVaultHealer(msg.sender), config.vid() >> 16).configInfo();
-        return (targetConfig.want, targetConfig.wantDust, targetWant.balanceOf(address(this)));
+		targetWant = targetConfig.want;
+		dust = targetConfig.wantDust;
+		balance = targetWant.balanceOf(address(this));
     }
 
     function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success, uint256 __wantLockedTotal) {
