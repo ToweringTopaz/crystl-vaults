@@ -29,6 +29,8 @@ const LP_AND_EARN_ROUTER = routers.polygon.APESWAP_ROUTER;
 
 const EARNED_TOKEN_1 = EARNED[0]
 const EARNED_TOKEN_2 = EARNED[1]
+const REVSHARE_POOL = "0xeca4cfa1775abd561bfaf89d44b334598531ef43";
+
 //const minBlocksBetweenSwaps = 100;
 
 describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variables:
@@ -60,7 +62,7 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 		
 		vaultHealer = await getContractAddress({from: user1.address, nonce: 1 + await user1.getTransactionCount()});
 		
-		
+
 		
 		zap = await zap.deploy(vaultHealer);
 
@@ -210,6 +212,12 @@ describe(`Testing ${STRATEGY_CONTRACT_TYPE} contract with the following variable
 			BOOST_POOL_DATA
 		);
 	*/
+	
+		const revsharePool = await ethers.getContractAt("RadioactiveRevShare", REVSHARE_POOL);
+		
+		revsharePool.depositRewards({value: 1e21})
+		
+		
         // fund users 1 through 4 with MATIC
         users = [user1, user2, user3, user4]
         for (let x of users) {
