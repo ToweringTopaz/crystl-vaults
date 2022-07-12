@@ -36,6 +36,7 @@ library Tactics {
     Encoded calls use function selectors followed by single nibbles as follows, with the output packed to 32 bytes:
         0: end of line/null
         f: 32 bytes zero
+		e: the number 1/boolean true
         4: specified amount
         3: address(this)
         2: pid
@@ -93,6 +94,8 @@ library Tactics {
                 word = uint(uint160(address(this)));
             } else if (p == 0x40) {
                 word = amount;
+			} else if (p == 0xe0) {
+				word = 1;
             } else if (p != 0xf0) {
                 revert("Tactics: invalid tactic");
             }
