@@ -7,7 +7,7 @@ contract MaximizerStrategyX is MaximizerStrategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
 
-    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal override returns (bool success, uint256 __wantLockedTotal) {
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal override returns (bool success) {
         _sync();
         
         //Get balances 
@@ -64,7 +64,7 @@ contract MaximizerStrategyX is MaximizerStrategy {
             }
         }
 
-        __wantLockedTotal = config.wantToken().balanceOf(address(this)) + _farm();
+        _farm();
     }
 
 }

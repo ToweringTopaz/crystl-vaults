@@ -34,6 +34,11 @@ library StrategyConfig {
             _tacticsA := mload(add(0x20,config))
         }
     }
+    function tacticsB(MemPointer config) internal pure returns (Tactics.TacticsB _tacticsB) {
+        assembly ("memory-safe") {
+            _tacticsB := mload(add(config,0x40))
+        }
+    }
 
     function tactics(MemPointer config) internal pure returns (Tactics.TacticsA _tacticsA, Tactics.TacticsB _tacticsB) {
         assembly ("memory-safe") {

@@ -133,27 +133,20 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     function _wantLockedTotal() internal view virtual returns (uint256) { return config.wantToken().balanceOf(address(this)) + _vaultSharesTotal(); }
     function configAddress() public view returns (address configAddr) { return AddrCalc.configAddress(); }
 
-    modifier guardPrincipal {
-        IERC20 _wantToken = config.wantToken();
-        uint wantLockedBefore = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
-        _;
-        if (_wantToken.balanceOf(address(this)) + _vaultSharesTotal() < wantLockedBefore) revert Strategy_WantLockedLoss();
-    }
-
     //Safely deposits want tokens in farm
-    function _farm() internal virtual returns (uint256 vaultSharesAfter) {
+    function _farm() internal virtual {
         IERC20 _wantToken = config.wantToken();
         uint dust = config.wantDust();
         uint256 wantAmt = _wantToken.balanceOf(address(this));
-        if (wantAmt < dust) return _vaultSharesTotal();
+        if (wantAmt > dust) {
         
-        uint256 sharesBefore = _vaultSharesTotal();
-        _vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
-        vaultSharesAfter = _vaultSharesTotal();
-        
-        //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + dust < sharesBefore + wantAmt * config.slippageFactor() / 256)
-            revert Strategy_ExcessiveFarmSlippage();
+			uint256 sharesBefore = _vaultSharesTotal();
+			_vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
+			
+			//safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
+			if (_vaultSharesTotal() + _wantToken.balanceOf(address(this)) + dust < sharesBefore + wantAmt * config.slippageFactor() / 256)
+				revert Strategy_ExcessiveFarmSlippage();
+		}
     }
 
     function safeSwap(
@@ -387,16 +380,21 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
 
     function _sync() internal virtual {}
 
-    function earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) external getConfig onlyVaultHealer guardPrincipal returns (bool success, uint256 __wantLockedTotal) {
-        return _earn(fees, operator, data);
+    function earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) external getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
+        IERC20 _wantToken = config.wantToken();
+        uint wantLockedBefore = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        success = _earn(fees, operator, data);
+		__wantLockedTotal = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        if (__wantLockedTotal < wantLockedBefore) revert Strategy_WantLockedLoss();
     }
-    function _earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) internal virtual returns (bool success, uint256 __wantLockedTotal);
+    function _earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) internal virtual returns (bool success);
 
     //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
     function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) public virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
         _sync();
+		_farm();
         IERC20 _wantToken = config.wantToken();
-        uint wantLockedBefore = _farm() + _wantToken.balanceOf(address(this));
+        uint wantLockedBefore = _vaultSharesTotal() + _wantToken.balanceOf(address(this));
 
         if (msg.value > 0) {
             IWETH weth = config.weth();
@@ -408,10 +406,10 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
         //a rogue strategy 
         if (_wantAmt > 0) IVaultHealer(msg.sender).executePendingDeposit(address(this), uint192(_wantAmt));
-        uint vaultSharesAfter = _farm(); //deposits the tokens in the pool
+        _farm(); //deposits the tokens in the pool
         // Proper deposit amount for tokens with fees, or vaults with deposit fees
 
-        wantAdded = _wantToken.balanceOf(address(this)) + vaultSharesAfter - wantLockedBefore;
+        wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
         sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
         if (wantAdded < config.wantDust() || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
     }

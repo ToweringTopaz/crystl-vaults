@@ -12,7 +12,7 @@ contract StrategyCustomRouter is Strategy {
         uint256 _amountIn,
         IERC20[] memory path
     ) internal override {
-        if (_amountIn == 0) return;
+        if (_amountIn == 0 || path.length < 2) return;
 
         IUniRouter _router = config.router();
 

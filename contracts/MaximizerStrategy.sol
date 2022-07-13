@@ -23,7 +23,7 @@ contract MaximizerStrategy is BaseStrategy {
 		balance = targetWant.balanceOf(address(this));
     }
 
-    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success, uint256 __wantLockedTotal) {
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
         _sync();
         (IERC20 targetWant, uint targetWantDust, uint targetWantAmt) = getTargetWant();
 
@@ -65,9 +65,7 @@ contract MaximizerStrategy is BaseStrategy {
                 }
                 emit Strategy_MaximizerDepositFailure();
             }
+			_farm();
         }
-
-        __wantLockedTotal = config.wantToken().balanceOf(address(this)) + _farm();
     }
-
 }

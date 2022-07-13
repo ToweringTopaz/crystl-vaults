@@ -42,7 +42,7 @@ contract Strategy is BaseStrategy {
 
 
 
-    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success, uint256 __wantLockedTotal) {
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
         _sync();        
         IERC20 _wantToken = config.wantToken();
 		uint wantAmt = _wantToken.balanceOf(address(this)); 
@@ -71,7 +71,7 @@ contract Strategy is BaseStrategy {
             swapToWantToken(wethAmt, config.weth());
             success = true;
         }
-        __wantLockedTotal = _wantToken.balanceOf(address(this)) + (success ? _farm() : _vaultSharesTotal());
+        if (success) _farm();
     }
 
 }
