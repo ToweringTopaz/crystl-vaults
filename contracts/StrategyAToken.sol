@@ -16,12 +16,13 @@ contract StrategyAToken is StrategyWrapperToken {
 
     function _vaultEmergencyWithdraw() internal override {
 
-        Tactics.TacticsB tacticsB = config.tacticsB();
-        if (Tactics.TacticsB.unwrap(tacticsB) << 196 == 0) {
+        if (Tactics.TacticsB.unwrap(config.tacticsB()) << 196 == 0) {
 
             IAToken aToken = IAToken(address(wrapperToken()));
             uint balance = aToken.balanceOf(address(this));
             if (balance > 0) aToken.redeem(balance);
+        } else {
+            super._vaultEmergencyWithdraw();
         }
     }
 
