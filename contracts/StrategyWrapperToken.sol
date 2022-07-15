@@ -70,22 +70,7 @@ contract StrategyWrapperToken is Strategy {
         address _magnetite,
         uint8 _slippageFactor,
         bool _feeOnTransfer
-    ) external override view returns (bytes memory configData) {
-        uint8 vaultType;
-        if (_feeOnTransfer) vaultType += 0x80;
-        configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
-		
-		IERC20 _targetWant = IERC20(_wantToken);
-
-        //Look for LP tokens. If not, want must be a single-stake
-        try IUniPair(address(_targetWant)).token0() returns (IERC20 _token0) {
-            vaultType += 0x20;
-            IERC20 _token1 = IUniPair(address(_targetWant)).token1();
-            configData = abi.encodePacked(configData, vaultType, _token0, _token1);
-        } catch { //if not LP, then single stake
-            configData = abi.encodePacked(configData, vaultType);
-        }
-
-        configData = abi.encodePacked(configData, IUniRouter(_router).WETH());
+    ) external view returns (bytes memory configData) {
+        return generateConfig(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor, _feeOnTransfer, new address[](0), new uint8[](0));
     }
 }

@@ -470,10 +470,10 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         address _magnetite,
         uint8 _slippageFactor,
         bool _feeOnTransfer,
-        address[] calldata _earned,
-        uint8[] calldata _earnedDust
-    ) external virtual view returns (bytes memory configData) {
-        require(_earned.length > 0 && _earned.length < 0x20, "earned.length invalid");
+        address[] memory _earned,
+        uint8[] memory _earnedDust
+    ) public virtual view returns (bytes memory configData) {
+        require(_earned.length < 0x20, "earned.length invalid");
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
         uint8 vaultType = uint8(_earned.length);
         if (_feeOnTransfer) vaultType += 0x80;
