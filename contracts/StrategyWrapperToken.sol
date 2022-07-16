@@ -20,7 +20,7 @@ contract StrategyWrapperToken is Strategy {
 		super._initialSetup();
 	}
 	
-	function wrapperToken() internal view returns (IERC20) {
+	function wrapperToken() internal pure returns (IERC20) {
 		return IERC20(config.tacticsA().masterchef());
 	}
 	
@@ -42,9 +42,7 @@ contract StrategyWrapperToken is Strategy {
 	}
 	
     function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
-        _sync();        
-        IERC20 _wantToken = config.wantToken();
-		uint wantAmt = _wantToken.balanceOf(address(this)); 
+        _sync();
         
 		uint oldRatio = underlyingRatioLast;
 		uint newRatio = getUnderlyingRatio();
