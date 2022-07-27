@@ -27,9 +27,10 @@ contract MaximizerStrategyX is MaximizerStrategy {
             }
         }
 
-        uint wantBalance = _wantToken.balanceOf(address(this));        
-        if (wantBalance > config.wantDust()) {
-            wantAmt = fees.payTokenFeePortion(_wantToken, wantBalance - wantAmt) + wantAmt; //fee portion on newly obtained want tokens
+        uint wantBalance = _wantToken.balanceOf(address(this));
+        uint wantHarvested = wantBalance - wantAmt;
+        if (wantHarvested > config.wantDust()) {
+            wantAmt = fees.payTokenFeePortion(_wantToken, wantHarvested) + wantAmt; //fee portion on newly obtained want tokens
             success = true;
         }
         if (unwrapAllWeth()) {
