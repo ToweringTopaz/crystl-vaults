@@ -183,7 +183,7 @@ task(
           }),
         ]);
       } catch {
-        console.log("MAGNETITE VERIFICATION FAILED.")
+        throw new Error ("MAGNETITE VERIFICATION FAILED.")
       }
     }
   });
