@@ -42,9 +42,9 @@ contract Strategy is BaseStrategy {
             }
         }
 
-        uint wantBalance = _wantToken.balanceOf(address(this));        
-        if (wantBalance > config.wantDust()) {
-            wantAmt = fees.payTokenFeePortion(_wantToken, wantBalance - wantAmt) + wantAmt; //fee portion on newly obtained want tokens
+        uint wantHarvested = _wantToken.balanceOf(address(this)) - wantAmt;
+        if (wantHarvested > config.wantDust()) {
+            wantAmt = fees.payTokenFeePortion(_wantToken, wantHarvested) + wantAmt; //fee portion on newly obtained want tokens
             success = true;
         }
         if (unwrapAllWeth()) {
