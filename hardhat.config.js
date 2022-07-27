@@ -4,6 +4,7 @@
  require("dotenv").config();
  require("solidity-coverage");
  require("@nomiclabs/hardhat-etherscan");
+ require("@nomiclabs/hardhat-ethers")
  require("@nomiclabs/hardhat-solhint");
  require("hardhat-tracer");
  

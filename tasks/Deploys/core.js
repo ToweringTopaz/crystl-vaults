@@ -5,125 +5,132 @@ task(
   "An aggregate task that combines all deployments and verifications of core V3 Contracts"
 )
   .addParam(
+    "deploy",
+    "boolean to represent whether to attempt automatic deployment"
+  )
+  .addParam(
     "verify",
     "boolean to represent whether to attempt automatic verifications"
   )
-  .setAction(async ({ verify }) => {
+  .setAction(async ({ deploy, verify }) => {
     /*could probably make this faster by awaiting for all getContractFactory promises to resolve
     into an object and then deploying and stuff but hi ho, sometimes slow is fine.
 
     Some chains have slower txn inclusion, so we wait for the deployments to be confirmed before we continue on,
     also prevents conditions in which there is no bytecode at a contract address upon auto-verification :) */
+    if (deploy) {
+      console.log("DEPLOYING VAULTCHONK");
+      const VaultChonk = await ethers.getContractFactory("VaultChonk");
+      const vaultChonk = await VaultChonk.deploy();
+      console.log(
+        `VAULTCHONK DEPLOYED @ ADDRESS:" ${vaultChonk.address}...WAITING FOR CONFIRMATION`
+      );
+      await vaultChonk.deployTransaction.wait(1);
 
-    console.log("DEPLOYING VAULTCHONK");
-    const VaultChonk = await ethers.getContractFactory("VaultChonk");
-    const vaultChonk = await VaultChonk.deploy();
-    console.log(
-      `VAULTCHONK DEPLOYED @ ADDRESS:" ${vaultChonk.address}...WAITING FOR CONFIRMATION`
-    );
-    await vaultChonk.deployTransaction.wait(1);
+      console.log("DEPLOYING LIBQUARTZ");
+      const LibQuartz = await ethers.getContractFactory("LibQuartz");
+      const libQuartz = await LibQuartz.deploy();
+      console.log(
+        `LIBQUARTZ DEPLOYED @ ADDRESS: ${libQuartz.address}... WAITING FOR CONFIRMATION`
+      );
+      await vaultChonk.deployTransaction.wait(1);
 
-    console.log("DEPLOYING LIBQUARTZ");
-    const LibQuartz = await ethers.getContractFactory("LibQuartz");
-    const libQuartz = await LibQuartz.deploy();
-    console.log(
-      `LIBQUARTZ DEPLOYED @ ADDRESS: ${libQuartz.address}... WAITING FOR CONFIRMATION`
-    );
-    await vaultChonk.deployTransaction.wait(1);
+      console.log("DEPLOYING VAULTWARDEN");
+      const VaultWarden = await ethers.getContractFactory("VaultWarden");
+      const vaultWarden = await VaultWarden.deploy();
+      console.log(
+        `VAULTWARDEN DEPLOYED @ ADDRESS ${vaultWarden.address}... WAITING FOR CONFIRMATION`
+      );
+      await vaultWarden.deployTransaction.wait(1);
 
-    console.log("DEPLOYING VAULTWARDEN");
-    const VaultWarden = await ethers.getContractFactory("VaultWarden");
-    const vaultWarden = await VaultWarden.deploy();
-    console.log(
-      `VAULTWARDEN DEPLOYED @ ADDRESS ${vaultWarden.address}... WAITING FOR CONFIRMATION`
-    );
-    await vaultWarden.deployTransaction.wait(1);
+      console.log("DEPLOYING ZAP AND DETERMINING VAULTHEALERADDRESS");
+      const dev = process.env.DEPLOYER_ADDRESS;
+      const Zap = await ethers.getContractFactory("QuartzUniV2Zap", {
+        libraries: { LibQuartz: libQuartz.address },
+      });
+      const nonce = await ethers.provider.getTransactionCount(dev);
+      const derivedVaultHealerAddress = ethers.utils.getContractAddress({
+        from: dev,
+        nonce: nonce + 1,
+      });
+      const zap = await Zap.deploy(derivedVaultHealerAddress);
+      console.log(
+        `ZAP DEPLOYED @ ADDRESS: ${zap.address}... WAITING FOR CONFIRMATION`
+      );
+      await zap.deployTransaction.wait(1);
 
-    console.log("DEPLOYING ZAP AND DETERMINING VAULTHEALERADDRESS");
-    const dev = process.env.DEPLOYER_ADDRESS;
-    const Zap = await ethers.getContractFactory("QuartzUniV2Zap", {
-      libraries: { LibQuartz: libQuartz.address },
-    });
-    const nonce = await ethers.provider.getTransactionCount(dev);
-    const derivedVaultHealerAddress = ethers.utils.getContractAddress({
-      from: dev,
-      nonce: nonce + 1,
-    });
-    const zap = await Zap.deploy(derivedVaultHealerAddress);
-    console.log(
-      `ZAP DEPLOYED @ ADDRESS: ${zap.address}... WAITING FOR CONFIRMATION`
-    );
-    await zap.deployTransaction.wait(1);
+      console.log("DEPLOYING VAULTHEALER");
+      const VaultHealer = await ethers.getContractFactory("VaultHealer", {
+        libraries: { VaultChonk: vaultChonk.address },
+      });
+      const vaultHealer = await VaultHealer.deploy(
+        vaultWarden.address,
+        vaultWarden.address,
+        zap.address
+      );
+      console.log(
+        `VAULTHEALER DEPLOYED @ ADDRESS: ${vaultHealer.address}... WAITING FOR CONFIRMATION`
+      );
+      await vaultHealer.deployTransaction.wait(1);
 
-    console.log("DEPLOYING VAULTHEALER");
-    const VaultHealer = await ethers.getContractFactory("VaultHealer", {
-      libraries: { VaultChonk: vaultChonk.address },
-    });
-    const vaultHealer = await VaultHealer.deploy(
-      vaultWarden.address,
-      vaultWarden.address,
-      zap.address
-    );
-    console.log(
-      `VAULTHEALER DEPLOYED @ ADDRESS: ${vaultHealer.address}... WAITING FOR CONFIRMATION`
-    );
-    await vaultHealer.deployTransaction.wait(1);
+      console.log("DEPLOYING BOILERPLATE STRATEGY IMPLEMENTATION CONTRACT");
+      const Strategy = await ethers.getContractFactory("Strategy");
+      const strategy = await Strategy.deploy();
+      console.log(
+        `BOILERPLATE STRATEGY IMPLEMENTATION DEPLOYED @ ADDRESS ${strategy.address}...WAITING FOR CONFIRMATION`
+      );
+      await strategy.deployTransaction.wait(1);
 
-    console.log("DEPLOYING BOILERPLATE STRATEGY IMPLEMENTATION CONTRACT");
-    const Strategy = await ethers.getContractFactory("Strategy");
-    const strategy = await Strategy.deploy();
-    console.log(
-      `BOILERPLATE STRATEGY IMPLEMENTATION DEPLOYED @ ADDRESS ${strategy.address}...WAITING FOR CONFIRMATION`
-    );
-    await strategy.deployTransaction.wait(1);
+      console.log("DEPLOYING BOOST POOL IMPLEMENTATION");
+      const BoostPool = await ethers.getContractFactory("BoostPool");
+      const boostPool = await BoostPool.deploy(vaultHealer.address);
+      console.log(
+        `BOOSTPOOL IMPLEMENTATION DEPLOYED @ ADDRESS ${boostPool.address}...WAITING FOR CONFIRMATION`
+      );
+      await boostPool.deployTransaction.wait(1);
 
-    console.log("DEPLOYING BOOST POOL IMPLEMENTATION");
-    const BoostPool = await ethers.getContractFactory("BoostPool");
-    const boostPool = await BoostPool.deploy(vaultHealer.address);
-    console.log(
-      `BOOSTPOOL IMPLEMENTATION DEPLOYED @ ADDRESS ${boostPool.address}...WAITING FOR CONFIRMATION`
-    );
-    await boostPool.deployTransaction.wait(1);
-
-    /* 
+      /* 
     Okay this is where things get a bit funky,  we'll use a try catch here. 
     If Magnetite is not correctly configured for the given blockchain, it should throw an error
     so we need to handle that accordingly.
     */
 
-    console.log("DEPLOYING MAGNETITE PROXY...");
-    try {
-      const MagnetiteDeploy = await ethers.getContractFactory(
-        "MagnetiteDeploy"
-      );
-      const magnetiteDeploy = await MagnetiteDeploy.deploy(vaultWarden.address);
-      console.log(
-        `MAGNETITEDEPLOY DEPLOYED @ ADDRESS: ${magnetiteDeploy.address}...WAITING FOR CONFIRMATION`
-      );
-      await magnetiteDeploy.deployTransaction.wait(1);
-      const magImpl = await magnetiteDeploy.implementation();
-      const magBeacon = await magnetiteDeploy.beacon();
-      const magProxy = await magnetiteDeploy.proxy();
-      console.log(`MAGNETITE IMPLEMENTATION DEPLOYED @ ADDRESS: ${magImpl}`);
-      console.log(`BEACON ADDRESS: ${magBeacon}`);
-      console.log(`PROXY ADDRESS: ${magProxy}`);
-      const Addresses = {
-        VaultChonk: vaultChonk.address,
-        LibQuartz: libQuartz.address,
-        VaultWarden: vaultWarden.address,
-        Zap: zap.address,
-        VaultHealer: vaultHealer.address,
-        Strategy: strategy.address,
-        BoostPool: boostPool.address,
-        MagnetiteImplementation: magImpl,
-        MagnetiteBeacon: magBeacon,
-        MagnetiteProxy: magProxy,
-      };
-      console.table(Addresses);
-    } catch {
-      throw new Error(
-        "MAGNETITE DEPLOY FAILED. PLEASE MAKE SURE YOU SET UP THE CONTRACT WITH THE CORRECT ADDRESSES "
-      );
+      console.log("DEPLOYING MAGNETITE PROXY...");
+      try {
+        const MagnetiteDeploy = await ethers.getContractFactory(
+          "MagnetiteDeploy"
+        );
+        const magnetiteDeploy = await MagnetiteDeploy.deploy(
+          vaultWarden.address
+        );
+        console.log(
+          `MAGNETITEDEPLOY DEPLOYED @ ADDRESS: ${magnetiteDeploy.address}...WAITING FOR CONFIRMATION`
+        );
+        await magnetiteDeploy.deployTransaction.wait(1);
+        const magImpl = await magnetiteDeploy.implementation();
+        const magBeacon = await magnetiteDeploy.beacon();
+        const magProxy = await magnetiteDeploy.proxy();
+        console.log(`MAGNETITE IMPLEMENTATION DEPLOYED @ ADDRESS: ${magImpl}`);
+        console.log(`BEACON ADDRESS: ${magBeacon}`);
+        console.log(`PROXY ADDRESS: ${magProxy}`);
+        const Addresses = {
+          VaultChonk: vaultChonk.address,
+          LibQuartz: libQuartz.address,
+          VaultWarden: vaultWarden.address,
+          Zap: zap.address,
+          VaultHealer: vaultHealer.address,
+          Strategy: strategy.address,
+          BoostPool: boostPool.address,
+          MagnetiteImplementation: magImpl,
+          MagnetiteBeacon: magBeacon,
+          MagnetiteProxy: magProxy,
+        };
+        console.table(Addresses);
+      } catch {
+        throw new Error(
+          "MAGNETITE DEPLOY FAILED. PLEASE MAKE SURE YOU SET UP THE CONTRACT WITH THE CORRECT ADDRESSES "
+        );
+      }
     }
     if (verify) {
       /* now we'll try programatic verification */
@@ -183,7 +190,7 @@ task(
           }),
         ]);
       } catch {
-        throw new Error ("MAGNETITE VERIFICATION FAILED.")
+        throw new Error("MAGNETITE VERIFICATION FAILED.");
       }
     }
   });
