@@ -23,20 +23,7 @@ contract MaximizerStrategyX is MaximizerStrategy {
             //Don't swap targetWant (goes to maximizer) or want (kept)
             if (earnedToken != targetWant && earnedToken != _wantToken) {
                 uint256 earnedAmt = earnedToken.balanceOf(address(this));
-                if (earnedAmt > dust) { //Only swap if enough has been earned
-                    IERC20[] memory path;
-                    bool toWeth;
-                    if (config.isPairStake()) {
-                        (IERC20 token0, IERC20 token1) = config.token0And1();
-                        (toWeth, path) = wethOnPath(earnedToken, token0);
-                        (bool toWethToken1,) = wethOnPath(earnedToken, token1);
-                        toWeth = toWeth && toWethToken1;
-                    } else {
-                        (toWeth, path) = wethOnPath(earnedToken, _wantToken);
-                    }
-                    if (toWeth) safeSwap(earnedAmt, path); //swap to the native gas token if it's on the path
-                    else swapToWantToken(earnedAmt, earnedToken);
-                }
+                if (earnedAmt > dust) sellUnwanted(earnedToken, earnedAmt);
             }
         }
 

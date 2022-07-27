@@ -25,23 +25,6 @@ contract Strategy is BaseStrategy {
         return _maximizerImplementation;
     }
 
-    function sellUnwanted(IERC20 tokenOut, uint amount) internal {
-        IERC20[] memory path;
-        bool toWeth;
-        if (config.isPairStake()) {
-            (IERC20 token0, IERC20 token1) = config.token0And1();
-            (toWeth, path) = wethOnPath(tokenOut, token0);
-            (bool toWethToken1,) = wethOnPath(tokenOut, token1);
-            toWeth = toWeth && toWethToken1;
-        } else {
-            (toWeth, path) = wethOnPath(tokenOut, config.wantToken());
-        }
-        if (toWeth) safeSwap(amount, path); //swap to the native gas token if it's on the path
-        else swapToWantToken(amount, tokenOut);
-    }
-
-
-
     function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
         _sync();        
         IERC20 _wantToken = config.wantToken();

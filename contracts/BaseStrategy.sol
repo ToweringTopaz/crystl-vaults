@@ -377,6 +377,21 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
         return address(this).balance > WETH_DUST;
     }
+	
+    function sellUnwanted(IERC20 tokenOut, uint amount) internal {
+        IERC20[] memory path;
+        bool toWeth;
+        if (config.isPairStake()) {
+            (IERC20 token0, IERC20 token1) = config.token0And1();
+            (toWeth, path) = wethOnPath(tokenOut, token0);
+            (bool toWethToken1,) = wethOnPath(tokenOut, token1);
+            toWeth = toWeth && toWethToken1;
+        } else {
+            (toWeth, path) = wethOnPath(tokenOut, config.wantToken());
+        }
+        if (toWeth) safeSwap(amount, path); //swap to the native gas token if it's on the path
+        else swapToWantToken(amount, tokenOut);
+    }
 
     function _sync() internal virtual {}
 
@@ -413,7 +428,6 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
         if (wantAdded < config.wantDust() || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
     }
-
 
     //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
     function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) public virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
