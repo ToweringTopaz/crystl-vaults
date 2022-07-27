@@ -38,7 +38,7 @@ contract StrategyWrapperToken is Strategy {
 	
 	//Typically the VST tactic should be configured using the standard balanceOf(address(this))
 	function _vaultSharesTotal() internal view virtual override returns (uint256) {
-		return PRBMath.mulDiv(super._vaultSharesTotal(), getUnderlyingTotal(), getWrapperTotalSupply());
+		return PRBMath.mulDiv(super._vaultSharesTotal(), underlyingRatioLast, 2**128);
 	}
 	
     function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
