@@ -25,9 +25,15 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     IVaultHealer private _vaultHealer;
 
     constructor() {
-        WETH_DUST = (block.chainid == 137 || block.chainid == 25) ? 1e18 : (block.chainid == 56 ? 1e16 : 1e14);
+        WETH_DUST = _getWethDust();
         implementation = this;
     }
+	
+	function _getWethDust() private view returns (uint) {
+		if (block.chainid == 137 || block.chainid == 25 || block.chainid == 250) return 1e18;
+		else if (block.chainid == 56) return 1e16;
+		else return 1e14;
+	}
 
     receive() external payable virtual { if (!Address.isContract(msg.sender)) revert Strategy_ImproperEthDeposit(msg.sender, msg.value); }
 
