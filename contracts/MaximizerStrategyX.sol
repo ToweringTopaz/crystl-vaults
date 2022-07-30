@@ -1,43 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.14;
 
-import "./BaseStrategy.sol";
 import "./MaximizerStrategy.sol";
 
-//Standard v3 Strategy
-contract Strategy is BaseStrategy {
-    using SafeERC20 for IERC20;
+contract MaximizerStrategyX is MaximizerStrategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using Fee for Fee.Data[3];
-    using VaultChonk for IVaultHealer;
 
-    IStrategy immutable _maximizerImplementation;
-
-    constructor() {
-        _maximizerImplementation = _deployMaximizerImplementation();
-	}
-
-    function _deployMaximizerImplementation() internal virtual returns (IStrategy) {
-        return new MaximizerStrategy();
-    }
-
-    function getMaximizerImplementation() external virtual override view returns (IStrategy) {
-        return _maximizerImplementation;
-    }
-
-    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
-        _sync();        
+    function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal override returns (bool success) {
+        _sync();
+        
+        //Get balances 
+        (IERC20 targetWant, uint targetWantDust, uint targetWantAmt) = getTargetWant();
         IERC20 _wantToken = config.wantToken();
-		uint wantAmt = _wantToken.balanceOf(address(this)); 
+        uint wantAmt = _wantToken.balanceOf(address(this)); 
 
         _vaultHarvest(); //Perform the harvest of earned reward tokens
-        
+
         for (uint i; i < config.earnedLength(); i++) { //In case of multiple reward vaults, process each reward token
             (IERC20 earnedToken, uint dust) = config.earned(i);
 
-            if (earnedToken != _wantToken) {
+            //Don't swap targetWant (goes to maximizer) or want (kept)
+            if (earnedToken != targetWant && earnedToken != _wantToken) {
                 uint256 earnedAmt = earnedToken.balanceOf(address(this));
-                //don't waste gas swapping minuscule rewards
                 if (earnedAmt > dust) sellUnwanted(earnedToken, earnedAmt);
             }
         }
@@ -54,7 +39,19 @@ contract Strategy is BaseStrategy {
             swapToWantToken(wethAmt, config.weth());
             success = true;
         }
-        if (success) _farm();
+        uint targetWantBalance = targetWant.balanceOf(address(this));        
+        if (targetWantBalance > targetWantDust) {
+
+            targetWantAmt = fees.payTokenFeePortion(targetWant, targetWantBalance - targetWantAmt) + targetWantAmt;
+            success = true;
+            
+            try IVaultHealer(msg.sender).maximizerDeposit(config.vid(), targetWantAmt, "") {} //deposit the rest, and any targetWant tokens
+            catch {
+                emit Strategy_MaximizerDepositFailure();
+            }
+        }
+
+        _farm();
     }
 
 }

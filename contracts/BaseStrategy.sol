@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./libraries/StrategyConfig.sol";
 import "./interfaces/IStrategy.sol";
 import "./libraries/Fee.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./libraries/VaultChonk.sol";
+import "./libraries/AddrCalc.sol";
+
 abstract contract BaseStrategy is IStrategy, ERC165 {
     using SafeERC20 for IERC20;
     using StrategyConfig for StrategyConfig.MemPointer;
@@ -15,24 +19,38 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     uint constant FEE_MAX = 10000;
     uint16 constant CONFIG_POINTER = 0x200;
     StrategyConfig.MemPointer constant config = StrategyConfig.MemPointer.wrap(CONFIG_POINTER);
-    IVaultHealer public immutable vaultHealer;
     IStrategy public immutable implementation;
+    uint immutable WETH_DUST;
     uint constant LP_DUST = 2**16;
+    IVaultHealer private _vaultHealer;
 
-    constructor(IVaultHealer _vaultHealer) { 
-        vaultHealer = _vaultHealer;
+    constructor() {
+        WETH_DUST = _getWethDust();
         implementation = this;
     }
-
+	
+	function _getWethDust() private view returns (uint) {
+		if (block.chainid == 137 || block.chainid == 25 || block.chainid == 250) return 1e18;
+		else if (block.chainid == 56) return 1e16;
+		else return 1e14;
+	}
 
     receive() external payable virtual { if (!Address.isContract(msg.sender)) revert Strategy_ImproperEthDeposit(msg.sender, msg.value); }
 
-    modifier onlyVaultHealer {
+    //For VHv3.0 support. Returns the vaulthealer for a proxy; for an implementation, returns msg.sender to a contract or address(0) to an EOA
+    function vaultHealer() external view returns (IVaultHealer) {
+        return (implementation == this && msg.sender != tx.origin) ? IVaultHealer(msg.sender) : _vaultHealer;
+    }
+
+    modifier onlyVaultHealer { //must come after getConfig
         _requireVaultHealer();
         _;
     }
     function _requireVaultHealer() private view {
-        if (msg.sender != address(vaultHealer)) revert Strategy_NotVaultHealer(msg.sender);
+        //The address of this contract is a Cavendish create2 address with salt equal to the vid, and the VaultHealer is the deployer.
+        //Address collisions are theoretically possible, but exceedingly rare. If one such false VaultHealer
+        //address were calculated, it could not be used by anyone for the same reason that address(0) remains unclaimed.
+        if (address(this) != Cavendish.computeAddress(bytes32(config.vid()), msg.sender)) revert Strategy_NotVaultHealer(msg.sender);
     }
 
     modifier getConfig() {
@@ -53,34 +71,46 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         }
     }
 
-    function initialize(bytes memory _config) public virtual onlyVaultHealer {
+    function initialize(bytes memory _config) external virtual {
         if (this == implementation) revert Strategy_InitializeOnlyByProxy();
+        address configAddr;
         assembly ("memory-safe") {
             let len := mload(_config) //get length of config
             mstore(_config, 0x600c80380380823d39803df3fe) //simple bytecode which saves everything after the f3
-
-            let configAddr := create(0, add(_config, 19), add(len,13)) //0 value; send 13 bytes plus _config
-            if iszero(configAddr) { //create failed?
-                revert(0, 0)
-            }
+            configAddr := create(0, add(_config, 19), add(len,13)) //0 value; send 13 bytes plus _config
         }
-		StrategyConfig.MemPointer config_ = StrategyConfig.MemPointer.wrap(_getConfig());
-        IERC20 want = config_.wantToken();
-		want.safeIncreaseAllowance(msg.sender, type(uint256).max);
+        if (configAddr != configAddress()) revert Strategy_AlreadyInitialized(); //also checks that create didn't fail
 
-        if (config_.isMaximizer()) {
+        _vaultHealer = IVaultHealer(msg.sender);
+        this.initialize_(); //must be called by this contract externally
 
-            (IERC20 targetWant,,,,,) = vaultHealer.vaultInfo(config_.vid() >> 16);
-            
-            for (uint i; i < config_.earnedLength(); i++) {
-                (IERC20 earned,) = config_.earned(i);
-                if (earned == targetWant && earned != want) {
-                    earned.safeIncreaseAllowance(msg.sender, type(uint256).max);
-                    break;
+    }
+
+    function initialize_() external getConfig {
+        require(msg.sender == address(this));
+        _initialSetup();
+    }
+    
+    function _initialSetup() internal virtual {
+        IERC20 want = config.wantToken();
+
+        _vaultSharesTotal();
+
+		want.safeIncreaseAllowance(address(_vaultHealer), type(uint256).max);
+
+        if (_isMaximizer()) {
+
+            (IERC20 targetWant,,,,,) = _vaultHealer.vaultInfo(config.targetVid());
+            if (want != targetWant) {
+                for (uint i; i < config.earnedLength(); i++) {
+                    (IERC20 earned,) = config.earned(i);
+                    if (earned == targetWant) {
+                        earned.safeIncreaseAllowance(address(_vaultHealer), type(uint256).max);
+                        break;
+                    }
                 }
             }
         }
-
     }
 
     //should only happen when this contract deposits as a maximizer
@@ -103,51 +133,26 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
 
-    function router() external view getConfig returns (IUniRouter _router) {
-        return config.router();
-    }
-
-
-    function wantToken() external view getConfig returns (IERC20 _token) {
-        return config.wantToken();
-    }
-
-
-    function configAddress() public view returns (address configAddr) {
-        assembly ("memory-safe") {
-            mstore(0, or(0xd694000000000000000000000000000000000000000001000000000000000000, shl(80,address())))
-            configAddr := and(0xffffffffffffffffffffffffffffffffffffffff, keccak256(0, 23)) //create address, nonce 1
-        }
-    }
-
-    function wantLockedTotal() external view getConfig returns (uint256) {
-        return _wantLockedTotal();
-    }
-    function _wantLockedTotal() internal view virtual returns (uint256) {
-        return config.wantToken().balanceOf(address(this)) + _vaultSharesTotal();
-    }
-
-    modifier guardPrincipal {
-        IERC20 _wantToken = config.wantToken();
-        uint wantLockedBefore = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
-        _;
-        if (_wantToken.balanceOf(address(this)) + _vaultSharesTotal() < wantLockedBefore) revert Strategy_WantLockedLoss();
-    }
+    function router() external view getConfig returns (IUniRouter _router) { return config.router(); }
+    function wantToken() external view getConfig returns (IERC20 _token) { return config.wantToken(); }
+    function wantLockedTotal() external view getConfig returns (uint256) { return _wantLockedTotal(); }
+    function _wantLockedTotal() internal view virtual returns (uint256) { return config.wantToken().balanceOf(address(this)) + _vaultSharesTotal(); }
+    function configAddress() public view returns (address configAddr) { return AddrCalc.configAddress(); }
 
     //Safely deposits want tokens in farm
-    function _farm() internal virtual returns (uint256 vaultSharesAfter) {
+    function _farm() internal virtual {
         IERC20 _wantToken = config.wantToken();
         uint dust = config.wantDust();
         uint256 wantAmt = _wantToken.balanceOf(address(this));
-        if (wantAmt < dust) return _vaultSharesTotal();
+        if (wantAmt > dust) {
         
-        uint256 sharesBefore = _vaultSharesTotal();
-        _vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
-        vaultSharesAfter = _vaultSharesTotal();
-        
-        //safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
-        if (vaultSharesAfter + _wantToken.balanceOf(address(this)) + dust < sharesBefore + wantAmt * config.slippageFactor() / 256)
-            revert Strategy_ExcessiveFarmSlippage();
+			uint256 sharesBefore = _vaultSharesTotal();
+			_vaultDeposit(_wantToken, wantAmt); //approves the transfer then calls the pool contract to deposit
+			
+			//safety check, will fail if there's a deposit fee rugpull or serious bug taking deposits
+			if (_vaultSharesTotal() + _wantToken.balanceOf(address(this)) + dust < sharesBefore + wantAmt * config.slippageFactor() / 256)
+				revert Strategy_ExcessiveFarmSlippage();
+		}
     }
 
     function safeSwap(
@@ -161,71 +166,75 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         safeSwap(_amountIn, path);
     }
 
-    // returns sorted token addresses, used to handle return values from pairs sorted in this order
-    function sortTokens(IERC20 tokenA, IERC20 tokenB) internal pure returns (IERC20 token0, IERC20 token1) {
-        if (tokenA == tokenB) revert IdenticalAddresses(tokenA, tokenB);
-        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        if (address(token0) == address(0)) revert ZeroAddress();
+    //returns true if the path from A to B contains weth; if true, path from tokenA to weth
+    //otherwise, path from tokenA to tokenB
+    function wethOnPath(IERC20 _tokenA, IERC20 _tokenB) internal returns (bool containsWeth, IERC20[] memory path) {
+        IERC20 weth = config.weth();
+        if (_tokenA == weth) {
+            path = new IERC20[](1);
+            path[0] = weth;
+            return (true, path);
+        } else {
+            path = config.magnetite().findAndSavePath(address(config.router()), _tokenA, _tokenB);
+            if (_tokenB == weth) return (true, path);
+            else {
+                for (uint i = 1; i < path.length - 1; i++) {
+                    if (path[i] == weth) {
+                        assembly("memory-safe") { mstore(path, add(i,1)) } //truncate path at weth
+                        return (true, path);
+                    }
+                }
+            }
+        }
     }
 
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
     ) internal virtual {
-        if (_amountIn == 0) return;
+        if (_amountIn == 0 || path.length < 2) return;
         IUniRouter _router = config.router();
         IUniFactory factory = _router.factory();
 
         uint[] memory amounts = _router.getAmountsOut(_amountIn, path);
-        (IERC20 input, IERC20 output) = (path[0], path[1]);
-        IUniPair pair = factory.getPair(input, output);
-        input.safeTransfer(address(pair), _amountIn);
+        IUniPair pair = factory.getPair(path[0], path[1]);
+        path[0].safeTransfer(address(pair), _amountIn);
         
         if (config.feeOnTransfer()) {
             uint balanceBefore = path[path.length - 1].balanceOf(address(this));
-            IERC20[] memory subpath;
-            if (path.length > 2) {
-                subpath = new IERC20[](2);
-                (subpath[0], subpath[1]) = (input, output);
-            } else subpath = path;
 
-            for (uint i; i < path.length - 1; i++) {
+            for (uint i = 1; i < path.length; i++) {
                 (uint reserve0, uint reserve1,) = pair.getReserves();
-                uint amountInput = input.balanceOf(address(pair)) - (input < output ? reserve0 : reserve1);
                 
-                uint amountOutput = _router.getAmountsOut(amountInput, subpath)[0];
+                (uint amount0Out, uint amount1Out) = path[i - 1] < path[i] ? 
+                    (uint(0), _router.getAmountOut(path[i - 1].balanceOf(address(pair)) - reserve0, reserve0, reserve1)) :
+                    (_router.getAmountOut(path[i - 1].balanceOf(address(pair)) - reserve1, reserve1, reserve0), uint(0));
 
-                (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amountOutput) : (amountOutput, uint(0));
-
-                if (i == path.length - 2) {
+                if (i == path.length - 1) {
                     pair.swap(amount0Out, amount1Out, address(this), "");
                 } else {
-                    IUniPair nextPair = factory.getPair(output, path[i + 2]);
-                    pair.swap(amount0Out, amount1Out, address(nextPair), "");
-                    (pair, input, output) = (nextPair, path[i+1], path[i+2]);
-                }
-            }
-            uint amountOutMin = amounts[amounts.length - 1] * config.slippageFactor() / 256;
-            if (output.balanceOf(address(this)) < amountOutMin + balanceBefore) {
-                unchecked {
-                    revert InsufficientOutputAmount(output.balanceOf(address(this)) - balanceBefore, amountOutMin);
-                }
-            }
-        } else {
-            
-            for (uint i; i < path.length - 1; i++) {
-                (input, output) = (path[i], path[i + 1]);
-                (uint amount0Out, uint amount1Out) = input < output ? (uint(0), amounts[i]) : (amounts[i], uint(0));
-                
-                if (i == path.length - 2) {
-                    pair.swap(amount0Out, amount1Out, address(this), "");
-                } else {
-                    IUniPair nextPair = factory.getPair(output, path[i + 2]);
+                    IUniPair nextPair = factory.getPair(path[i], path[i + 1]);
                     pair.swap(amount0Out, amount1Out, address(nextPair), "");
                     pair = nextPair;
                 }
             }
+            uint amountOutMin = amounts[amounts.length - 1] * config.slippageFactor() / 256;
+            uint amountOutput = path[path.length - 1].balanceOf(address(this)) - balanceBefore;
+            if (amountOutput < amountOutMin) revert InsufficientOutputAmount(amountOutput, amountOutMin);
 
+        } else {
+            
+            for (uint i = 1; i < path.length; i++) {
+                (uint amount0Out, uint amount1Out) = path[i - 1] < path[i] ? (uint(0), amounts[i]) : (amounts[i], uint(0));
+                
+                if (i == path.length - 1) {
+                    pair.swap(amount0Out, amount1Out, address(this), "");
+                } else {
+                    IUniPair nextPair = factory.getPair(path[i], path[i + 1]);
+                    pair.swap(amount0Out, amount1Out, address(nextPair), "");
+                    pair = nextPair;
+                }
+            }
         }
     }
 
@@ -315,13 +324,17 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     }
 
     function isMaximizer() external view getConfig returns (bool) {
-        return config.isMaximizer();
+        return _isMaximizer();
     }
 
     //For IStrategy-conforming strategies who don't implement their own maximizers. Should revert if a strategy implementation
-    //is incapable of being a maximizer.
+    //is incapable of supporting a maximizer.
     function getMaximizerImplementation() external virtual view returns (IStrategy) {
-        return implementation;
+        revert Strategy_MaximizersNotSupported();
+    }
+    function _isMaximizer() internal virtual view returns (bool) { 
+        assert(!config.isMaximizer());
+        return false; 
     }
 
     
@@ -355,4 +368,167 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
         (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) = config.tactics();
         Tactics.emergencyVaultWithdraw(tacticsA, tacticsB);
     }
+
+    function wrapAllEth() internal {
+        if (address(this).balance > WETH_DUST) {
+            config.weth().deposit{value: address(this).balance}();
+        }
+    }
+    function unwrapAllWeth() internal returns (bool hasEth) {
+        IWETH weth = config.weth();
+        uint wethBal = weth.balanceOf(address(this));
+        if (wethBal > WETH_DUST) {
+            weth.withdraw(wethBal);
+            return true;
+        }
+        return address(this).balance > WETH_DUST;
+    }
+	
+    function sellUnwanted(IERC20 tokenOut, uint amount) internal {
+        IERC20[] memory path;
+        bool toWeth;
+        if (config.isPairStake()) {
+            (IERC20 token0, IERC20 token1) = config.token0And1();
+            (toWeth, path) = wethOnPath(tokenOut, token0);
+            (bool toWethToken1,) = wethOnPath(tokenOut, token1);
+            toWeth = toWeth && toWethToken1;
+        } else {
+            (toWeth, path) = wethOnPath(tokenOut, config.wantToken());
+        }
+        if (toWeth) safeSwap(amount, path); //swap to the native gas token if it's on the path
+        else swapToWantToken(amount, tokenOut);
+    }
+
+    function _sync() internal virtual {}
+
+    function earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) external getConfig onlyVaultHealer returns (bool success, uint256 __wantLockedTotal) {
+        IERC20 _wantToken = config.wantToken();
+        uint wantLockedBefore = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        success = _earn(fees, operator, data);
+		__wantLockedTotal = _wantToken.balanceOf(address(this)) + _vaultSharesTotal();
+        if (__wantLockedTotal < wantLockedBefore) revert Strategy_WantLockedLoss();
+    }
+    function _earn(Fee.Data[3] calldata fees, address operator, bytes calldata data) internal virtual returns (bool success);
+
+    //VaultHealer calls this to add funds at a user's direction. VaultHealer manages the user shares
+    function deposit(uint256 _wantAmt, uint256 _sharesTotal, bytes calldata) public virtual payable getConfig onlyVaultHealer returns (uint256 wantAdded, uint256 sharesAdded) {
+        _sync();
+		_farm();
+        IERC20 _wantToken = config.wantToken();
+        uint wantLockedBefore = _vaultSharesTotal() + _wantToken.balanceOf(address(this));
+
+        if (msg.value > 0) {
+            IWETH weth = config.weth();
+            weth.deposit{value: msg.value}();
+            swapToWantToken(msg.value, weth);
+        }
+
+        //Before calling deposit here, the vaulthealer records how much the user deposits. Then with this
+        //call, the strategy tells the vaulthealer to proceed with the transfer. This minimizes risk of
+        //a rogue strategy 
+        if (_wantAmt > 0) IVaultHealer(msg.sender).executePendingDeposit(address(this), uint192(_wantAmt));
+        _farm(); //deposits the tokens in the pool
+        // Proper deposit amount for tokens with fees, or vaults with deposit fees
+
+        wantAdded = _wantToken.balanceOf(address(this)) + _vaultSharesTotal() - wantLockedBefore;
+        sharesAdded = _sharesTotal == 0 ? wantAdded : Math.ceilDiv(wantAdded * _sharesTotal, wantLockedBefore);
+        if (wantAdded < config.wantDust() || sharesAdded == 0) revert Strategy_DustDeposit(wantAdded);
+    }
+
+    //Correct logic to withdraw funds, based on share amounts provided by VaultHealer
+    function withdraw(uint _wantAmt, uint _userShares, uint _sharesTotal, bytes calldata) public virtual getConfig onlyVaultHealer returns (uint sharesRemoved, uint wantAmt) {
+        _sync();
+        IERC20 _wantToken = config.wantToken();
+        uint wantBal = _wantToken.balanceOf(address(this)); 
+        uint wantLockedBefore = wantBal + _vaultSharesTotal();
+        uint256 userWant = _userShares * wantLockedBefore / _sharesTotal; //User's balance, in want tokens
+        
+        // user requested all, very nearly all, or more than their balance, so withdraw all
+        unchecked { //overflow is caught and handled in the second condition
+            uint dust = config.wantDust();
+            if (_wantAmt + dust > userWant || _wantAmt + dust < _wantAmt) {
+				_wantAmt = userWant;
+            }
+        }
+
+		uint withdrawSlippage;
+        if (_wantAmt > wantBal) {
+            uint toWithdraw = _wantAmt - wantBal;
+            _vaultWithdraw(_wantToken, toWithdraw); //Withdraw from the masterchef, staking pool, etc.
+            wantBal = _wantToken.balanceOf(address(this));
+			uint wantLockedAfter = wantBal + _vaultSharesTotal();
+			
+			//Account for reflect, pool withdraw fee, etc; charge these to user
+			withdrawSlippage = wantLockedAfter < wantLockedBefore ? wantLockedBefore - wantLockedAfter : 0;
+		}
+		
+		//Calculate shares to remove
+        sharesRemoved = (_wantAmt + withdrawSlippage) * _sharesTotal;
+        sharesRemoved = Math.ceilDiv(sharesRemoved, wantLockedBefore);
+		
+        //Get final withdrawal amount
+        if (sharesRemoved > _userShares) {
+            sharesRemoved = _userShares;
+        }
+		wantAmt = sharesRemoved * wantLockedBefore / _sharesTotal;
+        
+        if (wantAmt <= withdrawSlippage) revert Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+		
+		wantAmt -= withdrawSlippage;
+		if (wantAmt > wantBal) wantAmt = wantBal;
+		
+        return (sharesRemoved, wantAmt);
+
+    }
+
+    function generateConfig(
+        Tactics.TacticsA _tacticsA,
+        Tactics.TacticsB _tacticsB,
+        address _wantToken,
+        uint8 _wantDust,
+        address _router,
+        address _magnetite,
+        uint8 _slippageFactor,
+        bool _feeOnTransfer,
+        address[] memory _earned,
+        uint8[] memory _earnedDust
+    ) public virtual view returns (bytes memory configData) {
+        require(_earned.length < 0x20, "earned.length invalid");
+        require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
+        uint8 vaultType = uint8(_earned.length);
+        if (_feeOnTransfer) vaultType += 0x80;
+        configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
+		
+		IERC20 _targetWant = IERC20(_wantToken);
+
+        //Look for LP tokens. If not, want must be a single-stake
+        try IUniPair(address(_targetWant)).token0() returns (IERC20 _token0) {
+            vaultType += 0x20;
+            IERC20 _token1 = IUniPair(address(_targetWant)).token1();
+            configData = abi.encodePacked(configData, vaultType, _token0, _token1);
+        } catch { //if not LP, then single stake
+            configData = abi.encodePacked(configData, vaultType);
+        }
+
+        for (uint i; i < _earned.length; i++) {
+            configData = abi.encodePacked(configData, _earned[i], _earnedDust[i]);
+        }
+
+        configData = abi.encodePacked(configData, IUniRouter(_router).WETH());
+    }
+
+    function generateTactics(
+        address _masterchef,
+        uint24 pid, 
+        uint8 vstReturnPosition, 
+        bytes8 vstCode, //includes selector and encoded call format
+        bytes8 depositCode, //includes selector and encoded call format
+        bytes8 withdrawCode, //includes selector and encoded call format
+        bytes8 harvestCode, //includes selector and encoded call format
+        bytes8 emergencyCode//includes selector and encoded call format
+    ) external virtual pure returns (Tactics.TacticsA tacticsA, Tactics.TacticsB tacticsB) {
+        tacticsA = Tactics.TacticsA.wrap(bytes32(abi.encodePacked(bytes20(_masterchef),bytes3(pid),bytes1(vstReturnPosition),vstCode)));
+        tacticsB = Tactics.TacticsB.wrap(bytes32(abi.encodePacked(depositCode, withdrawCode, harvestCode, emergencyCode)));
+    }
+
 }

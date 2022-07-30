@@ -23,6 +23,16 @@ const apeSwapVaults = [
         earned: [ BANANA, WMATIC ],
 		earnedDust: [8, 8],
     },
+    {
+        want: lps.polygon.MATIC_ETH_APE_LP, // Want
+		wantDust: 8,
+        vaulthealer: accounts.polygon.NEW_TEST_VAULT_HEALER,
+        masterchef: masterChefs.polygon.APESWAP_MINICHEF, // Masterchef
+        router: routers.polygon.APESWAP_ROUTER,
+        PID: 1,
+        earned: [ BANANA, WMATIC ],
+		earnedDust: [8, 8],
+    },
 ]
 
 module.exports = {

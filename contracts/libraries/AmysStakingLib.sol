@@ -29,7 +29,7 @@ library AmysStakingLib {
     }
 
     struct WantPid {
-        uint64 current;
+        uint current;
         uint64[] old;
     }
 
@@ -37,7 +37,7 @@ library AmysStakingLib {
         if (self.current < pid) {
 
             if (self.current > 0) 
-                self.old.push(self.current);
+                self.old.push(uint64(self.current));
 
             self.current = pid;
         }

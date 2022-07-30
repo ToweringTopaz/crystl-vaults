@@ -4,7 +4,7 @@ pragma solidity ^0.8.14;
 library AddrCalc {
 
     //returns the first create address for the current address
-    function configAddress() public view returns (address configAddr) {
+    function configAddress() internal view returns (address configAddr) {
         assembly ("memory-safe") {
             mstore(0, or(0xd694000000000000000000000000000000000000000001000000000000000000, shl(80,address())))
             configAddr := and(0xffffffffffffffffffffffffffffffffffffffff, keccak256(0, 23)) //create address, nonce 1
@@ -32,5 +32,25 @@ library AddrCalc {
     ) internal pure returns (address) {
         bytes32 _data = keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, initcodehash));
         return address(uint160(uint256(_data)));
+    }
+
+    //The nonce of a factory contract that uses CREATE, assuming no child contracts have selfdestructed
+    function createFactoryNonce(address _origin) internal view returns (uint nonce) {
+        unchecked {
+            nonce = 1;
+            uint top = 2**32;
+            uint p = 1;
+            while (p < top && p > 0) {
+                address spawn = addressFrom(_origin, nonce + p); //
+                if (spawn.code.length > 0) {
+                    nonce += p;
+                    p *= 2;
+                    if (nonce + p > top) p = (top - nonce) / 2;
+                } else {
+                    top = nonce + p;
+                    p /= 2;
+                }
+            }
+        }
     }
 }

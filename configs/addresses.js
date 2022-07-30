@@ -90,6 +90,7 @@ const lps = {
                 MATIC_GBNT_CAT_LP: "0xd883c361d1e8a7e1f77d38e0a6e45d897006b798",
                 MATIC_TAKO_APE_LP: '0xd30f018e0DD3c9FD1fF5077a05D86bA82d04c73C', // tako pid = 0
                 MATIC_INKU_APE_LP: '0x5bfd0CA929aC41e110B709a5be069Cb7D5D8A15e', // tako pid = 6
+				MATIC_ETH_APE_LP: '0x6Cf8654e85AB489cA7e70189046D507ebA233613', // 
                 BANANA_ETH_APE_LP: '0x44b82c02F404Ed004201FB23602cC0667B1D011e', // tako pid = 4
                 MATIC_ROLL_APE_LP: '0x65c37f48781a555e2ad5542e4306ebab1ae93cd7', // polyroll pid = 8
                 QUICK_KOM_QUICK_LP: '0x082b58350a04D8D38b4BCaE003BB1191b9aae565', //quick pid = ?
@@ -112,20 +113,12 @@ const routers = {
         }
 }
 
-const tactics = {
-        polygon: {
-                TACTIC_MASTERHEALER: '0xEF402F090975700830635D28B9a6829bfBBdcfa8', //updated this one
-                TACTIC_MASTERHEALER_REFERRAL: '0xAfdA790471f2c26cEf82568E22a0feACfA031cD3', //possibly out of date
-                TACTIC_MINIAPE: '0x48D446A5571592EC101e59FEb47A0aFdD4A42566', //possibly out of date
-        }
-}
-
 module.exports = {
         accounts,
         tokens,
         masterChefs,
         lps,
         routers,
-        tactics
+ 
 }
 

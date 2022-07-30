@@ -8,13 +8,11 @@ contract StrategyCustomRouter is Strategy {
     using StrategyConfig for StrategyConfig.MemPointer;
     using SafeERC20 for IERC20;
 
-    constructor(IVaultHealer _vaultHealer) Strategy(_vaultHealer) {}
-
     function safeSwap(
         uint256 _amountIn,
         IERC20[] memory path
     ) internal override {
-        if (_amountIn == 0) return;
+        if (_amountIn == 0 || path.length < 2) return;
 
         IUniRouter _router = config.router();
 

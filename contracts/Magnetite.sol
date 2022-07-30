@@ -20,41 +20,44 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
     }
     
     struct Path {
-        IERC20[] tokens;
         bool manual;
+        IERC20[5] tokens;
     }
 
     uint constant private WNATIVE_MULTIPLIER = 3; // Wnative weighted 3x
     uint constant private B_MULTIPLIER = 10; // Token B direct swap weighted 10x
 
     event SetPath(bool manual, address router, IERC20[] path);
+    bytes32[1] private __RESERVED__;
     mapping(bytes32 => Path) private _paths;
 
     constructor(address vhAuth) {
-        require(block.chainid > 30000 || block.chainid == 137 || block.chainid == 25 || block.chainid == 56, "unsupported chain");
         _init(vhAuth);
+        (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = _commonInit();
+    }
 
-        (COMMON_1, COMMON_2, COMMON_3, COMMON_4, COMMON_5) = block.chainid == 25 ? ( //cronos
-            0xc21223249CA28397B4B6541dfFaEcC539BfF0c59,
-            0xe44Fd7fCb2b1581822D0c862B68222998a0c299a,
-            0x062E66477Faf219F25D27dCED647BF57C3107d52,
-            0x66e428c3f67a68878562e79A0234c1F83c208770,
-            0xF2001B145b43032AAF5Ee2884e456CCd805F677D
-        ) : ( block.chainid == 56 ? ( //bsc
-            0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d, //usdc
-            0x2170Ed0880ac9A755fd29B2688956BD959F933F8, //weth
-            0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c, //wbtc: actually btcb on BNB Chain
-            0x55d398326f99059fF775485246999027B3197955, //usdt
-            0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3 //dai
-        ) : ( //polygon
-            0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174, //usdc
-            0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619, //weth
-            0x831753DD7087CaC61aB5644b308642cc1c33Dc13, //quick
-            0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //usdt
-            0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 //dai
-
-        ));
-
+    function _commonInit() internal virtual returns (address c1, address c2, address c3, address c4, address c5) {
+        if (block.chainid == 25 || block.chainid == 31337) {
+            c1 = 0xc21223249CA28397B4B6541dfFaEcC539BfF0c59;
+            c2 = 0xe44Fd7fCb2b1581822D0c862B68222998a0c299a;
+            c3 = 0x062E66477Faf219F25D27dCED647BF57C3107d52;
+            c4 = 0x66e428c3f67a68878562e79A0234c1F83c208770;
+            c5 = 0xF2001B145b43032AAF5Ee2884e456CCd805F677D;
+        } else if (block.chainid == 56) {
+            c1 = 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d; //usdc
+            c2 = 0x2170Ed0880ac9A755fd29B2688956BD959F933F8; //weth
+            c3 = 0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c; //wbtc: actually btcb on BNB Chain
+            c4 = 0x55d398326f99059fF775485246999027B3197955; //usdt
+            c5 = 0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3; //dai
+        } else if (block.chainid == 137) {
+            c1 = 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174; //usdc
+            c2 = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619; //weth
+            c3 = 0x831753DD7087CaC61aB5644b308642cc1c33Dc13; //quick
+            c4 = 0xc2132D05D31c914a87C6611C10748AEb04B58e8F; //usdt
+            c5 = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063; //dai
+        } else {
+            revert("unsupported chain");
+        }
     }
 
     function _init(address vhAuth) public virtual initializer {
@@ -93,25 +96,55 @@ contract Magnetite is OwnableUpgradeable, IMagnetite {
             path[0] = a;
             return path;
         }
-        path = _paths[keccak256(abi.encodePacked(router, a, b))].tokens;
+        IERC20[5] storage tokens = _paths[keccak256(abi.encodePacked(router, a, b))].tokens;
+
+        if (tokens[0] == IERC20(address(type(uint160).max))) {
+            path = new IERC20[](2);
+            path[0] = a;
+            path[1] = b;
+            return path;            
+        } else if (tokens[0] != IERC20(address(0))) {
+            path = new IERC20[](7);
+            path[0] = a;
+            uint i;
+            while(i < 4) {
+                IERC20 token = tokens[i];
+                if (token == IERC20(address(0))) break;
+                path[++i] = token;
+
+            }
+            path[++i] = b;
+            assembly("memory-safe") {
+                mstore(path, add(i, 1))
+            }
+        }
     }
 
     function _setPath(address router, IERC20[] memory _path, bool _manual) internal { 
         uint len = _path.length;
-
         bytes32 hashAB = keccak256(abi.encodePacked(router,_path[0], _path[len - 1]));
-        IERC20[] storage pathAB = _paths[hashAB].tokens;
+        IERC20[5] storage tokens = _paths[hashAB].tokens;
         if (_manual) {
             _paths[hashAB].manual = true;
         } else {
-            if (pathAB.length > 0) return;
+            if (tokens[0] > IERC20(address(0))) return;
         }
-        
-        for (uint i; i < len; i++) {
-            pathAB.push() = _path[i];
+
+        uint i;
+        if (len == 2) {
+            tokens[0] = IERC20(address(type(uint160).max));
+            i = 1;
+        } else {
+            for (; i < len - 2; i++) {
+                tokens[i] = _path[i+1];
+            }
         }
-            
-        emit SetPath(_manual, router, pathAB);
+        for (; i < 5; i++) {
+            if (tokens[i] == IERC20(address(0))) break;
+            else delete tokens[i];
+        }
+
+        emit SetPath(_manual, router, _path);
     }
     
     function generatePath(IUniRouter router, IERC20 a, IERC20 b) internal view returns (IERC20[] memory path) {

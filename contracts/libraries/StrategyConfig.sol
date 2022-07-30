@@ -34,6 +34,11 @@ library StrategyConfig {
             _tacticsA := mload(add(0x20,config))
         }
     }
+    function tacticsB(MemPointer config) internal pure returns (Tactics.TacticsB _tacticsB) {
+        assembly ("memory-safe") {
+            _tacticsB := mload(add(config,0x40))
+        }
+    }
 
     function tactics(MemPointer config) internal pure returns (Tactics.TacticsA _tacticsA, Tactics.TacticsB _tacticsB) {
         assembly ("memory-safe") {
@@ -106,6 +111,32 @@ library StrategyConfig {
             dust := shl(and(mload(add(offset,1)), 0xff) , 1)
         }
     }
+
+    function earnedToken(MemPointer config, uint n) internal pure returns (IERC20 _earned) {
+        assert(n < earnedLength(config));
+        bool pairStake = isPairStake(config);
+
+        assembly ("memory-safe") {
+            let offset := add(add(mul(n,0x15),0x93),config)
+            if pairStake {
+                offset := add(offset,0x28)
+            }
+            _earned := and(mload(offset), MASK_160)
+        }
+    }
+    function earnedDust(MemPointer config, uint n) internal pure returns (uint dust) {
+        assert(n < earnedLength(config));
+        bool pairStake = isPairStake(config);
+
+        assembly ("memory-safe") {
+            let offset := add(add(mul(n,0x15),0x94),config)
+            if pairStake {
+                offset := add(offset,0x28)
+            }
+            dust := shl(and(mload(offset), 0xff) , 1)
+        }
+    }
+
     function weth(MemPointer config) internal pure returns (IWETH _weth) {
         unchecked {
             uint offset = 0x93 + earnedLength(config) * 0x15;
@@ -156,9 +187,9 @@ library StrategyConfig {
         uint len = config.earnedLength();
 
         IERC20[] memory _earned = new IERC20[](len);
-        uint[] memory earnedDust = new uint[](len);
+        uint[] memory _earnedDust = new uint[](len);
         for (uint i; i < len; i++) {
-            (_earned[i], earnedDust[i]) = config.earned(i);
+            (_earned[i], _earnedDust[i]) = config.earned(i);
         }
 
         return IStrategy.ConfigInfo({
@@ -170,7 +201,7 @@ library StrategyConfig {
             _router: config.router(),
             _magnetite: config.magnetite(),
             earned: _earned,
-            earnedDust: earnedDust,
+            earnedDust: _earnedDust,
             slippageFactor: config.slippageFactor(),
             feeOnTransfer: config.feeOnTransfer()
         });

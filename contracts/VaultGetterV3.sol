@@ -91,6 +91,9 @@ contract VaultGetterV3 {
     function getPausedVaults() external view returns (VaultInfo[] memory vaultInfo) {
         return _getVaults(includePaused, 0);
     }
+    function getActiveVaultsLastEarnedBefore(uint blk) external view returns (VaultInfo[] memory vaultInfo) {
+        return _getVaults(includeActiveLastEarnBefore, blk);
+    }
     function getVaultsLastEarnedBefore(uint blk) external view returns (VaultInfo[] memory vaultInfo) {
         return _getVaults(includeLastEarnBefore, blk);
     }
@@ -106,5 +109,6 @@ contract VaultGetterV3 {
     function includeLastEarnBefore(VaultInfo memory info, uint blk) internal pure returns (bool) { return info.vid > 0 && info.lastEarnBlock < blk; }
     function includeLastEarnAfter(VaultInfo memory info, uint blk) internal pure returns (bool) { return info.vid > 0 && info.lastEarnBlock > blk; }
     function includeNoAutoEarn(VaultInfo memory info, uint) internal pure returns (bool) { return info.vid > 0 && info.noAutoEarn > 0; }
+    function includeActiveLastEarnBefore(VaultInfo memory info, uint blk) internal pure returns (bool) { return includeActive(info, blk) && includeLastEarnBefore(info, blk); }
 
 }

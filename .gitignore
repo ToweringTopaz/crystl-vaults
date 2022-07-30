@@ -18,3 +18,4 @@ compiler_config.json
 .env
 .env.*
 contracts/.*
+*.html
