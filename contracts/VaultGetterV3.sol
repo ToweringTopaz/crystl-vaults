@@ -59,16 +59,13 @@ contract VaultGetterV3 {
         for (uint i; i < baseInfo.length; i++) {
             uint vid = baseInfo[i].vid;
 
-            if (includeCondition(baseInfo[i], blk, token)) {
+            if (includeCondition(baseInfo[i], blk, token))
                 vids[k++] = vid;
-            }
 
             for (uint j = 1; j <= baseInfo[i].numMaximizers; j++) {
                 uint maxiVid = (vid << 16) + j;
-                
-                if (includeCondition(_vaultInfo(maxiVid),blk,token)) {
+                if (includeCondition(_vaultInfo(maxiVid),blk,token)) 
                     vids[k++] = maxiVid;
-                }
             }
         }
         assembly ("memory-safe") { mstore(vids, k) } //reduce length of array to actual size
@@ -102,6 +99,12 @@ contract VaultGetterV3 {
     function getBoostedVaults() external view returns (uint[] memory vids) {
         return _getVaults(includeBoosted, 0, address(0));
     }
+    function getActiveVaultsWant(address token) external view returns (uint[] memory vids) {
+        return _getVaults(includeActiveWant, 0, token);
+    }
+    function getActiveBoostedVaults() external view returns (uint[] memory vids) {
+        return _getVaults(includeActiveBoosted, 0, address(0));
+    }
 
     function includeAll(VaultInfo memory, uint, address) internal pure returns (bool) { return true; }
     function includeActive(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.active; }
@@ -112,5 +115,6 @@ contract VaultGetterV3 {
     function includeActiveLastEarnBefore(VaultInfo memory info, uint blk, address) internal pure returns (bool) { return info.active && info.lastEarnBlock < blk; }
     function includeWant(VaultInfo memory info, uint, address token) internal pure returns (bool) { return info.want == token; }
     function includeBoosted(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.numBoosts > 0; }
-
+    function includeActiveWant(VaultInfo memory info, uint, address token) internal pure returns (bool) { return info.active && info.want == token; }
+    function includeActiveBoosted(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.active && info.numBoosts > 0; }
 }
