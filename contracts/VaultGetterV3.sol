@@ -60,16 +60,14 @@ contract VaultGetterV3 {
             uint vid = baseInfo[i].vid;
 
             if (includeCondition(baseInfo[i], blk, token)) {
-                vids[k] = vid;
-                k++;
+                vids[k++] = vid;
             }
 
             for (uint j = 1; j <= baseInfo[i].numMaximizers; j++) {
                 uint maxiVid = (vid << 16) + j;
                 
                 if (includeCondition(_vaultInfo(maxiVid),blk,token)) {
-                    vids[k] = maxiVid;
-                    k++;
+                    vids[k++] = maxiVid;
                 }
             }
         }
