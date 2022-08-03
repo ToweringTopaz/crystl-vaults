@@ -1,9 +1,12 @@
+
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
  require("dotenv").config();
  require("solidity-coverage");
  require("@nomiclabs/hardhat-etherscan");
+ require("@nomiclabs/hardhat-ethers")
  require("@nomiclabs/hardhat-solhint");
  require("hardhat-tracer");
  
@@ -153,7 +156,7 @@
        accounts: [`0x${myPrivateKey}`],
      },
      ftm: {
-       url: optimismMainnetNodeUrl,
+       url: ftmMainnetNodeUrl,
        accounts: [`0x${myPrivateKey}`]
      }
    },
