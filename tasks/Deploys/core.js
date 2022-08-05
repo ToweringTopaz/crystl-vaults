@@ -92,6 +92,18 @@ task(
     */
     let Addresses;
     console.log("DEPLOYING MAGNETITE PROXY...");
+    const Addresses = {
+      VaultChonk: vaultChonk.address,
+      LibQuartz: libQuartz.address,
+      VaultWarden: vaultWarden.address,
+      Zap: zap.address,
+      VaultHealer: vaultHealer.address,
+      Strategy: strategy.address,
+      BoostPool: boostPool.address,
+      MagnetiteImplementation: undefined,
+      MagnetiteBeacon: undefined,
+      MagnetiteProxy: undefined,
+    };
     try {
       const MagnetiteDeploy = await ethers.getContractFactory(
         "MagnetiteDeploy"
@@ -107,6 +119,7 @@ task(
       console.log(`MAGNETITE IMPLEMENTATION DEPLOYED @ ADDRESS: ${magImpl}`);
       console.log(`BEACON ADDRESS: ${magBeacon}`);
       console.log(`PROXY ADDRESS: ${magProxy}`);
+      
       Addresses = {
         VaultChonk: vaultChonk.address,
         LibQuartz: libQuartz.address,

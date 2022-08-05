@@ -1,3 +1,5 @@
+
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
@@ -154,7 +156,7 @@
        accounts: [`0x${myPrivateKey}`],
      },
      ftm: {
-       url: optimismMainnetNodeUrl,
+       url: ftmMainnetNodeUrl,
        accounts: [`0x${myPrivateKey}`]
      }
    },

@@ -37,78 +37,84 @@ contract VaultGetterV3 {
         if (address(info.want) == address(0) && info.lastEarnBlock == 0) info.vid = 0;
     }
 
-    function _getBase(function(VaultInfo memory, uint) view returns (bool) includeCondition, uint blk) internal view returns (VaultInfo[] memory baseInfo, uint numVaultsTotal) {
+    function _getBase() internal view returns (VaultInfo[] memory baseInfo, uint numVaultsTotal) {
 
         numVaultsTotal = vaultHealer.numVaultsBase();
         baseInfo = new VaultInfo[](numVaultsTotal);
 
         for (uint i; i < baseInfo.length; i++) {
-            uint vid = i + 1;
-            baseInfo[i] = _vaultInfo(vid);
+            VaultInfo memory info = _vaultInfo(i + 1);
+            baseInfo[i] = info;
 
-            if (includeCondition(baseInfo[i], blk)) {
-                numVaultsTotal += baseInfo[i].numMaximizers;
-            } else {
-                numVaultsTotal -= 1;
-                delete baseInfo[i];
-            }
+            numVaultsTotal += info.numMaximizers;
         }
     }
 
-    function _getVaults(function(VaultInfo memory, uint) view returns (bool) includeCondition, uint blk) internal view returns (VaultInfo[] memory vaultInfo) {
+    function _getVaults(function(VaultInfo memory, uint, address) view returns (bool) includeCondition, uint blk, address token) internal view returns (uint[] memory vids) {
 
-        (VaultInfo[] memory baseInfo, uint numVaultsTotal) = _getBase(includeCondition, blk);
-        vaultInfo = new VaultInfo[](numVaultsTotal);
+        (VaultInfo[] memory baseInfo, uint numVaultsTotal) = _getBase();
+        vids = new uint[](numVaultsTotal);
         uint k;
 
         for (uint i; i < baseInfo.length; i++) {
             uint vid = baseInfo[i].vid;
-            if (vid > 0) {
-                vaultInfo[k] = baseInfo[i];
-                k++;
 
-                for (uint j; j < baseInfo[i].numMaximizers; j++) {
-                    uint mVid = (vid << 16) + j + 1;
-                    vaultInfo[k] = _vaultInfo(mVid);
-                    if (includeCondition(vaultInfo[k],blk)) {
-                        k++;
-                    }
-                }
+            if (includeCondition(baseInfo[i], blk, token))
+                vids[k++] = vid;
+
+            for (uint j = 1; j <= baseInfo[i].numMaximizers; j++) {
+                uint maxiVid = (vid << 16) + j;
+                if (includeCondition(_vaultInfo(maxiVid),blk,token)) 
+                    vids[k++] = maxiVid;
             }
         }
-        assembly {
-            mstore(vaultInfo, k) //reduce length of array to actual size
-        }
+        assembly ("memory-safe") { mstore(vids, k) } //reduce length of array to actual size
     }
 
-    function getAllVaults() external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includeAll, 0);
+    function getAllVaults() external view returns (uint[] memory vids) {
+        return _getVaults(includeAll, 0, address(0));
     }
 
-    function getActiveVaults() external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includeActive, 0);
+    function getActiveVaults() external view returns (uint[] memory vids) {
+        return _getVaults(includeActive, 0, address(0));
     }
-    function getPausedVaults() external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includePaused, 0);
+    function getPausedVaults() external view returns (uint[] memory vids) {
+        return _getVaults(includePaused, 0, address(0));
     }
-    function getActiveVaultsLastEarnedBefore(uint blk) external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includeActiveLastEarnBefore, blk);
+    function getActiveVaultsLastEarnedBefore(uint blk) external view returns (uint[] memory vids) {
+        return _getVaults(includeActiveLastEarnBefore, blk, address(0));
     }
-    function getVaultsLastEarnedBefore(uint blk) external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includeLastEarnBefore, blk);
+    function getVaultsLastEarnedBefore(uint blk) external view returns (uint[] memory vids) {
+        return _getVaults(includeLastEarnBefore, blk, address(0));
     }
-    function getVaultsLastEarnedAfter(uint blk) external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includeLastEarnAfter, blk);
+    function getVaultsLastEarnedAfter(uint blk) external view returns (uint[] memory vids) {
+        return _getVaults(includeLastEarnAfter, blk, address(0));
     }
-    function getVaultsNoAutoEarn() external view returns (VaultInfo[] memory vaultInfo) {
-        return _getVaults(includeNoAutoEarn, 0);
+    function getVaultsNoAutoEarn() external view returns (uint[] memory vids) {
+        return _getVaults(includeNoAutoEarn, 0, address(0));
     }
-    function includeAll(VaultInfo memory info, uint) internal pure returns (bool) { return info.vid > 0; }
-    function includeActive(VaultInfo memory info, uint) internal pure returns (bool) { return info.vid > 0 && info.active; }
-    function includePaused(VaultInfo memory info, uint) internal pure returns (bool) { return info.vid > 0 && !info.active; }
-    function includeLastEarnBefore(VaultInfo memory info, uint blk) internal pure returns (bool) { return info.vid > 0 && info.lastEarnBlock < blk; }
-    function includeLastEarnAfter(VaultInfo memory info, uint blk) internal pure returns (bool) { return info.vid > 0 && info.lastEarnBlock > blk; }
-    function includeNoAutoEarn(VaultInfo memory info, uint) internal pure returns (bool) { return info.vid > 0 && info.noAutoEarn > 0; }
-    function includeActiveLastEarnBefore(VaultInfo memory info, uint blk) internal pure returns (bool) { return includeActive(info, blk) && includeLastEarnBefore(info, blk); }
+    function getVaultsWant(address token) external view returns (uint[] memory vids) {
+        return _getVaults(includeWant, 0, token);
+    }
+    function getBoostedVaults() external view returns (uint[] memory vids) {
+        return _getVaults(includeBoosted, 0, address(0));
+    }
+    function getActiveVaultsWant(address token) external view returns (uint[] memory vids) {
+        return _getVaults(includeActiveWant, 0, token);
+    }
+    function getActiveBoostedVaults() external view returns (uint[] memory vids) {
+        return _getVaults(includeActiveBoosted, 0, address(0));
+    }
 
+    function includeAll(VaultInfo memory, uint, address) internal pure returns (bool) { return true; }
+    function includeActive(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.active; }
+    function includePaused(VaultInfo memory info, uint, address) internal pure returns (bool) { return !info.active; }
+    function includeLastEarnBefore(VaultInfo memory info, uint blk, address) internal pure returns (bool) { return info.lastEarnBlock < blk; }
+    function includeLastEarnAfter(VaultInfo memory info, uint blk, address) internal pure returns (bool) { return info.lastEarnBlock > blk; }
+    function includeNoAutoEarn(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.noAutoEarn > 0; }
+    function includeActiveLastEarnBefore(VaultInfo memory info, uint blk, address) internal pure returns (bool) { return info.active && info.lastEarnBlock < blk; }
+    function includeWant(VaultInfo memory info, uint, address token) internal pure returns (bool) { return info.want == token; }
+    function includeBoosted(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.numBoosts > 0; }
+    function includeActiveWant(VaultInfo memory info, uint, address token) internal pure returns (bool) { return info.active && info.want == token; }
+    function includeActiveBoosted(VaultInfo memory info, uint, address) internal pure returns (bool) { return info.active && info.numBoosts > 0; }
 }

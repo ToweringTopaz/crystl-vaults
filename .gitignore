@@ -12,6 +12,7 @@
 cache
 artifacts
 coverage.json
+compiler_config.json
 
 #Environment Variables
 .env

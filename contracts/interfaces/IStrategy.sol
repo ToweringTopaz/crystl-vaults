@@ -22,10 +22,10 @@ interface IStrategy is IERC165 {
     error Strategy_NotVaultHealer(address sender); //3da8f0c0
     error Strategy_InitializeOnlyByProxy(); //2ebab949
     error Strategy_ExcessiveFarmSlippage();
-    error Strategy_WantLockedLoss();
-	error Strategy_TotalSlippageWithdrawal(); //nothing to withdraw after slippage
+    error Strategy_WantLockedLoss(); //73e0bc96
+	error Strategy_TotalSlippageWithdrawal(); //099d5d11 //nothing to withdraw after slippage
 	error Strategy_DustDeposit(uint256 wantAdded); //eaf3800a - Deposit amount is insignificant after slippage
-    error Strategy_AlreadyInitialized();
+    error Strategy_AlreadyInitialized(); //f3222d46
     error Strategy_MaximizersNotSupported();
 
     event Strategy_MaximizerDepositFailure();
