@@ -19,7 +19,7 @@ task(
     const VaultChonk = await ethers.getContractFactory("VaultChonk");
     const vaultChonk = await VaultChonk.deploy();
     console.log(
-      `VAULTCHONK DEPLOYED @ ADDRESS:" ${vaultChonk.address}...WAITING FOR CONFIRMATION`
+      `VAULTCHONK DEPLOYED @ ADDRESS: ${vaultChonk.address}...WAITING FOR CONFIRMATION`
     );
     await vaultChonk.deployTransaction.wait(1);
 
@@ -39,7 +39,7 @@ task(
     );
     await vaultWarden.deployTransaction.wait(1);
 
-    console.log("DEPLOYING ZAP AND DETERMINING VAULTHEALERADDRESS");
+    console.log("DEPLOYING ZAP AND DETERMINING VAULTHEALER ADDRESS");
     const dev = process.env.DEPLOYER_ADDRESS;
     const Zap = await ethers.getContractFactory("QuartzUniV2Zap", {
       libraries: { LibQuartz: libQuartz.address },
@@ -92,7 +92,7 @@ task(
     */
     let Addresses;
     console.log("DEPLOYING MAGNETITE PROXY...");
-    const Addresses = {
+    Addresses = {
       VaultChonk: vaultChonk.address,
       LibQuartz: libQuartz.address,
       VaultWarden: vaultWarden.address,
@@ -119,7 +119,7 @@ task(
       console.log(`MAGNETITE IMPLEMENTATION DEPLOYED @ ADDRESS: ${magImpl}`);
       console.log(`BEACON ADDRESS: ${magBeacon}`);
       console.log(`PROXY ADDRESS: ${magProxy}`);
-      
+
       Addresses = {
         VaultChonk: vaultChonk.address,
         LibQuartz: libQuartz.address,
@@ -155,6 +155,8 @@ task(
           libraries: { LibQuartz: Addresses.LibQuartz },
           constructorArguments: [Addresses.VaultHealer],
         }),
+      ]);
+      await Promise.all([
         hre.run("verify:verify", {
           address: Addresses.VaultHealer,
           libraries: { VaultChonk: Addresses.VaultChonk },
@@ -172,6 +174,7 @@ task(
           constructorArguments: [Addresses.VaultHealer],
         }),
       ]);
+
       //now that the core contracts are verified, we'll try to verify magnetite. This can be error prone so to handle those we'll try-catch
       try {
         await Promise.all([
