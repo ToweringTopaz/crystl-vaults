@@ -90,7 +90,7 @@ task(
     If Magnetite is not correctly configured for the given blockchain, it should throw an error
     so we need to handle that accordingly.
     */
-
+    let Addresses;
     console.log("DEPLOYING MAGNETITE PROXY...");
     const Addresses = {
       VaultChonk: vaultChonk.address,
@@ -119,16 +119,26 @@ task(
       console.log(`MAGNETITE IMPLEMENTATION DEPLOYED @ ADDRESS: ${magImpl}`);
       console.log(`BEACON ADDRESS: ${magBeacon}`);
       console.log(`PROXY ADDRESS: ${magProxy}`);
-
-       Addresses.MagnetiteImplementation = magImpl;
-       Addresses.MagnetiteBeacon = magBeacon;
-       Addresses.MagnetiteProxy = magProxy
-      }catch {
+      
+      Addresses = {
+        VaultChonk: vaultChonk.address,
+        LibQuartz: libQuartz.address,
+        VaultWarden: vaultWarden.address,
+        Zap: zap.address,
+        VaultHealer: vaultHealer.address,
+        Strategy: strategy.address,
+        BoostPool: boostPool.address,
+        MagnetiteImplementation: magImpl,
+        MagnetiteBeacon: magBeacon,
+        MagnetiteProxy: magProxy,
+      };
+      console.table(Addresses);
+    } catch {
       throw new Error(
         "MAGNETITE DEPLOY FAILED. PLEASE MAKE SURE YOU SET UP THE CONTRACT WITH THE CORRECT ADDRESSES "
       );
     }
-    if (verify) {
+    if (verify === "true") {
       /* now we'll try programatic verification */
       await Promise.all([
         hre.run("verify:verify", {
@@ -186,7 +196,7 @@ task(
           }),
         ]);
       } catch {
-        throw new Error ("MAGNETITE VERIFICATION FAILED.")
+        throw new Error("MAGNETITE VERIFICATION FAILED.");
       }
     }
   });

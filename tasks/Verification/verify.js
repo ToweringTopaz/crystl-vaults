@@ -75,3 +75,12 @@ task("verifyMagnetite","Verifies standalone Magnetite Implementation")
     constructorArguments: [vhauth]
   });
 });
+task("verifyStrategy","verifies a Strategy Contract")
+  .addParam("name","the name of the contract to verify")
+  .addParam("addr")
+  .setAction(async ({name, addr}) =>{
+    await hre.run("verify:verify", {
+      address: addr,
+      
+    })
+  })
