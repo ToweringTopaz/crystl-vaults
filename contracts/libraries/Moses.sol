@@ -41,7 +41,7 @@ library Moses {
     }
 
     function computeAddress(bytes32 hash) public pure returns (address addr) {
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40) //free memory pointer, which is temporarily overwritten
             mstore(0x40, hash) 
             mstore(0x20, PILLAR) //solidity scratch space
