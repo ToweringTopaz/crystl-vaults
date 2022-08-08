@@ -139,7 +139,11 @@ task(
       );
     }
     if (verify === "true") {
-      /* now we'll try programatic verification */
+      /* now we'll try programatic verification..
+
+      /*first block , we'll wrap this in a try catch because of rate limits, polling errors, etc. 
+      If it throws an error, check manually that everything is verified*/
+      try{
       await Promise.all([
         hre.run("verify:verify", {
           address: Addresses.VaultChonk,
@@ -156,6 +160,12 @@ task(
           constructorArguments: [Addresses.VaultHealer],
         }),
       ]);
+    }catch(error){
+      console.log("Please note that the first block of verifications threw an error.")
+      console.log(error)
+      console.log("Attempting to continue verification of other contracts")
+      /*second block in case there is some error*/
+
       await Promise.all([
         hre.run("verify:verify", {
           address: Addresses.VaultHealer,
@@ -174,6 +184,56 @@ task(
           constructorArguments: [Addresses.VaultHealer],
         }),
       ]);
+    }
+    try{
+      await Promise.all([
+        hre.run("verify:verify", {
+          address: Addresses.VaultHealer,
+          libraries: { VaultChonk: Addresses.VaultChonk },
+          constructorArguments: [
+            Addresses.VaultWarden,
+            Addresses.VaultWarden,
+            Addresses.Zap,
+          ],
+        }),
+        hre.run("verify:verify", {
+          address: Addresses.Strategy,
+        }),
+        hre.run("verify:verify", {
+          address: Addresses.BoostPool,
+          constructorArguments: [Addresses.VaultHealer],
+        }),
+      ]);
+    }catch(error){
+      console.log("Please note that the first block of verifications threw an error.")
+      console.log(error)
+      console.log("Attempting to continue verification of other contracts")
+      try {
+        await Promise.all([
+          await hre.run("verify:verify", {
+            address: magdeploy,
+            constructorArguments: [vhauth],
+          }),
+          //Verify Magnetite Implementation
+          await hre.run("verify:verify", {
+            address: implementation,
+            constructorArguments: [vhauth],
+          }),
+          //Verify Beacon
+          await hre.run("verify:verify", {
+            address: beacon,
+            constructorArguments: [implementation],
+          }),
+          //Verify Proxy
+          await hre.run("verify:verify", {
+            address: proxy,
+            constructorArguments: [beacon, "0x"],
+          }),
+        ]);
+      } catch {
+        throw new Error("MAGNETITE VERIFICATION FAILED.");
+      }
+    }
 
       //now that the core contracts are verified, we'll try to verify magnetite. This can be error prone so to handle those we'll try-catch
       try {
