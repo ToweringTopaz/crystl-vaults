@@ -24,16 +24,6 @@ library AddrCalc {
         return address(uint160(uint256(data)));
     }
 
-    //Standard function to compute a create2 address
-    function computeAddress(
-        bytes32 salt,
-        address deployer,
-        bytes32 initcodehash
-    ) internal pure returns (address) {
-        bytes32 _data = keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, initcodehash));
-        return address(uint160(uint256(_data)));
-    }
-
     //The nonce of a factory contract that uses CREATE, assuming no child contracts have selfdestructed
     function createFactoryNonce(address _origin) internal view returns (uint nonce) {
         unchecked {
