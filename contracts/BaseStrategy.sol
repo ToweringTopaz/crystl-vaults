@@ -495,6 +495,8 @@ abstract contract BaseStrategy is IStrategy, ERC165 {
     ) public virtual view returns (bytes memory configData) {
         require(_earned.length < 0x20, "earned.length invalid");
         require(_earned.length == _earnedDust.length, "earned/dust length mismatch");
+        require(_router.code.length > 0, "router does not exist");
+        require(_magnetite.code.length > 0, "magnetite does not exist");
         uint8 vaultType = uint8(_earned.length);
         if (_feeOnTransfer) vaultType += 0x80;
         configData = abi.encodePacked(_tacticsA, _tacticsB, _wantToken, _wantDust, _router, _magnetite, _slippageFactor);
