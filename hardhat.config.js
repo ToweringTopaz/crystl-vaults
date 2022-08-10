@@ -124,9 +124,14 @@
          path: "m/44'/60'/0'/0",
          accountsBalance: "10000000000000000000000",
        },
+       forking: {
+         url: polygonMainnetNodeURL,
+         blockNumber: 25326200,
+       },
        chainId: chainIds.hardhat,
        hardfork: "london",
      },
+
      polygon: {
        url: polygonMainnetNodeURL,
        accounts: [`0x${myPrivateKey}`],
