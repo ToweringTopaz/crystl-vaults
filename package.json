@@ -7,8 +7,8 @@
     "verify:polygon": "truffle run verify VaultHealer --network polygon && truffle run verify StrategyMasterHealer --network polygon"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.6.0",
-    "@openzeppelin/contracts-upgradeable": "^4.6.0",
+    "@openzeppelin/contracts": "^4.7.1",
+    "@openzeppelin/contracts-upgradeable": "^4.7.1",
     "@prb/math": "^2.5.0",
     "@truffle/hdwallet-provider": "^1.7.0",
     "dotenv": "^8.6.0",

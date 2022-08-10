@@ -12,11 +12,14 @@ contract StrategyWrapperToken is Strategy {
 
 	error Strategy_MonotonicRatio(uint oldRatio, uint newRatio);
 	event UpdateRatio(uint newRatio);
+	
+	uint constant PRECISION = 2**128;
 
 	uint public underlyingRatioLast;
 	
 	function _initialSetup() internal override {
 		require(config.earnedLength() == 0, "Earned tokens cannot be set on this strategy");
+		underlyingRatioLast = getUnderlyingRatio();
 		super._initialSetup();
 	}
 	
@@ -33,12 +36,12 @@ contract StrategyWrapperToken is Strategy {
 	}
 	
 	function getUnderlyingRatio() internal view returns (uint256) {
-		return PRBMath.mulDiv(2**128, getUnderlyingTotal(), getWrapperTotalSupply());
+		return PRBMath.mulDiv(PRECISION, getUnderlyingTotal(), getWrapperTotalSupply());
 	}
 	
 	//Typically the VST tactic should be configured using the standard balanceOf(address(this))
 	function _vaultSharesTotal() internal view virtual override returns (uint256) {
-		return PRBMath.mulDiv(super._vaultSharesTotal(), underlyingRatioLast, 2**128);
+		return PRBMath.mulDiv(super._vaultSharesTotal(), underlyingRatioLast, PRECISION);
 	}
 	
     function _earn(Fee.Data[3] calldata fees, address, bytes calldata) internal virtual override returns (bool success) {
@@ -50,7 +53,7 @@ contract StrategyWrapperToken is Strategy {
 		if (newRatio > oldRatio) {
 			IERC20 wrapper = wrapperToken();
 			uint wrapperBalance = wrapper.balanceOf(address(this));
-			fees.payTokenFeePortion(wrapper, PRBMath.mulDiv(wrapperBalance, newRatio - oldRatio, 2**128));
+			fees.payTokenFeePortion(wrapper, PRBMath.mulDiv(wrapperBalance, newRatio - oldRatio, oldRatio));
 			success = true;
 			underlyingRatioLast = newRatio;
 			emit UpdateRatio(newRatio);
